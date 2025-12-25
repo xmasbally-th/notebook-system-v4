@@ -5,6 +5,10 @@ import { usePagination } from '@/hooks/usePagination'
 import { useEquipmentFilters } from '@/hooks/useEquipmentFilters'
 import EquipmentCard from './EquipmentCard'
 
+import { Database } from '@/supabase/types'
+
+type Equipment = Database['public']['Tables']['equipment']['Row']
+
 export default function EquipmentListContainer() {
     const { data: equipment, isLoading, error } = useEquipment()
 
@@ -15,7 +19,7 @@ export default function EquipmentListContainer() {
         setSelectedStatus,
         filteredItems,
         clearFilters
-    } = useEquipmentFilters(equipment || [])
+    } = useEquipmentFilters((equipment as Equipment[]) || [])
 
     const {
         paginatedItems,
