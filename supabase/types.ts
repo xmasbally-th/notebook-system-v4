@@ -91,6 +91,51 @@ export interface Database {
                     updated_at?: string
                 }
             }
+            loanRequests: {
+                Row: {
+                    id: string
+                    user_id: string
+                    equipment_id: string
+                    start_date: string
+                    end_date: string
+                    reason: string | null
+                    status: 'pending' | 'approved' | 'rejected' | 'returned'
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    equipment_id: string
+                    start_date: string
+                    end_date: string
+                    reason?: string | null
+                    status?: 'pending' | 'approved' | 'rejected' | 'returned'
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    user_id?: string
+                    equipment_id?: string
+                    start_date?: string
+                    end_date?: string
+                    reason?: string | null
+                    status?: 'pending' | 'approved' | 'rejected' | 'returned'
+                    created_at?: string
+                    updated_at?: string
+                }
+            }
+        }
+        Functions: {
+            check_reservation_conflict: {
+                Args: {
+                    target_equipment_id: string
+                    new_start_date: string
+                    new_end_date: string
+                }
+                Returns: boolean
+            }
         }
     }
 }

@@ -5,11 +5,11 @@ export const checkConflict = async (
     startDate: Date,
     endDate: Date
 ): Promise<boolean> => {
-    const { data, error } = await supabase.rpc('check_reservation_conflict', {
+    const { data, error } = await supabase.rpc('check_reservation_conflict' as any, {
         target_equipment_id: equipmentId,
         new_start_date: startDate.toISOString(),
         new_end_date: endDate.toISOString(),
-    })
+    } as any)
 
     if (error) {
         console.error('Error checking conflicts:', error)
