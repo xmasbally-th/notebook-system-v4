@@ -25,8 +25,9 @@ export default function LoanRequestsPage() {
     // Bulk Action Mutation
     const updateStatusMutation = useMutation({
         mutationFn: async ({ ids, status }: { ids: string[], status: 'approved' | 'rejected' }) => {
-            const { error } = await supabase
-                .from('loanRequests' as any)
+            // Cast to any to bypass strict type checking for the missing 'loanRequests' definition
+            const { error } = await (supabase
+                .from('loanRequests' as any) as any)
                 .update({ status })
                 .in('id', ids)
             if (error) throw error
