@@ -83,7 +83,7 @@ export default function LoanRequestsPage() {
                                         if (e.target.checked) setSelectedIds(requests?.map((r: any) => r.id) || [])
                                         else setSelectedIds([])
                                     }}
-                                    checked={requests?.length > 0 && selectedIds.length === requests?.length}
+                                    checked={(requests?.length ?? 0) > 0 && selectedIds.length === (requests?.length ?? 0)}
                                 />
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
