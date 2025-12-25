@@ -1,26 +1,21 @@
 {
   "name": "notebook-system-v4",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
-  },
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "@supabase/supabase-js": "^2.89.0",
-    "@tanstack/react-query": "^5.90.12",
-    "clsx": "^2.1.1",
-    "lucide-react": "^0.562.0",
-    "next": "^16.1.1",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "tailwind-merge": "^3.4.0"
+    "@supabase/supabase-js": "^2.39.0",
+    "@tanstack/react-query": "^5.0.0",
+    "clsx": "^2.1.0",
+    "lucide-react": "^0.300.0",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "tailwind-merge": "^2.2.0"
   }
 }
