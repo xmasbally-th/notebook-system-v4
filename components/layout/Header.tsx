@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { Laptop, LogIn, LogOut, User, Menu, X } from 'lucide-react'
+import { Laptop, LogIn, LogOut, User, Menu, X, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -47,6 +47,13 @@ export default function Header() {
                     <div className="hidden md:flex items-center gap-4">
                         {user ? (
                             <div className="flex items-center gap-4">
+                                <Link
+                                    href="/my-loans"
+                                    className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                                >
+                                    <Package className="w-4 h-4" />
+                                    ประวัติการยืม
+                                </Link>
                                 <Link
                                     href="/profile"
                                     className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
