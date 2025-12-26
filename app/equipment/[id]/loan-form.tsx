@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import { submitLoanRequest } from './actions'
+import { submitLoanRequest } from '../actions'
 import { Loader2 } from 'lucide-react'
 
 // Shim for React 18 if useActionState is not available, use fallback or just normal form

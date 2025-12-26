@@ -9,7 +9,7 @@ export function useSystemConfig() {
     return useQuery({
         queryKey: ['system_config'],
         queryFn: async () => {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from('system_config')
                 .select('*')
                 .single()
@@ -25,7 +25,7 @@ export function useUpdateSystemConfig() {
 
     return useMutation({
         mutationFn: async (updates: SystemConfigUpdate) => {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from('system_config')
                 .update(updates)
                 .eq('id', 1) // Always update the singleton row
