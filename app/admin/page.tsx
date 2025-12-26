@@ -14,9 +14,9 @@ export default function AdminDashboard() {
                 { count: pendingUsersCount },
                 { count: pendingLoansCount }
             ] = await Promise.all([
-                supabase.from('equipment').select('*', { count: 'exact', head: true }),
-                supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-                supabase.from('loanRequests' as any).select('*', { count: 'exact', head: true }).eq('status', 'pending') // Table might not exist yet
+                (supabase as any).from('equipment').select('*', { count: 'exact', head: true }),
+                (supabase as any).from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+                (supabase as any).from('loanRequests').select('*', { count: 'exact', head: true }).eq('status', 'pending')
             ])
 
             return {

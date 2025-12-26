@@ -35,13 +35,13 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
     const mutation = useMutation({
         mutationFn: async (data: EquipmentInsert) => {
             if (isEditing && initialData) {
-                const { error } = await supabase
+                const { error } = await (supabase as any)
                     .from('equipment')
                     .update(data as any)
                     .eq('id', initialData.id)
                 if (error) throw error
             } else {
-                const { error } = await supabase
+                const { error } = await (supabase as any)
                     .from('equipment')
                     .insert(data as any)
                 if (error) throw error
