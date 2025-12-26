@@ -1,4 +1,8 @@
 import EquipmentListContainer from '@/components/equipment/EquipmentList'
+import Header from '@/components/layout/Header'
+import Footer from '@/components/layout/Footer'
+import RulesSection from '@/components/home/RulesSection'
+import HoursSection from '@/components/home/HoursSection'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
@@ -20,25 +24,38 @@ export default async function Home() {
     }
 
     return (
-        <main className="min-h-screen bg-gray-50 pb-12">
-            <div className="bg-white border-b border-gray-200">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-gray-900">Equipment Lending System</h1>
-                    <div className="flex gap-4">
-                        {/* Auth buttons could go here */}
-                        <a href="/login" className="text-sm font-medium text-gray-500 hover:text-gray-900">Login</a>
+        <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
+            <Header />
+
+            <main className="flex-grow">
+                {/* Hero Section (or just Equipment List Title) */}
+                <div className="bg-white border-b border-gray-100">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+                        <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl tracking-tight mb-4">
+                            Notebook Lending System
+                        </h1>
+                        <p className="text-xl text-gray-500 max-w-2xl mx-auto">
+                            Borrow laptops, tablets, and accessories for your academic needs.
+                            Seamless, digital, and efficient.
+                        </p>
                     </div>
                 </div>
-            </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="mb-8">
-                    <h2 className="text-xl font-semibold text-gray-800">Available Equipment</h2>
-                    <p className="mt-1 text-sm text-gray-500">Browse and reserve equipment for your department.</p>
-                </div>
+                <RulesSection />
 
-                <EquipmentListContainer />
-            </div>
-        </main>
+                {/* Equipment Section */}
+                <section className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="mb-10 text-center">
+                        <h2 className="text-3xl font-bold text-gray-900">Available Equipment</h2>
+                        <p className="mt-2 text-gray-500">Browse our real-time inventory and request items swiftly.</p>
+                    </div>
+                    <EquipmentListContainer />
+                </section>
+
+                <HoursSection />
+            </main>
+
+            <Footer />
+        </div>
     )
 }
