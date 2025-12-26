@@ -54,13 +54,13 @@ export default async function EquipmentDetailsPage({ params }: { params: Promise
                         </div>
 
                         {/* Content Side */}
-                        <div className="p-8 space-y-6">
+                        <div className="p-5 md:p-8 space-y-6">
                             <div>
                                 <div className="flex items-center gap-2 text-sm text-blue-600 font-medium mb-2">
                                     <span>{category.icon || '📦'}</span>
                                     <span>{category.name || 'General'}</span>
                                 </div>
-                                <h1 className="text-3xl font-bold text-gray-900 mb-2">{item.name}</h1>
+                                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{item.name}</h1>
                                 <p className="text-gray-500 font-mono text-sm">#{item.equipment_number}</p>
                             </div>
 

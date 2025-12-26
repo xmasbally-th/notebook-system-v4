@@ -46,7 +46,7 @@ export default function EquipmentCard({ item }: EquipmentCardProps) {
                 </div>
 
                 {/* Content Area */}
-                <div className="flex flex-1 flex-col p-4">
+                <div className="flex flex-1 flex-col p-3 md:p-4">
                     <div className="mb-2 flex items-center gap-2 text-sm text-gray-500">
                         <span>{categoryIcon}</span>
                         <span>{categoryName}</span>

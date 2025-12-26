@@ -2,15 +2,15 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { Laptop, LogIn, LogOut, User } from 'lucide-react'
+import { Laptop, LogIn, LogOut, User, Menu, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 export default function Header() {
     const [user, setUser] = useState<any>(null)
+    const [isMenuOpen, setIsMenuOpen] = useState(false)
     const router = useRouter()
-    // const supabase = createClient() // No longer needed as we import the instance directly
 
     useEffect(() => {
         const checkUser = async () => {
@@ -23,6 +23,7 @@ export default function Header() {
     const handleSignOut = async () => {
         await supabase.auth.signOut()
         setUser(null)
+        setIsMenuOpen(false)
         router.push('/login')
         router.refresh()
     }
@@ -32,7 +33,7 @@ export default function Header() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
                     {/* Logo & Brand */}
-                    <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                    <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity z-50 relative">
                         <div className="p-2 bg-blue-600 rounded-lg shadow-sm">
                             <Laptop className="w-6 h-6 text-white" />
                         </div>
@@ -42,13 +43,13 @@ export default function Header() {
                         </div>
                     </Link>
 
-                    {/* Navigation / Auth */}
-                    <div className="flex items-center gap-4">
+                    {/* Desktop Navigation */}
+                    <div className="hidden md:flex items-center gap-4">
                         {user ? (
                             <div className="flex items-center gap-4">
                                 <Link
                                     href="/profile"
-                                    className="hidden sm:flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                                    className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
                                 >
                                     <User className="w-4 h-4" />
                                     Profile
@@ -71,8 +72,61 @@ export default function Header() {
                             </Link>
                         )}
                     </div>
+
+                    {/* Mobile Menu Button */}
+                    <button
+                        className="md:hidden p-2 text-gray-600 hover:text-gray-900 z-50 relative"
+                        onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    >
+                        {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                    </button>
                 </div>
             </div>
+
+            {/* Mobile Navigation Drawer */}
+            {isMenuOpen && (
+                <div className="fixed inset-0 bg-white z-40 md:hidden pt-20 px-4 animate-in slide-in-from-top-10 fade-in duration-200">
+                    <div className="flex flex-col gap-4">
+                        {user ? (
+                            <>
+                                <div className="py-4 border-b border-gray-100">
+                                    <p className="text-sm text-gray-500 mb-1">Signed in as</p>
+                                    <p className="font-medium text-gray-900 truncate">{user.email}</p>
+                                </div>
+                                <Link
+                                    href="/profile"
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 text-gray-900 font-medium"
+                                >
+                                    <User className="w-5 h-5" />
+                                    My Profile
+                                </Link>
+                                <button
+                                    onClick={handleSignOut}
+                                    className="flex items-center gap-3 p-3 rounded-xl bg-red-50 text-red-600 font-medium w-full text-left"
+                                >
+                                    <LogOut className="w-5 h-5" />
+                                    Sign Out
+                                </button>
+                            </>
+                        ) : (
+                            <div className="py-4 text-center">
+                                <Link
+                                    href="/login"
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="flex items-center justify-center gap-2 w-full p-3 bg-blue-600 text-white rounded-xl font-medium shadow-sm active:scale-95 transition-transform"
+                                >
+                                    <LogIn className="w-5 h-5" />
+                                    Sign In with Google
+                                </Link>
+                                <p className="mt-4 text-sm text-gray-500">
+                                    Please sign in with your university account to continue.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </header>
     )
 }
