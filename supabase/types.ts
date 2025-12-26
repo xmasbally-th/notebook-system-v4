@@ -126,6 +126,50 @@ export interface Database {
                     updated_at?: string
                 }
             }
+            system_config: {
+                Row: {
+                    id: number
+                    max_loan_days: number
+                    max_items_per_user: number
+                    opening_time: string | null
+                    closing_time: string | null
+                    closed_days: Json | null
+                    is_loan_system_active: boolean
+                    is_reservation_active: boolean
+                    discord_webhook_url: string | null
+                    announcement_message: string | null
+                    announcement_active: boolean
+                    updated_at: string
+                }
+                Insert: {
+                    id?: number
+                    max_loan_days?: number
+                    max_items_per_user?: number
+                    opening_time?: string | null
+                    closing_time?: string | null
+                    closed_days?: Json | null
+                    is_loan_system_active?: boolean
+                    is_reservation_active?: boolean
+                    discord_webhook_url?: string | null
+                    announcement_message?: string | null
+                    announcement_active?: boolean
+                    updated_at?: string
+                }
+                Update: {
+                    id?: number
+                    max_loan_days?: number
+                    max_items_per_user?: number
+                    opening_time?: string | null
+                    closing_time?: string | null
+                    closed_days?: Json | null
+                    is_loan_system_active?: boolean
+                    is_reservation_active?: boolean
+                    discord_webhook_url?: string | null
+                    announcement_message?: string | null
+                    announcement_active?: boolean
+                    updated_at?: string
+                }
+            }
         }
         Functions: {
             check_reservation_conflict: {

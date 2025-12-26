@@ -1,6 +1,24 @@
 import EquipmentListContainer from '@/components/equipment/EquipmentList'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 
-export default function Home() {
+export default async function Home() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (user) {
+        const { data: profile } = await supabase
+            .from('profiles' as any)
+            .select('department_id, phone_number')
+            .eq('id', user.id)
+            .single()
+
+        // If logged in but profile incomplete -> redirect
+        if (profile && (!profile.department_id || !profile.phone_number)) {
+            redirect('/register/complete-profile')
+        }
+    }
+
     return (
         <main className="min-h-screen bg-gray-50 pb-12">
             <div className="bg-white border-b border-gray-200">

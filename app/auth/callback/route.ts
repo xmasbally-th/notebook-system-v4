@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client' // Correction: Use SSR capable client if available, or create new one here.
+
 // Actually for Route Handlers in App Router with Cookie Auth, we need specific setup.
 // But since we are using client-side auth mostly, let's see. 
 // Standard Next.js + Supabase SSR pattern:
