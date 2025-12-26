@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { Loader2 } from 'lucide-react'
+import { notifyNewRegistration } from '@/app/register/actions'
 
 // Types
 type Department = { id: string, name: string }
@@ -80,6 +81,9 @@ export default function CompleteProfilePage() {
                 .eq('id', user.id)
 
             if (error) throw error
+
+            // Notify Admin via Discord
+            await notifyNewRegistration(user.id)
 
             // Success -> Redirect to Home (which will show "Pending Approval" if pending)
             // Or explicitly to a "waiting" page.

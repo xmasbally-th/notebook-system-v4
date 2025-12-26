@@ -14,18 +14,13 @@ const statusColorMap: Record<string, string> = {
     lost: 'bg-red-100 text-red-800 border-red-200',
 }
 
-export default function EquipmentCard({ item }: EquipmentCardProps) {
-    // Defensive: ensure images is an array (already handled in hook, but double safety)
-    const images = Array.isArray(item.images) ? item.images : []
-    const imageUrl = images.length > 0 ? (images[0] as string) : 'https://placehold.co/600x400?text=No+Image'
+import Link from 'next/link'
 
-    // Defensive: category parsing
-    const category = (item.category as any) || {}
-    const categoryName = category.name || 'Uncategorized'
-    const categoryIcon = category.icon || '📦'
+// ...
 
-    return (
-        <div className="group relative flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+return (
+    <Link href={`/equipment/${item.id}`} className="block group">
+        <div className="relative flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
             {/* Image Area */}
             <div className="relative aspect-video w-full overflow-hidden bg-gray-100">
                 <img
@@ -64,11 +59,12 @@ export default function EquipmentCard({ item }: EquipmentCardProps) {
                         {/* Location could go here */}
                         {(item.location as any)?.building || 'Main Building'}
                     </span>
-                    <button className="rounded-lg bg-gray-50 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors">
+                    <span className="rounded-lg bg-gray-50 px-3 py-1 text-xs font-medium text-gray-600 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
                         View Details
-                    </button>
+                    </span>
                 </div>
             </div>
         </div>
-    )
+    </Link>
+)
 }
