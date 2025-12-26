@@ -25,8 +25,8 @@ export default function DepartmentsPage() {
 
     const fetchDepartments = async () => {
         setIsLoading(true)
-        const { data, error } = await supabase
-            .from('departments' as any)
+        const { data, error } = await (supabase as any)
+            .from('departments')
             .select('*')
             .order('name')
 
@@ -47,8 +47,8 @@ export default function DepartmentsPage() {
         if (!newDeptName.trim()) return
 
         setIsSaving(true)
-        const { error } = await supabase
-            .from('departments' as any)
+        const { error } = await (supabase as any)
+            .from('departments')
             .insert([{ name: newDeptName.trim(), code: newDeptCode.trim() || null }])
             .select()
 
@@ -64,8 +64,8 @@ export default function DepartmentsPage() {
     }
 
     const toggleStatus = async (id: string, currentStatus: boolean) => {
-        const { error } = await supabase
-            .from('departments' as any)
+        const { error } = await (supabase as any)
+            .from('departments')
             .update({ is_active: !currentStatus })
             .eq('id', id)
 
@@ -81,8 +81,8 @@ export default function DepartmentsPage() {
     const deleteDepartment = async (id: string) => {
         if (!confirm('Are you sure you want to delete this department? This might fail if users are linked to it.')) return
 
-        const { error } = await supabase
-            .from('departments' as any)
+        const { error } = await (supabase as any)
+            .from('departments')
             .delete()
             .eq('id', id)
 
@@ -193,8 +193,8 @@ export default function DepartmentsPage() {
                                         <button
                                             onClick={() => toggleStatus(dept.id, dept.is_active)}
                                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${dept.is_active
-                                                ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
-                                                : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
+                                                    ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                                                    : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
                                                 }`}
                                         >
                                             {dept.is_active ? (

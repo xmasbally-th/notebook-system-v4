@@ -7,8 +7,8 @@ export default async function Home() {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (user) {
-        const { data: profile } = await supabase
-            .from('profiles' as any)
+        const { data: profile } = await (supabase as any)
+            .from('profiles')
             .select('department_id, phone_number')
             .eq('id', user.id)
             .single()

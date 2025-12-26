@@ -32,8 +32,8 @@ export default function CompleteProfilePage() {
             }
 
             // 2. Load current profile (if partial)
-            const { data: profile } = await supabase
-                .from('profiles' as any)
+            const { data: profile } = await (supabase as any)
+                .from('profiles')
                 .select('first_name, last_name, title, phone_number, user_type, department_id')
                 .eq('id', user.id)
                 .single()
@@ -45,8 +45,8 @@ export default function CompleteProfilePage() {
             }
 
             // 3. Load Departments
-            const { data: depts } = await supabase
-                .from('departments' as any)
+            const { data: depts } = await (supabase as any)
+                .from('departments')
                 .select('id, name')
                 .eq('is_active', true)
                 .order('name')
@@ -74,8 +74,8 @@ export default function CompleteProfilePage() {
                 updated_at: new Date().toISOString(),
             }
 
-            const { error } = await supabase
-                .from('profiles' as any)
+            const { error } = await (supabase as any)
+                .from('profiles')
                 .update(updates)
                 .eq('id', user.id)
 
