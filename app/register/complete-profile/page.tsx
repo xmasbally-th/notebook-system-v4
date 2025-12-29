@@ -85,9 +85,8 @@ export default function CompleteProfilePage() {
             // Notify Admin via Discord
             await notifyNewRegistration(user.id)
 
-            // Success -> Redirect to Home (which will show "Pending Approval" if pending)
-            // Or explicitly to a "waiting" page.
-            router.replace('/')
+            // Success -> Redirect to Pending Approval page
+            router.replace('/pending-approval')
 
         } catch (error: any) {
             alert('Error updating profile: ' + error.message)

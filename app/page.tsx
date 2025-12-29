@@ -14,12 +14,18 @@ export default async function Home() {
     if (user) {
         const { data: profile } = await (supabase as any)
             .from('profiles')
-            .select('department_id, phone_number')
+            .select('department_id, phone_number, status')
             .eq('id', user.id)
             .single()
 
+        // Check if profile is incomplete
         if (profile && (!profile.department_id || !profile.phone_number)) {
             redirect('/register/complete-profile')
+        }
+
+        // Check if user is pending or rejected
+        if (profile && (profile.status === 'pending' || profile.status === 'rejected')) {
+            redirect('/pending-approval')
         }
     }
 

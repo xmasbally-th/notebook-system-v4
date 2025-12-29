@@ -3,8 +3,24 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
 import Link from 'next/link'
+import AdminNotificationBell from '@/components/admin/AdminNotificationBell'
+import { useProfile } from '@/hooks/useProfile'
+import { useEffect, useState } from 'react'
 
 export default function AdminDashboard() {
+    // Get current user session
+    const [userId, setUserId] = useState<string | undefined>(undefined)
+
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            setUserId(user?.id || undefined)
+        })
+    }, [])
+
+    // Fetch user profile to check admin status
+    const { data: profile } = useProfile(userId)
+    const isAdmin = profile?.role === 'admin'
+
     // Fetch stats
     const { data: stats, isLoading } = useQuery({
         queryKey: ['admin-stats'],
@@ -29,7 +45,10 @@ export default function AdminDashboard() {
 
     return (
         <div className="p-8 max-w-7xl mx-auto">
-            <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+            <div className="flex justify-between items-center mb-8">
+                <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+                <AdminNotificationBell isAdmin={isAdmin} />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
