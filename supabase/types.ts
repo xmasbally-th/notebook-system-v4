@@ -142,7 +142,11 @@ export interface Database {
                     max_items_per_user: number
                     opening_time: string | null
                     closing_time: string | null
+                    break_start_time: string | null
+                    break_end_time: string | null
                     closed_days: Json | null
+                    closed_dates: Json | null
+                    loan_limits_by_type: Json | null
                     is_loan_system_active: boolean
                     is_reservation_active: boolean
                     discord_webhook_url: string | null
@@ -156,7 +160,11 @@ export interface Database {
                     max_items_per_user?: number
                     opening_time?: string | null
                     closing_time?: string | null
+                    break_start_time?: string | null
+                    break_end_time?: string | null
                     closed_days?: Json | null
+                    closed_dates?: Json | null
+                    loan_limits_by_type?: Json | null
                     is_loan_system_active?: boolean
                     is_reservation_active?: boolean
                     discord_webhook_url?: string | null
@@ -170,7 +178,11 @@ export interface Database {
                     max_items_per_user?: number
                     opening_time?: string | null
                     closing_time?: string | null
+                    break_start_time?: string | null
+                    break_end_time?: string | null
                     closed_days?: Json | null
+                    closed_dates?: Json | null
+                    loan_limits_by_type?: Json | null
                     is_loan_system_active?: boolean
                     is_reservation_active?: boolean
                     discord_webhook_url?: string | null

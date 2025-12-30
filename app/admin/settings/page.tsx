@@ -13,11 +13,35 @@ import {
     Zap,
     Building2,
     Bell,
-    ChevronRight
+    ChevronRight,
+    Coffee,
+    CalendarX,
+    Users,
+    Plus,
+    X,
+    Trash2
 } from 'lucide-react'
 import { Database } from '@/supabase/types'
 
 type SystemConfigUpdate = Database['public']['Tables']['system_config']['Update']
+
+type LoanLimitsByType = {
+    student: { max_days: number; max_items: number }
+    lecturer: { max_days: number; max_items: number }
+    staff: { max_days: number; max_items: number }
+}
+
+const defaultLoanLimits: LoanLimitsByType = {
+    student: { max_days: 3, max_items: 1 },
+    lecturer: { max_days: 7, max_items: 3 },
+    staff: { max_days: 5, max_items: 2 }
+}
+
+const userTypeLabels: Record<string, string> = {
+    student: 'นักศึกษา',
+    lecturer: 'อาจารย์',
+    staff: 'บุคลากร'
+}
 
 export default function AdminSettingsPage() {
     const { data: config, isLoading } = useSystemConfig()
@@ -26,6 +50,9 @@ export default function AdminSettingsPage() {
     // Local state for form
     const [formData, setFormData] = useState<SystemConfigUpdate>({})
     const [isDirty, setIsDirty] = useState(false)
+    const [loanLimits, setLoanLimits] = useState<LoanLimitsByType>(defaultLoanLimits)
+    const [closedDates, setClosedDates] = useState<string[]>([])
+    const [newClosedDate, setNewClosedDate] = useState('')
 
     useEffect(() => {
         if (config) {
@@ -34,12 +61,22 @@ export default function AdminSettingsPage() {
                 max_items_per_user: config.max_items_per_user,
                 opening_time: config.opening_time,
                 closing_time: config.closing_time,
+                break_start_time: config.break_start_time,
+                break_end_time: config.break_end_time,
                 is_loan_system_active: config.is_loan_system_active,
                 is_reservation_active: config.is_reservation_active,
                 discord_webhook_url: config.discord_webhook_url,
                 announcement_message: config.announcement_message,
                 announcement_active: config.announcement_active,
             })
+            // Parse loan limits
+            if (config.loan_limits_by_type) {
+                setLoanLimits(config.loan_limits_by_type as LoanLimitsByType)
+            }
+            // Parse closed dates
+            if (config.closed_dates) {
+                setClosedDates(config.closed_dates as string[])
+            }
         }
     }, [config])
 
@@ -48,8 +85,34 @@ export default function AdminSettingsPage() {
         setIsDirty(true)
     }
 
+    const handleLoanLimitChange = (userType: keyof LoanLimitsByType, field: 'max_days' | 'max_items', value: number) => {
+        setLoanLimits(prev => ({
+            ...prev,
+            [userType]: { ...prev[userType], [field]: value }
+        }))
+        setIsDirty(true)
+    }
+
+    const handleAddClosedDate = () => {
+        if (newClosedDate && !closedDates.includes(newClosedDate)) {
+            setClosedDates(prev => [...prev, newClosedDate].sort())
+            setNewClosedDate('')
+            setIsDirty(true)
+        }
+    }
+
+    const handleRemoveClosedDate = (date: string) => {
+        setClosedDates(prev => prev.filter(d => d !== date))
+        setIsDirty(true)
+    }
+
     const handleSave = () => {
-        updateMutation.mutate(formData, {
+        const updates = {
+            ...formData,
+            loan_limits_by_type: loanLimits,
+            closed_dates: closedDates
+        }
+        updateMutation.mutate(updates, {
             onSuccess: () => {
                 setIsDirty(false)
                 alert('บันทึกการตั้งค่าเรียบร้อยแล้ว')
@@ -57,6 +120,16 @@ export default function AdminSettingsPage() {
             onError: (err) => {
                 alert(`เกิดข้อผิดพลาด: ${err.message}`)
             }
+        })
+    }
+
+    const formatDate = (dateStr: string) => {
+        const date = new Date(dateStr)
+        return date.toLocaleDateString('th-TH', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
         })
     }
 
@@ -91,38 +164,54 @@ export default function AdminSettingsPage() {
             )}
 
             <div className="max-w-4xl space-y-6">
-                {/* Loan Limits */}
+                {/* Loan Limits by User Type */}
                 <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                     <div className="flex items-center gap-3 mb-5">
                         <div className="p-2 bg-blue-50 rounded-xl">
-                            <Package className="w-5 h-5 text-blue-600" />
+                            <Users className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-semibold text-gray-900">ขีดจำกัดการยืม</h2>
-                            <p className="text-sm text-gray-500">กำหนดจำนวนวันและจำนวนอุปกรณ์ที่ยืมได้</p>
+                            <h2 className="text-lg font-semibold text-gray-900">ขีดจำกัดการยืมตามประเภทผู้ใช้</h2>
+                            <p className="text-sm text-gray-500">กำหนดจำนวนวันและจำนวนอุปกรณ์สูงสุดสำหรับแต่ละประเภท</p>
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">จำนวนวันสูงสุด</label>
-                            <input
-                                type="number"
-                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                                value={formData.max_loan_days || ''}
-                                onChange={(e) => handleChange('max_loan_days', parseInt(e.target.value))}
-                            />
-                            <p className="text-xs text-gray-400 mt-1.5">จำนวนวันสูงสุดที่ผู้ใช้สามารถยืมอุปกรณ์ได้</p>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">จำนวนอุปกรณ์สูงสุดต่อผู้ใช้</label>
-                            <input
-                                type="number"
-                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                                value={formData.max_items_per_user || ''}
-                                onChange={(e) => handleChange('max_items_per_user', parseInt(e.target.value))}
-                            />
-                            <p className="text-xs text-gray-400 mt-1.5">จำนวนอุปกรณ์ที่ผู้ใช้สามารถยืมพร้อมกันได้</p>
-                        </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-gray-100">
+                                    <th className="text-left py-3 px-4 font-medium text-gray-500">ประเภทผู้ใช้</th>
+                                    <th className="text-center py-3 px-4 font-medium text-gray-500">จำนวนวันสูงสุด</th>
+                                    <th className="text-center py-3 px-4 font-medium text-gray-500">จำนวนอุปกรณ์สูงสุด</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {(['student', 'lecturer', 'staff'] as const).map(userType => (
+                                    <tr key={userType} className="hover:bg-gray-50">
+                                        <td className="py-3 px-4">
+                                            <span className="font-medium text-gray-900">{userTypeLabels[userType]}</span>
+                                        </td>
+                                        <td className="py-3 px-4">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                className="w-20 mx-auto block text-center px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                value={loanLimits[userType].max_days}
+                                                onChange={e => handleLoanLimitChange(userType, 'max_days', parseInt(e.target.value) || 1)}
+                                            />
+                                        </td>
+                                        <td className="py-3 px-4">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                className="w-20 mx-auto block text-center px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                value={loanLimits[userType].max_items}
+                                                onChange={e => handleLoanLimitChange(userType, 'max_items', parseInt(e.target.value) || 1)}
+                                            />
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </section>
 
@@ -157,6 +246,101 @@ export default function AdminSettingsPage() {
                             />
                         </div>
                     </div>
+                </section>
+
+                {/* Lunch Break */}
+                <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className="p-2 bg-orange-50 rounded-xl">
+                            <Coffee className="w-5 h-5 text-orange-600" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-semibold text-gray-900">เวลาพักกลางวัน</h2>
+                            <p className="text-sm text-gray-500">กำหนดช่วงเวลาพักที่ไม่ให้บริการ</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">เริ่มพัก</label>
+                            <input
+                                type="time"
+                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                                value={formData.break_start_time || '12:00'}
+                                onChange={(e) => handleChange('break_start_time', e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">สิ้นสุดพัก</label>
+                            <input
+                                type="time"
+                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                                value={formData.break_end_time || '13:00'}
+                                onChange={(e) => handleChange('break_end_time', e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </section>
+
+                {/* Closed Dates */}
+                <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className="p-2 bg-red-50 rounded-xl">
+                            <CalendarX className="w-5 h-5 text-red-600" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-semibold text-gray-900">วันปิดทำการ</h2>
+                            <p className="text-sm text-gray-500">กำหนดวันหยุดที่ไม่เปิดให้ยืม/คืน/จอง</p>
+                        </div>
+                    </div>
+
+                    {/* Add new date */}
+                    <div className="flex gap-3 mb-4">
+                        <input
+                            type="date"
+                            className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+                            value={newClosedDate}
+                            onChange={(e) => setNewClosedDate(e.target.value)}
+                        />
+                        <button
+                            onClick={handleAddClosedDate}
+                            disabled={!newClosedDate}
+                            className="px-4 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                        >
+                            <Plus className="w-4 h-4" />
+                            เพิ่ม
+                        </button>
+                    </div>
+
+                    {/* List of closed dates */}
+                    {closedDates.length > 0 ? (
+                        <div className="space-y-2">
+                            {closedDates.map(date => (
+                                <div
+                                    key={date}
+                                    className="flex items-center justify-between p-3 bg-red-50 rounded-xl group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <CalendarX className="w-4 h-4 text-red-500" />
+                                        <span className="text-sm font-medium text-red-800">
+                                            {formatDate(date)}
+                                        </span>
+                                        <span className="text-xs text-red-500">({date})</span>
+                                    </div>
+                                    <button
+                                        onClick={() => handleRemoveClosedDate(date)}
+                                        className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-8 text-gray-400">
+                            <CalendarX className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">ยังไม่มีวันปิดทำการ</p>
+                        </div>
+                    )}
                 </section>
 
                 {/* Feature Toggles */}
