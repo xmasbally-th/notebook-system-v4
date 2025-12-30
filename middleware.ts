@@ -37,7 +37,7 @@ export async function middleware(request: NextRequest) {
 
     // If user is not logged in and trying to access protected routes
     const isProtectedRoute = request.nextUrl.pathname.startsWith('/admin') ||
-        request.nextUrl.pathname.startsWith('/profile') ||
+        request.nextUrl.pathname === '/profile' ||
         request.nextUrl.pathname.startsWith('/my-loans')
 
     const isPublicRoute = request.nextUrl.pathname === '/' ||
@@ -45,7 +45,8 @@ export async function middleware(request: NextRequest) {
         request.nextUrl.pathname.startsWith('/auth/') ||
         request.nextUrl.pathname.startsWith('/equipment') ||
         request.nextUrl.pathname.startsWith('/register') ||
-        request.nextUrl.pathname === '/pending-approval'
+        request.nextUrl.pathname === '/pending-approval' ||
+        request.nextUrl.pathname === '/profile/setup'
 
     if (!user && isProtectedRoute) {
         const url = request.nextUrl.clone()

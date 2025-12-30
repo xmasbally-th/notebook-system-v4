@@ -8,70 +8,84 @@ import { useProfile } from '@/hooks/useProfile'
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const router = useRouter()
     const pathname = usePathname()
-    const [session, setSession] = useState<any>(null)
+    const [userId, setUserId] = useState<string | undefined>(undefined)
+    const [isInitialized, setIsInitialized] = useState(false)
 
-    // Manage session state
+    // Get user ID from auth state
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session)
+        // Initial check
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            setUserId(user?.id)
+            setIsInitialized(true)
         })
 
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
-            setSession(session)
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUserId(session?.user?.id)
+            setIsInitialized(true)
         })
 
         return () => subscription.unsubscribe()
     }, [])
 
-    // Fetch profile if session exists
-    const { data: profile, isLoading } = useProfile(session?.user?.id)
+    // Fetch profile if userId exists
+    const { data: profile, isLoading: profileLoading } = useProfile(userId)
 
+    // Handle redirects based on profile state
     useEffect(() => {
-        if (isLoading) return
+        // Wait for initialization and profile loading
+        if (!isInitialized || profileLoading) return
 
-        // 1. If not logged in and not on login page, redirect to login
-        const publicPaths = ['/login', '/', '/auth/callback', '/auth/auth-code-error', '/pending-approval']
-        const isPublicPath = publicPaths.includes(pathname) ||
-            pathname.startsWith('/equipment') ||
-            pathname.startsWith('/register') ||
-            pathname.startsWith('/auth/')
+        // Don't redirect on public/auth pages
+        const skipProfileCheckPaths = [
+            '/login',
+            '/auth/callback',
+            '/auth/auth-code-error',
+            '/pending-approval',
+            '/profile/setup',
+            '/register/complete-profile'
+        ]
 
-        if (!session && !isPublicPath) {
-            router.push('/login')
+        if (skipProfileCheckPaths.includes(pathname) ||
+            pathname.startsWith('/auth/') ||
+            pathname.startsWith('/equipment')) {
             return
         }
 
-        // 2. If logged in but no profile (should happen rarely due to trigger), wait or error
-        if (session && !profile) return
-
-        // 3. Check Status
-        if (profile) {
-            // 3.1 Profile Incomplete -> Force Setup
+        // If user is logged in and has profile
+        if (userId && profile) {
+            // Check if profile is complete
             const isProfileComplete = profile.first_name && profile.last_name && profile.phone_number
+
+            // Force setup if profile incomplete
             if (!isProfileComplete && pathname !== '/profile/setup') {
                 router.push('/profile/setup')
                 return
             }
 
-            // 3.2 If on setup page but complete, go home
-            if (isProfileComplete && pathname === '/profile/setup') {
-                router.push('/')
+            // Check for pending status (but not on pending-approval page)
+            if (profile.status === 'pending' || profile.status === 'rejected') {
+                router.push('/pending-approval')
+                return
             }
 
-            // 3.3 Admin Redirect
+            // Redirect admin to admin dashboard from homepage
             if (profile.role === 'admin' && profile.status === 'approved' && pathname === '/') {
                 router.push('/admin')
             }
-
-            // 3.4 Pending Status Check (Block actions if pending?)
-            // This might be handled inside specific pages, but global guard ensures basic auth.
         }
-    }, [session, profile, isLoading, pathname, router])
+    }, [isInitialized, userId, profile, profileLoading, pathname, router])
 
-    if (isLoading) { // Show loading spinner
-        return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+    // Show loading only while initializing auth
+    if (!isInitialized) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-500">กำลังโหลด...</p>
+                </div>
+            </div>
+        )
     }
 
     return <>{children}</>

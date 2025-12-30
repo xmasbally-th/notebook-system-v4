@@ -1,6 +1,6 @@
-'use client'
-
 import EquipmentForm from '@/components/admin/EquipmentForm'
+
+export const dynamic = 'force-dynamic'
 
 export default function NewEquipmentPage() {
     return (
