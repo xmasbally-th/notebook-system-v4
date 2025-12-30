@@ -32,8 +32,11 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         if (isLoading) return
 
         // 1. If not logged in and not on login page, redirect to login
-        const publicPaths = ['/login', '/', '/auth/callback']
-        const isPublicPath = publicPaths.includes(pathname) || pathname.startsWith('/equipment') || pathname.startsWith('/register')
+        const publicPaths = ['/login', '/', '/auth/callback', '/auth/auth-code-error', '/pending-approval']
+        const isPublicPath = publicPaths.includes(pathname) ||
+            pathname.startsWith('/equipment') ||
+            pathname.startsWith('/register') ||
+            pathname.startsWith('/auth/')
 
         if (!session && !isPublicPath) {
             router.push('/login')
