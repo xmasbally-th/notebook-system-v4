@@ -7,6 +7,9 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
     title: 'Equipment Lending System V4',
     description: 'Manage equipment lending and reservations',
+    icons: {
+        icon: '/favicon.svg',
+    },
 }
 
 import QueryProvider from '@/components/providers/QueryProvider'
