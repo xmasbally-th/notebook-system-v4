@@ -13,11 +13,14 @@ export interface Database {
                 Row: {
                     id: string
                     email: string | null
+                    title: string | null
                     first_name: string | null
                     last_name: string | null
                     role: 'admin' | 'user'
                     status: 'pending' | 'approved' | 'rejected'
+                    user_type: 'student' | 'lecturer' | 'staff' | null
                     department: Json | null
+                    department_id: string | null
                     phone_number: string | null
                     created_at: string
                     updated_at: string
@@ -25,11 +28,14 @@ export interface Database {
                 Insert: {
                     id: string
                     email?: string | null
+                    title?: string | null
                     first_name?: string | null
                     last_name?: string | null
                     role?: 'admin' | 'user'
                     status?: 'pending' | 'approved' | 'rejected'
+                    user_type?: 'student' | 'lecturer' | 'staff' | null
                     department?: Json | null
+                    department_id?: string | null
                     phone_number?: string | null
                     created_at?: string
                     updated_at?: string
@@ -37,11 +43,14 @@ export interface Database {
                 Update: {
                     id?: string
                     email?: string | null
+                    title?: string | null
                     first_name?: string | null
                     last_name?: string | null
                     role?: 'admin' | 'user'
                     status?: 'pending' | 'approved' | 'rejected'
+                    user_type?: 'student' | 'lecturer' | 'staff' | null
                     department?: Json | null
+                    department_id?: string | null
                     phone_number?: string | null
                     created_at?: string
                     updated_at?: string
