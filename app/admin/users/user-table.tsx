@@ -1,7 +1,23 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, X, Shield, ShieldAlert, Search, Filter } from 'lucide-react'
+import {
+    Check,
+    X,
+    Shield,
+    ShieldOff,
+    Search,
+    User,
+    Phone,
+    Building2,
+    Mail,
+    Loader2,
+    Clock,
+    CheckCircle2,
+    XCircle,
+    MoreVertical,
+    ChevronDown
+} from 'lucide-react'
 import { updateUserStatus, updateUserRole } from './actions'
 import { useRouter } from 'next/navigation'
 
@@ -19,24 +35,36 @@ type User = {
     departments: { name: string } | null
 }
 
+const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+    pending: { label: 'รออนุมัติ', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: <Clock className="w-3.5 h-3.5" /> },
+    approved: { label: 'อนุมัติแล้ว', color: 'bg-green-100 text-green-800 border-green-200', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+    rejected: { label: 'ถูกปฏิเสธ', color: 'bg-red-100 text-red-800 border-red-200', icon: <XCircle className="w-3.5 h-3.5" /> },
+}
+
+const userTypeLabels: Record<string, string> = {
+    student: 'นักศึกษา',
+    lecturer: 'อาจารย์',
+    staff: 'บุคลากร'
+}
+
 export default function UserTable({ users }: { users: User[] }) {
     const router = useRouter()
     const [loading, setLoading] = useState<string | null>(null)
     const [filterStatus, setFilterStatus] = useState('all')
-    const [filterRole, setFilterRole] = useState('all')
     const [search, setSearch] = useState('')
+    const [expandedUser, setExpandedUser] = useState<string | null>(null)
 
     const filteredUsers = users.filter(user => {
         const matchesStatus = filterStatus === 'all' || user.status === filterStatus
-        const matchesRole = filterRole === 'all' || user.role === filterRole
         const fullName = `${user.title || ''}${user.first_name} ${user.last_name || ''}`.toLowerCase()
         const matchesSearch = fullName.includes(search.toLowerCase()) ||
             user.email.toLowerCase().includes(search.toLowerCase())
-        return matchesStatus && matchesRole && matchesSearch
+        return matchesStatus && matchesSearch
     })
 
     const handleStatusUpdate = async (userId: string, status: 'approved' | 'rejected') => {
-        if (!confirm(`Are you sure you want to ${status} this user?`)) return
+        const confirmMsg = status === 'approved' ? 'ต้องการอนุมัติผู้ใช้นี้หรือไม่?' : 'ต้องการปฏิเสธผู้ใช้นี้หรือไม่?'
+        if (!confirm(confirmMsg)) return
 
         setLoading(userId)
         try {
@@ -50,7 +78,8 @@ export default function UserTable({ users }: { users: User[] }) {
     }
 
     const handleRoleUpdate = async (userId: string, role: 'admin' | 'user') => {
-        if (!confirm(`Change role to ${role}?`)) return
+        const confirmMsg = role === 'admin' ? 'ต้องการเลื่อนตำแหน่งเป็น Admin หรือไม่?' : 'ต้องการลดตำแหน่งเป็น User หรือไม่?'
+        if (!confirm(confirmMsg)) return
 
         setLoading(userId)
         try {
@@ -63,150 +92,290 @@ export default function UserTable({ users }: { users: User[] }) {
         }
     }
 
+    const getInitials = (user: User) => {
+        const first = user.first_name?.charAt(0) || ''
+        const last = user.last_name?.charAt(0) || ''
+        return (first + last).toUpperCase() || 'U'
+    }
+
     return (
         <div className="space-y-4">
             {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-                <div className="flex gap-4 items-center flex-1">
-                    <div className="relative flex-1 max-w-sm">
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex flex-col sm:flex-row gap-3">
+                    {/* Search */}
+                    <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Search users..."
-                            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            placeholder="ค้นหาผู้ใช้..."
+                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
-                </div>
-                <div className="flex gap-4">
-                    <select
-                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
-                        value={filterStatus}
-                        onChange={e => setFilterStatus(e.target.value)}
-                    >
-                        <option value="all">All Status</option>
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
-                    </select>
-                    <select
-                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
-                        value={filterRole}
-                        onChange={e => setFilterRole(e.target.value)}
-                    >
-                        <option value="all">All Roles</option>
-                        <option value="student">Student</option>
-                        <option value="lecturer">Lecturer</option>
-                        <option value="staff">Staff</option>
-                        <option value="admin">Admin</option>
-                    </select>
+
+                    {/* Status Filter Tabs */}
+                    <div className="flex bg-gray-100 p-1 rounded-xl">
+                        {[
+                            { value: 'all', label: 'ทั้งหมด' },
+                            { value: 'pending', label: 'รออนุมัติ' },
+                            { value: 'approved', label: 'อนุมัติแล้ว' },
+                            { value: 'rejected', label: 'ปฏิเสธ' }
+                        ].map(tab => (
+                            <button
+                                key={tab.value}
+                                onClick={() => setFilterStatus(tab.value)}
+                                className={`
+                                    px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all
+                                    ${filterStatus === tab.value
+                                        ? 'bg-white text-gray-900 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                    }
+                                `}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
-            {/* Table */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-gray-50 border-b border-gray-200">
+            {/* Results Count */}
+            <div className="text-sm text-gray-500 px-1">
+                แสดง {filteredUsers.length} จาก {users.length} รายการ
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden lg:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-100">
+                        <tr>
+                            <th className="px-6 py-4 font-medium text-gray-500">ผู้ใช้</th>
+                            <th className="px-6 py-4 font-medium text-gray-500">ติดต่อ</th>
+                            <th className="px-6 py-4 font-medium text-gray-500">หน่วยงาน</th>
+                            <th className="px-6 py-4 font-medium text-gray-500">สถานะ</th>
+                            <th className="px-6 py-4 font-medium text-gray-500">สิทธิ์</th>
+                            <th className="px-6 py-4 font-medium text-gray-500 text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                        {filteredUsers.length === 0 ? (
                             <tr>
-                                <th className="px-6 py-3 font-medium text-gray-500">User</th>
-                                <th className="px-6 py-3 font-medium text-gray-500">Contact / Dept</th>
-                                <th className="px-6 py-3 font-medium text-gray-500">Status</th>
-                                <th className="px-6 py-3 font-medium text-gray-500">Role</th>
-                                <th className="px-6 py-3 font-medium text-gray-500 text-right">Actions</th>
+                                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                                    <User className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                                    <p>ไม่พบผู้ใช้ที่ตรงตามเงื่อนไข</p>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                            {filteredUsers.length === 0 ? (
-                                <tr>
-                                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                                        No users found matching filters.
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredUsers.map(user => (
-                                    <tr key={user.id} className="hover:bg-gray-50">
+                        ) : (
+                            filteredUsers.map(user => {
+                                const status = statusConfig[user.status] || statusConfig.pending
+                                return (
+                                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4">
-                                            <div>
-                                                <div className="font-medium text-gray-900">
-                                                    {user.title} {user.first_name} {user.last_name}
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold text-sm">
+                                                    {getInitials(user)}
                                                 </div>
-                                                <div className="text-gray-500 text-xs">{user.email}</div>
+                                                <div>
+                                                    <div className="font-medium text-gray-900">
+                                                        {user.title} {user.first_name} {user.last_name}
+                                                    </div>
+                                                    <div className="text-gray-500 text-xs">
+                                                        {user.user_type ? userTypeLabels[user.user_type] : '-'}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="text-gray-900">{user.departments?.name || '-'}</div>
-                                            <div className="text-gray-500 text-xs capitalize">{user.user_type} • {user.phone_number}</div>
+                                            <div className="text-gray-900 text-xs">{user.email}</div>
+                                            <div className="text-gray-500 text-xs">{user.phone_number || '-'}</div>
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-900">
+                                            {user.departments?.name || '-'}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
-                                                ${user.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                                    user.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
-                                                {user.status}
+                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${status.color}`}>
+                                                {status.icon}
+                                                {status.label}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
                                             {user.role === 'admin' ? (
-                                                <span className="flex items-center gap-1 text-purple-600 font-medium text-xs">
-                                                    <ShieldAlert className="w-3 h-3" /> Admin
+                                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-medium">
+                                                    <Shield className="w-3 h-3" />
+                                                    Admin
                                                 </span>
                                             ) : (
                                                 <span className="text-gray-500 text-xs">User</span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 text-right space-x-2">
+                                        <td className="px-6 py-4">
                                             {loading === user.id ? (
-                                                <span className="text-xs text-gray-500">Updating...</span>
+                                                <div className="flex justify-center">
+                                                    <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                                                </div>
                                             ) : (
-                                                <>
-                                                    {/* Status Actions */}
+                                                <div className="flex items-center justify-center gap-1">
                                                     {user.status === 'pending' && (
                                                         <>
                                                             <button
                                                                 onClick={() => handleStatusUpdate(user.id, 'approved')}
-                                                                className="text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 p-1.5 rounded-md transition-colors"
-                                                                title="Approve"
+                                                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                                title="อนุมัติ"
                                                             >
                                                                 <Check className="w-4 h-4" />
                                                             </button>
                                                             <button
                                                                 onClick={() => handleStatusUpdate(user.id, 'rejected')}
-                                                                className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-1.5 rounded-md transition-colors"
-                                                                title="Reject"
+                                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                                title="ปฏิเสธ"
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </button>
                                                         </>
                                                     )}
-
-                                                    {/* Role Toggle (Simple for now) */}
                                                     {user.role === 'user' ? (
                                                         <button
                                                             onClick={() => handleRoleUpdate(user.id, 'admin')}
-                                                            className="text-gray-400 hover:text-purple-600 p-1.5"
-                                                            title="Promote to Admin"
+                                                            className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                                            title="เลื่อนเป็น Admin"
                                                         >
                                                             <Shield className="w-4 h-4" />
                                                         </button>
                                                     ) : (
                                                         <button
                                                             onClick={() => handleRoleUpdate(user.id, 'user')}
-                                                            className="text-purple-600 hover:text-gray-500 p-1.5"
-                                                            title="Demote to User"
+                                                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                                            title="ลดเป็น User"
                                                         >
-                                                            <ShieldAlert className="w-4 h-4" />
+                                                            <ShieldOff className="w-4 h-4" />
                                                         </button>
                                                     )}
-                                                </>
+                                                </div>
                                             )}
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                )
+                            })
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="lg:hidden space-y-3">
+                {filteredUsers.length === 0 ? (
+                    <div className="bg-white rounded-2xl p-8 text-center text-gray-500 border border-gray-100">
+                        <User className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                        <p>ไม่พบผู้ใช้ที่ตรงตามเงื่อนไข</p>
+                    </div>
+                ) : (
+                    filteredUsers.map(user => {
+                        const status = statusConfig[user.status] || statusConfig.pending
+                        const isExpanded = expandedUser === user.id
+                        return (
+                            <div
+                                key={user.id}
+                                className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+                            >
+                                {/* Card Header */}
+                                <div
+                                    className="p-4 flex items-center gap-3 cursor-pointer"
+                                    onClick={() => setExpandedUser(isExpanded ? null : user.id)}
+                                >
+                                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold flex-shrink-0">
+                                        {getInitials(user)}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium text-gray-900 truncate">
+                                                {user.title} {user.first_name} {user.last_name}
+                                            </span>
+                                            {user.role === 'admin' && (
+                                                <Shield className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                                            )}
+                                        </div>
+                                        <div className="text-sm text-gray-500 truncate">{user.email}</div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${status.color}`}>
+                                            {status.icon}
+                                            <span className="hidden sm:inline">{status.label}</span>
+                                        </span>
+                                        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                    </div>
+                                </div>
+
+                                {/* Expanded Content */}
+                                {isExpanded && (
+                                    <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3 animate-in fade-in slide-in-from-top-2">
+                                        {/* Info Grid */}
+                                        <div className="grid grid-cols-2 gap-3 text-sm">
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <Phone className="w-4 h-4 text-gray-400" />
+                                                <span>{user.phone_number || '-'}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <User className="w-4 h-4 text-gray-400" />
+                                                <span>{user.user_type ? userTypeLabels[user.user_type] : '-'}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-gray-600 col-span-2">
+                                                <Building2 className="w-4 h-4 text-gray-400" />
+                                                <span>{user.departments?.name || '-'}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Actions */}
+                                        {loading === user.id ? (
+                                            <div className="flex justify-center py-2">
+                                                <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                                            </div>
+                                        ) : (
+                                            <div className="flex gap-2 pt-2">
+                                                {user.status === 'pending' && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleStatusUpdate(user.id, 'approved')}
+                                                            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-colors"
+                                                        >
+                                                            <Check className="w-4 h-4" />
+                                                            อนุมัติ
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleStatusUpdate(user.id, 'rejected')}
+                                                            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors"
+                                                        >
+                                                            <X className="w-4 h-4" />
+                                                            ปฏิเสธ
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {user.role === 'user' ? (
+                                                    <button
+                                                        onClick={() => handleRoleUpdate(user.id, 'admin')}
+                                                        className={`${user.status === 'pending' ? '' : 'flex-1'} flex items-center justify-center gap-2 py-2.5 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors`}
+                                                    >
+                                                        <Shield className="w-4 h-4" />
+                                                        เลื่อนเป็น Admin
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleRoleUpdate(user.id, 'user')}
+                                                        className={`${user.status === 'pending' ? '' : 'flex-1'} flex items-center justify-center gap-2 py-2.5 bg-gray-600 text-white rounded-xl font-medium hover:bg-gray-700 transition-colors`}
+                                                    >
+                                                        <ShieldOff className="w-4 h-4" />
+                                                        ลดเป็น User
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })
+                )}
             </div>
         </div>
     )
