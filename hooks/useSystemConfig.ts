@@ -11,20 +11,40 @@ export function useSystemConfig() {
         staleTime: 0,   // Always get fresh config for admin page
         retry: 3,       // Retry more for critical config
         queryFn: async () => {
-            console.log('[useSystemConfig] Fetching system config...')
+            console.log('[useSystemConfig] Starting fetch...')
 
-            const { data, error } = await (supabase as any)
-                .from('system_config')
-                .select('*')
-                .single()
+            try {
+                const supabaseClient = supabase as any
+                console.log('[useSystemConfig] Supabase client available:', !!supabaseClient)
 
-            if (error) {
-                console.error('[useSystemConfig] Error:', error)
-                throw error
+                const query = supabaseClient.from('system_config')
+                console.log('[useSystemConfig] Query created:', !!query)
+
+                const selectQuery = query.select('*')
+                console.log('[useSystemConfig] Select query created:', !!selectQuery)
+
+                const result = await selectQuery.single()
+                console.log('[useSystemConfig] Query completed, result:', result)
+
+                const { data, error } = result
+
+                if (error) {
+                    console.error('[useSystemConfig] Supabase error:', error.message, error.code, error)
+                    throw error
+                }
+
+                if (!data) {
+                    console.warn('[useSystemConfig] No data returned, system_config table might be empty')
+                    // Return default config if no data
+                    throw new Error('ไม่พบข้อมูลการตั้งค่าระบบ กรุณาตรวจสอบ database')
+                }
+
+                console.log('[useSystemConfig] Success:', data)
+                return data as SystemConfig
+            } catch (err) {
+                console.error('[useSystemConfig] Exception:', err)
+                throw err
             }
-
-            console.log('[useSystemConfig] Success:', data ? 'config loaded' : 'no config')
-            return data as SystemConfig
         }
     })
 }
