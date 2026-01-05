@@ -19,7 +19,8 @@ import {
     Plus,
     Trash2,
     Settings,
-    Megaphone
+    Megaphone,
+    RefreshCw
 } from 'lucide-react'
 import { Database } from '@/supabase/types'
 
@@ -53,7 +54,7 @@ const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
 ]
 
 export default function AdminSettingsPage() {
-    const { data: config, isLoading } = useSystemConfig()
+    const { data: config, isLoading, error, refetch } = useSystemConfig()
     const updateMutation = useUpdateSystemConfig()
 
     const [activeTab, setActiveTab] = useState<TabType>('limits')
@@ -145,6 +146,27 @@ export default function AdminSettingsPage() {
             <AdminLayout title="ตั้งค่าระบบ" subtitle="กำลังโหลด...">
                 <div className="flex items-center justify-center py-20">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                </div>
+            </AdminLayout>
+        )
+    }
+
+    if (error) {
+        return (
+            <AdminLayout title="ตั้งค่าระบบ" subtitle="เกิดข้อผิดพลาด">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-6 max-w-lg">
+                    <div className="flex items-center gap-3 mb-4">
+                        <AlertTriangle className="w-6 h-6 text-red-500" />
+                        <p className="text-red-700 font-medium">ไม่สามารถโหลดการตั้งค่าได้</p>
+                    </div>
+                    <p className="text-sm text-red-600 mb-4">{(error as Error).message}</p>
+                    <button
+                        onClick={() => refetch()}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                        ลองใหม่
+                    </button>
                 </div>
             </AdminLayout>
         )

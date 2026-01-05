@@ -5,12 +5,12 @@ import Link from 'next/link'
 import { useEquipmentTypes, useEquipmentTypeMutation } from '@/hooks/useEquipmentTypes'
 import { Database } from '@/supabase/types'
 import AdminLayout from '@/components/admin/AdminLayout'
-import { Plus, Edit, Trash2, Tag, CheckCircle, XCircle, AlertTriangle } from 'lucide-react'
+import { Plus, Edit, Trash2, Tag, CheckCircle, XCircle, AlertTriangle, RefreshCw } from 'lucide-react'
 
 type EquipmentType = Database['public']['Tables']['equipment_types']['Row']
 
 export default function EquipmentTypesPage() {
-    const { data: types, isLoading } = useEquipmentTypes()
+    const { data: types, isLoading, error, refetch } = useEquipmentTypes()
     const mutations = useEquipmentTypeMutation()
     const [deleteId, setDeleteId] = useState<string | null>(null)
 
@@ -32,6 +32,23 @@ export default function EquipmentTypesPage() {
 
     return (
         <AdminLayout title="จัดการประเภทอุปกรณ์" subtitle="เพิ่ม แก้ไข และลบประเภทอุปกรณ์">
+            {/* Error Display */}
+            {error && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <AlertTriangle className="w-5 h-5 text-red-500" />
+                        <p className="text-red-700">ไม่สามารถโหลดข้อมูลได้: {(error as Error).message}</p>
+                    </div>
+                    <button
+                        onClick={() => refetch()}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                        ลองใหม่
+                    </button>
+                </div>
+            )}
+
             {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                 <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
@@ -120,8 +137,8 @@ export default function EquipmentTypesPage() {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${type.is_active
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-gray-100 text-gray-600'
+                                            ? 'bg-green-100 text-green-700'
+                                            : 'bg-gray-100 text-gray-600'
                                             }`}>
                                             {type.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
                                         </span>

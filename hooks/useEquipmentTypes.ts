@@ -9,7 +9,11 @@ type EquipmentTypeUpdate = Database['public']['Tables']['equipment_types']['Upda
 export function useEquipmentTypes(id?: string) {
     return useQuery({
         queryKey: ['equipment-types', id],
+        staleTime: 0,  // Always refetch on mount for admin page
+        retry: 2,
         queryFn: async () => {
+            console.log('[useEquipmentTypes] Fetching equipment types...', id ? `id: ${id}` : 'all')
+
             let query: any = supabase
                 .from('equipment_types' as any)
                 .select('*')
@@ -21,7 +25,13 @@ export function useEquipmentTypes(id?: string) {
             }
 
             const { data, error } = await query
-            if (error) throw error
+
+            if (error) {
+                console.error('[useEquipmentTypes] Error:', error)
+                throw error
+            }
+
+            console.log('[useEquipmentTypes] Success:', Array.isArray(data) ? `${data.length} items` : 'single item')
 
             if (Array.isArray(data)) {
                 return data as EquipmentType[]
