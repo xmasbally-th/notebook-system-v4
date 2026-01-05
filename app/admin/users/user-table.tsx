@@ -10,16 +10,18 @@ import {
     User,
     Phone,
     Building2,
-    Mail,
     Loader2,
     Clock,
     CheckCircle2,
     XCircle,
-    MoreVertical,
-    ChevronDown
+    ChevronDown,
+    RotateCcw,
+    CheckCheck,
+    XOctagon
 } from 'lucide-react'
-import { updateUserStatus, updateUserRole } from './actions'
+import { updateUserStatus, updateUserRole, updateMultipleUserStatus } from './actions'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/ui/toast'
 
 type User = {
     id: string
@@ -49,10 +51,16 @@ const userTypeLabels: Record<string, string> = {
 
 export default function UserTable({ users }: { users: User[] }) {
     const router = useRouter()
+    const toast = useToast()
     const [loading, setLoading] = useState<string | null>(null)
+    const [bulkLoading, setBulkLoading] = useState(false)
     const [filterStatus, setFilterStatus] = useState('all')
     const [search, setSearch] = useState('')
     const [expandedUser, setExpandedUser] = useState<string | null>(null)
+
+    // Bulk selection state
+    const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
+    const [showBulkActions, setShowBulkActions] = useState(false)
 
     const filteredUsers = users.filter(user => {
         const matchesStatus = filterStatus === 'all' || user.status === filterStatus
@@ -62,16 +70,27 @@ export default function UserTable({ users }: { users: User[] }) {
         return matchesStatus && matchesSearch
     })
 
-    const handleStatusUpdate = async (userId: string, status: 'approved' | 'rejected') => {
-        const confirmMsg = status === 'approved' ? 'ต้องการอนุมัติผู้ใช้นี้หรือไม่?' : 'ต้องการปฏิเสธผู้ใช้นี้หรือไม่?'
-        if (!confirm(confirmMsg)) return
+    // Get pending users for bulk actions
+    const pendingUsers = filteredUsers.filter(u => u.status === 'pending')
+    const selectedPendingCount = Array.from(selectedUsers).filter(id =>
+        pendingUsers.some(u => u.id === id)
+    ).length
+
+    const handleStatusUpdate = async (userId: string, status: 'approved' | 'rejected' | 'pending') => {
+        const statusLabels: Record<string, string> = {
+            approved: 'อนุมัติ',
+            rejected: 'ปฏิเสธ',
+            pending: 'เปลี่ยนเป็นรออนุมัติ'
+        }
+        if (!confirm(`ต้องการ${statusLabels[status]}ผู้ใช้นี้หรือไม่?`)) return
 
         setLoading(userId)
         try {
             await updateUserStatus(userId, status)
             router.refresh()
+            toast.success(`${statusLabels[status]}ผู้ใช้เรียบร้อยแล้ว`)
         } catch (error: any) {
-            alert(error.message)
+            toast.error(`เกิดข้อผิดพลาด: ${error.message}`)
         } finally {
             setLoading(null)
         }
@@ -85,11 +104,59 @@ export default function UserTable({ users }: { users: User[] }) {
         try {
             await updateUserRole(userId, role)
             router.refresh()
+            toast.success(`เปลี่ยนสิทธิ์เป็น ${role === 'admin' ? 'Admin' : 'User'} เรียบร้อยแล้ว`)
         } catch (error: any) {
-            alert(error.message)
+            toast.error(`เกิดข้อผิดพลาด: ${error.message}`)
         } finally {
             setLoading(null)
         }
+    }
+
+    // Bulk actions
+    const handleBulkStatusUpdate = async (status: 'approved' | 'rejected') => {
+        const selectedIds = Array.from(selectedUsers).filter(id =>
+            pendingUsers.some(u => u.id === id)
+        )
+
+        if (selectedIds.length === 0) {
+            toast.warning('กรุณาเลือกผู้ใช้ที่รออนุมัติ')
+            return
+        }
+
+        const statusLabel = status === 'approved' ? 'อนุมัติ' : 'ปฏิเสธ'
+        if (!confirm(`ต้องการ${statusLabel} ${selectedIds.length} คนที่เลือกหรือไม่?`)) return
+
+        setBulkLoading(true)
+        try {
+            await updateMultipleUserStatus(selectedIds, status)
+            setSelectedUsers(new Set())
+            router.refresh()
+            const statusLabel = status === 'approved' ? 'อนุมัติ' : 'ปฏิเสธ'
+            toast.success(`${statusLabel} ${selectedIds.length} คนเรียบร้อยแล้ว`)
+        } catch (error: any) {
+            toast.error(`เกิดข้อผิดพลาด: ${error.message}`)
+        } finally {
+            setBulkLoading(false)
+        }
+    }
+
+    // Selection handlers
+    const toggleSelectAll = () => {
+        if (selectedUsers.size === pendingUsers.length) {
+            setSelectedUsers(new Set())
+        } else {
+            setSelectedUsers(new Set(pendingUsers.map(u => u.id)))
+        }
+    }
+
+    const toggleSelectUser = (userId: string) => {
+        const newSelected = new Set(selectedUsers)
+        if (newSelected.has(userId)) {
+            newSelected.delete(userId)
+        } else {
+            newSelected.add(userId)
+        }
+        setSelectedUsers(newSelected)
     }
 
     const getInitials = (user: User) => {
@@ -141,6 +208,55 @@ export default function UserTable({ users }: { users: User[] }) {
                 </div>
             </div>
 
+            {/* Bulk Actions Bar */}
+            {pendingUsers.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            checked={selectedUsers.size === pendingUsers.length && pendingUsers.length > 0}
+                            onChange={toggleSelectAll}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-blue-800">
+                            {selectedUsers.size > 0
+                                ? `เลือก ${selectedPendingCount} คน`
+                                : `เลือกทั้งหมด (${pendingUsers.length} คนรออนุมัติ)`
+                            }
+                        </span>
+                    </div>
+
+                    {selectedUsers.size > 0 && (
+                        <div className="flex gap-2 ml-auto">
+                            <button
+                                onClick={() => handleBulkStatusUpdate('approved')}
+                                disabled={bulkLoading}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                            >
+                                {bulkLoading ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <CheckCheck className="w-4 h-4" />
+                                )}
+                                อนุมัติที่เลือก
+                            </button>
+                            <button
+                                onClick={() => handleBulkStatusUpdate('rejected')}
+                                disabled={bulkLoading}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                            >
+                                {bulkLoading ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <XOctagon className="w-4 h-4" />
+                                )}
+                                ปฏิเสธที่เลือก
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Results Count */}
             <div className="text-sm text-gray-500 px-1">
                 แสดง {filteredUsers.length} จาก {users.length} รายการ
@@ -151,6 +267,16 @@ export default function UserTable({ users }: { users: User[] }) {
                 <table className="w-full text-left text-sm">
                     <thead className="bg-gray-50 border-b border-gray-100">
                         <tr>
+                            {filterStatus === 'pending' && (
+                                <th className="px-4 py-4 w-10">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedUsers.size === pendingUsers.length && pendingUsers.length > 0}
+                                        onChange={toggleSelectAll}
+                                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    />
+                                </th>
+                            )}
                             <th className="px-6 py-4 font-medium text-gray-500">ผู้ใช้</th>
                             <th className="px-6 py-4 font-medium text-gray-500">ติดต่อ</th>
                             <th className="px-6 py-4 font-medium text-gray-500">หน่วยงาน</th>
@@ -162,7 +288,7 @@ export default function UserTable({ users }: { users: User[] }) {
                     <tbody className="divide-y divide-gray-100">
                         {filteredUsers.length === 0 ? (
                             <tr>
-                                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                                <td colSpan={filterStatus === 'pending' ? 7 : 6} className="px-6 py-12 text-center text-gray-500">
                                     <User className="w-10 h-10 mx-auto mb-2 text-gray-300" />
                                     <p>ไม่พบผู้ใช้ที่ตรงตามเงื่อนไข</p>
                                 </td>
@@ -172,6 +298,16 @@ export default function UserTable({ users }: { users: User[] }) {
                                 const status = statusConfig[user.status] || statusConfig.pending
                                 return (
                                     <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                                        {filterStatus === 'pending' && (
+                                            <td className="px-4 py-4">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedUsers.has(user.id)}
+                                                    onChange={() => toggleSelectUser(user.id)}
+                                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                                />
+                                            </td>
+                                        )}
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold text-sm">
@@ -217,6 +353,7 @@ export default function UserTable({ users }: { users: User[] }) {
                                                 </div>
                                             ) : (
                                                 <div className="flex items-center justify-center gap-1">
+                                                    {/* Pending users: show approve/reject */}
                                                     {user.status === 'pending' && (
                                                         <>
                                                             <button
@@ -235,6 +372,28 @@ export default function UserTable({ users }: { users: User[] }) {
                                                             </button>
                                                         </>
                                                     )}
+
+                                                    {/* Rejected users: show re-approve options */}
+                                                    {user.status === 'rejected' && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleStatusUpdate(user.id, 'approved')}
+                                                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                                title="อนุมัติ"
+                                                            >
+                                                                <Check className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleStatusUpdate(user.id, 'pending')}
+                                                                className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                                title="เปลี่ยนเป็นรออนุมัติ"
+                                                            >
+                                                                <RotateCcw className="w-4 h-4" />
+                                                            </button>
+                                                        </>
+                                                    )}
+
+                                                    {/* Role toggle */}
                                                     {user.role === 'user' ? (
                                                         <button
                                                             onClick={() => handleRoleUpdate(user.id, 'admin')}
@@ -274,6 +433,9 @@ export default function UserTable({ users }: { users: User[] }) {
                     filteredUsers.map(user => {
                         const status = statusConfig[user.status] || statusConfig.pending
                         const isExpanded = expandedUser === user.id
+                        const isPending = user.status === 'pending'
+                        const isRejected = user.status === 'rejected'
+
                         return (
                             <div
                                 key={user.id}
@@ -284,6 +446,20 @@ export default function UserTable({ users }: { users: User[] }) {
                                     className="p-4 flex items-center gap-3 cursor-pointer"
                                     onClick={() => setExpandedUser(isExpanded ? null : user.id)}
                                 >
+                                    {/* Checkbox for pending users */}
+                                    {isPending && (
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedUsers.has(user.id)}
+                                            onChange={(e) => {
+                                                e.stopPropagation()
+                                                toggleSelectUser(user.id)
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                        />
+                                    )}
+
                                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold flex-shrink-0">
                                         {getInitials(user)}
                                     </div>
@@ -333,7 +509,8 @@ export default function UserTable({ users }: { users: User[] }) {
                                             </div>
                                         ) : (
                                             <div className="flex gap-2 pt-2">
-                                                {user.status === 'pending' && (
+                                                {/* Pending actions */}
+                                                {isPending && (
                                                     <>
                                                         <button
                                                             onClick={() => handleStatusUpdate(user.id, 'approved')}
@@ -351,21 +528,43 @@ export default function UserTable({ users }: { users: User[] }) {
                                                         </button>
                                                     </>
                                                 )}
-                                                {user.role === 'user' ? (
+
+                                                {/* Rejected actions - allow re-approve */}
+                                                {isRejected && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleStatusUpdate(user.id, 'approved')}
+                                                            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-colors"
+                                                        >
+                                                            <Check className="w-4 h-4" />
+                                                            อนุมัติ
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleStatusUpdate(user.id, 'pending')}
+                                                            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-amber-500 text-white rounded-xl font-medium hover:bg-amber-600 transition-colors"
+                                                        >
+                                                            <RotateCcw className="w-4 h-4" />
+                                                            รออนุมัติใหม่
+                                                        </button>
+                                                    </>
+                                                )}
+
+                                                {/* Role toggle for non-pending */}
+                                                {!isPending && user.role === 'user' ? (
                                                     <button
                                                         onClick={() => handleRoleUpdate(user.id, 'admin')}
-                                                        className={`${user.status === 'pending' ? '' : 'flex-1'} flex items-center justify-center gap-2 py-2.5 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors`}
+                                                        className={`${isRejected ? '' : 'flex-1'} flex items-center justify-center gap-2 py-2.5 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors`}
                                                     >
                                                         <Shield className="w-4 h-4" />
-                                                        เลื่อนเป็น Admin
+                                                        {isRejected ? '' : 'เลื่อนเป็น Admin'}
                                                     </button>
-                                                ) : (
+                                                ) : !isPending && (
                                                     <button
                                                         onClick={() => handleRoleUpdate(user.id, 'user')}
-                                                        className={`${user.status === 'pending' ? '' : 'flex-1'} flex items-center justify-center gap-2 py-2.5 bg-gray-600 text-white rounded-xl font-medium hover:bg-gray-700 transition-colors`}
+                                                        className={`${isRejected ? '' : 'flex-1'} flex items-center justify-center gap-2 py-2.5 bg-gray-600 text-white rounded-xl font-medium hover:bg-gray-700 transition-colors`}
                                                     >
                                                         <ShieldOff className="w-4 h-4" />
-                                                        ลดเป็น User
+                                                        {isRejected ? '' : 'ลดเป็น User'}
                                                     </button>
                                                 )}
                                             </div>

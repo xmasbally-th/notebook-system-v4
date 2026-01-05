@@ -5,8 +5,16 @@ import { NextResponse, type NextRequest } from 'next/server'
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+// Define route patterns
+const PUBLIC_ROUTES = ['/login', '/auth/callback', '/auth/auth-code-error']
+const PENDING_ROUTES = ['/pending-approval']
+const PROFILE_SETUP_ROUTES = ['/register/complete-profile', '/profile/setup']
+const ADMIN_ROUTES = ['/admin']
+const EQUIPMENT_ROUTES = ['/equipment']
+
 // Default export function - required by Next.js 16 proxy
 export default async function proxy(request: NextRequest) {
+    const { pathname } = request.nextUrl
     let response = NextResponse.next({ request })
 
     // If env vars are not available, pass through without auth
@@ -34,17 +42,87 @@ export default async function proxy(request: NextRequest) {
         }
     )
 
+    // Get current user
     const { data: { user } } = await supabase.auth.getUser()
 
-    // Protected routes check
-    const isProtectedRoute = request.nextUrl.pathname.startsWith('/admin') ||
-        request.nextUrl.pathname === '/profile' ||
-        request.nextUrl.pathname.startsWith('/my-loans')
+    // Check route types
+    const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route))
+    const isPendingRoute = PENDING_ROUTES.some(route => pathname.startsWith(route))
+    const isProfileSetupRoute = PROFILE_SETUP_ROUTES.some(route => pathname.startsWith(route))
+    const isAdminRoute = ADMIN_ROUTES.some(route => pathname.startsWith(route))
+    const isEquipmentRoute = EQUIPMENT_ROUTES.some(route => pathname.startsWith(route))
 
-    if (!user && isProtectedRoute) {
+    // Equipment routes are public - no auth needed
+    if (isEquipmentRoute) {
+        return response
+    }
+
+    // If no user and trying to access protected route, redirect to login
+    if (!user && !isPublicRoute && !isPendingRoute) {
         const url = request.nextUrl.clone()
         url.pathname = '/login'
         return NextResponse.redirect(url)
+    }
+
+    // If user exists, check profile and status
+    if (user) {
+        // Redirect logged-in users away from login page
+        if (pathname === '/login') {
+            const url = request.nextUrl.clone()
+            url.pathname = '/'
+            return NextResponse.redirect(url)
+        }
+
+        // Get user profile for status/role checking
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('status, role, first_name, last_name, phone_number')
+            .eq('id', user.id)
+            .single()
+
+        if (profile) {
+            const isProfileIncomplete = !profile.first_name || !profile.last_name || !profile.phone_number
+            const isProfileComplete = profile.first_name && profile.last_name && profile.phone_number
+            const isPending = profile.status === 'pending'
+            const isRejected = profile.status === 'rejected'
+            const isApproved = profile.status === 'approved'
+            const isAdmin = profile.role === 'admin'
+
+            // If profile is incomplete, redirect to setup (unless already there)
+            if (isProfileIncomplete && !isProfileSetupRoute && !isPublicRoute) {
+                const url = request.nextUrl.clone()
+                url.pathname = '/register/complete-profile'
+                return NextResponse.redirect(url)
+            }
+
+            // If pending/rejected, redirect to pending-approval
+            if ((isPending || isRejected) && !isPendingRoute && !isProfileSetupRoute && isProfileComplete) {
+                const url = request.nextUrl.clone()
+                url.pathname = '/pending-approval'
+                return NextResponse.redirect(url)
+            }
+
+            // If approved and trying to access pending-approval, redirect to home
+            if (isApproved && isPendingRoute) {
+                const url = request.nextUrl.clone()
+                url.pathname = '/'
+                return NextResponse.redirect(url)
+            }
+
+            // If not admin trying to access admin routes, redirect to home
+            if (isAdminRoute && !isAdmin) {
+                const url = request.nextUrl.clone()
+                url.pathname = '/'
+                return NextResponse.redirect(url)
+            }
+
+            // If approved and admin accessing home, redirect to admin dashboard
+            if (isAdmin && isApproved && pathname === '/') {
+                const url = request.nextUrl.clone()
+                url.pathname = '/admin'
+                return NextResponse.redirect(url)
+            }
+        }
     }
 
     return response

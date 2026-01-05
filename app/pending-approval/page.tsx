@@ -1,56 +1,83 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
-import { Loader2, Clock, CheckCircle2, Mail, Phone, LogOut, Laptop } from 'lucide-react'
+import { Loader2, Clock, CheckCircle2, Mail, Phone, LogOut, Laptop, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
+import { useToast } from '@/components/ui/toast'
+
+// Faster polling interval (15 seconds)
+const POLL_INTERVAL = 15000
 
 export default function PendingApprovalPage() {
     const router = useRouter()
+    const toast = useToast()
     const [loading, setLoading] = useState(true)
     const [profile, setProfile] = useState<any>(null)
     const [loggingOut, setLoggingOut] = useState(false)
+    const [isChecking, setIsChecking] = useState(false)
+    const previousStatusRef = useRef<string | null>(null)
 
     // Check auth and profile status
     useEffect(() => {
         const checkStatus = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
+            setIsChecking(true)
 
-            if (!user) {
-                router.replace('/login')
-                return
+            try {
+                const { data: { user } } = await supabase.auth.getUser()
+
+                if (!user) {
+                    router.replace('/login')
+                    return
+                }
+
+                // Get profile
+                const { data: profileData } = await (supabase as any)
+                    .from('profiles')
+                    .select('*, departments(name)')
+                    .eq('id', user.id)
+                    .single()
+
+                if (!profileData) {
+                    router.replace('/register/complete-profile')
+                    return
+                }
+
+                // Check if status changed
+                if (previousStatusRef.current &&
+                    previousStatusRef.current !== profileData.status) {
+                    if (profileData.status === 'approved') {
+                        toast.success('🎉 บัญชีของคุณได้รับการอนุมัติแล้ว!')
+                    } else if (profileData.status === 'rejected' &&
+                        previousStatusRef.current === 'pending') {
+                        toast.error('บัญชีของคุณถูกปฏิเสธ กรุณาติดต่อเจ้าหน้าที่')
+                    }
+                }
+                previousStatusRef.current = profileData.status
+
+                // If already approved, redirect to home
+                if (profileData.status === 'approved') {
+                    setTimeout(() => {
+                        router.replace('/')
+                    }, 1500) // Delay to show toast
+                    return
+                }
+
+                // If rejected, could show different page (for now just show status)
+                setProfile(profileData)
+                setLoading(false)
+            } finally {
+                setIsChecking(false)
             }
-
-            // Get profile
-            const { data: profileData } = await (supabase as any)
-                .from('profiles')
-                .select('*, departments(name)')
-                .eq('id', user.id)
-                .single()
-
-            if (!profileData) {
-                router.replace('/register/complete-profile')
-                return
-            }
-
-            // If already approved, redirect to home
-            if (profileData.status === 'approved') {
-                router.replace('/')
-                return
-            }
-
-            // If rejected, could show different page (for now just show status)
-            setProfile(profileData)
-            setLoading(false)
         }
 
         checkStatus()
 
-        // Set up auto-refresh every 30 seconds to check if approved
-        const interval = setInterval(checkStatus, 30000)
+        // Set up auto-refresh with faster interval
+        const interval = setInterval(checkStatus, POLL_INTERVAL)
         return () => clearInterval(interval)
-    }, [router])
+    }, [router, toast])
 
     const handleLogout = async () => {
         setLoggingOut(true)
@@ -212,7 +239,7 @@ export default function PendingApprovalPage() {
                             <ul className="text-sm text-blue-700 space-y-1">
                                 <li>• เจ้าหน้าที่จะตรวจสอบข้อมูลของคุณโดยเร็วที่สุด</li>
                                 <li>• คุณจะได้รับการแจ้งเตือนทางอีเมลเมื่อได้รับการอนุมัติ</li>
-                                <li>• หน้านี้จะรีเฟรชอัตโนมัติทุก 30 วินาที</li>
+                                <li>• หน้านี้จะรีเฟรชอัตโนมัติทุก 15 วินาที</li>
                             </ul>
                         </div>
 
