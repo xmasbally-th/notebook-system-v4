@@ -56,12 +56,44 @@ export interface Database {
                     updated_at?: string
                 }
             }
+            equipment_types: {
+                Row: {
+                    id: string
+                    name: string
+                    description: string | null
+                    icon: string
+                    is_active: boolean
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    name: string
+                    description?: string | null
+                    icon?: string
+                    is_active?: boolean
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    name?: string
+                    description?: string | null
+                    icon?: string
+                    is_active?: boolean
+                    created_at?: string
+                    updated_at?: string
+                }
+            }
             equipment: {
                 Row: {
                     id: string
                     equipment_number: string
                     name: string
-                    status: 'active' | 'maintenance' | 'retired' | 'lost'
+                    brand: string | null
+                    model: string | null
+                    equipment_type_id: string | null
+                    status: 'ready' | 'borrowed' | 'maintenance' | 'retired'
                     category: Json | null
                     images: Json
                     search_keywords: string[]
@@ -75,7 +107,10 @@ export interface Database {
                     id?: string
                     equipment_number: string
                     name: string
-                    status?: 'active' | 'maintenance' | 'retired' | 'lost'
+                    brand?: string | null
+                    model?: string | null
+                    equipment_type_id?: string | null
+                    status?: 'ready' | 'borrowed' | 'maintenance' | 'retired'
                     category?: Json | null
                     images?: Json
                     search_keywords?: string[]
@@ -89,7 +124,10 @@ export interface Database {
                     id?: string
                     equipment_number?: string
                     name?: string
-                    status?: 'active' | 'maintenance' | 'retired' | 'lost'
+                    brand?: string | null
+                    model?: string | null
+                    equipment_type_id?: string | null
+                    status?: 'ready' | 'borrowed' | 'maintenance' | 'retired'
                     category?: Json | null
                     images?: Json
                     search_keywords?: string[]

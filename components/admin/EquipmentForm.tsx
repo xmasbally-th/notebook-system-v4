@@ -1,32 +1,58 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
 import { Database } from '@/supabase/types'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Save, ArrowLeft, Package } from 'lucide-react'
+import Link from 'next/link'
+import ImageUpload from '@/components/ui/ImageUpload'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 type EquipmentInsert = Database['public']['Tables']['equipment']['Insert']
+type EquipmentType = Database['public']['Tables']['equipment_types']['Row']
 
 interface EquipmentFormProps {
     initialData?: Equipment
     isEditing?: boolean
 }
 
+const STATUS_OPTIONS = [
+    { value: 'ready', label: 'พร้อมใช้งาน', color: 'bg-green-100 text-green-700' },
+    { value: 'borrowed', label: 'ถูกยืม', color: 'bg-blue-100 text-blue-700' },
+    { value: 'maintenance', label: 'ซ่อมบำรุง', color: 'bg-yellow-100 text-yellow-700' },
+    { value: 'retired', label: 'เลิกใช้งาน', color: 'bg-gray-100 text-gray-600' },
+]
+
 export default function EquipmentForm({ initialData, isEditing = false }: EquipmentFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const [error, setError] = useState<string | null>(null)
 
-    // Form State
+    // Fetch equipment types for dropdown
+    const { data: equipmentTypes } = useQuery({
+        queryKey: ['equipment-types'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('equipment_types' as any)
+                .select('*')
+                .eq('is_active', true)
+                .order('name')
+            if (error) throw error
+            return data as EquipmentType[]
+        }
+    })
+
+    // Form State - updated with new fields
     const [formData, setFormData] = useState<Partial<EquipmentInsert>>({
         name: initialData?.name || '',
         equipment_number: initialData?.equipment_number || '',
-        status: initialData?.status || 'active',
-        category: (initialData?.category as any) || { name: 'General', type: 'Other' },
-        location: (initialData?.location as any) || { building: 'Main', room: 'Storage' },
+        brand: (initialData as any)?.brand || '',
+        model: (initialData as any)?.model || '',
+        equipment_type_id: (initialData as any)?.equipment_type_id || '',
+        status: ((initialData as any)?.status_new || initialData?.status || 'ready') as any,
+        location: (initialData?.location as any) || { building: '', room: '' },
         specifications: (initialData?.specifications as any) || {},
         images: (initialData?.images as any) || [],
         is_active: initialData?.is_active ?? true,
@@ -34,16 +60,23 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
 
     const mutation = useMutation({
         mutationFn: async (data: EquipmentInsert) => {
+            // Prepare data for upsert
+            const submitData = {
+                ...data,
+                // Handle status_new column for migration
+                status_new: data.status,
+            }
+
             if (isEditing && initialData) {
                 const { error } = await (supabase as any)
                     .from('equipment')
-                    .update(data as any)
+                    .update(submitData as any)
                     .eq('id', initialData.id)
                 if (error) throw error
             } else {
                 const { error } = await (supabase as any)
                     .from('equipment')
-                    .insert(data as any)
+                    .insert(submitData as any)
                 if (error) throw error
             }
         },
@@ -61,9 +94,13 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
         e.preventDefault()
         setError(null)
 
-        // Basic Validation
-        if (!formData.name || !formData.equipment_number) {
-            setError('Name and Equipment Number are required')
+        // Validation
+        if (!formData.name?.trim()) {
+            setError('กรุณาระบุชื่ออุปกรณ์')
+            return
+        }
+        if (!formData.equipment_number?.trim()) {
+            setError('กรุณาระบุหมายเลขครุภัณฑ์')
             return
         }
 
@@ -74,106 +111,262 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
         setFormData(prev => ({ ...prev, [field]: value }))
     }
 
-    // Helper for nested JSON fields
-    const handleNestedChange = (parent: 'category' | 'location', field: string, value: any) => {
+    const handleLocationChange = (field: string, value: string) => {
         setFormData(prev => ({
             ...prev,
-            [parent]: {
-                ...(prev[parent] as any),
+            location: {
+                ...(prev.location as any),
                 [field]: value
             }
         }))
     }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+        <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
+            {/* Back Link */}
+            <Link
+                href="/admin/equipment"
+                className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+            >
+                <ArrowLeft className="w-4 h-4" />
+                กลับไปรายการอุปกรณ์
+            </Link>
+
+            {/* Error Message */}
             {error && (
-                <div className="p-4 bg-red-50 text-red-600 rounded-lg text-sm">
+                <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
                     {error}
                 </div>
             )}
 
-            <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Basic Information</h3>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                        <input
-                            type="text"
-                            required
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-                            value={formData.name}
-                            onChange={(e) => handleChange('name', e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Equipment Number *</label>
-                        <input
-                            type="text"
-                            required
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-                            value={formData.equipment_number}
-                            onChange={(e) => handleChange('equipment_number', e.target.value)}
-                        />
+            {/* Main Form Card */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                            <Package className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-semibold text-gray-900">
+                                {isEditing ? 'แก้ไขข้อมูลอุปกรณ์' : 'เพิ่มอุปกรณ์ใหม่'}
+                            </h2>
+                            <p className="text-sm text-gray-500">
+                                กรอกข้อมูลด้านล่างให้ครบถ้วน
+                            </p>
+                        </div>
                     </div>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-                        value={formData.status}
-                        onChange={(e) => handleChange('status', e.target.value)}
-                    >
-                        <option value="active">Active</option>
-                        <option value="maintenance">Maintenance</option>
-                        <option value="retired">Retired</option>
-                        <option value="lost">Lost</option>
-                    </select>
+                <div className="p-6 space-y-6">
+                    {/* Basic Information */}
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                            ข้อมูลพื้นฐาน
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Name */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    ชื่ออุปกรณ์ <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="เช่น MacBook Pro 14"
+                                    value={formData.name}
+                                    onChange={(e) => handleChange('name', e.target.value)}
+                                />
+                            </div>
+
+                            {/* Equipment Number */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    หมายเลขครุภัณฑ์ <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="เช่น IT-NB-001"
+                                    value={formData.equipment_number}
+                                    onChange={(e) => handleChange('equipment_number', e.target.value)}
+                                />
+                            </div>
+
+                            {/* Brand */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    ยี่ห้อ
+                                </label>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="เช่น Apple, Dell, HP"
+                                    value={(formData as any).brand || ''}
+                                    onChange={(e) => handleChange('brand', e.target.value)}
+                                />
+                            </div>
+
+                            {/* Model */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    รุ่น
+                                </label>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="เช่น MacBook Pro 14-inch M3"
+                                    value={(formData as any).model || ''}
+                                    onChange={(e) => handleChange('model', e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Category & Status */}
+                    <div className="space-y-4 pt-4 border-t border-gray-100">
+                        <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                            ประเภทและสถานะ
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Equipment Type */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    ประเภทอุปกรณ์
+                                </label>
+                                <select
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    value={(formData as any).equipment_type_id || ''}
+                                    onChange={(e) => handleChange('equipment_type_id', e.target.value || null)}
+                                >
+                                    <option value="">-- เลือกประเภท --</option>
+                                    {equipmentTypes?.map(type => (
+                                        <option key={type.id} value={type.id}>
+                                            {type.icon} {type.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    <Link href="/admin/equipment-types" className="text-blue-600 hover:underline">
+                                        จัดการประเภทอุปกรณ์
+                                    </Link>
+                                </p>
+                            </div>
+
+                            {/* Status */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    สถานะ
+                                </label>
+                                <select
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    value={formData.status}
+                                    onChange={(e) => handleChange('status', e.target.value)}
+                                >
+                                    {STATUS_OPTIONS.map(opt => (
+                                        <option key={opt.value} value={opt.value}>
+                                            {opt.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Location */}
+                    <div className="space-y-4 pt-4 border-t border-gray-100">
+                        <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                            ตำแหน่งจัดเก็บ
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    อาคาร/สถานที่
+                                </label>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="เช่น อาคาร IT"
+                                    value={(formData.location as any)?.building || ''}
+                                    onChange={(e) => handleLocationChange('building', e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    ห้อง
+                                </label>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="เช่น 301"
+                                    value={(formData.location as any)?.room || ''}
+                                    onChange={(e) => handleLocationChange('room', e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Images */}
+                    <div className="space-y-4 pt-4 border-t border-gray-100">
+                        <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                            รูปภาพอุปกรณ์
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                            อัปโหลดรูปภาพเพื่อแสดงในรายการอุปกรณ์ (รูปจะถูกบีบอัดอัตโนมัติเพื่อลดขนาดไฟล์)
+                        </p>
+                        <ImageUpload
+                            images={(formData.images as string[]) || []}
+                            onChange={(images) => handleChange('images', images)}
+                            maxImages={5}
+                            disabled={mutation.isPending}
+                        />
+                    </div>
+
+                    {/* Active Toggle */}
+                    <div className="pt-4 border-t border-gray-100">
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="checkbox"
+                                id="is_active"
+                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                checked={formData.is_active}
+                                onChange={(e) => handleChange('is_active', e.target.checked)}
+                            />
+                            <label htmlFor="is_active" className="text-sm text-gray-700">
+                                <span className="font-medium">เปิดให้ยืม</span>
+                                <span className="text-gray-500 ml-1">
+                                    (แสดงในรายการอุปกรณ์สำหรับผู้ใช้)
+                                </span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900 border-b pb-2 pt-4">Details</h3>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
-                        <input
-                            type="text"
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-                            value={(formData.category as any)?.name || ''}
-                            onChange={(e) => handleNestedChange('category', 'name', e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Building/Location</label>
-                        <input
-                            type="text"
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-                            value={(formData.location as any)?.building || ''}
-                            onChange={(e) => handleNestedChange('location', 'building', e.target.value)}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            <div className="pt-4 flex justify-end gap-3">
-                <button
-                    type="button"
-                    onClick={() => router.back()}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3">
+                <Link
+                    href="/admin/equipment"
+                    className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
-                    Cancel
-                </button>
+                    ยกเลิก
+                </Link>
                 <button
                     type="submit"
                     disabled={mutation.isPending}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 shadow-sm"
                 >
-                    {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {isEditing ? 'Update Equipment' : 'Create Equipment'}
+                    {mutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                        <Save className="w-4 h-4" />
+                    )}
+                    {isEditing ? 'บันทึกการแก้ไข' : 'สร้างอุปกรณ์'}
                 </button>
             </div>
         </form>

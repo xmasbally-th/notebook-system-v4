@@ -13,7 +13,8 @@ import {
     LogOut,
     ChevronLeft,
     Menu,
-    X
+    X,
+    Tag
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -23,6 +24,7 @@ const menuItems = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/admin/users', label: 'จัดการผู้ใช้', icon: Users },
     { href: '/admin/equipment', label: 'จัดการอุปกรณ์', icon: Package },
+    { href: '/admin/equipment-types', label: 'ประเภทอุปกรณ์', icon: Tag },
     { href: '/admin/loans', label: 'คำขอยืม', icon: ClipboardList },
     { href: '/admin/settings', label: 'ตั้งค่าระบบ', icon: Settings },
 ]
