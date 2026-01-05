@@ -3,23 +3,31 @@
 import { createClient } from '@/lib/supabase/server'
 import { sendDiscordNotification } from '@/lib/notifications'
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
+import { formatThaiDate, formatThaiTime, formatThaiDateTime } from '@/lib/formatThaiDate'
+
+type LoanLimitsByType = {
+    student: { max_days: number; max_items: number }
+    lecturer: { max_days: number; max_items: number }
+    staff: { max_days: number; max_items: number }
+}
 
 export async function submitLoanRequest(prevState: any, formData: FormData) {
     const supabase = await createClient()
 
     // 1. Validate User
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Unauthorized')
+    if (!user) {
+        return { error: 'กรุณาเข้าสู่ระบบก่อน' }
+    }
 
     const { data: profile } = await (supabase as any)
         .from('profiles')
-        .select('status, first_name, last_name, email, departments(name)')
+        .select('status, first_name, last_name, email, user_type, departments(name)')
         .eq('id', user.id)
         .single()
 
     if (profile?.status !== 'approved') {
-        return { error: 'Your account is pending approval.' }
+        return { error: 'บัญชีของคุณยังไม่ได้รับการอนุมัติ' }
     }
 
     // 2. Parse Data
@@ -29,10 +37,65 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
     const reason = formData.get('reason') as string
 
     if (!equipmentId || !startDate || !endDate || !reason) {
-        return { error: 'All fields are required' }
+        return { error: 'กรุณากรอกข้อมูลให้ครบทุกช่อง' }
     }
 
-    // 3. Create Loan Request
+    // 3. Get System Config for Validation
+    const { data: config } = await (supabase as any)
+        .from('system_config')
+        .select('*')
+        .single()
+
+    if (config && !config.is_loan_system_active) {
+        return { error: 'ระบบยืม-คืนปิดให้บริการชั่วคราว' }
+    }
+
+    // 4. Server-side Validation
+    const userType = profile.user_type || 'student'
+    const loanLimits = config?.loan_limits_by_type as LoanLimitsByType | null
+    const limits = loanLimits?.[userType as keyof LoanLimitsByType] || { max_days: 7, max_items: 1 }
+
+    // Check loan duration
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const durationMs = end.getTime() - start.getTime()
+    const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24)) + 1
+
+    if (durationDays > limits.max_days) {
+        return { error: `ระยะเวลายืมเกินกำหนดสูงสุด (สูงสุด ${limits.max_days} วัน)` }
+    }
+
+    // Check active loans count
+    const { count: activeLoansCount } = await (supabase as any)
+        .from('loanRequests')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .in('status', ['pending', 'approved'])
+
+    if ((activeLoansCount || 0) >= limits.max_items) {
+        return { error: `คุณมีรายการยืมถึงขีดจำกัดแล้ว (สูงสุด ${limits.max_items} รายการ)` }
+    }
+
+    // Check closed dates
+    const closedDates = (config?.closed_dates as string[]) || []
+    const startDateStr = start.toISOString().split('T')[0]
+    const endDateStr = end.toISOString().split('T')[0]
+
+    if (closedDates.includes(startDateStr)) {
+        return { error: 'วันที่ยืมตรงกับวันหยุดทำการ' }
+    }
+    if (closedDates.includes(endDateStr)) {
+        return { error: 'วันที่คืนตรงกับวันหยุดทำการ' }
+    }
+
+    // 5. Get Equipment Details
+    const { data: equipment } = await (supabase as any)
+        .from('equipment')
+        .select('name, equipment_number')
+        .eq('id', equipmentId)
+        .single()
+
+    // 6. Create Loan Request
     const { error } = await (supabase as any)
         .from('loanRequests')
         .insert({
@@ -45,21 +108,37 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
         })
 
     if (error) {
-        return { error: error.message }
+        return { error: `เกิดข้อผิดพลาด: ${error.message}` }
     }
 
-    // 4. Notify Discord
+    // 7. Notify Discord with Thai formatting
     const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+    const dept = profile.departments?.name || '-'
+    const equipmentName = equipment?.name || 'ไม่ทราบชื่อ'
+    const equipmentNumber = equipment?.equipment_number || '-'
+
     const message = `
-**📋 New Loan Request**
-**User:** ${fullName}
-**Item ID:** ${equipmentId}
-**Dates:** ${startDate} to ${endDate}
-**Reason:** ${reason}
+**📋 คำขอยืมอุปกรณ์ใหม่**
+
+👤 **ผู้ยืม:** ${fullName}
+🏢 **หน่วยงาน:** ${dept}
+📧 **อีเมล:** ${profile.email}
+
+📦 **อุปกรณ์:** ${equipmentName}
+🔖 **รหัส:** #${equipmentNumber}
+
+📅 **วันที่ยืม:** ${formatThaiDate(startDate)}
+📅 **วันที่คืน:** ${formatThaiDateTime(endDate)}
+⏱️ **ระยะเวลา:** ${durationDays} วัน
+
+📝 **เหตุผล:** ${reason}
+
+🔗 [ตรวจสอบคำขอ](${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/loans)
     `.trim()
 
     await sendDiscordNotification(message)
 
     revalidatePath('/')
+    revalidatePath('/my-loans')
     return { success: true }
 }

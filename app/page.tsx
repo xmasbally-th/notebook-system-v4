@@ -1,15 +1,17 @@
-import EquipmentListContainer from '@/components/equipment/EquipmentList'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import RulesSection from '@/components/home/RulesSection'
 import HoursSection from '@/components/home/HoursSection'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Laptop, Tablet, Headphones, Monitor } from 'lucide-react'
+import Link from 'next/link'
+import { Laptop, Tablet, Headphones, Monitor, ArrowRight, LogIn, Package } from 'lucide-react'
 
 export default async function Home() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
+
+    let isApproved = false
 
     if (user) {
         const { data: profile } = await (supabase as any)
@@ -27,6 +29,8 @@ export default async function Home() {
         if (profile && (profile.status === 'pending' || profile.status === 'rejected')) {
             redirect('/pending-approval')
         }
+
+        isApproved = profile?.status === 'approved'
     }
 
     return (
@@ -87,16 +91,27 @@ export default async function Home() {
                                 </div>
                             </div>
 
-                            {/* CTA Button */}
-                            <a
-                                href="#equipment"
-                                className="inline-flex items-center gap-2 px-8 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
-                            >
-                                ดูรายการอุปกรณ์
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </a>
+                            {/* CTA Buttons */}
+                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                                {isApproved ? (
+                                    <Link
+                                        href="/equipment"
+                                        className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+                                    >
+                                        <Package className="w-5 h-5" />
+                                        ดูรายการอุปกรณ์
+                                        <ArrowRight className="w-5 h-5" />
+                                    </Link>
+                                ) : (
+                                    <Link
+                                        href="/login"
+                                        className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+                                    >
+                                        <LogIn className="w-5 h-5" />
+                                        เข้าสู่ระบบเพื่อดูอุปกรณ์
+                                    </Link>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -110,18 +125,46 @@ export default async function Home() {
 
                 <RulesSection />
 
-                {/* Equipment Section */}
-                <section id="equipment" className="py-16 bg-gray-50">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="mb-10 text-center">
-                            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium mb-4">
-                                <Monitor className="w-4 h-4" />
-                                พร้อมให้ยืม
+                {/* CTA Section - Instead of Equipment List */}
+                <section className="py-16 bg-gray-50">
+                    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 md:p-12">
+                            <div className="mb-6">
+                                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-2xl mb-4">
+                                    <Package className="w-8 h-8 text-blue-600" />
+                                </div>
+                                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+                                    พร้อมยืมอุปกรณ์แล้วหรือยัง?
+                                </h2>
+                                <p className="text-gray-500 max-w-lg mx-auto">
+                                    {isApproved
+                                        ? 'คุณสามารถเลือกอุปกรณ์และส่งคำขอยืมได้ทันที'
+                                        : 'เข้าสู่ระบบเพื่อดูรายการอุปกรณ์และส่งคำขอยืม'
+                                    }
+                                </p>
                             </div>
-                            <h2 className="text-3xl font-bold text-gray-900">รายการอุปกรณ์</h2>
-                            <p className="mt-2 text-gray-500">เลือกอุปกรณ์ที่ต้องการและส่งคำขอยืมได้ทันที</p>
+
+                            {isApproved ? (
+                                <Link
+                                    href="/equipment"
+                                    className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all"
+                                >
+                                    <Package className="w-5 h-5" />
+                                    ดูรายการอุปกรณ์ทั้งหมด
+                                    <ArrowRight className="w-5 h-5" />
+                                </Link>
+                            ) : (
+                                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                                    <Link
+                                        href="/login"
+                                        className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all"
+                                    >
+                                        <LogIn className="w-5 h-5" />
+                                        เข้าสู่ระบบ
+                                    </Link>
+                                </div>
+                            )}
                         </div>
-                        <EquipmentListContainer />
                     </div>
                 </section>
 
