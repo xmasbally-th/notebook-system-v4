@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabaseCredentials } from '@/lib/supabase-helpers'
 import { useState, useMemo } from 'react'
 import AdminLayout from '@/components/admin/AdminLayout'
 import {
@@ -26,27 +26,46 @@ export default function LoanRequestsPage() {
     const [currentPage, setCurrentPage] = useState(1)
     const itemsPerPage = 10
 
-    // Fetch loans with relations
+    // Fetch loans with relations using direct fetch
     const { data: requests, isLoading, error } = useQuery({
         queryKey: ['loan-requests'],
+        staleTime: 30000,
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('loanRequests' as any)
-                .select('*, profiles(first_name, last_name, email, avatar_url), equipment(name, equipment_number, images)')
-                .order('created_at', { ascending: false })
-            if (error) throw error
-            return data || []
+            const { url, key } = getSupabaseCredentials()
+            if (!url || !key) return []
+
+            const response = await fetch(
+                `${url}/rest/v1/loanRequests?select=*,profiles(first_name,last_name,email,avatar_url),equipment(name,equipment_number,images)&order=created_at.desc`,
+                {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`
+                    }
+                }
+            )
+            if (!response.ok) return []
+            return response.json()
         }
     })
 
-    // Bulk Action Mutation
+    // Bulk Action Mutation using direct fetch
     const updateStatusMutation = useMutation({
         mutationFn: async ({ ids, status }: { ids: string[], status: 'approved' | 'rejected' }) => {
-            const { error } = await (supabase as any)
-                .from('loanRequests')
-                .update({ status })
-                .in('id', ids)
-            if (error) throw error
+            const { url, key } = getSupabaseCredentials()
+
+            // Update each ID individually for better compatibility
+            for (const id of ids) {
+                const response = await fetch(`${url}/rest/v1/loanRequests?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status })
+                })
+                if (!response.ok) throw new Error('Failed to update')
+            }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['loan-requests'] })

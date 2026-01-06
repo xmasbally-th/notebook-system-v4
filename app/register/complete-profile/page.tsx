@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabaseBrowserClient, getSupabaseCredentials } from '@/lib/supabase-helpers'
 import { Loader2 } from 'lucide-react'
 import { notifyNewRegistration } from '@/app/register/actions'
 
@@ -25,33 +25,40 @@ export default function CompleteProfilePage() {
     // Fetch initial data
     useEffect(() => {
         const init = async () => {
+            const client = getSupabaseBrowserClient()
+            const { url, key } = getSupabaseCredentials()
+
+            if (!client || !url || !key) {
+                router.replace('/login')
+                return
+            }
+
             // 1. Get User
-            const { data: { user } } = await supabase.auth.getUser()
+            const { data: { user } } = await client.auth.getUser()
             if (!user) {
                 router.replace('/login')
                 return
             }
 
-            // 2. Load current profile (if partial)
-            const { data: profile } = await (supabase as any)
-                .from('profiles')
-                .select('first_name, last_name, title, phone_number, user_type, department_id')
-                .eq('id', user.id)
-                .single()
+            // 2. Load current profile using direct fetch
+            const profileRes = await fetch(
+                `${url}/rest/v1/profiles?id=eq.${user.id}&select=first_name,last_name,title,phone_number,user_type,department_id`,
+                { headers: { 'apikey': key, 'Authorization': `Bearer ${key}` } }
+            )
+            const profiles = await profileRes.json()
+            const profile = profiles?.[0]
 
             if (profile) {
                 if (profile.first_name) setFirstName(profile.first_name)
                 if (profile.last_name) setLastName(profile.last_name)
-                // If profile is largely complete, maybe redirect? For now, let them edit.
             }
 
-            // 3. Load Departments
-            const { data: depts } = await (supabase as any)
-                .from('departments')
-                .select('id, name')
-                .eq('is_active', true)
-                .order('name')
-
+            // 3. Load Departments using direct fetch
+            const deptRes = await fetch(
+                `${url}/rest/v1/departments?is_active=eq.true&select=id,name&order=name.asc`,
+                { headers: { 'apikey': key, 'Authorization': `Bearer ${key}` } }
+            )
+            const depts = await deptRes.json()
             if (depts) setDepartments(depts)
         }
         init()
@@ -62,7 +69,11 @@ export default function CompleteProfilePage() {
         setLoading(true)
 
         try {
-            const { data: { user } } = await supabase.auth.getUser()
+            const client = getSupabaseBrowserClient()
+            const { url, key } = getSupabaseCredentials()
+            if (!client) throw new Error('No client available')
+
+            const { data: { user } } = await client.auth.getUser()
             if (!user) throw new Error('No user found')
 
             const updates = {
@@ -75,12 +86,20 @@ export default function CompleteProfilePage() {
                 updated_at: new Date().toISOString(),
             }
 
-            const { error } = await (supabase as any)
-                .from('profiles')
-                .update(updates)
-                .eq('id', user.id)
+            const response = await fetch(
+                `${url}/rest/v1/profiles?id=eq.${user.id}`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updates)
+                }
+            )
 
-            if (error) throw error
+            if (!response.ok) throw new Error('Failed to update profile')
 
             // Notify Admin via Discord
             await notifyNewRegistration(user.id)

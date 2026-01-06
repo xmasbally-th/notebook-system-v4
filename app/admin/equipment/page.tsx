@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabaseCredentials, getSupabaseBrowserClient } from '@/lib/supabase-helpers'
 import { Database } from '@/supabase/types'
 import AdminLayout from '@/components/admin/AdminLayout'
 import {
@@ -34,40 +34,62 @@ export default function AdminEquipmentList() {
     const [currentPage, setCurrentPage] = useState(1)
     const itemsPerPage = 10
 
-    // Fetch equipment with type relation
+    // Fetch equipment with type relation using direct fetch
     const { data: equipment, isLoading } = useQuery({
         queryKey: ['equipment'],
+        staleTime: 30000,
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('equipment' as any)
-                .select('*, equipment_types(id, name, icon)')
-                .order('created_at', { ascending: false })
-            if (error) throw error
-            return data as (Equipment & { equipment_types?: EquipmentType })[]
+            const { url, key } = getSupabaseCredentials()
+            if (!url || !key) return []
+
+            const response = await fetch(
+                `${url}/rest/v1/equipment?select=*,equipment_types(id,name,icon)&order=created_at.desc`,
+                {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`
+                    }
+                }
+            )
+            if (!response.ok) return []
+            return response.json() as Promise<(Equipment & { equipment_types?: EquipmentType })[]>
         }
     })
 
-    // Fetch equipment types for filter
+    // Fetch equipment types for filter using direct fetch
     const { data: equipmentTypes } = useQuery({
         queryKey: ['equipment-types'],
+        staleTime: 30000,
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('equipment_types' as any)
-                .select('*')
-                .order('name')
-            if (error) throw error
-            return data as EquipmentType[]
+            const { url, key } = getSupabaseCredentials()
+            if (!url || !key) return []
+
+            const response = await fetch(
+                `${url}/rest/v1/equipment_types?select=*&order=name.asc`,
+                {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`
+                    }
+                }
+            )
+            if (!response.ok) return []
+            return response.json() as Promise<EquipmentType[]>
         }
     })
 
-    // Delete mutation
+    // Delete mutation using direct fetch
     const deleteMutation = useMutation({
         mutationFn: async (id: string) => {
-            const { error } = await supabase
-                .from('equipment' as any)
-                .delete()
-                .eq('id', id)
-            if (error) throw error
+            const { url, key } = getSupabaseCredentials()
+            const response = await fetch(`${url}/rest/v1/equipment?id=eq.${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'apikey': key,
+                    'Authorization': `Bearer ${key}`
+                }
+            })
+            if (!response.ok) throw new Error('Failed to delete')
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['equipment'] })
@@ -372,8 +394,8 @@ export default function AdminEquipmentList() {
                                             key={pageNum}
                                             onClick={() => setCurrentPage(pageNum)}
                                             className={`w-8 h-8 rounded-lg text-sm font-medium ${currentPage === pageNum
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'hover:bg-gray-100 text-gray-700'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'hover:bg-gray-100 text-gray-700'
                                                 }`}
                                         >
                                             {pageNum}

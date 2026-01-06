@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabaseBrowserClient, getSupabaseCredentials } from '@/lib/supabase-helpers'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Clock, CheckCircle2, XCircle, Package, ArrowLeft, CalendarDays, FileText, Loader2 } from 'lucide-react'
@@ -19,23 +19,34 @@ export default function MyLoansPage() {
     const [userId, setUserId] = useState<string | null>(null)
 
     useEffect(() => {
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            setUserId(user?.id || null)
-        })
+        const client = getSupabaseBrowserClient()
+        if (client) {
+            client.auth.getUser().then(({ data: { user } }) => {
+                setUserId(user?.id || null)
+            })
+        }
     }, [])
 
+    // Fetch loans using direct fetch
     const { data: loans, isLoading, error } = useQuery({
         queryKey: ['my-loans', userId],
         enabled: !!userId,
+        staleTime: 30000,
         queryFn: async () => {
-            const { data, error } = await (supabase as any)
-                .from('loanRequests')
-                .select('*, equipment(id, name, equipment_number, images)')
-                .eq('user_id', userId)
-                .order('created_at', { ascending: false })
+            const { url, key } = getSupabaseCredentials()
+            if (!url || !key || !userId) return []
 
-            if (error) throw error
-            return data || []
+            const response = await fetch(
+                `${url}/rest/v1/loanRequests?user_id=eq.${userId}&select=*,equipment(id,name,equipment_number,images)&order=created_at.desc`,
+                {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`
+                    }
+                }
+            )
+            if (!response.ok) return []
+            return response.json()
         },
     })
 
