@@ -23,11 +23,6 @@ export default function EquipmentCardWithBorrow({ item }: EquipmentCardWithBorro
     const images = Array.isArray(item.images) ? item.images : []
     const imageUrl = images.length > 0 ? (images[0] as string) : 'https://placehold.co/600x400?text=No+Image'
 
-    // Defensive: category parsing
-    const category = (item.category as any) || {}
-    const categoryName = category.name || 'ไม่ระบุประเภท'
-    const categoryIcon = category.icon || '📦'
-
     // Status config
     const status = statusConfig[item.status] || statusConfig.ready
 
