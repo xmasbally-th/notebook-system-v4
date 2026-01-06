@@ -11,55 +11,37 @@ export function useSystemConfig() {
         staleTime: 0,   // Always get fresh config for admin page
         retry: 2,       // Retry failed queries
         retryDelay: 1000,
-        queryFn: async () => {
+        queryFn: async (): Promise<SystemConfig> => {
             console.log('[useSystemConfig] Starting fetch...')
 
-            // Timeout wrapper to prevent hanging
-            const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('Query timeout - took more than 10 seconds')), 10000)
-            })
-
             try {
-                const supabaseClient = supabase as any
-
-                if (!supabaseClient || !supabaseClient.from) {
-                    console.error('[useSystemConfig] Supabase client not available')
-                    throw new Error('Supabase client not initialized')
-                }
-
-                console.log('[useSystemConfig] Executing query...')
-
-                const fetchPromise = supabaseClient
+                // Direct query without chaining .single() 
+                const { data, error } = await (supabase as any)
                     .from('system_config')
                     .select('*')
-                    .eq('id', 1)
-                    .single()
+                    .limit(1)
 
-                const result = await Promise.race([fetchPromise, timeoutPromise]) as any
-                console.log('[useSystemConfig] Query completed, result:', result)
-
-                const { data, error } = result
+                console.log('[useSystemConfig] Query result:', { data, error })
 
                 if (error) {
                     console.error('[useSystemConfig] Supabase error:', error.message, error.code)
-                    // If no rows found, return default config instead of throwing
-                    if (error.code === 'PGRST116') {
-                        console.log('[useSystemConfig] No config found, returning defaults')
-                        return getDefaultConfig()
-                    }
                     throw new Error(`Database error: ${error.message}`)
                 }
 
-                if (!data) {
-                    console.warn('[useSystemConfig] No data returned, using defaults')
+                // Get first row from array
+                const config = Array.isArray(data) && data.length > 0 ? data[0] : null
+
+                if (!config) {
+                    console.warn('[useSystemConfig] No config found, using defaults')
                     return getDefaultConfig()
                 }
 
-                console.log('[useSystemConfig] Success:', data)
-                return data as SystemConfig
+                console.log('[useSystemConfig] Success:', config)
+                return config as SystemConfig
             } catch (err: any) {
                 console.error('[useSystemConfig] Exception:', err?.message || err)
-                throw err
+                // Return default config on error so page doesn't stay stuck
+                return getDefaultConfig()
             }
         }
     })
