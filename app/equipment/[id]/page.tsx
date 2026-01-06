@@ -47,19 +47,19 @@ export default async function EquipmentDetailsPage({ params }: { params: Promise
     return (
         <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
-                <Link href="/" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 mb-6">
+                <Link href="/equipment" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 mb-6">
                     <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to Equipment
+                    กลับไปรายการอุปกรณ์
                 </Link>
 
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                     <div className="grid grid-cols-1 md:grid-cols-2">
-                        {/* Image Side */}
-                        <div className="bg-gray-100 relative">
+                        {/* Image Side - Thumbnail */}
+                        <div className="bg-gray-100 relative flex items-center justify-center p-4">
                             <img
                                 src={imageUrl}
                                 alt={item.name}
-                                className="object-contain w-full h-full max-h-[300px] md:max-h-[500px] md:object-cover"
+                                className="object-contain w-full max-h-[200px] md:max-h-[250px] rounded-lg"
                             />
                         </div>
 
@@ -80,25 +80,29 @@ export default async function EquipmentDetailsPage({ params }: { params: Promise
                                 <p className="text-gray-500 font-mono text-sm">หมายเลขครุภัณฑ์: {item.equipment_number}</p>
                             </div>
 
-                            <div className="prose prose-sm text-gray-600">
-                                <h3 className="text-gray-900 font-medium mb-2">Specifications</h3>
-                                <pre className="bg-gray-50 p-3 rounded-lg text-xs overflow-auto">
-                                    {JSON.stringify(item.specifications, null, 2)}
-                                </pre>
-                            </div>
-
                             <div className="border-t border-gray-100 pt-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Request to Borrow</h3>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">ขอยืมอุปกรณ์</h3>
 
                                 {userStatus === 'approved' ? (
                                     <LoanRequestForm equipmentId={item.id} />
                                 ) : (
                                     <div className="bg-yellow-50 text-yellow-800 p-4 rounded-lg text-sm">
                                         {userStatus === 'pending'
-                                            ? 'Your account is pending approval. You cannot borrow items yet.'
-                                            : 'Please log in to borrow items.'}
+                                            ? 'บัญชีของคุณอยู่ระหว่างการอนุมัติ ไม่สามารถยืมอุปกรณ์ได้'
+                                            : 'กรุณาเข้าสู่ระบบเพื่อยืมอุปกรณ์'}
                                     </div>
                                 )}
+
+                                {/* Cancel Button */}
+                                <div className="mt-4">
+                                    <Link
+                                        href="/equipment"
+                                        className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                                    >
+                                        <ArrowLeft className="w-4 h-4" />
+                                        ยกเลิก
+                                    </Link>
+                                </div>
                             </div>
                         </div>
                     </div>

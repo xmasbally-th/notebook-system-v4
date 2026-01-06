@@ -33,12 +33,12 @@ export default function EquipmentCardWithBorrow({ item }: EquipmentCardWithBorro
 
     return (
         <div className="group relative flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-            {/* Image Area */}
-            <Link href={`/equipment/${item.id}`} className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
+            {/* Image Area - Thumbnail */}
+            <Link href={`/equipment/${item.id}`} className="relative aspect-square w-full overflow-hidden bg-gray-100">
                 <img
                     src={imageUrl}
                     alt={item.name}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="h-full w-full object-contain p-2 transition-transform duration-500 group-hover:scale-105"
                 />
                 {/* Status Badge */}
                 <div className="absolute right-2 top-2">
@@ -52,29 +52,16 @@ export default function EquipmentCardWithBorrow({ item }: EquipmentCardWithBorro
             </Link>
 
             {/* Content Area */}
-            <div className="flex flex-1 flex-col p-4">
-                {/* Category */}
-                <div className="mb-2 flex items-center gap-1.5 text-sm text-gray-500">
-                    <span>{categoryIcon}</span>
-                    <span>{categoryName}</span>
-                </div>
-
+            <div className="flex flex-1 flex-col p-3">
                 {/* Name & Number */}
                 <Link href={`/equipment/${item.id}`}>
-                    <h3 className="text-lg font-semibold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                    <h3 className="text-base font-semibold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
                         {item.name}
                     </h3>
                 </Link>
-                <p className="text-sm text-gray-500 font-mono mt-0.5">
-                    #{item.equipment_number}
+                <p className="text-xs text-gray-500 font-mono mt-0.5">
+                    {item.equipment_number}
                 </p>
-
-                {/* Brand/Model */}
-                {(item.brand || item.model) && (
-                    <p className="text-sm text-gray-400 mt-1 truncate">
-                        {[item.brand, item.model].filter(Boolean).join(' ')}
-                    </p>
-                )}
 
                 {/* Action Area */}
                 <div className="mt-auto pt-4 flex gap-2">

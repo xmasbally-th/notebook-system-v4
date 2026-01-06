@@ -55,7 +55,7 @@ export default function EquipmentListWithFilters({ equipmentTypes }: EquipmentLi
         previousPage,
         resetPage,
         goToPage
-    } = usePagination(filteredItems, 12)
+    } = usePagination(filteredItems, 5)
 
     const clearFilters = () => {
         setSearchTerm('')
@@ -162,8 +162,8 @@ export default function EquipmentListWithFilters({ equipmentTypes }: EquipmentLi
                 <button
                     onClick={() => { setSelectedTypeId('all'); resetPage() }}
                     className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedTypeId === 'all'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300 hover:text-blue-600'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300 hover:text-blue-600'
                         }`}
                 >
                     ทั้งหมด
@@ -173,8 +173,8 @@ export default function EquipmentListWithFilters({ equipmentTypes }: EquipmentLi
                         key={type.id}
                         onClick={() => { setSelectedTypeId(type.id); resetPage() }}
                         className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${selectedTypeId === type.id
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300 hover:text-blue-600'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300 hover:text-blue-600'
                             }`}
                     >
                         <span>{type.icon}</span>
@@ -240,8 +240,8 @@ export default function EquipmentListWithFilters({ equipmentTypes }: EquipmentLi
                                         key={pageNum}
                                         onClick={() => goToPage(pageNum)}
                                         className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${currentPage === pageNum
-                                                ? 'bg-blue-600 text-white'
-                                                : 'border border-gray-300 hover:bg-gray-50'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'border border-gray-300 hover:bg-gray-50'
                                             }`}
                                     >
                                         {pageNum}
