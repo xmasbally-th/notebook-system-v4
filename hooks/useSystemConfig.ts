@@ -1,9 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase/client'
+import { createBrowserClient } from '@supabase/ssr'
 import { Database } from '@/supabase/types'
 
 type SystemConfig = Database['public']['Tables']['system_config']['Row']
 type SystemConfigUpdate = Database['public']['Tables']['system_config']['Update']
+
+// Create client directly for this hook
+function getSupabaseClient() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    if (!url || !key) {
+        console.error('[useSystemConfig] Missing Supabase env vars')
+        return null
+    }
+    return createBrowserClient<Database>(url, key)
+}
 
 export function useSystemConfig() {
     return useQuery({
@@ -15,17 +26,24 @@ export function useSystemConfig() {
             console.log('[useSystemConfig] Starting fetch...')
 
             try {
+                const client = getSupabaseClient()
+
+                if (!client) {
+                    console.error('[useSystemConfig] No client available')
+                    return getDefaultConfig()
+                }
+
                 // Direct query without chaining .single() 
-                const { data, error } = await (supabase as any)
+                const { data, error } = await client
                     .from('system_config')
                     .select('*')
                     .limit(1)
 
-                console.log('[useSystemConfig] Query result:', { data, error })
+                console.log('[useSystemConfig] Query result:', { hasData: !!data, error: error?.message })
 
                 if (error) {
                     console.error('[useSystemConfig] Supabase error:', error.message, error.code)
-                    throw new Error(`Database error: ${error.message}`)
+                    return getDefaultConfig()
                 }
 
                 // Get first row from array
@@ -36,7 +54,7 @@ export function useSystemConfig() {
                     return getDefaultConfig()
                 }
 
-                console.log('[useSystemConfig] Success:', config)
+                console.log('[useSystemConfig] Success')
                 return config as SystemConfig
             } catch (err: any) {
                 console.error('[useSystemConfig] Exception:', err?.message || err)
@@ -78,7 +96,12 @@ export function useUpdateSystemConfig() {
 
     return useMutation({
         mutationFn: async (updates: SystemConfigUpdate) => {
-            const { data, error } = await (supabase as any)
+            const client = getSupabaseClient()
+            if (!client) {
+                throw new Error('Supabase client not available')
+            }
+
+            const { data, error } = await (client as any)
                 .from('system_config')
                 .update(updates)
                 .eq('id', 1) // Always update the singleton row
