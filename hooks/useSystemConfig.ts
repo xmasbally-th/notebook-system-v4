@@ -20,26 +20,38 @@ export function useSystemConfig() {
     return useQuery({
         queryKey: ['system_config'],
         staleTime: 0,   // Always get fresh config for admin page
-        retry: 2,       // Retry failed queries
+        retry: 1,       // Retry once only
         retryDelay: 1000,
         queryFn: async (): Promise<SystemConfig> => {
             console.log('[useSystemConfig] Starting fetch...')
 
             try {
                 const client = getSupabaseClient()
+                console.log('[useSystemConfig] Client created:', !!client)
 
                 if (!client) {
                     console.error('[useSystemConfig] No client available')
                     return getDefaultConfig()
                 }
 
-                // Direct query without chaining .single() 
-                const { data, error } = await client
+                // Wrap in timeout to prevent hanging
+                const timeoutMs = 8000
+                console.log('[useSystemConfig] Executing query with timeout:', timeoutMs)
+
+                const queryPromise = client
                     .from('system_config')
                     .select('*')
                     .limit(1)
 
-                console.log('[useSystemConfig] Query result:', { hasData: !!data, error: error?.message })
+                const timeoutPromise = new Promise<never>((_, reject) => {
+                    setTimeout(() => {
+                        console.error('[useSystemConfig] Query timed out after', timeoutMs, 'ms')
+                        reject(new Error('Query timeout'))
+                    }, timeoutMs)
+                })
+
+                const { data, error } = await Promise.race([queryPromise, timeoutPromise])
+                console.log('[useSystemConfig] Query completed:', { hasData: !!data, dataLength: data?.length, error: error?.message })
 
                 if (error) {
                     console.error('[useSystemConfig] Supabase error:', error.message, error.code)
@@ -54,7 +66,7 @@ export function useSystemConfig() {
                     return getDefaultConfig()
                 }
 
-                console.log('[useSystemConfig] Success')
+                console.log('[useSystemConfig] Success - returning config')
                 return config as SystemConfig
             } catch (err: any) {
                 console.error('[useSystemConfig] Exception:', err?.message || err)
