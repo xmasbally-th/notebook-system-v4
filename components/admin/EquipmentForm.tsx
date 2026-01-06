@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { createBrowserClient } from '@supabase/ssr'
 import { Database } from '@/supabase/types'
 import { Loader2, Save, ArrowLeft, Package } from 'lucide-react'
 import Link from 'next/link'
@@ -14,12 +13,11 @@ type Equipment = Database['public']['Tables']['equipment']['Row']
 type EquipmentInsert = Database['public']['Tables']['equipment']['Insert']
 type EquipmentType = Database['public']['Tables']['equipment_types']['Row']
 
-// Get Supabase client for mutations
-function getSupabaseClient() {
+// Get Supabase credentials for direct fetch
+function getSupabaseCredentials() {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    if (!url || !key) return null
-    return createBrowserClient<Database>(url, key)
+    return { url, key }
 }
 
 interface EquipmentFormProps {
@@ -62,27 +60,58 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
 
     const mutation = useMutation({
         mutationFn: async (data: EquipmentInsert) => {
-            const client = getSupabaseClient()
-            if (!client) throw new Error('Supabase client not available')
+            const { url, key } = getSupabaseCredentials()
+            if (!url || !key) throw new Error('Supabase credentials not available')
 
             // Prepare data for upsert
             const submitData = {
-                ...data,
-                // Handle status_new column for migration
-                status_new: data.status,
+                name: data.name,
+                equipment_number: data.equipment_number,
+                brand: (data as any).brand || null,
+                model: (data as any).model || null,
+                equipment_type_id: (data as any).equipment_type_id || null,
+                status: data.status || 'ready',
+                status_new: data.status || 'ready',
+                location: data.location || {},
+                specifications: data.specifications || {},
+                images: data.images || [],
+                is_active: data.is_active ?? true,
             }
 
+            console.log('[EquipmentForm] Submitting:', submitData)
+
             if (isEditing && initialData) {
-                const { error } = await (client as any)
-                    .from('equipment')
-                    .update(submitData as any)
-                    .eq('id', initialData.id)
-                if (error) throw error
+                const response = await fetch(`${url}/rest/v1/equipment?id=eq.${initialData.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify(submitData)
+                })
+                if (!response.ok) {
+                    const errorText = await response.text()
+                    console.error('[EquipmentForm] Update error:', errorText)
+                    throw new Error(errorText || 'Failed to update equipment')
+                }
             } else {
-                const { error } = await (client as any)
-                    .from('equipment')
-                    .insert(submitData as any)
-                if (error) throw error
+                const response = await fetch(`${url}/rest/v1/equipment`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify(submitData)
+                })
+                if (!response.ok) {
+                    const errorText = await response.text()
+                    console.error('[EquipmentForm] Insert error:', errorText)
+                    throw new Error(errorText || 'Failed to create equipment')
+                }
             }
         },
         onSuccess: () => {
