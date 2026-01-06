@@ -2,16 +2,25 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase/client'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { createBrowserClient } from '@supabase/ssr'
 import { Database } from '@/supabase/types'
 import { Loader2, Save, ArrowLeft, Package } from 'lucide-react'
 import Link from 'next/link'
 import ImageUpload from '@/components/ui/ImageUpload'
+import { useEquipmentTypes } from '@/hooks/useEquipmentTypes'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 type EquipmentInsert = Database['public']['Tables']['equipment']['Insert']
 type EquipmentType = Database['public']['Tables']['equipment_types']['Row']
+
+// Get Supabase client for mutations
+function getSupabaseClient() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    if (!url || !key) return null
+    return createBrowserClient<Database>(url, key)
+}
 
 interface EquipmentFormProps {
     initialData?: Equipment
@@ -30,19 +39,12 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
     const queryClient = useQueryClient()
     const [error, setError] = useState<string | null>(null)
 
-    // Fetch equipment types for dropdown
-    const { data: equipmentTypes } = useQuery({
-        queryKey: ['equipment-types'],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('equipment_types' as any)
-                .select('*')
-                .eq('is_active', true)
-                .order('name')
-            if (error) throw error
-            return data as EquipmentType[]
-        }
-    })
+    // Fetch equipment types using fixed hook
+    const { data: equipmentTypesData } = useEquipmentTypes()
+    // Filter active types only
+    const equipmentTypes = Array.isArray(equipmentTypesData)
+        ? equipmentTypesData.filter((t: EquipmentType) => t.is_active)
+        : []
 
     // Form State - updated with new fields
     const [formData, setFormData] = useState<Partial<EquipmentInsert>>({
@@ -60,6 +62,9 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
 
     const mutation = useMutation({
         mutationFn: async (data: EquipmentInsert) => {
+            const client = getSupabaseClient()
+            if (!client) throw new Error('Supabase client not available')
+
             // Prepare data for upsert
             const submitData = {
                 ...data,
@@ -68,13 +73,13 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
             }
 
             if (isEditing && initialData) {
-                const { error } = await (supabase as any)
+                const { error } = await (client as any)
                     .from('equipment')
                     .update(submitData as any)
                     .eq('id', initialData.id)
                 if (error) throw error
             } else {
-                const { error } = await (supabase as any)
+                const { error } = await (client as any)
                     .from('equipment')
                     .insert(submitData as any)
                 if (error) throw error
