@@ -63,6 +63,18 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
             const { url, key } = getSupabaseCredentials()
             if (!url || !key) throw new Error('Supabase credentials not available')
 
+            // Map new status values to old enum values for the 'status' column
+            // Old enum: 'active', 'maintenance', 'retired', 'lost'
+            // New enum: 'ready', 'borrowed', 'maintenance', 'retired'
+            const statusForOldColumn = (status: string) => {
+                if (status === 'ready' || status === 'borrowed') return 'active'
+                if (status === 'maintenance') return 'maintenance'
+                if (status === 'retired') return 'retired'
+                return 'active'
+            }
+
+            const currentStatus = data.status || 'ready'
+
             // Prepare data for upsert
             const submitData = {
                 name: data.name,
@@ -70,8 +82,8 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
                 brand: (data as any).brand || null,
                 model: (data as any).model || null,
                 equipment_type_id: (data as any).equipment_type_id || null,
-                status: data.status || 'ready',
-                status_new: data.status || 'ready',
+                status: statusForOldColumn(currentStatus), // Old column uses 'active' instead of 'ready'
+                status_new: currentStatus, // New column uses 'ready', 'borrowed', etc.
                 location: data.location || {},
                 specifications: data.specifications || {},
                 images: data.images || [],
