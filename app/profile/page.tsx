@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabaseBrowserClient, getSupabaseCredentials, supabaseFetch } from '@/lib/supabase-helpers'
 import { useProfile } from '@/hooks/useProfile'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
@@ -57,23 +57,34 @@ export default function ProfilePage() {
         department_id: '',
     })
 
-    // Fetch departments
+    // Fetch departments using direct fetch
     const { data: departments } = useQuery({
         queryKey: ['departments'],
         queryFn: async () => {
-            const { data } = await (supabase as any)
-                .from('departments')
-                .select('id, name')
-                .eq('is_active', true)
-                .order('name')
-            return data || []
+            const { url, key } = getSupabaseCredentials()
+            if (!url || !key) return []
+
+            const response = await fetch(
+                `${url}/rest/v1/departments?is_active=eq.true&select=id,name&order=name.asc`,
+                {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`
+                    }
+                }
+            )
+            if (!response.ok) return []
+            return response.json()
         },
     })
 
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session)
-        })
+        const client = getSupabaseBrowserClient()
+        if (client) {
+            client.auth.getSession().then(({ data: { session } }) => {
+                setSession(session)
+            })
+        }
     }, [])
 
     useEffect(() => {
@@ -117,20 +128,32 @@ export default function ProfilePage() {
         setIsSubmitting(true)
         setSuccessMessage('')
 
-        const { error } = await (supabase.from('profiles') as any)
-            .update({
-                title: formData.title || null,
-                first_name: formData.first_name,
-                last_name: formData.last_name,
-                phone_number: formData.phone_number,
-                user_type: formData.user_type || null,
-                department_id: formData.department_id || null,
-            })
-            .eq('id', session.user.id)
+        const { url, key } = getSupabaseCredentials()
+
+        const response = await fetch(
+            `${url}/rest/v1/profiles?id=eq.${session.user.id}`,
+            {
+                method: 'PATCH',
+                headers: {
+                    'apikey': key,
+                    'Authorization': `Bearer ${key}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify({
+                    title: formData.title || null,
+                    first_name: formData.first_name,
+                    last_name: formData.last_name,
+                    phone_number: formData.phone_number,
+                    user_type: formData.user_type || null,
+                    department_id: formData.department_id || null,
+                })
+            }
+        )
 
         setIsSubmitting(false)
 
-        if (!error) {
+        if (response.ok) {
             // Invalidate and refetch profile data
             queryClient.invalidateQueries({ queryKey: ['profile', session.user.id] })
             setSuccessMessage('บันทึกข้อมูลเรียบร้อยแล้ว')

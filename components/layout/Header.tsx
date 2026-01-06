@@ -3,9 +3,17 @@
 import React from 'react'
 import Link from 'next/link'
 import { Laptop, LogIn, LogOut, User, Menu, X, Package } from 'lucide-react'
-import { supabase } from '@/lib/supabase/client'
+import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+
+// Get Supabase client for auth operations
+function getSupabaseClient() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    if (!url || !key) return null
+    return createBrowserClient(url, key)
+}
 
 export default function Header() {
     const [user, setUser] = useState<any>(null)
@@ -14,14 +22,19 @@ export default function Header() {
 
     useEffect(() => {
         const checkUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
+            const client = getSupabaseClient()
+            if (!client) return
+            const { data: { user } } = await client.auth.getUser()
             setUser(user)
         }
         checkUser()
     }, [])
 
     const handleSignOut = async () => {
-        await supabase.auth.signOut()
+        const client = getSupabaseClient()
+        if (client) {
+            await client.auth.signOut()
+        }
         setUser(null)
         setIsMenuOpen(false)
         router.push('/login')

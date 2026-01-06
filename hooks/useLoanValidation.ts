@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase/client'
+import { createBrowserClient } from '@supabase/ssr'
 import { useMemo } from 'react'
 
 type LoanLimitsByType = {
@@ -32,35 +32,66 @@ interface LoanValidationResult {
     currentLoanCount: number
 }
 
+// Get credentials for direct fetch API
+function getSupabaseCredentials() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    return { url, key }
+}
+
+// Get client for auth operations
+function getSupabaseClient() {
+    const { url, key } = getSupabaseCredentials()
+    if (!url || !key) return null
+    return createBrowserClient(url, key)
+}
+
 export function useLoanValidation(userType: UserType = 'student'): LoanValidationResult {
-    // Fetch system config
+    // Fetch system config using direct fetch
     const { data: systemConfig, isLoading: configLoading } = useQuery({
         queryKey: ['system_config'],
+        staleTime: 30000,
         queryFn: async () => {
-            const { data, error } = await (supabase as any)
-                .from('system_config')
-                .select('*')
-                .single()
+            const { url, key } = getSupabaseCredentials()
+            if (!url || !key) return null
 
-            if (error) throw error
-            return data
+            const response = await fetch(`${url}/rest/v1/system_config?select=*&limit=1`, {
+                headers: {
+                    'apikey': key,
+                    'Authorization': `Bearer ${key}`
+                }
+            })
+            if (!response.ok) return null
+            const data = await response.json()
+            return data?.[0] || null
         }
     })
 
     // Fetch current user's active loans count
     const { data: activeLoanData, isLoading: loansLoading } = useQuery({
         queryKey: ['my-active-loans-count'],
+        staleTime: 30000,
         queryFn: async () => {
-            const { data: { user } } = await supabase.auth.getUser()
+            const client = getSupabaseClient()
+            if (!client) return { count: 0 }
+
+            const { data: { user } } = await client.auth.getUser()
             if (!user) return { count: 0 }
 
-            const { count } = await (supabase as any)
-                .from('loanRequests')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', user.id)
-                .in('status', ['pending', 'approved'])
-
-            return { count: count || 0 }
+            const { url, key } = getSupabaseCredentials()
+            const response = await fetch(
+                `${url}/rest/v1/loanRequests?user_id=eq.${user.id}&status=in.(pending,approved)&select=id`,
+                {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`,
+                        'Prefer': 'count=exact'
+                    }
+                }
+            )
+            if (!response.ok) return { count: 0 }
+            const data = await response.json()
+            return { count: data?.length || 0 }
         }
     })
 

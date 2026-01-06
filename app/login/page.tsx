@@ -1,19 +1,33 @@
 'use client'
 
-import { supabase } from '@/lib/supabase/client'
+import { createBrowserClient } from '@supabase/ssr'
 import { useState } from 'react'
 import { Laptop, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+
+// Get Supabase client for auth operations
+function getSupabaseClient() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    if (!url || !key) return null
+    return createBrowserClient(url, key)
+}
 
 export default function LoginPage() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     const handleLogin = async () => {
+        const client = getSupabaseClient()
+        if (!client) {
+            setError('ไม่สามารถเชื่อมต่อระบบได้')
+            return
+        }
+
         try {
             setLoading(true)
             setError(null)
-            const { error } = await supabase.auth.signInWithOAuth({
+            const { error } = await client.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
                     redirectTo: `${location.origin}/auth/callback`,

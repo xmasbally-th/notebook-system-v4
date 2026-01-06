@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { supabase } from '@/lib/supabase/client'
+import { createBrowserClient } from '@supabase/ssr'
 import { useQueryClient } from '@tanstack/react-query'
 
 type Profile = {
@@ -35,6 +35,19 @@ const SETUP_PATHS = [
     '/register/complete-profile'
 ]
 
+// Get credentials and client
+function getSupabaseCredentials() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    return { url, key }
+}
+
+function getSupabaseClient() {
+    const { url, key } = getSupabaseCredentials()
+    if (!url || !key) return null
+    return createBrowserClient(url, key)
+}
+
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const router = useRouter()
     const pathname = usePathname()
@@ -53,7 +66,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         return patterns.some(pattern => pathname.startsWith(pattern))
     }, [pathname])
 
-    // Fetch profile with caching
+    // Fetch profile with caching using direct fetch
     const fetchProfile = useCallback(async (uid: string): Promise<Profile | null> => {
         // Check cache first
         const now = Date.now()
@@ -64,24 +77,36 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         }
 
         try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id, status, role, first_name, last_name, phone_number')
-                .eq('id', uid)
-                .single()
+            const { url, key } = getSupabaseCredentials()
+            if (!url || !key) return null
 
-            if (error) {
-                console.warn('AuthGuard: Failed to fetch profile', error.message)
+            const response = await fetch(
+                `${url}/rest/v1/profiles?id=eq.${uid}&select=id,status,role,first_name,last_name,phone_number`,
+                {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`
+                    }
+                }
+            )
+
+            if (!response.ok) {
+                console.warn('AuthGuard: Failed to fetch profile')
                 return null
             }
 
+            const data = await response.json()
+            const profileData = data?.[0] as Profile | null
+
             // Update cache
-            profileCacheRef.current = {
-                data: data as Profile,
-                timestamp: now
+            if (profileData) {
+                profileCacheRef.current = {
+                    data: profileData,
+                    timestamp: now
+                }
             }
 
-            return data as Profile
+            return profileData
         } catch (err) {
             console.error('AuthGuard: Error fetching profile', err)
             return null
@@ -113,10 +138,16 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     // Initial auth check
     useEffect(() => {
         let isMounted = true
+        const client = getSupabaseClient()
 
         const checkAuth = async () => {
+            if (!client) {
+                setAuthState('unauthenticated')
+                return
+            }
+
             try {
-                const { data: { user } } = await supabase.auth.getUser()
+                const { data: { user } } = await client.auth.getUser()
 
                 if (!isMounted) return
 
@@ -145,35 +176,41 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         checkAuth()
 
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (event, session) => {
-                if (!isMounted) return
+        if (client) {
+            const { data: { subscription } } = client.auth.onAuthStateChange(
+                async (event, session) => {
+                    if (!isMounted) return
 
-                if (event === 'SIGNED_OUT') {
-                    setUserId(null)
-                    setProfile(null)
-                    setAuthState('unauthenticated')
-                    clearProfileCache()
-                } else if (session?.user) {
-                    setUserId(session.user.id)
-                    setAuthState('authenticated')
-
-                    // Clear cache on sign in to get fresh data
-                    if (event === 'SIGNED_IN') {
+                    if (event === 'SIGNED_OUT') {
+                        setUserId(null)
+                        setProfile(null)
+                        setAuthState('unauthenticated')
                         clearProfileCache()
-                    }
+                    } else if (session?.user) {
+                        setUserId(session.user.id)
+                        setAuthState('authenticated')
 
-                    const userProfile = await fetchProfile(session.user.id)
-                    if (isMounted) {
-                        setProfile(userProfile)
+                        // Clear cache on sign in to get fresh data
+                        if (event === 'SIGNED_IN') {
+                            clearProfileCache()
+                        }
+
+                        const userProfile = await fetchProfile(session.user.id)
+                        if (isMounted) {
+                            setProfile(userProfile)
+                        }
                     }
                 }
+            )
+
+            return () => {
+                isMounted = false
+                subscription.unsubscribe()
             }
-        )
+        }
 
         return () => {
             isMounted = false
-            subscription.unsubscribe()
         }
     }, [fetchProfile, clearProfileCache])
 

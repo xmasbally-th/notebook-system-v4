@@ -2,10 +2,23 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase/client'
+import { createBrowserClient } from '@supabase/ssr'
 import { Loader2, Clock, CheckCircle2, Mail, Phone, LogOut, Laptop, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/toast'
+
+// Get Supabase credentials and client
+function getSupabaseCredentials() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    return { url, key }
+}
+
+function getSupabaseClient() {
+    const { url, key } = getSupabaseCredentials()
+    if (!url || !key) return null
+    return createBrowserClient(url, key)
+}
 
 // Faster polling interval (15 seconds)
 const POLL_INTERVAL = 15000
@@ -23,21 +36,34 @@ export default function PendingApprovalPage() {
     useEffect(() => {
         const checkStatus = async () => {
             setIsChecking(true)
+            const client = getSupabaseClient()
+            const { url, key } = getSupabaseCredentials()
 
             try {
-                const { data: { user } } = await supabase.auth.getUser()
+                if (!client) {
+                    router.replace('/login')
+                    return
+                }
+
+                const { data: { user } } = await client.auth.getUser()
 
                 if (!user) {
                     router.replace('/login')
                     return
                 }
 
-                // Get profile
-                const { data: profileData } = await (supabase as any)
-                    .from('profiles')
-                    .select('*, departments(name)')
-                    .eq('id', user.id)
-                    .single()
+                // Get profile using direct fetch
+                const response = await fetch(
+                    `${url}/rest/v1/profiles?id=eq.${user.id}&select=*,departments(name)`,
+                    {
+                        headers: {
+                            'apikey': key,
+                            'Authorization': `Bearer ${key}`
+                        }
+                    }
+                )
+                const data = await response.json()
+                const profileData = data?.[0]
 
                 if (!profileData) {
                     router.replace('/register/complete-profile')
@@ -81,7 +107,10 @@ export default function PendingApprovalPage() {
 
     const handleLogout = async () => {
         setLoggingOut(true)
-        await supabase.auth.signOut()
+        const client = getSupabaseClient()
+        if (client) {
+            await client.auth.signOut()
+        }
         router.replace('/login')
     }
 

@@ -4,8 +4,16 @@ import React from 'react'
 import AdminSidebar from './AdminSidebar'
 import AdminNotificationBell from './AdminNotificationBell'
 import { useProfile } from '@/hooks/useProfile'
-import { supabase } from '@/lib/supabase/client'
+import { createBrowserClient } from '@supabase/ssr'
 import { useEffect, useState } from 'react'
+
+// Get Supabase client for auth operations
+function getSupabaseClient() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    if (!url || !key) return null
+    return createBrowserClient(url, key)
+}
 
 interface AdminLayoutProps {
     children: React.ReactNode
@@ -17,9 +25,12 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
     const [userId, setUserId] = useState<string | undefined>(undefined)
 
     useEffect(() => {
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            setUserId(user?.id || undefined)
-        })
+        const client = getSupabaseClient()
+        if (client) {
+            client.auth.getUser().then(({ data: { user } }) => {
+                setUserId(user?.id || undefined)
+            })
+        }
     }, [])
 
     const { data: profile } = useProfile(userId)

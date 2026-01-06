@@ -16,9 +16,17 @@ import {
     X,
     Tag
 } from 'lucide-react'
-import { supabase } from '@/lib/supabase/client'
+import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+
+// Get Supabase client for auth operations
+function getSupabaseClient() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    if (!url || !key) return null
+    return createBrowserClient(url, key)
+}
 
 const menuItems = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
@@ -36,7 +44,10 @@ export default function AdminSidebar() {
     const [isMobileOpen, setIsMobileOpen] = useState(false)
 
     const handleSignOut = async () => {
-        await supabase.auth.signOut()
+        const client = getSupabaseClient()
+        if (client) {
+            await client.auth.signOut()
+        }
         router.push('/login')
         router.refresh()
     }
