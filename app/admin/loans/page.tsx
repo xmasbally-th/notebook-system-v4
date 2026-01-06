@@ -239,135 +239,211 @@ export default function LoanRequestsPage() {
                     </div>
                 </div>
 
-                {/* Table */}
-                <div className="overflow-x-auto">
-                    {isLoading ? (
-                        <div className="p-8 text-center text-gray-500">กำลังโหลด...</div>
-                    ) : error ? (
-                        <div className="p-12 text-center">
-                            <AlertTriangle className="w-12 h-12 mx-auto text-red-300 mb-3" />
-                            <p className="text-red-500">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
-                            <p className="text-sm text-gray-500 mt-1">กรุณาลองใหม่อีกครั้ง</p>
-                        </div>
-                    ) : paginatedItems.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <ClipboardList className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                            <p className="text-gray-500">ไม่พบคำขอยืม</p>
-                            {(searchTerm || statusFilter !== 'all') && (
-                                <button
-                                    onClick={() => {
-                                        setSearchTerm('')
-                                        setStatusFilter('all')
-                                    }}
-                                    className="text-blue-600 hover:underline text-sm mt-2"
-                                >
-                                    ล้างตัวกรอง
-                                </button>
-                            )}
-                        </div>
-                    ) : (
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-4 py-3 text-left w-10">
-                                        <input
-                                            type="checkbox"
-                                            className="rounded border-gray-300"
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedIds(paginatedItems
-                                                        .filter((r: any) => r.status === 'pending')
-                                                        .map((r: any) => r.id))
-                                                } else {
-                                                    setSelectedIds([])
-                                                }
-                                            }}
-                                            checked={paginatedItems.filter((r: any) => r.status === 'pending').length > 0 &&
-                                                selectedIds.length === paginatedItems.filter((r: any) => r.status === 'pending').length}
-                                        />
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ผู้ยืม</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">อุปกรณ์</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">วันที่ยืม-คืน</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">เหตุผล</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {paginatedItems.map((request: any) => {
-                                    const statusConfig = STATUS_CONFIG[request.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending
-                                    const StatusIcon = statusConfig.icon
-                                    const canSelect = request.status === 'pending'
+                {/* Loading & Empty & Error States */}
+                {isLoading ? (
+                    <div className="p-8 text-center text-gray-500">กำลังโหลด...</div>
+                ) : error ? (
+                    <div className="p-12 text-center">
+                        <AlertTriangle className="w-12 h-12 mx-auto text-red-300 mb-3" />
+                        <p className="text-red-500">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+                        <p className="text-sm text-gray-500 mt-1">กรุณาลองใหม่อีกครั้ง</p>
+                    </div>
+                ) : paginatedItems.length === 0 ? (
+                    <div className="p-12 text-center">
+                        <ClipboardList className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                        <p className="text-gray-500">ไม่พบคำขอยืม</p>
+                        {(searchTerm || statusFilter !== 'all') && (
+                            <button
+                                onClick={() => {
+                                    setSearchTerm('')
+                                    setStatusFilter('all')
+                                }}
+                                className="text-blue-600 hover:underline text-sm mt-2"
+                            >
+                                ล้างตัวกรอง
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    <>
+                        {/* Desktop Table */}
+                        <div className="hidden lg:block overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left w-10">
+                                            <input
+                                                type="checkbox"
+                                                className="rounded border-gray-300"
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedIds(paginatedItems
+                                                            .filter((r: any) => r.status === 'pending')
+                                                            .map((r: any) => r.id))
+                                                    } else {
+                                                        setSelectedIds([])
+                                                    }
+                                                }}
+                                                checked={paginatedItems.filter((r: any) => r.status === 'pending').length > 0 &&
+                                                    selectedIds.length === paginatedItems.filter((r: any) => r.status === 'pending').length}
+                                            />
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ผู้ยืม</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">อุปกรณ์</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">วันที่ยืม-คืน</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">เหตุผล</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {paginatedItems.map((request: any) => {
+                                        const statusConfig = STATUS_CONFIG[request.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending
+                                        const StatusIcon = statusConfig.icon
+                                        const canSelect = request.status === 'pending'
 
-                                    return (
-                                        <tr key={request.id} className={`hover:bg-gray-50 ${selectedIds.includes(request.id) ? 'bg-blue-50' : ''}`}>
-                                            <td className="px-4 py-4">
-                                                <input
-                                                    type="checkbox"
-                                                    className="rounded border-gray-300"
-                                                    checked={selectedIds.includes(request.id)}
-                                                    onChange={() => toggleSelect(request.id)}
-                                                    disabled={!canSelect}
-                                                />
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-                                                        {request.profiles?.avatar_url ? (
-                                                            <img src={request.profiles.avatar_url} alt="" className="w-8 h-8 object-cover" />
-                                                        ) : (
-                                                            <User className="w-4 h-4 text-gray-400" />
-                                                        )}
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-sm font-medium text-gray-900">
-                                                            {request.profiles?.first_name} {request.profiles?.last_name}
+                                        return (
+                                            <tr key={request.id} className={`hover:bg-gray-50 ${selectedIds.includes(request.id) ? 'bg-blue-50' : ''}`}>
+                                                <td className="px-4 py-4">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="rounded border-gray-300"
+                                                        checked={selectedIds.includes(request.id)}
+                                                        onChange={() => toggleSelect(request.id)}
+                                                        disabled={!canSelect}
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                                                            {request.profiles?.avatar_url ? (
+                                                                <img src={request.profiles.avatar_url} alt="" className="w-8 h-8 object-cover" />
+                                                            ) : (
+                                                                <User className="w-4 h-4 text-gray-400" />
+                                                            )}
                                                         </div>
-                                                        <div className="text-xs text-gray-500">{request.profiles?.email}</div>
+                                                        <div>
+                                                            <div className="text-sm font-medium text-gray-900">
+                                                                {request.profiles?.first_name} {request.profiles?.last_name}
+                                                            </div>
+                                                            <div className="text-xs text-gray-500">{request.profiles?.email}</div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
-                                                        {request.equipment?.images?.[0] ? (
-                                                            <img src={request.equipment.images[0]} alt="" className="w-10 h-10 object-cover" />
-                                                        ) : (
-                                                            <Package className="w-5 h-5 text-gray-400" />
-                                                        )}
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
+                                                            {request.equipment?.images?.[0] ? (
+                                                                <img src={request.equipment.images[0]} alt="" className="w-10 h-10 object-cover" />
+                                                            ) : (
+                                                                <Package className="w-5 h-5 text-gray-400" />
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-sm font-medium text-gray-900">{request.equipment?.name || '-'}</div>
+                                                            <div className="text-xs text-gray-500 font-mono">{request.equipment?.equipment_number}</div>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <div className="text-sm font-medium text-gray-900">{request.equipment?.name || '-'}</div>
-                                                        <div className="text-xs text-gray-500 font-mono">{request.equipment?.equipment_number}</div>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <div className="flex items-center gap-1 text-sm text-gray-600">
+                                                        <Calendar className="w-4 h-4 text-gray-400" />
+                                                        <span>{formatDate(request.start_date)}</span>
+                                                        <ArrowUpRight className="w-3 h-3 text-gray-400" />
+                                                        <span>{formatDate(request.end_date)}</span>
                                                     </div>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full ${statusConfig.color}`}>
+                                                        <StatusIcon className="w-3 h-3" />
+                                                        {statusConfig.label}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <p className="text-sm text-gray-600 truncate max-w-[200px]" title={request.reason}>
+                                                        {request.reason || '-'}
+                                                    </p>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Mobile Cards */}
+                        <div className="lg:hidden p-4 space-y-3">
+                            {paginatedItems.map((request: any) => {
+                                const statusConfig = STATUS_CONFIG[request.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending
+                                const StatusIcon = statusConfig.icon
+                                const canSelect = request.status === 'pending'
+
+                                return (
+                                    <div
+                                        key={request.id}
+                                        className={`bg-gray-50 rounded-xl p-4 border ${selectedIds.includes(request.id) ? 'border-blue-300 bg-blue-50' : 'border-gray-100'}`}
+                                    >
+                                        {/* Header with checkbox and status */}
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-3">
+                                                {canSelect && (
+                                                    <input
+                                                        type="checkbox"
+                                                        className="rounded border-gray-300"
+                                                        checked={selectedIds.includes(request.id)}
+                                                        onChange={() => toggleSelect(request.id)}
+                                                    />
+                                                )}
+                                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                                                    {request.profiles?.avatar_url ? (
+                                                        <img src={request.profiles.avatar_url} alt="" className="w-8 h-8 object-cover" />
+                                                    ) : (
+                                                        <User className="w-4 h-4 text-gray-400" />
+                                                    )}
                                                 </div>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <div className="flex items-center gap-1 text-sm text-gray-600">
-                                                    <Calendar className="w-4 h-4 text-gray-400" />
-                                                    <span>{formatDate(request.start_date)}</span>
-                                                    <ArrowUpRight className="w-3 h-3 text-gray-400" />
-                                                    <span>{formatDate(request.end_date)}</span>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                                        {request.profiles?.first_name} {request.profiles?.last_name}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 truncate">{request.profiles?.email}</p>
                                                 </div>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full ${statusConfig.color}`}>
-                                                    <StatusIcon className="w-3 h-3" />
-                                                    {statusConfig.label}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <p className="text-sm text-gray-600 truncate max-w-[200px]" title={request.reason}>
-                                                    {request.reason || '-'}
-                                                </p>
-                                            </td>
-                                        </tr>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
-                    )}
-                </div>
+                                            </div>
+                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${statusConfig.color}`}>
+                                                <StatusIcon className="w-3 h-3" />
+                                                <span className="hidden sm:inline">{statusConfig.label}</span>
+                                            </span>
+                                        </div>
+
+                                        {/* Equipment Info */}
+                                        <div className="flex items-center gap-3 mb-3 bg-white rounded-lg p-2">
+                                            <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                                {request.equipment?.images?.[0] ? (
+                                                    <img src={request.equipment.images[0]} alt="" className="w-12 h-12 object-cover" />
+                                                ) : (
+                                                    <Package className="w-6 h-6 text-gray-400" />
+                                                )}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-medium text-gray-900 truncate">{request.equipment?.name || '-'}</p>
+                                                <p className="text-xs text-gray-500 font-mono">{request.equipment?.equipment_number}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Details */}
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <Calendar className="w-4 h-4 text-gray-400" />
+                                                <span>{formatDate(request.start_date)} - {formatDate(request.end_date)}</span>
+                                            </div>
+                                            {request.reason && (
+                                                <p className="text-gray-500 text-xs line-clamp-2">{request.reason}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </>
+                )}
 
                 {/* Pagination */}
                 {totalPages > 1 && (

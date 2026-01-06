@@ -111,60 +111,114 @@ export default function EquipmentTypesPage() {
                         </Link>
                     </div>
                 ) : (
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ไอคอน</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ชื่อประเภท</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">คำอธิบาย</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                    <>
+                        {/* Desktop Table */}
+                        <div className="hidden lg:block">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ไอคอน</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ชื่อประเภท</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">คำอธิบาย</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {typesList.map((type) => (
+                                        <tr key={type.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className="text-2xl">{type.icon}</span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className="text-sm font-medium text-gray-900">{type.name}</span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="text-sm text-gray-500 line-clamp-1">
+                                                    {type.description || '-'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${type.is_active
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : 'bg-gray-100 text-gray-600'
+                                                    }`}>
+                                                    {type.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Link
+                                                        href={`/admin/equipment-types/${type.id}`}
+                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        title="แก้ไข"
+                                                    >
+                                                        <Edit className="w-4 h-4" />
+                                                    </Link>
+                                                    <button
+                                                        onClick={() => setDeleteId(type.id)}
+                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="ลบ"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Mobile Cards */}
+                        <div className="lg:hidden p-4 space-y-3">
                             {typesList.map((type) => (
-                                <tr key={type.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="text-2xl">{type.icon}</span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="text-sm font-medium text-gray-900">{type.name}</span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className="text-sm text-gray-500 line-clamp-1">
-                                            {type.description || '-'}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${type.is_active
-                                            ? 'bg-green-100 text-green-700'
-                                            : 'bg-gray-100 text-gray-600'
-                                            }`}>
-                                            {type.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                                        <div className="flex items-center justify-end gap-2">
-                                            <Link
-                                                href={`/admin/equipment-types/${type.id}`}
-                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                title="แก้ไข"
-                                            >
-                                                <Edit className="w-4 h-4" />
-                                            </Link>
-                                            <button
-                                                onClick={() => setDeleteId(type.id)}
-                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                title="ลบ"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
+                                <div key={type.id} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                    <div className="flex items-start gap-3">
+                                        {/* Icon */}
+                                        <div className="w-12 h-12 flex-shrink-0 rounded-lg bg-white flex items-center justify-center text-2xl border border-gray-100">
+                                            {type.icon}
                                         </div>
-                                    </td>
-                                </tr>
+
+                                        {/* Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <h3 className="font-medium text-gray-900">{type.name}</h3>
+                                                    {type.description && (
+                                                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{type.description}</p>
+                                                    )}
+                                                </div>
+                                                <span className={`flex-shrink-0 px-2 py-0.5 text-xs font-medium rounded-full ${type.is_active
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : 'bg-gray-100 text-gray-600'
+                                                    }`}>
+                                                    {type.is_active ? 'เปิด' : 'ปิด'}
+                                                </span>
+                                            </div>
+
+                                            {/* Actions */}
+                                            <div className="mt-3 flex gap-2">
+                                                <Link
+                                                    href={`/admin/equipment-types/${type.id}`}
+                                                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                    แก้ไข
+                                                </Link>
+                                                <button
+                                                    onClick={() => setDeleteId(type.id)}
+                                                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-red-100 text-red-600 text-sm font-medium rounded-lg hover:bg-red-200 transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             ))}
-                        </tbody>
-                    </table>
+                        </div>
+                    </>
                 )}
             </div>
 

@@ -272,111 +272,183 @@ export default function AdminEquipmentList() {
                     </div>
                 </div>
 
-                {/* Table */}
-                <div className="overflow-x-auto">
-                    {isLoading ? (
-                        <div className="p-8 text-center text-gray-500">กำลังโหลด...</div>
-                    ) : paginatedItems.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <Package className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                            <p className="text-gray-500">ไม่พบอุปกรณ์ที่ค้นหา</p>
-                            {searchTerm || selectedStatus !== 'all' || selectedType !== 'all' ? (
-                                <button
-                                    onClick={() => {
-                                        setSearchTerm('')
-                                        setSelectedStatus('all')
-                                        setSelectedType('all')
-                                    }}
-                                    className="text-blue-600 hover:underline text-sm mt-2"
-                                >
-                                    ล้างตัวกรอง
-                                </button>
-                            ) : (
-                                <Link href="/admin/equipment/new" className="text-blue-600 hover:underline text-sm mt-2 inline-block">
-                                    + เพิ่มอุปกรณ์แรก
-                                </Link>
-                            )}
-                        </div>
-                    ) : (
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">อุปกรณ์</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ยี่ห้อ/รุ่น</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ประเภท</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">จัดการ</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {paginatedItems.map((item) => {
-                                    const itemStatus = ((item as any).status_new || item.status) as keyof typeof STATUS_CONFIG
-                                    const statusConfig = STATUS_CONFIG[itemStatus] || STATUS_CONFIG.ready
-                                    const StatusIcon = statusConfig.icon
+                {/* Loading & Empty States */}
+                {isLoading ? (
+                    <div className="p-8 text-center text-gray-500">กำลังโหลด...</div>
+                ) : paginatedItems.length === 0 ? (
+                    <div className="p-12 text-center">
+                        <Package className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                        <p className="text-gray-500">ไม่พบอุปกรณ์ที่ค้นหา</p>
+                        {searchTerm || selectedStatus !== 'all' || selectedType !== 'all' ? (
+                            <button
+                                onClick={() => {
+                                    setSearchTerm('')
+                                    setSelectedStatus('all')
+                                    setSelectedType('all')
+                                }}
+                                className="text-blue-600 hover:underline text-sm mt-2"
+                            >
+                                ล้างตัวกรอง
+                            </button>
+                        ) : (
+                            <Link href="/admin/equipment/new" className="text-blue-600 hover:underline text-sm mt-2 inline-block">
+                                + เพิ่มอุปกรณ์แรก
+                            </Link>
+                        )}
+                    </div>
+                ) : (
+                    <>
+                        {/* Desktop Table */}
+                        <div className="hidden lg:block overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">อุปกรณ์</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ยี่ห้อ/รุ่น</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ประเภท</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {paginatedItems.map((item) => {
+                                        const itemStatus = ((item as any).status_new || item.status) as keyof typeof STATUS_CONFIG
+                                        const statusConfig = STATUS_CONFIG[itemStatus] || STATUS_CONFIG.ready
+                                        const StatusIcon = statusConfig.icon
 
-                                    return (
-                                        <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-12 w-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                                                        {(item.images as any)?.[0] ? (
-                                                            <img
-                                                                src={(item.images as any)[0]}
-                                                                alt={item.name}
-                                                                className="h-12 w-12 object-cover"
-                                                            />
-                                                        ) : (
-                                                            <div className="h-12 w-12 flex items-center justify-center text-2xl">
-                                                                {(item as any).equipment_types?.icon || '📦'}
-                                                            </div>
-                                                        )}
+                                        return (
+                                            <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-12 w-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                                                            {(item.images as any)?.[0] ? (
+                                                                <img
+                                                                    src={(item.images as any)[0]}
+                                                                    alt={item.name}
+                                                                    className="h-12 w-12 object-cover"
+                                                                />
+                                                            ) : (
+                                                                <div className="h-12 w-12 flex items-center justify-center text-2xl">
+                                                                    {(item as any).equipment_types?.icon || '📦'}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                                                            <div className="text-xs text-gray-500 font-mono">{item.equipment_number}</div>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                                                        <div className="text-xs text-gray-500 font-mono">{item.equipment_number}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm text-gray-900">{(item as any).brand || '-'}</div>
+                                                    <div className="text-xs text-gray-500">{(item as any).model || ''}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-gray-700">
+                                                        {(item as any).equipment_types?.icon} {(item as any).equipment_types?.name || '-'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full ${statusConfig.color}`}>
+                                                        <StatusIcon className="w-3 h-3" />
+                                                        {statusConfig.label}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <Link
+                                                            href={`/admin/equipment/${item.id}`}
+                                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="แก้ไข"
+                                                        >
+                                                            <Edit className="w-4 h-4" />
+                                                        </Link>
+                                                        <button
+                                                            onClick={() => setDeleteId(item.id)}
+                                                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="ลบ"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
                                                     </div>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Mobile Cards */}
+                        <div className="lg:hidden p-4 space-y-3">
+                            {paginatedItems.map((item) => {
+                                const itemStatus = ((item as any).status_new || item.status) as keyof typeof STATUS_CONFIG
+                                const statusConfig = STATUS_CONFIG[itemStatus] || STATUS_CONFIG.ready
+                                const StatusIcon = statusConfig.icon
+
+                                return (
+                                    <div key={item.id} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                        <div className="flex items-start gap-3">
+                                            {/* Image */}
+                                            <div className="h-16 w-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-200">
+                                                {(item.images as any)?.[0] ? (
+                                                    <img
+                                                        src={(item.images as any)[0]}
+                                                        alt={item.name}
+                                                        className="h-16 w-16 object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="h-16 w-16 flex items-center justify-center text-2xl bg-white">
+                                                        {(item as any).equipment_types?.icon || '📦'}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Info */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div className="min-w-0">
+                                                        <h3 className="font-medium text-gray-900 truncate">{item.name}</h3>
+                                                        <p className="text-xs text-gray-500 font-mono">{item.equipment_number}</p>
+                                                    </div>
+                                                    <span className={`flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${statusConfig.color}`}>
+                                                        <StatusIcon className="w-3 h-3" />
+                                                        <span className="hidden sm:inline">{statusConfig.label}</span>
+                                                    </span>
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm text-gray-900">{(item as any).brand || '-'}</div>
-                                                <div className="text-xs text-gray-500">{(item as any).model || ''}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className="text-sm text-gray-700">
-                                                    {(item as any).equipment_types?.icon} {(item as any).equipment_types?.name || '-'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full ${statusConfig.color}`}>
-                                                    <StatusIcon className="w-3 h-3" />
-                                                    {statusConfig.label}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex items-center justify-end gap-1">
+
+                                                {/* Details */}
+                                                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                                                    {((item as any).brand || (item as any).model) && (
+                                                        <span>{(item as any).brand} {(item as any).model}</span>
+                                                    )}
+                                                    <span>{(item as any).equipment_types?.icon} {(item as any).equipment_types?.name || '-'}</span>
+                                                </div>
+
+                                                {/* Actions */}
+                                                <div className="mt-3 flex gap-2">
                                                     <Link
                                                         href={`/admin/equipment/${item.id}`}
-                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                        title="แก้ไข"
+                                                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                                                     >
                                                         <Edit className="w-4 h-4" />
+                                                        แก้ไข
                                                     </Link>
                                                     <button
                                                         onClick={() => setDeleteId(item.id)}
-                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                        title="ลบ"
+                                                        className="flex items-center justify-center gap-1.5 px-3 py-2 bg-red-100 text-red-600 text-sm font-medium rounded-lg hover:bg-red-200 transition-colors"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
-                    )}
-                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </>
+                )}
 
                 {/* Pagination */}
                 {totalPages > 1 && (
