@@ -1,6 +1,17 @@
-import { supabase } from '@/lib/supabase/client'
+import { createBrowserClient } from '@supabase/ssr'
 
 const BUCKET_NAME = 'equipment-images'
+
+// Get Supabase client for storage operations
+function getSupabaseClient() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    if (!url || !key) {
+        console.error('[uploadImage] Missing Supabase env vars')
+        return null
+    }
+    return createBrowserClient(url, key)
+}
 
 /**
  * Compress image before upload
@@ -67,6 +78,13 @@ function generateFilename(originalName: string): string {
  * - Returns public URL
  */
 export async function uploadEquipmentImage(file: File): Promise<string> {
+    console.log('[uploadImage] Starting upload for:', file.name)
+
+    const client = getSupabaseClient()
+    if (!client) {
+        throw new Error('Supabase client not available')
+    }
+
     // Validate file type
     if (!file.type.startsWith('image/')) {
         throw new Error('อนุญาตเฉพาะไฟล์รูปภาพเท่านั้น')
@@ -79,14 +97,17 @@ export async function uploadEquipmentImage(file: File): Promise<string> {
     }
 
     // Compress image
+    console.log('[uploadImage] Compressing image...')
     const compressedBlob = await compressImage(file)
+    console.log('[uploadImage] Compressed to:', compressedBlob.size, 'bytes')
 
     // Generate filename
     const filename = generateFilename(file.name)
     const filePath = `equipment/${filename}`
 
     // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
+    console.log('[uploadImage] Uploading to:', filePath)
+    const { data, error } = await client.storage
         .from(BUCKET_NAME)
         .upload(filePath, compressedBlob, {
             contentType: 'image/webp',
@@ -95,15 +116,16 @@ export async function uploadEquipmentImage(file: File): Promise<string> {
         })
 
     if (error) {
-        console.error('Upload error:', error)
+        console.error('[uploadImage] Upload error:', error)
         throw new Error('ไม่สามารถอัปโหลดรูปภาพได้: ' + error.message)
     }
 
     // Get public URL
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = client.storage
         .from(BUCKET_NAME)
         .getPublicUrl(data.path)
 
+    console.log('[uploadImage] Success:', urlData.publicUrl)
     return urlData.publicUrl
 }
 
@@ -111,25 +133,34 @@ export async function uploadEquipmentImage(file: File): Promise<string> {
  * Delete image from Supabase Storage
  */
 export async function deleteEquipmentImage(url: string): Promise<void> {
+    console.log('[uploadImage] Deleting:', url)
+
+    const client = getSupabaseClient()
+    if (!client) {
+        throw new Error('Supabase client not available')
+    }
+
     // Extract path from URL
     const urlParts = url.split('/')
     const bucketIndex = urlParts.findIndex(part => part === BUCKET_NAME)
 
     if (bucketIndex === -1) {
-        console.warn('Could not find bucket in URL:', url)
+        console.warn('[uploadImage] Could not find bucket in URL:', url)
         return
     }
 
     const filePath = urlParts.slice(bucketIndex + 1).join('/')
 
-    const { error } = await supabase.storage
+    const { error } = await client.storage
         .from(BUCKET_NAME)
         .remove([filePath])
 
     if (error) {
-        console.error('Delete error:', error)
+        console.error('[uploadImage] Delete error:', error)
         throw new Error('ไม่สามารถลบรูปภาพได้')
     }
+
+    console.log('[uploadImage] Deleted successfully')
 }
 
 /**
