@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase/client'
+import { getSupabaseCredentials } from '@/lib/supabase-helpers'
 import Link from 'next/link'
 import AdminLayout from '@/components/admin/AdminLayout'
 import {
@@ -18,30 +18,35 @@ import {
 } from 'lucide-react'
 
 export default function AdminDashboard() {
-    // Fetch stats
+    // Fetch stats using direct API
     const { data: stats, isLoading } = useQuery({
         queryKey: ['admin-stats'],
+        staleTime: 30000,
         queryFn: async () => {
-            const [
-                { count: equipmentCount },
-                { count: pendingUsersCount },
-                { count: pendingLoansCount },
-                { count: activeLoansCount },
-                { count: totalUsersCount }
-            ] = await Promise.all([
-                (supabase as any).from('equipment').select('*', { count: 'exact', head: true }),
-                (supabase as any).from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-                (supabase as any).from('loanRequests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-                (supabase as any).from('loanRequests').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
-                (supabase as any).from('profiles').select('*', { count: 'exact', head: true })
+            const { url, key } = getSupabaseCredentials()
+            if (!url || !key) return { equipment: 0, pendingUsers: 0, pendingLoans: 0, activeLoans: 0, totalUsers: 0 }
+
+            const headers = { 'apikey': key, 'Authorization': `Bearer ${key}`, 'Prefer': 'count=exact' }
+
+            const [equipmentRes, pendingUsersRes, pendingLoansRes, activeLoansRes, totalUsersRes] = await Promise.all([
+                fetch(`${url}/rest/v1/equipment?select=id`, { headers }),
+                fetch(`${url}/rest/v1/profiles?status=eq.pending&select=id`, { headers }),
+                fetch(`${url}/rest/v1/loanRequests?status=eq.pending&select=id`, { headers }),
+                fetch(`${url}/rest/v1/loanRequests?status=eq.approved&select=id`, { headers }),
+                fetch(`${url}/rest/v1/profiles?select=id`, { headers })
             ])
 
+            const getCount = (res: Response) => {
+                const range = res.headers.get('content-range')
+                return range ? parseInt(range.split('/')[1]) || 0 : 0
+            }
+
             return {
-                equipment: equipmentCount || 0,
-                pendingUsers: pendingUsersCount || 0,
-                pendingLoans: pendingLoansCount || 0,
-                activeLoans: activeLoansCount || 0,
-                totalUsers: totalUsersCount || 0
+                equipment: getCount(equipmentRes),
+                pendingUsers: getCount(pendingUsersRes),
+                pendingLoans: getCount(pendingLoansRes),
+                activeLoans: getCount(activeLoansRes),
+                totalUsers: getCount(totalUsersRes)
             }
         }
     })
