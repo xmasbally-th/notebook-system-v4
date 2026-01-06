@@ -7,6 +7,17 @@ function getSupabaseCredentials() {
     return { url, key }
 }
 
+// Get user's access token for authenticated requests
+async function getAccessToken(): Promise<string | null> {
+    const { url, key } = getSupabaseCredentials()
+    if (!url || !key) return null
+
+    const { createBrowserClient } = await import('@supabase/ssr')
+    const client = createBrowserClient(url, key)
+    const { data: { session } } = await client.auth.getSession()
+    return session?.access_token || null
+}
+
 /**
  * Compress image before upload
  * Reduces file size while maintaining quality
@@ -61,15 +72,12 @@ async function compressImage(file: File, maxWidth = 800, quality = 0.8): Promise
 function generateFilename(originalName: string): string {
     const timestamp = Date.now()
     const random = Math.random().toString(36).substring(2, 8)
-    const extension = 'webp' // Always convert to webp for better compression
-    return `${timestamp}-${random}.${extension}`
+    return `${timestamp}_${random}.webp`
 }
 
 /**
- * Upload image to Supabase Storage using direct fetch API
- * - Compresses image before upload
- * - Converts to WebP format
- * - Returns public URL
+ * Upload equipment image to Supabase Storage using direct fetch API
+ * Returns the public URL of the uploaded image
  */
 export async function uploadEquipmentImage(file: File): Promise<string> {
     console.log('[uploadImage] Starting upload for:', file.name)
@@ -79,14 +87,20 @@ export async function uploadEquipmentImage(file: File): Promise<string> {
         throw new Error('Supabase credentials not available')
     }
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-        throw new Error('อนุญาตเฉพาะไฟล์รูปภาพเท่านั้น')
+    // Get user's access token for RLS-protected operations
+    const accessToken = await getAccessToken()
+    if (!accessToken) {
+        throw new Error('กรุณาเข้าสู่ระบบก่อน')
     }
 
-    // Validate file size (max 5MB before compression)
-    const maxSize = 5 * 1024 * 1024
-    if (file.size > maxSize) {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        throw new Error('ไฟล์ต้องเป็นรูปภาพเท่านั้น')
+    }
+
+    // Validate file size (max 5MB)
+    const MAX_SIZE = 5 * 1024 * 1024
+    if (file.size > MAX_SIZE) {
         throw new Error('ไฟล์ต้องมีขนาดไม่เกิน 5MB')
     }
 
@@ -106,7 +120,7 @@ export async function uploadEquipmentImage(file: File): Promise<string> {
     const response = await fetch(uploadUrl, {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${key}`,
+            'Authorization': `Bearer ${accessToken}`,
             'apikey': key,
             'Content-Type': 'image/webp',
             'x-upsert': 'false'
@@ -140,6 +154,12 @@ export async function deleteEquipmentImage(imageUrl: string): Promise<void> {
         throw new Error('Supabase credentials not available')
     }
 
+    // Get user's access token for RLS
+    const accessToken = await getAccessToken()
+    if (!accessToken) {
+        throw new Error('กรุณาเข้าสู่ระบบก่อน')
+    }
+
     // Extract path from URL
     const urlParts = imageUrl.split('/')
     const bucketIndex = urlParts.findIndex(part => part === BUCKET_NAME)
@@ -155,7 +175,7 @@ export async function deleteEquipmentImage(imageUrl: string): Promise<void> {
     const response = await fetch(deleteUrl, {
         method: 'DELETE',
         headers: {
-            'Authorization': `Bearer ${key}`,
+            'Authorization': `Bearer ${accessToken}`,
             'apikey': key
         }
     })

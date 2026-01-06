@@ -130,13 +130,16 @@ export default function ProfilePage() {
 
         const { url, key } = getSupabaseCredentials()
 
+        // Use session access token for RLS authentication
+        const accessToken = session.access_token
+
         const response = await fetch(
             `${url}/rest/v1/profiles?id=eq.${session.user.id}`,
             {
                 method: 'PATCH',
                 headers: {
                     'apikey': key,
-                    'Authorization': `Bearer ${key}`,
+                    'Authorization': `Bearer ${accessToken}`,
                     'Content-Type': 'application/json',
                     'Prefer': 'return=representation'
                 },

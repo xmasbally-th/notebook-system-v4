@@ -5,6 +5,17 @@ function getSupabaseCredentials() {
     return { url, key }
 }
 
+// Get user's access token for authenticated requests
+async function getAccessToken(): Promise<string | null> {
+    const { url, key } = getSupabaseCredentials()
+    if (!url || !key) return null
+
+    const { createBrowserClient } = await import('@supabase/ssr')
+    const client = createBrowserClient(url, key)
+    const { data: { session } } = await client.auth.getSession()
+    return session?.access_token || null
+}
+
 export const checkConflict = async (
     equipmentId: string,
     startDate: Date,
@@ -17,13 +28,16 @@ export const checkConflict = async (
         return true // Fail safe: assume conflict
     }
 
+    // Get user's access token for RLS
+    const accessToken = await getAccessToken()
+
     try {
         // Call the RPC function using direct fetch
         const response = await fetch(`${url}/rest/v1/rpc/check_reservation_conflict`, {
             method: 'POST',
             headers: {
                 'apikey': key,
-                'Authorization': `Bearer ${key}`,
+                'Authorization': `Bearer ${accessToken || key}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({

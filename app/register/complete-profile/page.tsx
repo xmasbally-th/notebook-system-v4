@@ -73,8 +73,10 @@ export default function CompleteProfilePage() {
             const { url, key } = getSupabaseCredentials()
             if (!client) throw new Error('No client available')
 
+            // Get session for access token
+            const { data: { session } } = await client.auth.getSession()
             const { data: { user } } = await client.auth.getUser()
-            if (!user) throw new Error('No user found')
+            if (!user || !session) throw new Error('No user found')
 
             const updates = {
                 title,
@@ -92,7 +94,7 @@ export default function CompleteProfilePage() {
                     method: 'PATCH',
                     headers: {
                         'apikey': key,
-                        'Authorization': `Bearer ${key}`,
+                        'Authorization': `Bearer ${session.access_token}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(updates)

@@ -78,15 +78,25 @@ export default function AdminEquipmentList() {
         }
     })
 
-    // Delete mutation using direct fetch
+    // Delete mutation using direct fetch with user auth
     const deleteMutation = useMutation({
         mutationFn: async (id: string) => {
             const { url, key } = getSupabaseCredentials()
+
+            // Get user's access token for RLS
+            const { createBrowserClient } = await import('@supabase/ssr')
+            const client = createBrowserClient(url, key)
+            const { data: { session } } = await client.auth.getSession()
+
+            if (!session?.access_token) {
+                throw new Error('กรุณาเข้าสู่ระบบก่อน')
+            }
+
             const response = await fetch(`${url}/rest/v1/equipment?id=eq.${id}`, {
                 method: 'DELETE',
                 headers: {
                     'apikey': key,
-                    'Authorization': `Bearer ${key}`
+                    'Authorization': `Bearer ${session.access_token}`
                 }
             })
             if (!response.ok) throw new Error('Failed to delete')
