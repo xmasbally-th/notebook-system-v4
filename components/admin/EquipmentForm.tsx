@@ -63,6 +63,15 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
             const { url, key } = getSupabaseCredentials()
             if (!url || !key) throw new Error('Supabase credentials not available')
 
+            // Get user's access token for RLS authentication
+            const { createBrowserClient } = await import('@supabase/ssr')
+            const client = createBrowserClient(url, key)
+            const { data: { session } } = await client.auth.getSession()
+
+            if (!session?.access_token) {
+                throw new Error('กรุณาเข้าสู่ระบบก่อน')
+            }
+
             // Map new status values to old enum values for the 'status' column
             // Old enum: 'active', 'maintenance', 'retired', 'lost'
             // New enum: 'ready', 'borrowed', 'maintenance', 'retired'
@@ -90,17 +99,20 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
                 is_active: data.is_active ?? true,
             }
 
-            console.log('[EquipmentForm] Submitting:', submitData)
+            console.log('[EquipmentForm] Submitting with user token:', submitData)
+
+            // Use user's access token in Authorization header for RLS
+            const authHeaders = {
+                'apikey': key,
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            }
 
             if (isEditing && initialData) {
                 const response = await fetch(`${url}/rest/v1/equipment?id=eq.${initialData.id}`, {
                     method: 'PATCH',
-                    headers: {
-                        'apikey': key,
-                        'Authorization': `Bearer ${key}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=representation'
-                    },
+                    headers: authHeaders,
                     body: JSON.stringify(submitData)
                 })
                 if (!response.ok) {
@@ -111,12 +123,7 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
             } else {
                 const response = await fetch(`${url}/rest/v1/equipment`, {
                     method: 'POST',
-                    headers: {
-                        'apikey': key,
-                        'Authorization': `Bearer ${key}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=representation'
-                    },
+                    headers: authHeaders,
                     body: JSON.stringify(submitData)
                 })
                 if (!response.ok) {
