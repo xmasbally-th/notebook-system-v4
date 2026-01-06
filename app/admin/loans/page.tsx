@@ -40,7 +40,7 @@ export default function LoanRequestsPage() {
             const { data: { session } } = await client.auth.getSession()
 
             const response = await fetch(
-                `${url}/rest/v1/loanRequests?select=*,profiles(first_name,last_name,email,avatar_url),equipment(name,equipment_number,images)&order=created_at.desc`,
+                `${url}/rest/v1/loanRequests?select=*,profiles(first_name,last_name,email),equipment(name,equipment_number,images)&order=created_at.desc`,
                 {
                     headers: {
                         'apikey': key,
