@@ -1,16 +1,10 @@
-import { createBrowserClient } from '@supabase/ssr'
-
 const BUCKET_NAME = 'equipment-images'
 
-// Get Supabase client for storage operations
-function getSupabaseClient() {
+// Get Supabase credentials
+function getSupabaseCredentials() {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    if (!url || !key) {
-        console.error('[uploadImage] Missing Supabase env vars')
-        return null
-    }
-    return createBrowserClient(url, key)
+    return { url, key }
 }
 
 /**
@@ -72,7 +66,7 @@ function generateFilename(originalName: string): string {
 }
 
 /**
- * Upload image to Supabase Storage
+ * Upload image to Supabase Storage using direct fetch API
  * - Compresses image before upload
  * - Converts to WebP format
  * - Returns public URL
@@ -80,9 +74,9 @@ function generateFilename(originalName: string): string {
 export async function uploadEquipmentImage(file: File): Promise<string> {
     console.log('[uploadImage] Starting upload for:', file.name)
 
-    const client = getSupabaseClient()
-    if (!client) {
-        throw new Error('Supabase client not available')
+    const { url, key } = getSupabaseCredentials()
+    if (!url || !key) {
+        throw new Error('Supabase credentials not available')
     }
 
     // Validate file type
@@ -105,58 +99,70 @@ export async function uploadEquipmentImage(file: File): Promise<string> {
     const filename = generateFilename(file.name)
     const filePath = `equipment/${filename}`
 
-    // Upload to Supabase Storage
+    // Upload using direct fetch API to Supabase Storage
     console.log('[uploadImage] Uploading to:', filePath)
-    const { data, error } = await client.storage
-        .from(BUCKET_NAME)
-        .upload(filePath, compressedBlob, {
-            contentType: 'image/webp',
-            cacheControl: '31536000', // 1 year cache
-            upsert: false
-        })
+    const uploadUrl = `${url}/storage/v1/object/${BUCKET_NAME}/${filePath}`
 
-    if (error) {
-        console.error('[uploadImage] Upload error:', error)
-        throw new Error('ไม่สามารถอัปโหลดรูปภาพได้: ' + error.message)
+    const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${key}`,
+            'apikey': key,
+            'Content-Type': 'image/webp',
+            'x-upsert': 'false'
+        },
+        body: compressedBlob
+    })
+
+    console.log('[uploadImage] Response status:', response.status)
+
+    if (!response.ok) {
+        const errorText = await response.text()
+        console.error('[uploadImage] Upload error:', errorText)
+        throw new Error('ไม่สามารถอัปโหลดรูปภาพได้: ' + errorText)
     }
 
-    // Get public URL
-    const { data: urlData } = client.storage
-        .from(BUCKET_NAME)
-        .getPublicUrl(data.path)
+    // Construct public URL
+    const publicUrl = `${url}/storage/v1/object/public/${BUCKET_NAME}/${filePath}`
+    console.log('[uploadImage] Success:', publicUrl)
 
-    console.log('[uploadImage] Success:', urlData.publicUrl)
-    return urlData.publicUrl
+    return publicUrl
 }
 
 /**
- * Delete image from Supabase Storage
+ * Delete image from Supabase Storage using direct fetch API
  */
-export async function deleteEquipmentImage(url: string): Promise<void> {
-    console.log('[uploadImage] Deleting:', url)
+export async function deleteEquipmentImage(imageUrl: string): Promise<void> {
+    console.log('[uploadImage] Deleting:', imageUrl)
 
-    const client = getSupabaseClient()
-    if (!client) {
-        throw new Error('Supabase client not available')
+    const { url, key } = getSupabaseCredentials()
+    if (!url || !key) {
+        throw new Error('Supabase credentials not available')
     }
 
     // Extract path from URL
-    const urlParts = url.split('/')
+    const urlParts = imageUrl.split('/')
     const bucketIndex = urlParts.findIndex(part => part === BUCKET_NAME)
 
     if (bucketIndex === -1) {
-        console.warn('[uploadImage] Could not find bucket in URL:', url)
+        console.warn('[uploadImage] Could not find bucket in URL:', imageUrl)
         return
     }
 
     const filePath = urlParts.slice(bucketIndex + 1).join('/')
+    const deleteUrl = `${url}/storage/v1/object/${BUCKET_NAME}/${filePath}`
 
-    const { error } = await client.storage
-        .from(BUCKET_NAME)
-        .remove([filePath])
+    const response = await fetch(deleteUrl, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${key}`,
+            'apikey': key
+        }
+    })
 
-    if (error) {
-        console.error('[uploadImage] Delete error:', error)
+    if (!response.ok) {
+        const errorText = await response.text()
+        console.error('[uploadImage] Delete error:', errorText)
         throw new Error('ไม่สามารถลบรูปภาพได้')
     }
 
