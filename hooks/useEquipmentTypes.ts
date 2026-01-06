@@ -1,42 +1,82 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase/client'
+import { createBrowserClient } from '@supabase/ssr'
 import { Database } from '@/supabase/types'
 
 type EquipmentType = Database['public']['Tables']['equipment_types']['Row']
 type EquipmentTypeInsert = Database['public']['Tables']['equipment_types']['Insert']
 type EquipmentTypeUpdate = Database['public']['Tables']['equipment_types']['Update']
 
+// Create client directly for this hook
+function getSupabaseClient() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    if (!url || !key) {
+        console.error('[useEquipmentTypes] Missing Supabase env vars')
+        return null
+    }
+    return createBrowserClient<Database>(url, key)
+}
+
 export function useEquipmentTypes(id?: string) {
     return useQuery({
         queryKey: ['equipment-types', id],
         staleTime: 0,  // Always refetch on mount for admin page
-        retry: 2,
+        retry: 1,
         queryFn: async () => {
             console.log('[useEquipmentTypes] Fetching equipment types...', id ? `id: ${id}` : 'all')
 
-            let query: any = supabase
-                .from('equipment_types' as any)
-                .select('*')
+            try {
+                const client = getSupabaseClient()
+                console.log('[useEquipmentTypes] Client created:', !!client)
 
-            if (id) {
-                query = query.eq('id', id).single()
-            } else {
-                query = query.order('name', { ascending: true })
+                if (!client) {
+                    console.error('[useEquipmentTypes] No client available')
+                    return []
+                }
+
+                // Wrap in timeout to prevent hanging
+                const timeoutMs = 8000
+                console.log('[useEquipmentTypes] Executing query with timeout:', timeoutMs)
+
+                let queryPromise
+                if (id) {
+                    queryPromise = client
+                        .from('equipment_types')
+                        .select('*')
+                        .eq('id', id)
+                        .single()
+                } else {
+                    queryPromise = client
+                        .from('equipment_types')
+                        .select('*')
+                        .order('name', { ascending: true })
+                }
+
+                const timeoutPromise = new Promise<never>((_, reject) => {
+                    setTimeout(() => {
+                        console.error('[useEquipmentTypes] Query timed out after', timeoutMs, 'ms')
+                        reject(new Error('Query timeout'))
+                    }, timeoutMs)
+                })
+
+                const { data, error } = await Promise.race([queryPromise, timeoutPromise])
+                console.log('[useEquipmentTypes] Query completed:', { hasData: !!data, error: error?.message })
+
+                if (error) {
+                    console.error('[useEquipmentTypes] Error:', error)
+                    return id ? null : []
+                }
+
+                console.log('[useEquipmentTypes] Success:', Array.isArray(data) ? `${data.length} items` : 'single item')
+
+                if (Array.isArray(data)) {
+                    return data as EquipmentType[]
+                }
+                return data as EquipmentType
+            } catch (err: any) {
+                console.error('[useEquipmentTypes] Exception:', err?.message || err)
+                return id ? null : []
             }
-
-            const { data, error } = await query
-
-            if (error) {
-                console.error('[useEquipmentTypes] Error:', error)
-                throw error
-            }
-
-            console.log('[useEquipmentTypes] Success:', Array.isArray(data) ? `${data.length} items` : 'single item')
-
-            if (Array.isArray(data)) {
-                return data as EquipmentType[]
-            }
-            return data as EquipmentType
         },
     })
 }
@@ -46,9 +86,12 @@ export function useEquipmentTypeMutation() {
 
     const createMutation = useMutation({
         mutationFn: async (data: EquipmentTypeInsert) => {
-            const { data: result, error } = await supabase
-                .from('equipment_types' as any)
-                .insert(data as any)
+            const client = getSupabaseClient()
+            if (!client) throw new Error('Supabase client not available')
+
+            const { data: result, error } = await (client as any)
+                .from('equipment_types')
+                .insert(data)
                 .select()
                 .single()
 
@@ -62,7 +105,10 @@ export function useEquipmentTypeMutation() {
 
     const updateMutation = useMutation({
         mutationFn: async ({ id, data }: { id: string; data: EquipmentTypeUpdate }) => {
-            const { data: result, error } = await (supabase as any)
+            const client = getSupabaseClient()
+            if (!client) throw new Error('Supabase client not available')
+
+            const { data: result, error } = await (client as any)
                 .from('equipment_types')
                 .update(data)
                 .eq('id', id)
@@ -79,8 +125,11 @@ export function useEquipmentTypeMutation() {
 
     const deleteMutation = useMutation({
         mutationFn: async (id: string) => {
-            const { error } = await supabase
-                .from('equipment_types' as any)
+            const client = getSupabaseClient()
+            if (!client) throw new Error('Supabase client not available')
+
+            const { error } = await (client as any)
+                .from('equipment_types')
                 .delete()
                 .eq('id', id)
 
