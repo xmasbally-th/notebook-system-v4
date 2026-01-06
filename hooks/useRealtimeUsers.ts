@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { supabase } from '@/lib/supabase/client'
 
 type NewUser = {
     id: string
@@ -14,6 +13,13 @@ type NewUser = {
 
 const POLL_INTERVAL = 10000 // 10 seconds
 
+// Get Supabase credentials
+function getSupabaseCredentials() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    return { url, key }
+}
+
 export function useRealtimeUsers(isAdmin: boolean) {
     const [pendingCount, setPendingCount] = useState(0)
     const [newUser, setNewUser] = useState<NewUser | null>(null)
@@ -24,29 +30,53 @@ export function useRealtimeUsers(isAdmin: boolean) {
     const fetchPendingUsers = useCallback(async () => {
         if (!isAdmin) return
 
-        const { data, count } = await supabase
-            .from('profiles')
-            .select('*', { count: 'exact' })
-            .eq('status', 'pending')
-            .order('created_at', { ascending: false })
-            .limit(1)
+        try {
+            const { url, key } = getSupabaseCredentials()
 
-        const newCount = count || 0
-
-        // Check if there's a new user (count increased and different user)
-        if (data && data.length > 0) {
-            const latestPendingUser = data[0] as NewUser
-
-            // If count increased and it's a new user ID, show notification
-            if (newCount > previousCountRef.current &&
-                latestUserRef.current !== latestPendingUser.id) {
-                setNewUser(latestPendingUser)
-                latestUserRef.current = latestPendingUser.id
+            if (!url || !key) {
+                console.error('[useRealtimeUsers] Missing credentials')
+                return
             }
-        }
 
-        previousCountRef.current = newCount
-        setPendingCount(newCount)
+            // Use direct fetch API
+            const endpoint = `${url}/rest/v1/profiles?status=eq.pending&select=*&order=created_at.desc&limit=1`
+
+            const response = await fetch(endpoint, {
+                method: 'GET',
+                headers: {
+                    'apikey': key,
+                    'Authorization': `Bearer ${key}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'count=exact'
+                }
+            })
+
+            if (!response.ok) {
+                console.error('[useRealtimeUsers] HTTP Error:', response.status)
+                return
+            }
+
+            const data = await response.json()
+            const countHeader = response.headers.get('content-range')
+            const newCount = countHeader ? parseInt(countHeader.split('/')[1]) || 0 : data.length
+
+            // Check if there's a new user (count increased and different user)
+            if (data && data.length > 0) {
+                const latestPendingUser = data[0] as NewUser
+
+                // If count increased and it's a new user ID, show notification
+                if (newCount > previousCountRef.current &&
+                    latestUserRef.current !== latestPendingUser.id) {
+                    setNewUser(latestPendingUser)
+                    latestUserRef.current = latestPendingUser.id
+                }
+            }
+
+            previousCountRef.current = newCount
+            setPendingCount(newCount)
+        } catch (err: any) {
+            console.error('[useRealtimeUsers] Exception:', err?.message || err)
+        }
     }, [isAdmin])
 
     // Initial fetch and setup polling
