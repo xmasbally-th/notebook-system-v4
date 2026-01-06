@@ -1,17 +1,24 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Calendar, FileText } from 'lucide-react'
+import { ArrowLeft, CheckCircle, AlertTriangle, Clock, Wrench } from 'lucide-react'
 import LoanRequestForm from './loan-form'
+
+const STATUS_CONFIG = {
+    ready: { label: 'พร้อมให้ยืม', color: 'bg-green-100 text-green-700', icon: CheckCircle },
+    borrowed: { label: 'กำลังถูกยืม', color: 'bg-blue-100 text-blue-700', icon: Clock },
+    maintenance: { label: 'ซ่อมบำรุง', color: 'bg-yellow-100 text-yellow-700', icon: Wrench },
+    retired: { label: 'ปลดระวาง', color: 'bg-gray-100 text-gray-500', icon: AlertTriangle },
+}
 
 export default async function EquipmentDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     const supabase = await createClient()
 
-    // 1. Fetch Equipment
+    // 1. Fetch Equipment with equipment_types
     const { data: item } = await (supabase as any)
         .from('equipment')
-        .select('*')
+        .select('*, equipment_types(id, name, icon)')
         .eq('id', id)
         .single()
 
@@ -32,7 +39,10 @@ export default async function EquipmentDetailsPage({ params }: { params: Promise
 
     const images = Array.isArray(item.images) ? item.images : []
     const imageUrl = images.length > 0 ? (images[0] as string) : 'https://placehold.co/800x600?text=No+Image'
-    const category = (item.category as any) || {}
+    const equipmentType = (item as any).equipment_types || { name: 'ทั่วไป', icon: '📦' }
+    const equipmentStatus = (item.status || 'ready') as keyof typeof STATUS_CONFIG
+    const statusConfig = STATUS_CONFIG[equipmentStatus] || STATUS_CONFIG.ready
+    const StatusIcon = statusConfig.icon
 
     return (
         <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -45,23 +55,29 @@ export default async function EquipmentDetailsPage({ params }: { params: Promise
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                     <div className="grid grid-cols-1 md:grid-cols-2">
                         {/* Image Side */}
-                        <div className="bg-gray-100 aspect-square md:aspect-auto relative">
+                        <div className="bg-gray-100 relative">
                             <img
                                 src={imageUrl}
                                 alt={item.name}
-                                className="object-cover w-full h-full"
+                                className="object-contain w-full h-full max-h-[300px] md:max-h-[500px] md:object-cover"
                             />
                         </div>
 
                         {/* Content Side */}
                         <div className="p-5 md:p-8 space-y-6">
                             <div>
-                                <div className="flex items-center gap-2 text-sm text-blue-600 font-medium mb-2">
-                                    <span>{category.icon || '📦'}</span>
-                                    <span>{category.name || 'General'}</span>
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                    <div className="flex items-center gap-2 text-sm text-blue-600 font-medium">
+                                        <span>{equipmentType.icon}</span>
+                                        <span>{equipmentType.name}</span>
+                                    </div>
+                                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full ${statusConfig.color}`}>
+                                        <StatusIcon className="w-3 h-3" />
+                                        {statusConfig.label}
+                                    </span>
                                 </div>
                                 <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{item.name}</h1>
-                                <p className="text-gray-500 font-mono text-sm">#{item.equipment_number}</p>
+                                <p className="text-gray-500 font-mono text-sm">หมายเลขครุภัณฑ์: {item.equipment_number}</p>
                             </div>
 
                             <div className="prose prose-sm text-gray-600">

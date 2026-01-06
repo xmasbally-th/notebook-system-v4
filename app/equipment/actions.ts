@@ -34,9 +34,8 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
     const equipmentId = formData.get('equipmentId') as string
     const startDate = formData.get('startDate') as string
     const endDate = formData.get('endDate') as string
-    const reason = formData.get('reason') as string
 
-    if (!equipmentId || !startDate || !endDate || !reason) {
+    if (!equipmentId || !startDate || !endDate) {
         return { error: 'กรุณากรอกข้อมูลให้ครบทุกช่อง' }
     }
 
@@ -96,16 +95,17 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
         .single()
 
     // 6. Create Loan Request
-    const { error } = await (supabase as any)
+    const { data: insertedLoan, error } = await (supabase as any)
         .from('loanRequests')
         .insert({
             user_id: user.id,
             equipment_id: equipmentId,
             start_date: new Date(startDate).toISOString(),
             end_date: new Date(endDate).toISOString(),
-            reason: reason,
             status: 'pending'
         })
+        .select('id')
+        .single()
 
     if (error) {
         return { error: `เกิดข้อผิดพลาด: ${error.message}` }
@@ -130,8 +130,6 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
 📅 **วันที่ยืม:** ${formatThaiDate(startDate)}
 📅 **วันที่คืน:** ${formatThaiDateTime(endDate)}
 ⏱️ **ระยะเวลา:** ${durationDays} วัน
-
-📝 **เหตุผล:** ${reason}
 
 🔗 [ตรวจสอบคำขอ](${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/loans)
     `.trim()

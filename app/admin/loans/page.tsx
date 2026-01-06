@@ -34,12 +34,17 @@ export default function LoanRequestsPage() {
             const { url, key } = getSupabaseCredentials()
             if (!url || !key) return []
 
+            // Get user's access token for RLS
+            const { createBrowserClient } = await import('@supabase/ssr')
+            const client = createBrowserClient(url, key)
+            const { data: { session } } = await client.auth.getSession()
+
             const response = await fetch(
                 `${url}/rest/v1/loanRequests?select=*,profiles(first_name,last_name,email,avatar_url),equipment(name,equipment_number,images)&order=created_at.desc`,
                 {
                     headers: {
                         'apikey': key,
-                        'Authorization': `Bearer ${key}`
+                        'Authorization': `Bearer ${session?.access_token || key}`
                     }
                 }
             )

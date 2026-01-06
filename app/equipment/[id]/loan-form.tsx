@@ -36,7 +36,6 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
     const [startDate, setStartDate] = useState('')
     const [endDate, setEndDate] = useState('')
     const [returnTime, setReturnTime] = useState('16:00')
-    const [reason, setReason] = useState('')
 
     // Validation state
     const [validationErrors, setValidationErrors] = useState<string[]>([])
@@ -72,7 +71,6 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
             formData.append('equipmentId', equipmentId)
             formData.append('startDate', startDate)
             formData.append('endDate', `${endDate}T${returnTime}`)
-            formData.append('reason', reason)
 
             const submitResult = await submitLoanRequest(null, formData)
             if (submitResult?.error) {
@@ -167,8 +165,8 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
                             onChange={(e) => setStartDate(e.target.value)}
                         />
                         {startDate && (
-                            <p className="text-xs text-gray-500 mt-1">
-                                {formatThaiDate(startDate)}
+                            <p className="text-sm text-blue-600 mt-1 font-medium">
+                                ⇒ {formatThaiDate(startDate)} (พ.ศ.)
                             </p>
                         )}
                     </div>
@@ -187,8 +185,8 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
                             onChange={(e) => setEndDate(e.target.value)}
                         />
                         {endDate && (
-                            <p className="text-xs text-gray-500 mt-1">
-                                {formatThaiDate(endDate)}
+                            <p className="text-sm text-blue-600 mt-1 font-medium">
+                                ⇒ {formatThaiDate(endDate)} (พ.ศ.)
                             </p>
                         )}
                     </div>
@@ -208,28 +206,17 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
                         value={returnTime}
                         onChange={(e) => setReturnTime(e.target.value)}
                     />
+                    <p className="text-sm text-blue-600 mt-1 font-medium">
+                        ⇒ เวลา {returnTime} น. (รูปแบบ 24 ชั่วโมง)
+                    </p>
                     {config && (
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 mt-0.5">
                             เวลาทำการ: {config.openingTime} - {config.closingTime}
                         </p>
                     )}
                 </div>
 
-                {/* Reason */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                        เหตุผลในการยืม
-                    </label>
-                    <textarea
-                        name="reason"
-                        required
-                        rows={3}
-                        className="w-full rounded-lg border-gray-300 border shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-2.5"
-                        placeholder="เช่น ใช้สำหรับงานนำเสนอโปรเจกต์จบการศึกษา..."
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                    />
-                </div>
+
 
                 {/* Validation Warnings */}
                 {validationWarnings.length > 0 && (
