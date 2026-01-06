@@ -19,7 +19,6 @@ export interface Database {
                     role: 'admin' | 'user'
                     status: 'pending' | 'approved' | 'rejected'
                     user_type: 'student' | 'lecturer' | 'staff' | null
-                    department: Json | null
                     department_id: string | null
                     phone_number: string | null
                     created_at: string
@@ -34,7 +33,6 @@ export interface Database {
                     role?: 'admin' | 'user'
                     status?: 'pending' | 'approved' | 'rejected'
                     user_type?: 'student' | 'lecturer' | 'staff' | null
-                    department?: Json | null
                     department_id?: string | null
                     phone_number?: string | null
                     created_at?: string
@@ -49,7 +47,6 @@ export interface Database {
                     role?: 'admin' | 'user'
                     status?: 'pending' | 'approved' | 'rejected'
                     user_type?: 'student' | 'lecturer' | 'staff' | null
-                    department?: Json | null
                     department_id?: string | null
                     phone_number?: string | null
                     created_at?: string
@@ -94,7 +91,6 @@ export interface Database {
                     model: string | null
                     equipment_type_id: string | null
                     status: 'ready' | 'borrowed' | 'maintenance' | 'retired'
-                    category: Json | null
                     images: Json
                     search_keywords: string[]
                     location: Json | null
@@ -111,7 +107,6 @@ export interface Database {
                     model?: string | null
                     equipment_type_id?: string | null
                     status?: 'ready' | 'borrowed' | 'maintenance' | 'retired'
-                    category?: Json | null
                     images?: Json
                     search_keywords?: string[]
                     location?: Json | null
@@ -128,7 +123,6 @@ export interface Database {
                     model?: string | null
                     equipment_type_id?: string | null
                     status?: 'ready' | 'borrowed' | 'maintenance' | 'retired'
-                    category?: Json | null
                     images?: Json
                     search_keywords?: string[]
                     location?: Json | null

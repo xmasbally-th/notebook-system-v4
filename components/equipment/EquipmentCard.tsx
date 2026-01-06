@@ -16,14 +16,9 @@ const statusColorMap: Record<string, string> = {
 }
 
 export default function EquipmentCard({ item }: EquipmentCardProps) {
-    // Defensive: ensure images is an array (already handled in hook, but double safety)
+    // Defensive: ensure images is an array
     const images = Array.isArray(item.images) ? item.images : []
     const imageUrl = images.length > 0 ? (images[0] as string) : 'https://placehold.co/600x400?text=No+Image'
-
-    // Defensive: category parsing
-    const category = (item.category as any) || {}
-    const categoryName = category.name || 'Uncategorized'
-    const categoryIcon = category.icon || '📦'
 
     return (
         <Link href={`/equipment/${item.id}`} className="block group">
@@ -47,10 +42,6 @@ export default function EquipmentCard({ item }: EquipmentCardProps) {
 
                 {/* Content Area */}
                 <div className="flex flex-1 flex-col p-3 md:p-4">
-                    <div className="mb-2 flex items-center gap-2 text-sm text-gray-500">
-                        <span>{categoryIcon}</span>
-                        <span>{categoryName}</span>
-                    </div>
 
                     <h3 className="mb-1 text-lg font-semibold text-gray-900 line-clamp-1 group-hover:text-blue-600">
                         {item.name}
