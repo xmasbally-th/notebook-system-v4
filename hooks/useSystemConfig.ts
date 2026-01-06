@@ -9,44 +9,86 @@ export function useSystemConfig() {
     return useQuery({
         queryKey: ['system_config'],
         staleTime: 0,   // Always get fresh config for admin page
-        retry: 3,       // Retry more for critical config
+        retry: 2,       // Retry failed queries
+        retryDelay: 1000,
         queryFn: async () => {
             console.log('[useSystemConfig] Starting fetch...')
 
+            // Timeout wrapper to prevent hanging
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Query timeout - took more than 10 seconds')), 10000)
+            })
+
             try {
                 const supabaseClient = supabase as any
-                console.log('[useSystemConfig] Supabase client available:', !!supabaseClient)
 
-                const query = supabaseClient.from('system_config')
-                console.log('[useSystemConfig] Query created:', !!query)
+                if (!supabaseClient || !supabaseClient.from) {
+                    console.error('[useSystemConfig] Supabase client not available')
+                    throw new Error('Supabase client not initialized')
+                }
 
-                const selectQuery = query.select('*')
-                console.log('[useSystemConfig] Select query created:', !!selectQuery)
+                console.log('[useSystemConfig] Executing query...')
 
-                const result = await selectQuery.single()
+                const fetchPromise = supabaseClient
+                    .from('system_config')
+                    .select('*')
+                    .eq('id', 1)
+                    .single()
+
+                const result = await Promise.race([fetchPromise, timeoutPromise]) as any
                 console.log('[useSystemConfig] Query completed, result:', result)
 
                 const { data, error } = result
 
                 if (error) {
-                    console.error('[useSystemConfig] Supabase error:', error.message, error.code, error)
-                    throw error
+                    console.error('[useSystemConfig] Supabase error:', error.message, error.code)
+                    // If no rows found, return default config instead of throwing
+                    if (error.code === 'PGRST116') {
+                        console.log('[useSystemConfig] No config found, returning defaults')
+                        return getDefaultConfig()
+                    }
+                    throw new Error(`Database error: ${error.message}`)
                 }
 
                 if (!data) {
-                    console.warn('[useSystemConfig] No data returned, system_config table might be empty')
-                    // Return default config if no data
-                    throw new Error('ไม่พบข้อมูลการตั้งค่าระบบ กรุณาตรวจสอบ database')
+                    console.warn('[useSystemConfig] No data returned, using defaults')
+                    return getDefaultConfig()
                 }
 
                 console.log('[useSystemConfig] Success:', data)
                 return data as SystemConfig
-            } catch (err) {
-                console.error('[useSystemConfig] Exception:', err)
+            } catch (err: any) {
+                console.error('[useSystemConfig] Exception:', err?.message || err)
                 throw err
             }
         }
     })
+}
+
+// Default config values
+function getDefaultConfig(): SystemConfig {
+    return {
+        id: 1,
+        max_loan_days: 7,
+        max_items_per_user: 3,
+        opening_time: '09:00:00',
+        closing_time: '17:00:00',
+        closed_days: [],
+        is_loan_system_active: true,
+        is_reservation_active: true,
+        discord_webhook_url: null,
+        announcement_message: null,
+        announcement_active: false,
+        updated_at: new Date().toISOString(),
+        break_start_time: '12:00:00',
+        break_end_time: '13:00:00',
+        closed_dates: [],
+        loan_limits_by_type: {
+            student: { max_days: 3, max_items: 1 },
+            lecturer: { max_days: 7, max_items: 3 },
+            staff: { max_days: 5, max_items: 2 }
+        }
+    } as SystemConfig
 }
 
 export function useUpdateSystemConfig() {
