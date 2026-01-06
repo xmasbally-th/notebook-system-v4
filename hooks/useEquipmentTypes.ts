@@ -6,10 +6,16 @@ type EquipmentType = Database['public']['Tables']['equipment_types']['Row']
 type EquipmentTypeInsert = Database['public']['Tables']['equipment_types']['Insert']
 type EquipmentTypeUpdate = Database['public']['Tables']['equipment_types']['Update']
 
-// Create client directly for this hook
-function getSupabaseClient() {
+// Get Supabase credentials
+function getSupabaseCredentials() {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    return { url, key }
+}
+
+// Create client for mutations
+function getSupabaseClient() {
+    const { url, key } = getSupabaseCredentials()
     if (!url || !key) {
         console.error('[useEquipmentTypes] Missing Supabase env vars')
         return null
@@ -26,53 +32,47 @@ export function useEquipmentTypes(id?: string) {
             console.log('[useEquipmentTypes] Fetching equipment types...', id ? `id: ${id}` : 'all')
 
             try {
-                const client = getSupabaseClient()
-                console.log('[useEquipmentTypes] Client created:', !!client)
+                const { url, key } = getSupabaseCredentials()
+                console.log('[useEquipmentTypes] Credentials:', { hasUrl: !!url, hasKey: !!key })
 
-                if (!client) {
-                    console.error('[useEquipmentTypes] No client available')
+                if (!url || !key) {
+                    console.error('[useEquipmentTypes] Missing credentials')
                     return []
                 }
 
-                // Wrap in timeout to prevent hanging
-                const timeoutMs = 8000
-                console.log('[useEquipmentTypes] Executing query with timeout:', timeoutMs)
+                // Use direct fetch API instead of Supabase client
+                const endpoint = id
+                    ? `${url}/rest/v1/equipment_types?id=eq.${id}&select=*`
+                    : `${url}/rest/v1/equipment_types?select=*&order=name.asc`
 
-                let queryPromise
-                if (id) {
-                    queryPromise = client
-                        .from('equipment_types')
-                        .select('*')
-                        .eq('id', id)
-                        .single()
-                } else {
-                    queryPromise = client
-                        .from('equipment_types')
-                        .select('*')
-                        .order('name', { ascending: true })
-                }
+                console.log('[useEquipmentTypes] Fetching from:', endpoint)
 
-                const timeoutPromise = new Promise<never>((_, reject) => {
-                    setTimeout(() => {
-                        console.error('[useEquipmentTypes] Query timed out after', timeoutMs, 'ms')
-                        reject(new Error('Query timeout'))
-                    }, timeoutMs)
+                const response = await fetch(endpoint, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    }
                 })
 
-                const { data, error } = await Promise.race([queryPromise, timeoutPromise])
-                console.log('[useEquipmentTypes] Query completed:', { hasData: !!data, error: error?.message })
+                console.log('[useEquipmentTypes] Response status:', response.status)
 
-                if (error) {
-                    console.error('[useEquipmentTypes] Error:', error)
+                if (!response.ok) {
+                    const errorText = await response.text()
+                    console.error('[useEquipmentTypes] HTTP Error:', response.status, errorText)
                     return id ? null : []
                 }
 
+                const data = await response.json()
                 console.log('[useEquipmentTypes] Success:', Array.isArray(data) ? `${data.length} items` : 'single item')
 
-                if (Array.isArray(data)) {
-                    return data as EquipmentType[]
+                if (id && Array.isArray(data) && data.length > 0) {
+                    return data[0] as EquipmentType
                 }
-                return data as EquipmentType
+
+                return (data || []) as EquipmentType[]
             } catch (err: any) {
                 console.error('[useEquipmentTypes] Exception:', err?.message || err)
                 return id ? null : []
