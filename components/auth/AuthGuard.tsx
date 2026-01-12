@@ -8,7 +8,7 @@ import { useQueryClient } from '@tanstack/react-query'
 type Profile = {
     id: string
     status: 'pending' | 'approved' | 'rejected'
-    role: 'user' | 'admin'
+    role: 'user' | 'staff' | 'admin'
     first_name: string | null
     last_name: string | null
     phone_number: string | null
@@ -240,6 +240,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             const isRejected = profile.status === 'rejected'
             const isApproved = profile.status === 'approved'
             const isAdmin = profile.role === 'admin'
+            const isStaff = profile.role === 'staff'
+            const isAdminPath = pathname.startsWith('/admin')
+            const isStaffPath = pathname.startsWith('/staff')
 
             // If profile incomplete, redirect to setup
             if (!isProfileComplete && !isSetupPath && !isPendingPath) {
@@ -259,10 +262,27 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
                 return
             }
 
-            // If admin and approved on home page, redirect to admin
-            if (isAdmin && isApproved && pathname === '/') {
-                handleRedirect('/admin')
+            // Block admin routes for non-admins
+            if (isAdminPath && !isAdmin) {
+                handleRedirect(isStaff ? '/staff' : '/')
                 return
+            }
+
+            // Block staff routes for regular users
+            if (isStaffPath && !isStaff && !isAdmin) {
+                handleRedirect('/')
+                return
+            }
+
+            // Role-based home page redirect
+            if (isApproved && pathname === '/') {
+                if (isAdmin) {
+                    handleRedirect('/admin')
+                    return
+                } else if (isStaff) {
+                    handleRedirect('/staff')
+                    return
+                }
             }
         }
     }, [authState, profile, pathname, matchesPath, handleRedirect])

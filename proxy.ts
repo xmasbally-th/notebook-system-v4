@@ -10,6 +10,7 @@ const PUBLIC_ROUTES = ['/login', '/auth/callback', '/auth/auth-code-error']
 const PENDING_ROUTES = ['/pending-approval']
 const PROFILE_SETUP_ROUTES = ['/register/complete-profile', '/profile/setup']
 const ADMIN_ROUTES = ['/admin']
+const STAFF_ROUTES = ['/staff']
 const EQUIPMENT_ROUTES = ['/equipment']
 
 // Default export function - required by Next.js 16 proxy
@@ -50,6 +51,7 @@ export default async function proxy(request: NextRequest) {
     const isPendingRoute = PENDING_ROUTES.some(route => pathname.startsWith(route))
     const isProfileSetupRoute = PROFILE_SETUP_ROUTES.some(route => pathname.startsWith(route))
     const isAdminRoute = ADMIN_ROUTES.some(route => pathname.startsWith(route))
+    const isStaffRoute = STAFF_ROUTES.some(route => pathname.startsWith(route))
     const isEquipmentRoute = EQUIPMENT_ROUTES.some(route => pathname.startsWith(route))
 
     // Equipment routes are public - no auth needed
@@ -86,7 +88,8 @@ export default async function proxy(request: NextRequest) {
             const isPending = profile.status === 'pending'
             const isRejected = profile.status === 'rejected'
             const isApproved = profile.status === 'approved'
-            const isAdmin = profile.role === 'admin'
+            const isAdminUser = profile.role === 'admin'
+            const isStaffUser = profile.role === 'staff'
 
             // If profile is incomplete, redirect to setup (unless already there)
             if (isProfileIncomplete && !isProfileSetupRoute && !isPublicRoute) {
@@ -109,18 +112,31 @@ export default async function proxy(request: NextRequest) {
                 return NextResponse.redirect(url)
             }
 
-            // If not admin trying to access admin routes, redirect to home
-            if (isAdminRoute && !isAdmin) {
+            // Admin route access control
+            if (isAdminRoute && !isAdminUser) {
+                const url = request.nextUrl.clone()
+                url.pathname = isStaffUser ? '/staff' : '/'
+                return NextResponse.redirect(url)
+            }
+
+            // Staff route access control - staff and admin can access
+            if (isStaffRoute && !isStaffUser && !isAdminUser) {
                 const url = request.nextUrl.clone()
                 url.pathname = '/'
                 return NextResponse.redirect(url)
             }
 
-            // If approved and admin accessing home, redirect to admin dashboard
-            if (isAdmin && isApproved && pathname === '/') {
-                const url = request.nextUrl.clone()
-                url.pathname = '/admin'
-                return NextResponse.redirect(url)
+            // Redirect based on role when accessing home page
+            if (isApproved && pathname === '/') {
+                if (isAdminUser) {
+                    const url = request.nextUrl.clone()
+                    url.pathname = '/admin'
+                    return NextResponse.redirect(url)
+                } else if (isStaffUser) {
+                    const url = request.nextUrl.clone()
+                    url.pathname = '/staff'
+                    return NextResponse.redirect(url)
+                }
             }
         }
     }
@@ -133,3 +149,4 @@ export const config = {
         '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }
+

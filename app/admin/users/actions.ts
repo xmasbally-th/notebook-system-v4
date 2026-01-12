@@ -41,7 +41,7 @@ export async function updateUserStatus(userId: string, newStatus: 'approved' | '
     return { success: true }
 }
 
-export async function updateUserRole(userId: string, newRole: 'admin' | 'user') {
+export async function updateUserRole(userId: string, newRole: 'admin' | 'staff' | 'user') {
     const supabase = await createClient()
 
     // 1. Check Admin Permission

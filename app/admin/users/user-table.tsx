@@ -96,15 +96,19 @@ export default function UserTable({ users }: { users: User[] }) {
         }
     }
 
-    const handleRoleUpdate = async (userId: string, role: 'admin' | 'user') => {
-        const confirmMsg = role === 'admin' ? 'ต้องการเลื่อนตำแหน่งเป็น Admin หรือไม่?' : 'ต้องการลดตำแหน่งเป็น User หรือไม่?'
-        if (!confirm(confirmMsg)) return
+    const handleRoleUpdate = async (userId: string, role: 'admin' | 'staff' | 'user') => {
+        const roleLabels = {
+            admin: 'ผู้ดูแลระบบ',
+            staff: 'เจ้าหน้าที่ให้บริการ',
+            user: 'ผู้ใช้งาน'
+        }
+        if (!confirm(`ต้องการเปลี่ยนสิทธิ์เป็น ${roleLabels[role]} หรือไม่?`)) return
 
         setLoading(userId)
         try {
             await updateUserRole(userId, role)
             router.refresh()
-            toast.success(`เปลี่ยนสิทธิ์เป็น ${role === 'admin' ? 'Admin' : 'User'} เรียบร้อยแล้ว`)
+            toast.success(`เปลี่ยนสิทธิ์เป็น ${roleLabels[role]} เรียบร้อยแล้ว`)
         } catch (error: any) {
             toast.error(`เกิดข้อผิดพลาด: ${error.message}`)
         } finally {
@@ -342,6 +346,11 @@ export default function UserTable({ users }: { users: User[] }) {
                                                     <Shield className="w-3 h-3" />
                                                     Admin
                                                 </span>
+                                            ) : user.role === 'staff' ? (
+                                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-teal-100 text-teal-700 rounded-lg text-xs font-medium">
+                                                    <Shield className="w-3 h-3" />
+                                                    Staff
+                                                </span>
                                             ) : (
                                                 <span className="text-gray-500 text-xs">User</span>
                                             )}
@@ -393,24 +402,16 @@ export default function UserTable({ users }: { users: User[] }) {
                                                         </>
                                                     )}
 
-                                                    {/* Role toggle */}
-                                                    {user.role === 'user' ? (
-                                                        <button
-                                                            onClick={() => handleRoleUpdate(user.id, 'admin')}
-                                                            className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                                                            title="เลื่อนเป็น Admin"
-                                                        >
-                                                            <Shield className="w-4 h-4" />
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => handleRoleUpdate(user.id, 'user')}
-                                                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                                                            title="ลดเป็น User"
-                                                        >
-                                                            <ShieldOff className="w-4 h-4" />
-                                                        </button>
-                                                    )}
+                                                    {/* Role dropdown */}
+                                                    <select
+                                                        value={user.role}
+                                                        onChange={(e) => handleRoleUpdate(user.id, e.target.value as 'admin' | 'staff' | 'user')}
+                                                        className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                                    >
+                                                        <option value="user">User</option>
+                                                        <option value="staff">Staff</option>
+                                                        <option value="admin">Admin</option>
+                                                    </select>
                                                 </div>
                                             )}
                                         </td>

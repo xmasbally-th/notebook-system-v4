@@ -16,7 +16,7 @@ export interface Database {
                     title: string | null
                     first_name: string | null
                     last_name: string | null
-                    role: 'admin' | 'user'
+                    role: 'admin' | 'staff' | 'user'
                     status: 'pending' | 'approved' | 'rejected'
                     user_type: 'student' | 'lecturer' | 'staff' | null
                     department_id: string | null
@@ -30,7 +30,7 @@ export interface Database {
                     title?: string | null
                     first_name?: string | null
                     last_name?: string | null
-                    role?: 'admin' | 'user'
+                    role?: 'admin' | 'staff' | 'user'
                     status?: 'pending' | 'approved' | 'rejected'
                     user_type?: 'student' | 'lecturer' | 'staff' | null
                     department_id?: string | null
@@ -44,7 +44,7 @@ export interface Database {
                     title?: string | null
                     first_name?: string | null
                     last_name?: string | null
-                    role?: 'admin' | 'user'
+                    role?: 'admin' | 'staff' | 'user'
                     status?: 'pending' | 'approved' | 'rejected'
                     user_type?: 'student' | 'lecturer' | 'staff' | null
                     department_id?: string | null
