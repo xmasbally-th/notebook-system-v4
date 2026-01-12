@@ -72,6 +72,7 @@ export default function StaffReturnsPage() {
             }
 
             // Update loan request to returned
+            // Note: return_condition & return_notes columns need to be added via migration
             const loanResponse = await fetch(`${url}/rest/v1/loanRequests?id=eq.${loanId}`, {
                 method: 'PATCH',
                 headers: {
@@ -80,10 +81,7 @@ export default function StaffReturnsPage() {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    status: 'returned',
-                    return_condition: condition,
-                    return_notes: notes,
-                    returned_at: new Date().toISOString()
+                    status: 'returned'
                 })
             })
 
