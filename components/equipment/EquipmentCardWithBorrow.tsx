@@ -3,12 +3,14 @@
 import { Database } from '@/supabase/types'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
-import { Package, ArrowRight } from 'lucide-react'
+import { Package, ArrowRight, Plus, Check, Clock } from 'lucide-react'
+import { useCart } from '@/components/cart/CartContext'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 
 interface EquipmentCardWithBorrowProps {
     item: Equipment
+    isRecentlyBorrowed?: boolean
 }
 
 const statusConfig: Record<string, { label: string; color: string; canBorrow: boolean }> = {
@@ -19,7 +21,7 @@ const statusConfig: Record<string, { label: string; color: string; canBorrow: bo
     retired: { label: 'ปลดระวาง', color: 'bg-gray-100 text-gray-600 border-gray-200', canBorrow: false },
 }
 
-export default function EquipmentCardWithBorrow({ item }: EquipmentCardWithBorrowProps) {
+export default function EquipmentCardWithBorrow({ item, isRecentlyBorrowed = false }: EquipmentCardWithBorrowProps) {
     // Defensive: ensure images is an array
     const images = Array.isArray(item.images) ? item.images : []
     const imageUrl = images.length > 0 ? (images[0] as string) : 'https://placehold.co/600x400?text=No+Image'
@@ -27,8 +29,38 @@ export default function EquipmentCardWithBorrow({ item }: EquipmentCardWithBorro
     // Status config
     const status = statusConfig[item.status] || statusConfig.ready
 
+    // Cart context
+    const { isInCart, addItem, removeItem, isAtLimit } = useCart()
+    const inCart = isInCart(item.id)
+
+    const handleCartToggle = (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+
+        if (inCart) {
+            removeItem(item.id)
+        } else {
+            addItem({
+                id: item.id,
+                name: item.name,
+                equipment_number: item.equipment_number,
+                imageUrl,
+            })
+        }
+    }
+
     return (
         <div className="group relative flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+            {/* Recently Borrowed Badge */}
+            {isRecentlyBorrowed && (
+                <div className="absolute left-2 top-2 z-10">
+                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium bg-blue-600 text-white shadow-sm">
+                        <Clock className="w-3 h-3" />
+                        ยืมล่าสุด
+                    </span>
+                </div>
+            )}
+
             {/* Image Area - Thumbnail */}
             <Link href={`/equipment/${item.id}`} className="relative aspect-square w-full overflow-hidden bg-gray-100">
                 <img
@@ -62,13 +94,33 @@ export default function EquipmentCardWithBorrow({ item }: EquipmentCardWithBorro
                 {/* Action Area */}
                 <div className="mt-auto pt-4 flex gap-2">
                     {status.canBorrow ? (
-                        <Link
-                            href={`/equipment/${item.id}#borrow-form`}
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                        >
-                            <Package className="w-4 h-4" />
-                            ยืมอุปกรณ์
-                        </Link>
+                        <>
+                            {/* Add to Cart / Remove from Cart Button */}
+                            <button
+                                onClick={handleCartToggle}
+                                disabled={!inCart && isAtLimit}
+                                className={cn(
+                                    "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 font-medium rounded-lg transition-colors text-sm",
+                                    inCart
+                                        ? "bg-green-600 text-white hover:bg-green-700"
+                                        : isAtLimit
+                                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                            : "bg-blue-600 text-white hover:bg-blue-700"
+                                )}
+                            >
+                                {inCart ? (
+                                    <>
+                                        <Check className="w-4 h-4" />
+                                        เลือกแล้ว
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="w-4 h-4" />
+                                        เลือกอุปกรณ์
+                                    </>
+                                )}
+                            </button>
+                        </>
                     ) : (
                         <button
                             disabled

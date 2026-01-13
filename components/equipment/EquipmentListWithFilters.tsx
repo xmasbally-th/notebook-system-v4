@@ -2,10 +2,14 @@
 
 import { useEquipment } from '@/hooks/useEquipment'
 import { usePagination } from '@/hooks/usePagination'
+import { useRecentlyBorrowed, isRecentlyBorrowed, sortByRecentlyBorrowed } from '@/hooks/useRecentlyBorrowed'
 import { useState, useMemo } from 'react'
 import EquipmentCardWithBorrow from './EquipmentCardWithBorrow'
 import { Database } from '@/supabase/types'
 import { Search, Filter, X, Package } from 'lucide-react'
+import { CartProvider } from '@/components/cart/CartContext'
+import CartButton from '@/components/cart/CartButton'
+import CartDrawer from '@/components/cart/CartDrawer'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 type EquipmentType = {
@@ -18,17 +22,19 @@ interface EquipmentListWithFiltersProps {
     equipmentTypes: EquipmentType[]
 }
 
-export default function EquipmentListWithFilters({ equipmentTypes }: EquipmentListWithFiltersProps) {
+function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps) {
     const { data: equipment, isLoading, error } = useEquipment()
+    const { data: recentlyBorrowed = [] } = useRecentlyBorrowed()
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedTypeId, setSelectedTypeId] = useState<string>('all')
     const [selectedStatus, setSelectedStatus] = useState<string>('all')
+    const [isCartOpen, setIsCartOpen] = useState(false)
 
     // Filter logic
     const filteredItems = useMemo(() => {
         if (!equipment) return []
 
-        return (equipment as Equipment[]).filter(item => {
+        let items = (equipment as Equipment[]).filter(item => {
             // Search filter
             const searchLower = searchTerm.toLowerCase()
             const matchesSearch = !searchTerm ||
@@ -45,7 +51,10 @@ export default function EquipmentListWithFilters({ equipmentTypes }: EquipmentLi
 
             return matchesSearch && matchesType && matchesStatus
         })
-    }, [equipment, searchTerm, selectedTypeId, selectedStatus])
+
+        // Sort by recently borrowed first
+        return sortByRecentlyBorrowed(items, recentlyBorrowed)
+    }, [equipment, searchTerm, selectedTypeId, selectedStatus, recentlyBorrowed])
 
     const {
         paginatedItems,
@@ -55,7 +64,7 @@ export default function EquipmentListWithFilters({ equipmentTypes }: EquipmentLi
         previousPage,
         resetPage,
         goToPage
-    } = usePagination(filteredItems, 5)
+    } = usePagination(filteredItems, 8) // Increased to 8 items per page
 
     const clearFilters = () => {
         setSearchTerm('')
@@ -201,7 +210,11 @@ export default function EquipmentListWithFilters({ equipmentTypes }: EquipmentLi
             ) : (
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {paginatedItems.map((item) => (
-                        <EquipmentCardWithBorrow key={item.id} item={item} />
+                        <EquipmentCardWithBorrow
+                            key={item.id}
+                            item={item}
+                            isRecentlyBorrowed={isRecentlyBorrowed(item.id, recentlyBorrowed)}
+                        />
                     ))}
                 </div>
             )}
@@ -260,6 +273,19 @@ export default function EquipmentListWithFilters({ equipmentTypes }: EquipmentLi
                     </div>
                 </div>
             )}
+
+            {/* Cart Button & Drawer */}
+            <CartButton onClick={() => setIsCartOpen(true)} />
+            <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
         </div>
+    )
+}
+
+// Wrapper component with CartProvider
+export default function EquipmentListWithFilters({ equipmentTypes }: EquipmentListWithFiltersProps) {
+    return (
+        <CartProvider>
+            <EquipmentListContent equipmentTypes={equipmentTypes} />
+        </CartProvider>
     )
 }

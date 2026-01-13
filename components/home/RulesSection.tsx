@@ -1,7 +1,7 @@
 'use client'
 
 import { useSystemConfig } from '@/hooks/useSystemConfig'
-import { ShieldCheck, Clock, AlertCircle, Users, Loader2 } from 'lucide-react'
+import { ShieldCheck, AlertCircle, Users, Loader2 } from 'lucide-react'
 
 type LoanLimitsByType = {
     student: { max_days: number; max_items: number }
@@ -31,20 +31,13 @@ export default function RulesSection() {
     }
 
     const loanLimits = config?.loan_limits_by_type as LoanLimitsByType | null
-    const openingTime = config?.opening_time || '08:30'
-    const closingTime = config?.closing_time || '16:30'
 
-    // Build rules from config
+    // Simplified rules - removed duplicate operating hours (now shown in HoursSection)
     const rules = [
         {
             icon: <ShieldCheck className="w-6 h-6 text-green-600" />,
             title: "สิทธิ์การยืม",
             description: "เฉพาะผู้ใช้ที่ได้รับการอนุมัติแล้วเท่านั้นจึงจะสามารถยืมอุปกรณ์ได้"
-        },
-        {
-            icon: <Clock className="w-6 h-6 text-blue-600" />,
-            title: "เวลาทำการ",
-            description: `เปิดให้บริการเวลา ${openingTime} - ${closingTime} น. ในวันทำการ`
         },
         {
             icon: <Users className="w-6 h-6 text-purple-600" />,
@@ -70,7 +63,7 @@ export default function RulesSection() {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {rules.map((rule, index) => (
                         <div
                             key={index}

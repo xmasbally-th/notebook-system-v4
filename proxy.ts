@@ -6,7 +6,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 // Define route patterns
-const PUBLIC_ROUTES = ['/login', '/auth/callback', '/auth/auth-code-error']
+const PUBLIC_ROUTES = ['/', '/login', '/auth/callback', '/auth/auth-code-error']
 const PENDING_ROUTES = ['/pending-approval']
 const PROFILE_SETUP_ROUTES = ['/register/complete-profile', '/profile/setup']
 const ADMIN_ROUTES = ['/admin']
@@ -47,7 +47,12 @@ export default async function proxy(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
 
     // Check route types
-    const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route))
+    const isPublicRoute = PUBLIC_ROUTES.some(route => {
+        // For root path, use exact match
+        if (route === '/') return pathname === '/'
+        // For other paths, use startsWith
+        return pathname.startsWith(route)
+    })
     const isPendingRoute = PENDING_ROUTES.some(route => pathname.startsWith(route))
     const isProfileSetupRoute = PROFILE_SETUP_ROUTES.some(route => pathname.startsWith(route))
     const isAdminRoute = ADMIN_ROUTES.some(route => pathname.startsWith(route))

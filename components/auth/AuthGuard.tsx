@@ -21,6 +21,7 @@ const CACHE_DURATION = 5 * 60 * 1000
 
 // Routes that don't require profile check
 const PUBLIC_PATHS = [
+    '/',
     '/login',
     '/auth/callback',
     '/auth/auth-code-error'
@@ -63,7 +64,14 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
     // Check if current path matches any pattern
     const matchesPath = useCallback((patterns: string[]) => {
-        return patterns.some(pattern => pathname.startsWith(pattern))
+        return patterns.some(pattern => {
+            // For root path, use exact match
+            if (pattern === '/') {
+                return pathname === '/'
+            }
+            // For other paths, use startsWith
+            return pathname.startsWith(pattern)
+        })
     }, [pathname])
 
     // Fetch profile with caching using direct fetch
