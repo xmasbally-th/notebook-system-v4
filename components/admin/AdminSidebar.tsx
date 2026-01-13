@@ -16,7 +16,8 @@ import {
     X,
     Tag,
     User,
-    Activity
+    Activity,
+    CalendarPlus
 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
@@ -36,6 +37,7 @@ const menuItems = [
     { href: '/admin/equipment', label: 'จัดการอุปกรณ์', icon: Package },
     { href: '/admin/equipment-types', label: 'ประเภทอุปกรณ์', icon: Tag },
     { href: '/admin/loans', label: 'คำขอยืม', icon: ClipboardList },
+    { href: '/admin/reservations', label: 'จัดการการจอง', icon: CalendarPlus },
     { href: '/admin/staff-activity', label: 'ประวัติการทำงาน', icon: Activity },
     { href: '/admin/settings', label: 'ตั้งค่าระบบ', icon: Settings },
 ]
