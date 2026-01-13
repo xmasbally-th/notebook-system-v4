@@ -6,6 +6,7 @@ import { Laptop, LogIn, LogOut, User, Menu, X, Package } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import UserNotificationBell from '@/components/ui/UserNotificationBell'
 
 // Get Supabase client for auth operations
 function getSupabaseClient() {
@@ -59,7 +60,8 @@ export default function Header() {
                     {/* Desktop Navigation */}
                     <div className="hidden md:flex items-center gap-4">
                         {user ? (
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3">
+                                <UserNotificationBell userId={user.id} />
                                 <Link
                                     href="/my-loans"
                                     className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"

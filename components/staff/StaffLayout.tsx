@@ -2,6 +2,7 @@
 
 import React from 'react'
 import StaffSidebar from './StaffSidebar'
+import StaffNotificationBell from './StaffNotificationBell'
 import { useProfile } from '@/hooks/useProfile'
 import { createBrowserClient } from '@supabase/ssr'
 import { useEffect, useState } from 'react'
@@ -53,6 +54,7 @@ export default function StaffLayout({ children, title, subtitle }: StaffLayoutPr
                             )}
                         </div>
                         <div className="flex items-center gap-4">
+                            <StaffNotificationBell isStaff={hasAccess || false} />
                             {profile && (
                                 <div className="hidden sm:flex items-center gap-2 text-sm">
                                     <div className="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center">
