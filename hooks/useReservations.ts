@@ -143,7 +143,8 @@ export function useStaffActivityLog(filters?: {
             const accessToken = await getAccessToken()
             if (!accessToken) return []
 
-            let queryUrl = `${url}/rest/v1/staff_activity_log?select=*,profiles:staff_id(first_name,last_name,email)&order=created_at.desc&limit=100`
+            // Fetch activity logs without the problematic join
+            let queryUrl = `${url}/rest/v1/staff_activity_log?select=*&order=created_at.desc&limit=100`
 
             if (filters?.staffId) {
                 queryUrl += `&staff_id=eq.${filters.staffId}`
@@ -165,7 +166,30 @@ export function useStaffActivityLog(filters?: {
                 }
             })
             if (!response.ok) return []
-            return response.json()
+            const logs = await response.json()
+
+            // Fetch profiles for staff members
+            const staffIds = Array.from(new Set(logs.map((log: any) => log.staff_id))) as string[]
+            if (staffIds.length === 0) return logs
+
+            const profilesResponse = await fetch(
+                `${url}/rest/v1/profiles?id=in.(${staffIds.join(',')})&select=id,first_name,last_name,email`,
+                {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                }
+            )
+
+            const profiles = profilesResponse.ok ? await profilesResponse.json() : []
+            const profilesMap = new Map(profiles.map((p: any) => [p.id, p]))
+
+            // Merge profiles into logs
+            return logs.map((log: any) => ({
+                ...log,
+                profiles: profilesMap.get(log.staff_id) || null
+            }))
         }
     })
 }
