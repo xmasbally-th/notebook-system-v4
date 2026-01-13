@@ -38,6 +38,8 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
     // Form values
     const [startDate, setStartDate] = useState('')
     const [endDate, setEndDate] = useState('')
+    const [pickupTime, setPickupTime] = useState('09:00')
+    const [returnTime, setReturnTime] = useState('16:00')
 
     // Validation
     const [validationErrors, setValidationErrors] = useState<string[]>([])
@@ -105,8 +107,8 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
         try {
             const result = await createReservation(
                 equipmentId,
-                `${startDate}T${config?.openingTime || '09:00'}:00`,
-                `${endDate}T${config?.closingTime || '17:00'}:00`
+                `${startDate}T${pickupTime}:00`,
+                `${endDate}T${returnTime}:00`
             )
 
             if (result.success) {
@@ -261,6 +263,42 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
                                 ⇒ {formatThaiDate(endDate)} (พ.ศ.)
                             </p>
                         )}
+                    </div>
+                </div>
+
+                {/* Time Inputs */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                            <Clock className="w-4 h-4 inline-block mr-1" />
+                            เวลาที่จะมารับ
+                        </label>
+                        <input
+                            type="time"
+                            required
+                            className="w-full rounded-lg border-gray-300 border shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm p-2.5"
+                            value={pickupTime}
+                            onChange={(e) => setPickupTime(e.target.value)}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                            เวลาทำการ: {config?.openingTime || '08:00'} - {config?.closingTime || '17:00'} น.
+                        </p>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                            <Clock className="w-4 h-4 inline-block mr-1" />
+                            เวลาที่จะมาคืน
+                        </label>
+                        <input
+                            type="time"
+                            required
+                            className="w-full rounded-lg border-gray-300 border shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm p-2.5"
+                            value={returnTime}
+                            onChange={(e) => setReturnTime(e.target.value)}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                            เวลาทำการ: {config?.openingTime || '08:00'} - {config?.closingTime || '17:00'} น.
+                        </p>
                     </div>
                 </div>
 

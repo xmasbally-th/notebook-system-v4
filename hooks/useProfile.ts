@@ -51,6 +51,10 @@ export function useProfile(userId?: string) {
 
                 console.log('[useProfile] Fetching profile for:', targetUserId)
 
+                // Get user's access token for proper RLS
+                const { data: { session } } = await client.auth.getSession()
+                const accessToken = session?.access_token || key
+
                 // Use direct fetch API
                 const endpoint = `${url}/rest/v1/profiles?id=eq.${targetUserId}&select=*`
 
@@ -58,7 +62,7 @@ export function useProfile(userId?: string) {
                     method: 'GET',
                     headers: {
                         'apikey': key,
-                        'Authorization': `Bearer ${key}`,
+                        'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json'
                     }
                 })

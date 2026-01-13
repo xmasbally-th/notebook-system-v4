@@ -55,10 +55,20 @@ export function useLoanValidation(userType: UserType = 'student'): LoanValidatio
             const { url, key } = getSupabaseCredentials()
             if (!url || !key) return null
 
+            // Try to get user's access token for authenticated requests
+            const client = getSupabaseClient()
+            let authToken = key
+            if (client) {
+                const { data: { session } } = await client.auth.getSession()
+                if (session?.access_token) {
+                    authToken = session.access_token
+                }
+            }
+
             const response = await fetch(`${url}/rest/v1/system_config?select=*&limit=1`, {
                 headers: {
                     'apikey': key,
-                    'Authorization': `Bearer ${key}`
+                    'Authorization': `Bearer ${authToken}`
                 }
             })
             if (!response.ok) return null
