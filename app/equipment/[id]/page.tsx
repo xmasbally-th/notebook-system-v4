@@ -8,6 +8,7 @@ import BorrowTabs from './borrow-tabs'
 
 const STATUS_CONFIG = {
     ready: { label: 'พร้อมให้ยืม', color: 'bg-green-100 text-green-700', icon: CheckCircle },
+    active: { label: 'พร้อมให้ยืม', color: 'bg-green-100 text-green-700', icon: CheckCircle }, // Legacy enum value
     borrowed: { label: 'กำลังถูกยืม', color: 'bg-blue-100 text-blue-700', icon: Clock },
     maintenance: { label: 'ซ่อมบำรุง', color: 'bg-yellow-100 text-yellow-700', icon: Wrench },
     retired: { label: 'ปลดระวาง', color: 'bg-gray-100 text-gray-500', icon: AlertTriangle },
@@ -47,7 +48,8 @@ export default async function EquipmentDetailsPage({ params }: { params: Promise
     const StatusIcon = statusConfig.icon
 
     // Check if equipment is available for borrowing
-    const canBorrow = equipmentStatus === 'ready'
+    // Support both old enum ('active') and new enum ('ready')
+    const canBorrow = equipmentStatus === 'ready' || equipmentStatus === 'active'
 
     return (
         <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">

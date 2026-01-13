@@ -13,6 +13,7 @@ interface EquipmentCardWithBorrowProps {
 
 const statusConfig: Record<string, { label: string; color: string; canBorrow: boolean }> = {
     ready: { label: 'พร้อมให้ยืม', color: 'bg-green-100 text-green-700 border-green-200', canBorrow: true },
+    active: { label: 'พร้อมให้ยืม', color: 'bg-green-100 text-green-700 border-green-200', canBorrow: true }, // Legacy enum value
     borrowed: { label: 'กำลังถูกยืม', color: 'bg-orange-100 text-orange-700 border-orange-200', canBorrow: false },
     maintenance: { label: 'ซ่อมบำรุง', color: 'bg-yellow-100 text-yellow-700 border-yellow-200', canBorrow: false },
     retired: { label: 'ปลดระวาง', color: 'bg-gray-100 text-gray-600 border-gray-200', canBorrow: false },
