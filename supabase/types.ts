@@ -164,6 +164,100 @@ export interface Database {
                     updated_at?: string
                 }
             }
+            reservations: {
+                Row: {
+                    id: string
+                    user_id: string
+                    equipment_id: string
+                    start_date: string
+                    end_date: string
+                    status: 'pending' | 'approved' | 'ready' | 'completed' | 'rejected' | 'cancelled' | 'expired'
+                    rejection_reason: string | null
+                    loan_id: string | null
+                    created_at: string
+                    updated_at: string
+                    approved_at: string | null
+                    approved_by: string | null
+                    ready_at: string | null
+                    ready_by: string | null
+                    completed_at: string | null
+                    completed_by: string | null
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    equipment_id: string
+                    start_date: string
+                    end_date: string
+                    status?: 'pending' | 'approved' | 'ready' | 'completed' | 'rejected' | 'cancelled' | 'expired'
+                    rejection_reason?: string | null
+                    loan_id?: string | null
+                    created_at?: string
+                    updated_at?: string
+                    approved_at?: string | null
+                    approved_by?: string | null
+                    ready_at?: string | null
+                    ready_by?: string | null
+                    completed_at?: string | null
+                    completed_by?: string | null
+                }
+                Update: {
+                    id?: string
+                    user_id?: string
+                    equipment_id?: string
+                    start_date?: string
+                    end_date?: string
+                    status?: 'pending' | 'approved' | 'ready' | 'completed' | 'rejected' | 'cancelled' | 'expired'
+                    rejection_reason?: string | null
+                    loan_id?: string | null
+                    created_at?: string
+                    updated_at?: string
+                    approved_at?: string | null
+                    approved_by?: string | null
+                    ready_at?: string | null
+                    ready_by?: string | null
+                    completed_at?: string | null
+                    completed_by?: string | null
+                }
+            }
+            staff_activity_log: {
+                Row: {
+                    id: string
+                    staff_id: string
+                    staff_role: string
+                    action_type: string
+                    target_type: string
+                    target_id: string
+                    target_user_id: string | null
+                    is_self_action: boolean
+                    details: Json
+                    created_at: string
+                }
+                Insert: {
+                    id?: string
+                    staff_id: string
+                    staff_role: string
+                    action_type: string
+                    target_type: string
+                    target_id: string
+                    target_user_id?: string | null
+                    is_self_action?: boolean
+                    details?: Json
+                    created_at?: string
+                }
+                Update: {
+                    id?: string
+                    staff_id?: string
+                    staff_role?: string
+                    action_type?: string
+                    target_type?: string
+                    target_id?: string
+                    target_user_id?: string | null
+                    is_self_action?: boolean
+                    details?: Json
+                    created_at?: string
+                }
+            }
             system_config: {
                 Row: {
                     id: number

@@ -14,7 +14,9 @@ import {
     ChevronLeft,
     Menu,
     X,
-    Tag
+    Tag,
+    User,
+    Activity
 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
@@ -34,6 +36,7 @@ const menuItems = [
     { href: '/admin/equipment', label: 'จัดการอุปกรณ์', icon: Package },
     { href: '/admin/equipment-types', label: 'ประเภทอุปกรณ์', icon: Tag },
     { href: '/admin/loans', label: 'คำขอยืม', icon: ClipboardList },
+    { href: '/admin/staff-activity', label: 'ประวัติการทำงาน', icon: Activity },
     { href: '/admin/settings', label: 'ตั้งค่าระบบ', icon: Settings },
 ]
 
@@ -134,6 +137,14 @@ export default function AdminSidebar() {
 
                 {/* Footer */}
                 <div className="p-3 border-t border-blue-600/50">
+                    <Link
+                        href="/profile"
+                        onClick={() => setIsMobileOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 text-blue-200 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+                    >
+                        <User className="w-5 h-5" />
+                        {!isCollapsed && <span>โปรไฟล์ของฉัน</span>}
+                    </Link>
                     <Link
                         href="/"
                         className="flex items-center gap-3 px-3 py-2.5 text-blue-200 hover:text-white hover:bg-white/10 rounded-xl transition-colors"

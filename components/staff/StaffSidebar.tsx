@@ -12,7 +12,9 @@ import {
     LogOut,
     ChevronLeft,
     Menu,
-    X
+    X,
+    User,
+    CalendarPlus
 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
@@ -29,6 +31,7 @@ function getSupabaseClient() {
 const menuItems = [
     { href: '/staff', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/staff/loans', label: 'จัดการคำขอยืม', icon: ClipboardList },
+    { href: '/staff/reservations', label: 'จัดการการจอง', icon: CalendarPlus },
     { href: '/staff/returns', label: 'รับคืนอุปกรณ์', icon: RotateCcw },
     { href: '/staff/overdue', label: 'รายการค้างคืน', icon: AlertTriangle },
 ]
@@ -130,6 +133,14 @@ export default function StaffSidebar() {
 
                 {/* Footer */}
                 <div className="p-3 border-t border-teal-500/50">
+                    <Link
+                        href="/profile"
+                        onClick={() => setIsMobileOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 text-teal-200 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+                    >
+                        <User className="w-5 h-5" />
+                        {!isCollapsed && <span>โปรไฟล์ของฉัน</span>}
+                    </Link>
                     <Link
                         href="/"
                         className="flex items-center gap-3 px-3 py-2.5 text-teal-200 hover:text-white hover:bg-white/10 rounded-xl transition-colors"

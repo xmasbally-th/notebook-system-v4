@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle, AlertTriangle, Clock, Wrench } from 'lucide-react'
 import LoanRequestForm from './loan-form'
+import ReservationForm from './reservation-form'
+import BorrowTabs from './borrow-tabs'
 
 const STATUS_CONFIG = {
     ready: { label: 'พร้อมให้ยืม', color: 'bg-green-100 text-green-700', icon: CheckCircle },
@@ -44,6 +46,9 @@ export default async function EquipmentDetailsPage({ params }: { params: Promise
     const statusConfig = STATUS_CONFIG[equipmentStatus] || STATUS_CONFIG.ready
     const StatusIcon = statusConfig.icon
 
+    // Check if equipment is available for borrowing
+    const canBorrow = equipmentStatus === 'ready'
+
     return (
         <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
@@ -81,10 +86,18 @@ export default async function EquipmentDetailsPage({ params }: { params: Promise
                             </div>
 
                             <div className="border-t border-gray-100 pt-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">ขอยืมอุปกรณ์</h3>
-
                                 {userStatus === 'approved' ? (
-                                    <LoanRequestForm equipmentId={item.id} />
+                                    canBorrow ? (
+                                        <BorrowTabs
+                                            equipmentId={item.id}
+                                            loanForm={<LoanRequestForm equipmentId={item.id} />}
+                                            reservationForm={<ReservationForm equipmentId={item.id} />}
+                                        />
+                                    ) : (
+                                        <div className="bg-yellow-50 text-yellow-800 p-4 rounded-lg text-sm">
+                                            อุปกรณ์นี้ไม่พร้อมให้ยืมในขณะนี้ ({statusConfig.label})
+                                        </div>
+                                    )
                                 ) : (
                                     <div className="bg-yellow-50 text-yellow-800 p-4 rounded-lg text-sm">
                                         {userStatus === 'pending'
@@ -111,3 +124,4 @@ export default async function EquipmentDetailsPage({ params }: { params: Promise
         </div>
     )
 }
+
