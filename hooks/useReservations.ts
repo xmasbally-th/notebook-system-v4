@@ -62,7 +62,8 @@ export function useAllReservations(statusFilter?: ReservationStatus | 'all') {
             const accessToken = await getAccessToken()
             if (!accessToken) return []
 
-            let queryUrl = `${url}/rest/v1/reservations?select=*,profiles(first_name,last_name,email,phone_number),equipment(name,equipment_number,images,equipment_types(name,icon))&order=created_at.desc`
+            // Fetch reservations without problematic joins
+            let queryUrl = `${url}/rest/v1/reservations?select=*&order=created_at.desc`
 
             if (statusFilter && statusFilter !== 'all') {
                 queryUrl += `&status=eq.${statusFilter}`
@@ -75,7 +76,44 @@ export function useAllReservations(statusFilter?: ReservationStatus | 'all') {
                 }
             })
             if (!response.ok) return []
-            return response.json()
+            const reservations = await response.json()
+
+            if (reservations.length === 0) return []
+
+            // Fetch profiles for users
+            const userIds = Array.from(new Set(reservations.map((r: any) => r.user_id))) as string[]
+            const profilesResponse = await fetch(
+                `${url}/rest/v1/profiles?id=in.(${userIds.join(',')})&select=id,first_name,last_name,email,phone_number`,
+                {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                }
+            )
+            const profiles = profilesResponse.ok ? await profilesResponse.json() : []
+            const profilesMap = new Map(profiles.map((p: any) => [p.id, p]))
+
+            // Fetch equipment
+            const equipmentIds = Array.from(new Set(reservations.map((r: any) => r.equipment_id))) as string[]
+            const equipmentResponse = await fetch(
+                `${url}/rest/v1/equipment?id=in.(${equipmentIds.join(',')})&select=id,name,equipment_number,images,equipment_types(name,icon)`,
+                {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                }
+            )
+            const equipmentList = equipmentResponse.ok ? await equipmentResponse.json() : []
+            const equipmentMap = new Map(equipmentList.map((e: any) => [e.id, e]))
+
+            // Merge data
+            return reservations.map((r: any) => ({
+                ...r,
+                profiles: profilesMap.get(r.user_id) || null,
+                equipment: equipmentMap.get(r.equipment_id) || null
+            }))
         }
     })
 }
