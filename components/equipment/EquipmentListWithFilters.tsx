@@ -81,7 +81,7 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                 {/* Filter Skeleton */}
                 <div className="h-16 bg-white rounded-xl border border-gray-200 animate-pulse" />
                 {/* Grid Skeleton */}
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                     {[...Array(8)].map((_, i) => (
                         <div key={i} className="h-72 animate-pulse rounded-xl bg-gray-200" />
                     ))}
@@ -208,7 +208,7 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                     )}
                 </div>
             ) : (
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                     {paginatedItems.map((item) => (
                         <EquipmentCardWithBorrow
                             key={item.id}

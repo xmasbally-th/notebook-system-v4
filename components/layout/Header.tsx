@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { Laptop, LogIn, LogOut, User, Menu, X, Package } from 'lucide-react'
+import { Laptop, LogIn, LogOut, User, Menu, X, Package, Monitor } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -63,11 +63,18 @@ export default function Header() {
                             <div className="flex items-center gap-3">
                                 <UserNotificationBell userId={user.id} />
                                 <Link
+                                    href="/equipment"
+                                    className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                                >
+                                    <Monitor className="w-4 h-4" />
+                                    อุปกรณ์
+                                </Link>
+                                <Link
                                     href="/my-loans"
                                     className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
                                 >
                                     <Package className="w-4 h-4" />
-                                    ประวัติการยืม
+                                    การยืมและจอง
                                 </Link>
                                 <Link
                                     href="/profile"
@@ -116,12 +123,28 @@ export default function Header() {
                                     <p className="font-medium text-gray-900 truncate">{user.email}</p>
                                 </div>
                                 <Link
+                                    href="/equipment"
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 text-blue-900 font-medium"
+                                >
+                                    <Monitor className="w-5 h-5" />
+                                    อุปกรณ์
+                                </Link>
+                                <Link
+                                    href="/my-loans"
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 text-gray-900 font-medium"
+                                >
+                                    <Package className="w-5 h-5" />
+                                    การยืมและจอง
+                                </Link>
+                                <Link
                                     href="/profile"
                                     onClick={() => setIsMenuOpen(false)}
                                     className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 text-gray-900 font-medium"
                                 >
                                     <User className="w-5 h-5" />
-                                    My Profile
+                                    โปรไฟล์
                                 </Link>
                                 <button
                                     onClick={handleSignOut}

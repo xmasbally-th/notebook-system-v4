@@ -61,12 +61,12 @@ export default function EquipmentCardWithBorrow({ item, isRecentlyBorrowed = fal
                 </div>
             )}
 
-            {/* Image Area - Thumbnail */}
-            <Link href={`/equipment/${item.id}`} className="relative aspect-square w-full overflow-hidden bg-gray-100">
+            {/* Image Area - Compact Thumbnail */}
+            <Link href={`/equipment/${item.id}`} className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
                 <img
                     src={imageUrl}
                     alt={item.name}
-                    className="h-full w-full object-contain p-2 transition-transform duration-500 group-hover:scale-105"
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 {/* Status Badge */}
                 <div className="absolute right-2 top-2">
@@ -80,10 +80,10 @@ export default function EquipmentCardWithBorrow({ item, isRecentlyBorrowed = fal
             </Link>
 
             {/* Content Area */}
-            <div className="flex flex-1 flex-col p-3">
+            <div className="flex flex-1 flex-col p-2.5">
                 {/* Name & Number */}
                 <Link href={`/equipment/${item.id}`}>
-                    <h3 className="text-base font-semibold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                    <h3 className="text-sm font-semibold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
                         {item.name}
                     </h3>
                 </Link>
@@ -92,7 +92,7 @@ export default function EquipmentCardWithBorrow({ item, isRecentlyBorrowed = fal
                 </p>
 
                 {/* Action Area */}
-                <div className="mt-auto pt-4 flex gap-2">
+                <div className="mt-auto pt-3 flex gap-1.5">
                     {status.canBorrow ? (
                         <>
                             {/* Add to Cart / Remove from Cart Button */}
@@ -100,7 +100,7 @@ export default function EquipmentCardWithBorrow({ item, isRecentlyBorrowed = fal
                                 onClick={handleCartToggle}
                                 disabled={!inCart && isAtLimit}
                                 className={cn(
-                                    "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 font-medium rounded-lg transition-colors text-sm",
+                                    "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 font-medium rounded-lg transition-colors text-xs",
                                     inCart
                                         ? "bg-green-600 text-white hover:bg-green-700"
                                         : isAtLimit
@@ -132,10 +132,10 @@ export default function EquipmentCardWithBorrow({ item, isRecentlyBorrowed = fal
                     )}
                     <Link
                         href={`/equipment/${item.id}`}
-                        className="flex items-center justify-center px-3 py-2.5 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
+                        className="flex items-center justify-center px-2.5 py-2 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
                         title="ดูรายละเอียด"
                     >
-                        <ArrowRight className="w-4 h-4" />
+                        <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                 </div>
             </div>
