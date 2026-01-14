@@ -45,32 +45,34 @@ interface HistoryItem {
 
 export default function MyLoansPage() {
     const [userId, setUserId] = useState<string | null>(null)
+    const [accessToken, setAccessToken] = useState<string | null>(null)
     const [filter, setFilter] = useState<FilterTab>('all')
 
     useEffect(() => {
         const client = getSupabaseBrowserClient()
         if (client) {
-            client.auth.getUser().then(({ data: { user } }) => {
-                setUserId(user?.id || null)
+            client.auth.getSession().then(({ data: { session } }) => {
+                setUserId(session?.user?.id || null)
+                setAccessToken(session?.access_token || null)
             })
         }
     }, [])
 
-    // Fetch loans
+    // Fetch loans with user access_token
     const { data: loans, isLoading: loansLoading } = useQuery({
         queryKey: ['my-loans', userId],
-        enabled: !!userId,
+        enabled: !!userId && !!accessToken,
         staleTime: 30000,
         queryFn: async () => {
             const { url, key } = getSupabaseCredentials()
-            if (!url || !key || !userId) return []
+            if (!url || !key || !userId || !accessToken) return []
 
             const response = await fetch(
                 `${url}/rest/v1/loanRequests?user_id=eq.${userId}&select=*,equipment(id,name,equipment_number,images)&order=created_at.desc`,
                 {
                     headers: {
                         'apikey': key,
-                        'Authorization': `Bearer ${key}`
+                        'Authorization': `Bearer ${accessToken}`
                     }
                 }
             )
@@ -79,21 +81,21 @@ export default function MyLoansPage() {
         },
     })
 
-    // Fetch reservations
+    // Fetch reservations with user access_token
     const { data: reservations, isLoading: reservationsLoading } = useQuery({
         queryKey: ['my-reservations', userId],
-        enabled: !!userId,
+        enabled: !!userId && !!accessToken,
         staleTime: 30000,
         queryFn: async () => {
             const { url, key } = getSupabaseCredentials()
-            if (!url || !key || !userId) return []
+            if (!url || !key || !userId || !accessToken) return []
 
             const response = await fetch(
                 `${url}/rest/v1/reservations?user_id=eq.${userId}&select=*,equipment(id,name,equipment_number,images)&order=created_at.desc`,
                 {
                     headers: {
                         'apikey': key,
-                        'Authorization': `Bearer ${key}`
+                        'Authorization': `Bearer ${accessToken}`
                     }
                 }
             )

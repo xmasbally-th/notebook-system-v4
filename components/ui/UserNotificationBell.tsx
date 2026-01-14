@@ -37,9 +37,12 @@ export default function UserNotificationBell({ userId }: UserNotificationBellPro
             case 'overdue_warning':
                 return { icon: <AlertTriangle className="w-5 h-5 text-red-600" />, bg: 'bg-red-100' }
             case 'reservation_confirmed':
+            case 'reservation_approved':
                 return { icon: <Bookmark className="w-5 h-5 text-blue-600" />, bg: 'bg-blue-100' }
             case 'reservation_ready':
                 return { icon: <Package className="w-5 h-5 text-green-600" />, bg: 'bg-green-100' }
+            case 'reservation_rejected':
+                return { icon: <XCircle className="w-5 h-5 text-red-600" />, bg: 'bg-red-100' }
             default:
                 return { icon: <Bell className="w-5 h-5 text-gray-600" />, bg: 'bg-gray-100' }
         }
@@ -120,8 +123,8 @@ export default function UserNotificationBell({ userId }: UserNotificationBellPro
                                             }
                                         }}
                                         className={`flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-blue-50 transition-colors border-b border-gray-50 ${!('is_read' in notification) || notification.is_read === false
-                                                ? 'bg-blue-50/50'
-                                                : ''
+                                            ? 'bg-blue-50/50'
+                                            : ''
                                             }`}
                                     >
                                         <div className={`p-2 rounded-lg ${bg} flex-shrink-0`}>
