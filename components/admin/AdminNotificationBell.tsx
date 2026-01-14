@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Bell, UserPlus, Package, X, Users, ClipboardList } from 'lucide-react'
+import { Bell, UserPlus, Package, X, Users, ClipboardList, Bookmark } from 'lucide-react'
 import Link from 'next/link'
 import { useRealtimeUsers } from '@/hooks/useRealtimeUsers'
 import { useRealtimeLoans } from '@/hooks/useRealtimeLoans'
+import { useRealtimeReservations } from '@/hooks/useRealtimeReservations'
 
 interface AdminNotificationBellProps {
     isAdmin: boolean
@@ -13,10 +14,11 @@ interface AdminNotificationBellProps {
 export default function AdminNotificationBell({ isAdmin }: AdminNotificationBellProps) {
     const { pendingCount: pendingUsersCount, newUser, clearNewUser } = useRealtimeUsers(isAdmin)
     const { pendingCount: pendingLoansCount, newLoan, clearNewLoan } = useRealtimeLoans(isAdmin)
+    const { pendingCount: pendingReservationsCount, newReservation, clearNewReservation } = useRealtimeReservations(isAdmin)
 
     const [showDropdown, setShowDropdown] = useState(false)
 
-    const totalPending = pendingUsersCount + pendingLoansCount
+    const totalPending = pendingUsersCount + pendingLoansCount + pendingReservationsCount
 
     // Auto-clear new notifications after 5 seconds
     useEffect(() => {
@@ -32,6 +34,13 @@ export default function AdminNotificationBell({ isAdmin }: AdminNotificationBell
             return () => clearTimeout(timer)
         }
     }, [newLoan, clearNewLoan])
+
+    useEffect(() => {
+        if (newReservation) {
+            const timer = setTimeout(clearNewReservation, 5000)
+            return () => clearTimeout(timer)
+        }
+    }, [newReservation, clearNewReservation])
 
     if (!isAdmin) return null
 
@@ -91,7 +100,7 @@ export default function AdminNotificationBell({ isAdmin }: AdminNotificationBell
                         <Link
                             href="/admin/loans"
                             onClick={() => setShowDropdown(false)}
-                            className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors"
+                            className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors border-b border-gray-50"
                         >
                             <div className={`p-2 rounded-lg ${pendingLoansCount > 0 ? 'bg-blue-100' : 'bg-gray-100'}`}>
                                 <ClipboardList className={`w-5 h-5 ${pendingLoansCount > 0 ? 'text-blue-600' : 'text-gray-400'}`} />
@@ -103,6 +112,26 @@ export default function AdminNotificationBell({ isAdmin }: AdminNotificationBell
                             {pendingLoansCount > 0 && (
                                 <span className="bg-blue-500 text-white text-xs font-bold rounded-full min-w-[24px] h-6 flex items-center justify-center px-2">
                                     {pendingLoansCount}
+                                </span>
+                            )}
+                        </Link>
+
+                        {/* Pending Reservations */}
+                        <Link
+                            href="/admin/reservations"
+                            onClick={() => setShowDropdown(false)}
+                            className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors"
+                        >
+                            <div className={`p-2 rounded-lg ${pendingReservationsCount > 0 ? 'bg-purple-100' : 'bg-gray-100'}`}>
+                                <Bookmark className={`w-5 h-5 ${pendingReservationsCount > 0 ? 'text-purple-600' : 'text-gray-400'}`} />
+                            </div>
+                            <div className="flex-1">
+                                <p className="font-medium text-gray-900 text-sm">คำขอจองรอการอนุมัติ</p>
+                                <p className="text-gray-500 text-xs">คลิกเพื่อจัดการคำขอจอง</p>
+                            </div>
+                            {pendingReservationsCount > 0 && (
+                                <span className="bg-purple-500 text-white text-xs font-bold rounded-full min-w-[24px] h-6 flex items-center justify-center px-2">
+                                    {pendingReservationsCount}
                                 </span>
                             )}
                         </Link>
@@ -149,7 +178,7 @@ export default function AdminNotificationBell({ isAdmin }: AdminNotificationBell
             )}
 
             {/* Toast: New Loan */}
-            {newLoan && !newUser && (
+            {newLoan && !newUser && !newReservation && (
                 <div className="absolute right-0 top-12 bg-white rounded-lg shadow-xl border border-gray-200 p-4 w-72 z-50 animate-slide-in">
                     <div className="flex items-center gap-3">
                         <div className="bg-blue-100 p-2 rounded-full">
@@ -170,6 +199,36 @@ export default function AdminNotificationBell({ isAdmin }: AdminNotificationBell
                         </Link>
                         <button
                             onClick={clearNewLoan}
+                            className="px-3 text-gray-500 text-xs hover:text-gray-700"
+                        >
+                            ปิด
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Toast: New Reservation */}
+            {newReservation && !newUser && (
+                <div className="absolute right-0 top-12 bg-white rounded-lg shadow-xl border border-gray-200 p-4 w-72 z-50 animate-slide-in">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-purple-100 p-2 rounded-full">
+                            <Bookmark className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 text-sm">คำขอจองใหม่!</p>
+                            <p className="text-gray-500 text-xs">มีคำขอจองอุปกรณ์รอการอนุมัติ</p>
+                        </div>
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                        <Link
+                            href="/admin/reservations"
+                            className="flex-1 bg-purple-600 text-white text-center text-xs py-1.5 rounded-md hover:bg-purple-700 transition-colors"
+                            onClick={clearNewReservation}
+                        >
+                            ตรวจสอบเลย
+                        </Link>
+                        <button
+                            onClick={clearNewReservation}
                             className="px-3 text-gray-500 text-xs hover:text-gray-700"
                         >
                             ปิด

@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { getSupabaseBrowserClient, getSupabaseCredentials } from '@/lib/supabase-helpers'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Clock, CheckCircle2, XCircle, Package, ArrowLeft, CalendarDays, FileText, Loader2, Bookmark, Send, AlertTriangle, Timer } from 'lucide-react'
+import { Clock, CheckCircle2, XCircle, Package, CalendarDays, Loader2, Bookmark, Send, AlertTriangle, Timer } from 'lucide-react'
+import Header from '@/components/layout/Header'
 
 type LoanStatus = 'pending' | 'approved' | 'rejected' | 'returned'
 type ReservationStatus = 'pending' | 'approved' | 'ready' | 'completed' | 'rejected' | 'cancelled' | 'expired'
@@ -137,167 +138,166 @@ export default function MyLoansPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-4xl mx-auto">
-                {/* Header */}
-                <div className="mb-8">
-                    <Link href="/" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 mb-4">
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        กลับหน้าหลัก
-                    </Link>
-                    <h1 className="text-3xl font-bold text-gray-900">ประวัติการยืมและจอง</h1>
-                    <p className="mt-2 text-gray-500">ดูสถานะคำขอยืมและจองอุปกรณ์ทั้งหมดของคุณ</p>
-                </div>
+        <>
+            <Header />
+            <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+                <div className="max-w-4xl mx-auto">
+                    {/* Header */}
+                    <div className="mb-8">
+                        <h1 className="text-3xl font-bold text-gray-900">ประวัติการยืมและจอง</h1>
+                        <p className="mt-2 text-gray-500">ดูสถานะคำขอยืมและจองอุปกรณ์ทั้งหมดของคุณ</p>
+                    </div>
 
-                {/* Filter Tabs */}
-                <div className="flex bg-white border border-gray-200 rounded-lg p-1 mb-6">
-                    <button
-                        onClick={() => setFilter('all')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${filter === 'all'
+                    {/* Filter Tabs */}
+                    <div className="flex bg-white border border-gray-200 rounded-lg p-1 mb-6">
+                        <button
+                            onClick={() => setFilter('all')}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${filter === 'all'
                                 ? 'bg-gray-900 text-white'
                                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                            }`}
-                    >
-                        ทั้งหมด
-                        <span className={`px-2 py-0.5 rounded-full text-xs ${filter === 'all' ? 'bg-white/20' : 'bg-gray-100'
-                            }`}>
-                            {allItems.length}
-                        </span>
-                    </button>
-                    <button
-                        onClick={() => setFilter('loans')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${filter === 'loans'
+                                }`}
+                        >
+                            ทั้งหมด
+                            <span className={`px-2 py-0.5 rounded-full text-xs ${filter === 'all' ? 'bg-white/20' : 'bg-gray-100'
+                                }`}>
+                                {allItems.length}
+                            </span>
+                        </button>
+                        <button
+                            onClick={() => setFilter('loans')}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${filter === 'loans'
                                 ? 'bg-blue-600 text-white'
                                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                            }`}
-                    >
-                        <Send className="w-4 h-4" />
-                        ยืม
-                        <span className={`px-2 py-0.5 rounded-full text-xs ${filter === 'loans' ? 'bg-white/20' : 'bg-gray-100'
-                            }`}>
-                            {loanCount}
-                        </span>
-                    </button>
-                    <button
-                        onClick={() => setFilter('reservations')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${filter === 'reservations'
+                                }`}
+                        >
+                            <Send className="w-4 h-4" />
+                            ยืม
+                            <span className={`px-2 py-0.5 rounded-full text-xs ${filter === 'loans' ? 'bg-white/20' : 'bg-gray-100'
+                                }`}>
+                                {loanCount}
+                            </span>
+                        </button>
+                        <button
+                            onClick={() => setFilter('reservations')}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${filter === 'reservations'
                                 ? 'bg-purple-600 text-white'
                                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                            }`}
-                    >
-                        <Bookmark className="w-4 h-4" />
-                        จอง
-                        <span className={`px-2 py-0.5 rounded-full text-xs ${filter === 'reservations' ? 'bg-white/20' : 'bg-gray-100'
-                            }`}>
-                            {reservationCount}
-                        </span>
-                    </button>
-                </div>
-
-                {/* Items List */}
-                {isLoading ? (
-                    <div className="text-center py-12">
-                        <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-                        <p className="text-gray-500">กำลังโหลดข้อมูล...</p>
-                    </div>
-                ) : filteredItems.length === 0 ? (
-                    <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
-                        <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">
-                            {filter === 'all'
-                                ? 'ยังไม่มีประวัติการยืมหรือจอง'
-                                : filter === 'loans'
-                                    ? 'ยังไม่มีประวัติการยืม'
-                                    : 'ยังไม่มีประวัติการจอง'
-                            }
-                        </h3>
-                        <p className="text-gray-500 mb-6">เริ่มยืมหรือจองอุปกรณ์ได้โดยเลือกจากรายการอุปกรณ์</p>
-                        <Link
-                            href="/equipment"
-                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                }`}
                         >
-                            ดูรายการอุปกรณ์
-                        </Link>
+                            <Bookmark className="w-4 h-4" />
+                            จอง
+                            <span className={`px-2 py-0.5 rounded-full text-xs ${filter === 'reservations' ? 'bg-white/20' : 'bg-gray-100'
+                                }`}>
+                                {reservationCount}
+                            </span>
+                        </button>
                     </div>
-                ) : (
-                    <div className="space-y-4">
-                        {filteredItems.map((item) => {
-                            const isLoan = item.type === 'loan'
-                            const status = item.status as (LoanStatus | ReservationStatus)
-                            const config = isLoan
-                                ? loanStatusConfig[status as LoanStatus] || loanStatusConfig.pending
-                                : reservationStatusConfig[status as ReservationStatus] || reservationStatusConfig.pending
-                            const equipment = item.equipment
-                            const images = Array.isArray(equipment?.images) ? equipment.images : []
-                            const imageUrl = images.length > 0 ? images[0] : 'https://placehold.co/100x100?text=No+Image'
 
-                            return (
-                                <div
-                                    key={`${item.type}-${item.id}`}
-                                    className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow"
-                                >
-                                    <div className="flex flex-col sm:flex-row gap-4">
-                                        {/* Equipment Image */}
-                                        <div className="relative w-full sm:w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                                            <img
-                                                src={imageUrl}
-                                                alt={equipment?.name || 'Equipment'}
-                                                className="w-full h-full object-cover"
-                                            />
-                                            {/* Type Badge */}
-                                            <div className={`absolute top-1 left-1 px-2 py-0.5 rounded text-xs font-medium ${isLoan
+                    {/* Items List */}
+                    {isLoading ? (
+                        <div className="text-center py-12">
+                            <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+                            <p className="text-gray-500">กำลังโหลดข้อมูล...</p>
+                        </div>
+                    ) : filteredItems.length === 0 ? (
+                        <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
+                            <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                {filter === 'all'
+                                    ? 'ยังไม่มีประวัติการยืมหรือจอง'
+                                    : filter === 'loans'
+                                        ? 'ยังไม่มีประวัติการยืม'
+                                        : 'ยังไม่มีประวัติการจอง'
+                                }
+                            </h3>
+                            <p className="text-gray-500 mb-6">เริ่มยืมหรือจองอุปกรณ์ได้โดยเลือกจากรายการอุปกรณ์</p>
+                            <Link
+                                href="/equipment"
+                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                                ดูรายการอุปกรณ์
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {filteredItems.map((item) => {
+                                const isLoan = item.type === 'loan'
+                                const status = item.status as (LoanStatus | ReservationStatus)
+                                const config = isLoan
+                                    ? loanStatusConfig[status as LoanStatus] || loanStatusConfig.pending
+                                    : reservationStatusConfig[status as ReservationStatus] || reservationStatusConfig.pending
+                                const equipment = item.equipment
+                                const images = Array.isArray(equipment?.images) ? equipment.images : []
+                                const imageUrl = images.length > 0 ? images[0] : 'https://placehold.co/100x100?text=No+Image'
+
+                                return (
+                                    <div
+                                        key={`${item.type}-${item.id}`}
+                                        className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow"
+                                    >
+                                        <div className="flex flex-col sm:flex-row gap-4">
+                                            {/* Equipment Image */}
+                                            <div className="relative w-full sm:w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                                                <img
+                                                    src={imageUrl}
+                                                    alt={equipment?.name || 'Equipment'}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                {/* Type Badge */}
+                                                <div className={`absolute top-1 left-1 px-2 py-0.5 rounded text-xs font-medium ${isLoan
                                                     ? 'bg-blue-600 text-white'
                                                     : 'bg-purple-600 text-white'
-                                                }`}>
-                                                {isLoan ? 'ยืม' : 'จอง'}
-                                            </div>
-                                        </div>
-
-                                        {/* Content */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                                                <div>
-                                                    <h3 className="font-semibold text-gray-900 truncate">
-                                                        {equipment?.name || 'ไม่ระบุอุปกรณ์'}
-                                                    </h3>
-                                                    <p className="text-sm text-gray-500 font-mono">
-                                                        #{equipment?.equipment_number}
-                                                    </p>
+                                                    }`}>
+                                                    {isLoan ? 'ยืม' : 'จอง'}
                                                 </div>
-                                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${config.color}`}>
-                                                    {config.icon}
-                                                    {config.label}
-                                                </span>
                                             </div>
 
-                                            <div className="flex flex-wrap gap-4 text-sm text-gray-500 mt-3">
-                                                <div className="flex items-center gap-1.5">
-                                                    <CalendarDays className="w-4 h-4" />
-                                                    <span>
-                                                        {new Date(item.start_date).toLocaleDateString('th-TH')} - {new Date(item.end_date).toLocaleDateString('th-TH')}
+                                            {/* Content */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                                                    <div>
+                                                        <h3 className="font-semibold text-gray-900 truncate">
+                                                            {equipment?.name || 'ไม่ระบุอุปกรณ์'}
+                                                        </h3>
+                                                        <p className="text-sm text-gray-500 font-mono">
+                                                            #{equipment?.equipment_number}
+                                                        </p>
+                                                    </div>
+                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${config.color}`}>
+                                                        {config.icon}
+                                                        {config.label}
                                                     </span>
                                                 </div>
-                                                <div className="flex items-center gap-1.5 text-gray-400">
-                                                    <Clock className="w-4 h-4" />
-                                                    <span>
-                                                        {new Date(item.created_at).toLocaleDateString('th-TH', {
-                                                            day: 'numeric',
-                                                            month: 'short',
-                                                            year: 'numeric',
-                                                            hour: '2-digit',
-                                                            minute: '2-digit'
-                                                        })}
-                                                    </span>
+
+                                                <div className="flex flex-wrap gap-4 text-sm text-gray-500 mt-3">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <CalendarDays className="w-4 h-4" />
+                                                        <span>
+                                                            {new Date(item.start_date).toLocaleDateString('th-TH')} - {new Date(item.end_date).toLocaleDateString('th-TH')}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 text-gray-400">
+                                                        <Clock className="w-4 h-4" />
+                                                        <span>
+                                                            {new Date(item.created_at).toLocaleDateString('th-TH', {
+                                                                day: 'numeric',
+                                                                month: 'short',
+                                                                year: 'numeric',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            })}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            )
-                        })}
-                    </div>
-                )}
+                                )
+                            })}
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>
+        </>
     )
 }

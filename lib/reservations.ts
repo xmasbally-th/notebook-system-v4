@@ -168,10 +168,14 @@ export async function createReservation(
     const accessToken = await getAccessToken()
     if (!accessToken) return { success: false, error: 'กรุณาเข้าสู่ระบบ' }
 
-    // Check type conflict
-    const typeConflict = await checkTypeConflict(user.id, equipmentId)
-    if (typeConflict.hasConflict) {
-        return { success: false, error: 'คุณมีการจองหรือยืมอุปกรณ์ประเภทนี้อยู่แล้ว' }
+    // Check type conflict (optional - skip if RPC not available)
+    try {
+        const typeConflict = await checkTypeConflict(user.id, equipmentId)
+        if (typeConflict.hasConflict) {
+            return { success: false, error: 'คุณมีการจองหรือยืมอุปกรณ์ประเภทนี้อยู่แล้ว' }
+        }
+    } catch (e) {
+        console.warn('[createReservation] Type conflict check skipped (RPC may not be deployed)')
     }
 
     // Check time conflict
