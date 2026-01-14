@@ -19,11 +19,26 @@ function getSupabaseCredentials() {
     return { url, key }
 }
 
+// Get access token from session
+async function getAccessToken(): Promise<string | null> {
+    try {
+        const { url, key } = getSupabaseCredentials()
+        if (!url || !key) return null
+
+        const { createBrowserClient } = await import('@supabase/ssr')
+        const supabase = createBrowserClient(url, key)
+        const { data: { session } } = await supabase.auth.getSession()
+        return session?.access_token || null
+    } catch {
+        return null
+    }
+}
+
 export function useRealtimeLoans(isAdmin: boolean) {
     const [newLoan, setNewLoan] = useState<PendingLoan | null>(null)
     const [lastKnownCount, setLastKnownCount] = useState<number | null>(null)
 
-    // Fetch pending loans count
+    // Fetch pending loans count using user's access token
     const { data: pendingLoansData, isLoading, refetch } = useQuery({
         queryKey: ['pending-loans-count'],
         queryFn: async () => {
@@ -31,9 +46,15 @@ export function useRealtimeLoans(isAdmin: boolean) {
 
             try {
                 const { url, key } = getSupabaseCredentials()
-
                 if (!url || !key) {
                     console.error('[useRealtimeLoans] Missing credentials')
+                    return { loans: [], count: 0 }
+                }
+
+                // Get user's access token for RLS
+                const accessToken = await getAccessToken()
+                if (!accessToken) {
+                    console.log('[useRealtimeLoans] No access token, user not logged in')
                     return { loans: [], count: 0 }
                 }
 
@@ -44,7 +65,7 @@ export function useRealtimeLoans(isAdmin: boolean) {
                     method: 'GET',
                     headers: {
                         'apikey': key,
-                        'Authorization': `Bearer ${key}`,
+                        'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'count=exact'
                     }

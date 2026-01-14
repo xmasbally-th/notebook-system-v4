@@ -19,11 +19,26 @@ function getSupabaseCredentials() {
     return { url, key }
 }
 
+// Get access token from session
+async function getAccessToken(): Promise<string | null> {
+    try {
+        const { url, key } = getSupabaseCredentials()
+        if (!url || !key) return null
+
+        const { createBrowserClient } = await import('@supabase/ssr')
+        const supabase = createBrowserClient(url, key)
+        const { data: { session } } = await supabase.auth.getSession()
+        return session?.access_token || null
+    } catch {
+        return null
+    }
+}
+
 export function useRealtimeReservations(enabled: boolean) {
     const [newReservation, setNewReservation] = useState<PendingReservation | null>(null)
     const [lastKnownCount, setLastKnownCount] = useState<number | null>(null)
 
-    // Fetch pending reservations count
+    // Fetch pending reservations count using user's access token
     const { data: pendingReservationsData, isLoading, refetch } = useQuery({
         queryKey: ['pending-reservations-count'],
         queryFn: async () => {
@@ -31,9 +46,15 @@ export function useRealtimeReservations(enabled: boolean) {
 
             try {
                 const { url, key } = getSupabaseCredentials()
-
                 if (!url || !key) {
                     console.error('[useRealtimeReservations] Missing credentials')
+                    return { reservations: [], count: 0 }
+                }
+
+                // Get user's access token for RLS
+                const accessToken = await getAccessToken()
+                if (!accessToken) {
+                    console.log('[useRealtimeReservations] No access token, user not logged in')
                     return { reservations: [], count: 0 }
                 }
 
@@ -44,7 +65,7 @@ export function useRealtimeReservations(enabled: boolean) {
                     method: 'GET',
                     headers: {
                         'apikey': key,
-                        'Authorization': `Bearer ${key}`,
+                        'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json',
                         'Prefer': 'count=exact'
                     }
