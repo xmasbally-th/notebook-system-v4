@@ -18,6 +18,7 @@ function getSupabaseClient() {
 
 export default function Header() {
     const [user, setUser] = useState<any>(null)
+    const [accessToken, setAccessToken] = useState<string | null>(null)
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const router = useRouter()
 
@@ -25,8 +26,9 @@ export default function Header() {
         const checkUser = async () => {
             const client = getSupabaseClient()
             if (!client) return
-            const { data: { user } } = await client.auth.getUser()
-            setUser(user)
+            const { data: { session } } = await client.auth.getSession()
+            setUser(session?.user || null)
+            setAccessToken(session?.access_token || null)
         }
         checkUser()
     }, [])
@@ -61,7 +63,7 @@ export default function Header() {
                     <div className="hidden md:flex items-center gap-4">
                         {user ? (
                             <div className="flex items-center gap-3">
-                                <UserNotificationBell userId={user.id} />
+                                <UserNotificationBell userId={user.id} accessToken={accessToken || undefined} />
                                 <Link
                                     href="/equipment"
                                     className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"

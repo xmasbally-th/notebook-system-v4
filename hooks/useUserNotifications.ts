@@ -50,7 +50,7 @@ function getSupabaseCredentials() {
     return { url, key }
 }
 
-export function useUserNotifications(userId?: string): UserNotificationsResult {
+export function useUserNotifications(userId?: string, accessToken?: string): UserNotificationsResult {
     const queryClient = useQueryClient()
     const sharedData = useSharedNotificationData()
 
@@ -64,12 +64,13 @@ export function useUserNotifications(userId?: string): UserNotificationsResult {
             if (!url || !key) return { notifications: [] }
 
             try {
+                const authHeader = accessToken ? `Bearer ${accessToken}` : `Bearer ${key}`
                 const response = await fetch(
                     `${url}/rest/v1/notifications?user_id=eq.${userId}&select=*&order=created_at.desc&limit=20`,
                     {
                         headers: {
                             'apikey': key,
-                            'Authorization': `Bearer ${key}`,
+                            'Authorization': authHeader,
                             'Content-Type': 'application/json'
                         }
                     }

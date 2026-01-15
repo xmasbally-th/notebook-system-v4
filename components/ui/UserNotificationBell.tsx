@@ -16,10 +16,11 @@ import { useUserNotifications } from '@/hooks/useUserNotifications'
 
 interface UserNotificationBellProps {
     userId?: string
+    accessToken?: string
 }
 
-export default function UserNotificationBell({ userId }: UserNotificationBellProps) {
-    const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading } = useUserNotifications(userId)
+export default function UserNotificationBell({ userId, accessToken }: UserNotificationBellProps) {
+    const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading } = useUserNotifications(userId, accessToken)
     const [showDropdown, setShowDropdown] = useState(false)
 
     if (!userId) return null
