@@ -35,6 +35,7 @@ interface HistoryItem {
     start_date: string
     end_date: string
     created_at: string
+    rejection_reason?: string | null
     equipment: {
         id: string
         name: string
@@ -291,6 +292,15 @@ export default function MyLoansPage() {
                                                         </span>
                                                     </div>
                                                 </div>
+
+                                                {/* Rejection Reason */}
+                                                {item.status === 'rejected' && item.rejection_reason && (
+                                                    <div className="mt-3 p-3 bg-red-50 border border-red-100 rounded-lg">
+                                                        <p className="text-sm text-red-700">
+                                                            <span className="font-medium">เหตุผลที่ปฏิเสธ:</span> {item.rejection_reason}
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
