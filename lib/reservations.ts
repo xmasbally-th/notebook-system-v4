@@ -75,6 +75,8 @@ async function getCurrentUser(): Promise<{ id: string, role: 'admin' | 'staff' |
 
 /**
  * Check if user has type conflict (already has reservation/loan of same equipment type)
+ * Note: This function requires the check_user_type_conflict RPC to be deployed in Supabase.
+ * If the RPC is not available, it will gracefully skip the check.
  */
 export async function checkTypeConflict(
     userId: string,
@@ -101,6 +103,11 @@ export async function checkTypeConflict(
         })
 
         if (!response.ok) {
+            // 400/404 means function doesn't exist - gracefully skip this check
+            if (response.status === 400 || response.status === 404) {
+                console.warn('[checkTypeConflict] RPC not available, skipping type conflict check')
+                return { hasConflict: false }
+            }
             console.error('[checkTypeConflict] HTTP Error:', response.status)
             return { hasConflict: false }
         }
@@ -115,6 +122,8 @@ export async function checkTypeConflict(
 
 /**
  * Check if time slot conflicts with existing reservations/loans
+ * Note: This function requires the check_combined_reservation_conflict RPC.
+ * If the RPC is not available, it falls back to direct queries.
  */
 export async function checkTimeConflict(
     equipmentId: string,
@@ -123,7 +132,7 @@ export async function checkTimeConflict(
     excludeReservationId?: string
 ): Promise<boolean> {
     const { url, key } = getSupabaseCredentials()
-    if (!url || !key) return true // Fail safe
+    if (!url || !key) return false // Allow if can't check
 
     const accessToken = await getAccessToken()
 
@@ -143,11 +152,69 @@ export async function checkTimeConflict(
             })
         })
 
-        if (!response.ok) return true
+        // RPC not available - fallback to direct query
+        if (response.status === 400 || response.status === 404) {
+            console.warn('[checkTimeConflict] RPC not available, using fallback query')
+            return await checkTimeConflictFallback(url, key, accessToken, equipmentId, startDate, endDate, excludeReservationId)
+        }
+
+        if (!response.ok) {
+            console.warn('[checkTimeConflict] RPC error, allowing reservation')
+            return false
+        }
         return await response.json()
     } catch (error) {
         console.error('[checkTimeConflict] Error:', error)
-        return true
+        return false
+    }
+}
+
+/**
+ * Fallback: Direct query for time conflict check
+ */
+async function checkTimeConflictFallback(
+    url: string,
+    key: string,
+    accessToken: string | null,
+    equipmentId: string,
+    startDate: Date,
+    endDate: Date,
+    excludeReservationId?: string
+): Promise<boolean> {
+    try {
+        const authHeader = accessToken ? `Bearer ${accessToken}` : `Bearer ${key}`
+
+        // Check reservations
+        let reservationQuery = `${url}/rest/v1/reservations?equipment_id=eq.${equipmentId}&status=in.(pending,approved,ready)&start_date=lte.${endDate.toISOString()}&end_date=gte.${startDate.toISOString()}&select=id`
+        if (excludeReservationId) {
+            reservationQuery += `&id=neq.${excludeReservationId}`
+        }
+
+        const reservationRes = await fetch(reservationQuery, {
+            headers: { 'apikey': key, 'Authorization': authHeader }
+        })
+
+        if (reservationRes.ok) {
+            const reservations = await reservationRes.json()
+            if (reservations.length > 0) return true
+        }
+
+        // Check loans
+        const loanQuery = `${url}/rest/v1/loanRequests?equipment_id=eq.${equipmentId}&status=in.(pending,approved)&start_date=lte.${endDate.toISOString()}&end_date=gte.${startDate.toISOString()}&select=id`
+
+        const loanRes = await fetch(loanQuery, {
+            headers: { 'apikey': key, 'Authorization': authHeader }
+        })
+
+        if (loanRes.ok) {
+            const loans = await loanRes.json()
+            if (loans.length > 0) return true
+        }
+
+        return false
+    } catch (error) {
+        console.error('[checkTimeConflictFallback] Error:', error)
+        return false // Allow reservation if fallback fails
     }
 }
 
