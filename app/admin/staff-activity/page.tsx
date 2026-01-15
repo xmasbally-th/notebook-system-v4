@@ -14,6 +14,8 @@ export default function AdminStaffActivityPage() {
     const [staffFilter, setStaffFilter] = useState<string>('')
     const [actionFilter, setActionFilter] = useState<string>('')
     const [dateRange, setDateRange] = useState({ start: '', end: '' })
+    const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize, setPageSize] = useState(25)
 
     const { data: logs, isLoading, error } = useStaffActivityLog({
         staffId: staffFilter || undefined,
@@ -37,6 +39,14 @@ export default function AdminStaffActivityPage() {
             minute: '2-digit'
         })
     }
+
+    // Pagination
+    const totalItems = logs?.length || 0
+    const totalPages = Math.ceil(totalItems / pageSize)
+    const paginatedLogs = logs?.slice(
+        (currentPage - 1) * pageSize,
+        currentPage * pageSize
+    ) || []
 
     return (
         <AdminLayout title="ประวัติการทำงาน Staff" subtitle="ดูบันทึกการดำเนินการของเจ้าหน้าที่และผู้ดูแลระบบ">
@@ -128,80 +138,126 @@ export default function AdminStaffActivityPage() {
                         <p className="text-gray-500">ไม่พบประวัติการทำงาน</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                        วันที่/เวลา
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                        เจ้าหน้าที่
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                        การดำเนินการ
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                        ประเภท
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                        หมายเหตุ
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {logs.map((log: any) => (
-                                    <tr key={log.id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900">
-                                                {formatThaiDate(log.created_at)}
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                                {formatTime(log.created_at)}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                                                    <User className="w-4 h-4 text-gray-400" />
+                    <>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                            วันที่/เวลา
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                            เจ้าหน้าที่
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                            การดำเนินการ
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                            ประเภท
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                            หมายเหตุ
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {paginatedLogs.map((log: any) => (
+                                        <tr key={log.id} className="hover:bg-gray-50">
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-900">
+                                                    {formatThaiDate(log.created_at)}
                                                 </div>
-                                                <div>
-                                                    <div className="text-sm font-medium text-gray-900">
-                                                        {log.profiles?.first_name} {log.profiles?.last_name}
+                                                <div className="text-xs text-gray-500">
+                                                    {formatTime(log.created_at)}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                                        <User className="w-4 h-4 text-gray-400" />
                                                     </div>
-                                                    <div className="text-xs text-gray-500">
-                                                        {log.staff_role === 'admin' ? '👑 Admin' : '👤 Staff'}
+                                                    <div>
+                                                        <div className="text-sm font-medium text-gray-900">
+                                                            {log.profiles?.first_name} {log.profiles?.last_name}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500">
+                                                            {log.staff_role === 'admin' ? '👑 Admin' : '👤 Staff'}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <span className="inline-flex items-center gap-1.5 text-sm">
-                                                <span>{getActionTypeIcon(log.action_type)}</span>
-                                                <span>{getActionTypeLabel(log.action_type)}</span>
-                                            </span>
-                                            {log.is_self_action && (
-                                                <span className="ml-2 px-2 py-0.5 text-xs bg-orange-100 text-orange-700 rounded-full">
-                                                    ตัวเอง
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <span className="inline-flex items-center gap-1.5 text-sm">
+                                                    <span>{getActionTypeIcon(log.action_type)}</span>
+                                                    <span>{getActionTypeLabel(log.action_type)}</span>
                                                 </span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${log.target_type === 'loan'
+                                                {log.is_self_action && (
+                                                    <span className="ml-2 px-2 py-0.5 text-xs bg-orange-100 text-orange-700 rounded-full">
+                                                        ตัวเอง
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${log.target_type === 'loan'
                                                     ? 'bg-blue-100 text-blue-700'
                                                     : 'bg-purple-100 text-purple-700'
-                                                }`}>
-                                                {log.target_type === 'loan' ? 'ยืม' : 'จอง'}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-4 text-sm text-gray-500 max-w-xs truncate">
-                                            {log.details?.reason || log.details?.note || '-'}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                                    }`}>
+                                                    {log.target_type === 'loan' ? 'ยืม' : 'จอง'}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-4 text-sm text-gray-500 max-w-xs truncate">
+                                                {log.details?.reason || log.details?.note || '-'}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Pagination */}
+                        {totalItems > 0 && (
+                            <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <span>แสดง</span>
+                                    <select
+                                        value={pageSize}
+                                        onChange={(e) => {
+                                            setPageSize(Number(e.target.value))
+                                            setCurrentPage(1)
+                                        }}
+                                        className="border border-gray-300 rounded-lg px-2 py-1 text-sm"
+                                    >
+                                        <option value={10}>10</option>
+                                        <option value={25}>25</option>
+                                        <option value={50}>50</option>
+                                        <option value={100}>100</option>
+                                    </select>
+                                    <span>รายการ | {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, totalItems)} จาก {totalItems}</span>
+                                </div>
+                                {totalPages > 1 && (
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                            disabled={currentPage === 1}
+                                            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-50"
+                                        >
+                                            ก่อนหน้า
+                                        </button>
+                                        <span className="px-3 py-1.5 text-sm text-gray-600">
+                                            หน้า {currentPage} / {totalPages}
+                                        </span>
+                                        <button
+                                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                            disabled={currentPage === totalPages}
+                                            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-50"
+                                        >
+                                            ถัดไป
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </AdminLayout>

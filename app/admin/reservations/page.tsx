@@ -40,6 +40,8 @@ export default function AdminReservationsPage() {
     const [rejectModal, setRejectModal] = useState<{ id: string; userId: string } | null>(null)
     const [rejectReason, setRejectReason] = useState('')
     const [deleteModal, setDeleteModal] = useState<string | null>(null)
+    const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
 
     const toast = useToast()
     const queryClient = useQueryClient()
@@ -70,6 +72,13 @@ export default function AdminReservationsPage() {
             total: reservations.length,
         }
     }, [reservations])
+
+    // Pagination
+    const totalPages = Math.ceil(filteredReservations.length / pageSize)
+    const paginatedItems = filteredReservations.slice(
+        (currentPage - 1) * pageSize,
+        currentPage * pageSize
+    )
 
     const handleApprove = async (id: string, userId: string) => {
         setProcessing(id)
@@ -326,133 +335,179 @@ export default function AdminReservationsPage() {
                         <p className="text-gray-500">ไม่มีรายการจอง</p>
                     </div>
                 ) : (
-                    <div className="divide-y divide-gray-100">
-                        {filteredReservations.map((reservation: any) => {
-                            const status = reservation.status as ReservationStatus
-                            const statusConfig = STATUS_CONFIG[status]
-                            const StatusIcon = statusConfig.icon
-                            const isProcessing = processing === reservation.id
-                            const canCancel = ['pending', 'approved', 'ready'].includes(status)
+                    <>
+                        <div className="divide-y divide-gray-100">
+                            {paginatedItems.map((reservation: any) => {
+                                const status = reservation.status as ReservationStatus
+                                const statusConfig = STATUS_CONFIG[status]
+                                const StatusIcon = statusConfig.icon
+                                const isProcessing = processing === reservation.id
+                                const canCancel = ['pending', 'approved', 'ready'].includes(status)
 
-                            return (
-                                <div key={reservation.id} className="p-4 hover:bg-gray-50">
-                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                                        {/* User & Equipment Info */}
-                                        <div className="flex items-start gap-4 flex-1">
-                                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
-                                                {reservation.equipment?.images?.[0] ? (
-                                                    <img src={reservation.equipment.images[0]} alt="" className="w-12 h-12 object-cover" />
-                                                ) : (
-                                                    <Package className="w-6 h-6 text-gray-400" />
+                                return (
+                                    <div key={reservation.id} className="p-4 hover:bg-gray-50">
+                                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                            {/* User & Equipment Info */}
+                                            <div className="flex items-start gap-4 flex-1">
+                                                <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                                                    {reservation.equipment?.images?.[0] ? (
+                                                        <img src={reservation.equipment.images[0]} alt="" className="w-12 h-12 object-cover" />
+                                                    ) : (
+                                                        <Package className="w-6 h-6 text-gray-400" />
+                                                    )}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <User className="w-4 h-4 text-gray-400" />
+                                                        <span className="font-medium text-gray-900">
+                                                            {reservation.profiles?.first_name} {reservation.profiles?.last_name}
+                                                        </span>
+                                                        <span className="text-xs text-gray-400">
+                                                            {reservation.profiles?.email}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-sm text-gray-600">{reservation.equipment?.name}</p>
+                                                    <p className="text-xs text-gray-400 font-mono">{reservation.equipment?.equipment_number}</p>
+                                                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                                        <Calendar className="w-3 h-3" />
+                                                        <span>{formatThaiDate(reservation.start_date)}</span>
+                                                        <ArrowRight className="w-3 h-3" />
+                                                        <span>{formatThaiDate(reservation.end_date)}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Status & Actions */}
+                                            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                                                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full ${statusConfig.color}`}>
+                                                    <StatusIcon className="w-4 h-4" />
+                                                    {statusConfig.label}
+                                                </span>
+
+                                                {/* Action Buttons */}
+                                                {status === 'pending' && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleApprove(reservation.id, reservation.user_id)}
+                                                            disabled={isProcessing}
+                                                            className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 disabled:opacity-50"
+                                                            title="อนุมัติ"
+                                                        >
+                                                            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setRejectModal({ id: reservation.id, userId: reservation.user_id })}
+                                                            disabled={isProcessing}
+                                                            className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 disabled:opacity-50"
+                                                            title="ปฏิเสธ"
+                                                        >
+                                                            <XCircle className="w-4 h-4" />
+                                                        </button>
+                                                    </>
                                                 )}
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <User className="w-4 h-4 text-gray-400" />
-                                                    <span className="font-medium text-gray-900">
-                                                        {reservation.profiles?.first_name} {reservation.profiles?.last_name}
-                                                    </span>
-                                                    <span className="text-xs text-gray-400">
-                                                        {reservation.profiles?.email}
-                                                    </span>
-                                                </div>
-                                                <p className="text-sm text-gray-600">{reservation.equipment?.name}</p>
-                                                <p className="text-xs text-gray-400 font-mono">{reservation.equipment?.equipment_number}</p>
-                                                <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                                                    <Calendar className="w-3 h-3" />
-                                                    <span>{formatThaiDate(reservation.start_date)}</span>
-                                                    <ArrowRight className="w-3 h-3" />
-                                                    <span>{formatThaiDate(reservation.end_date)}</span>
-                                                </div>
+
+                                                {status === 'approved' && (
+                                                    <button
+                                                        onClick={() => handleMarkReady(reservation.id, reservation.user_id)}
+                                                        disabled={isProcessing}
+                                                        className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
+                                                    >
+                                                        {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
+                                                        พร้อมรับ
+                                                    </button>
+                                                )}
+
+                                                {status === 'ready' && (
+                                                    <button
+                                                        onClick={() => handleConvertToLoan(reservation)}
+                                                        disabled={isProcessing}
+                                                        className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 text-sm font-medium"
+                                                    >
+                                                        {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightCircle className="w-4 h-4" />}
+                                                        แปลงเป็นยืม
+                                                    </button>
+                                                )}
+
+                                                {/* Admin-only: Force Cancel */}
+                                                {canCancel && (
+                                                    <button
+                                                        onClick={() => handleForceCancel(reservation.id)}
+                                                        disabled={isProcessing}
+                                                        className="p-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 disabled:opacity-50"
+                                                        title="ยกเลิกการจอง (Admin)"
+                                                    >
+                                                        <Ban className="w-4 h-4" />
+                                                    </button>
+                                                )}
+
+                                                {/* Admin-only: Delete */}
+                                                <button
+                                                    onClick={() => setDeleteModal(reservation.id)}
+                                                    disabled={isProcessing}
+                                                    className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 disabled:opacity-50"
+                                                    title="ลบการจอง (Admin)"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
                                             </div>
                                         </div>
 
-                                        {/* Status & Actions */}
-                                        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full ${statusConfig.color}`}>
-                                                <StatusIcon className="w-4 h-4" />
-                                                {statusConfig.label}
-                                            </span>
-
-                                            {/* Action Buttons */}
-                                            {status === 'pending' && (
-                                                <>
-                                                    <button
-                                                        onClick={() => handleApprove(reservation.id, reservation.user_id)}
-                                                        disabled={isProcessing}
-                                                        className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 disabled:opacity-50"
-                                                        title="อนุมัติ"
-                                                    >
-                                                        {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setRejectModal({ id: reservation.id, userId: reservation.user_id })}
-                                                        disabled={isProcessing}
-                                                        className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 disabled:opacity-50"
-                                                        title="ปฏิเสธ"
-                                                    >
-                                                        <XCircle className="w-4 h-4" />
-                                                    </button>
-                                                </>
-                                            )}
-
-                                            {status === 'approved' && (
-                                                <button
-                                                    onClick={() => handleMarkReady(reservation.id, reservation.user_id)}
-                                                    disabled={isProcessing}
-                                                    className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
-                                                >
-                                                    {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
-                                                    พร้อมรับ
-                                                </button>
-                                            )}
-
-                                            {status === 'ready' && (
-                                                <button
-                                                    onClick={() => handleConvertToLoan(reservation)}
-                                                    disabled={isProcessing}
-                                                    className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 text-sm font-medium"
-                                                >
-                                                    {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightCircle className="w-4 h-4" />}
-                                                    แปลงเป็นยืม
-                                                </button>
-                                            )}
-
-                                            {/* Admin-only: Force Cancel */}
-                                            {canCancel && (
-                                                <button
-                                                    onClick={() => handleForceCancel(reservation.id)}
-                                                    disabled={isProcessing}
-                                                    className="p-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 disabled:opacity-50"
-                                                    title="ยกเลิกการจอง (Admin)"
-                                                >
-                                                    <Ban className="w-4 h-4" />
-                                                </button>
-                                            )}
-
-                                            {/* Admin-only: Delete */}
-                                            <button
-                                                onClick={() => setDeleteModal(reservation.id)}
-                                                disabled={isProcessing}
-                                                className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 disabled:opacity-50"
-                                                title="ลบการจอง (Admin)"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
+                                        {/* Rejection reason */}
+                                        {status === 'rejected' && reservation.rejection_reason && (
+                                            <div className="mt-3 ml-16 flex items-start gap-2 text-sm text-red-600">
+                                                <MessageSquare className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                                <span>{reservation.rejection_reason}</span>
+                                            </div>
+                                        )}
                                     </div>
+                                )
+                            })}
+                        </div>
 
-                                    {/* Rejection reason */}
-                                    {status === 'rejected' && reservation.rejection_reason && (
-                                        <div className="mt-3 ml-16 flex items-start gap-2 text-sm text-red-600">
-                                            <MessageSquare className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                                            <span>{reservation.rejection_reason}</span>
-                                        </div>
-                                    )}
+                        {/* Pagination */}
+                        {filteredReservations.length > 0 && (
+                            <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <span>แสดง</span>
+                                    <select
+                                        value={pageSize}
+                                        onChange={(e) => {
+                                            setPageSize(Number(e.target.value))
+                                            setCurrentPage(1)
+                                        }}
+                                        className="border border-gray-300 rounded-lg px-2 py-1 text-sm"
+                                    >
+                                        <option value={10}>10</option>
+                                        <option value={25}>25</option>
+                                        <option value={50}>50</option>
+                                        <option value={100}>100</option>
+                                    </select>
+                                    <span>รายการ | {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, filteredReservations.length)} จาก {filteredReservations.length}</span>
                                 </div>
-                            )
-                        })}
-                    </div>
+                                {totalPages > 1 && (
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                            disabled={currentPage === 1}
+                                            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-50"
+                                        >
+                                            ก่อนหน้า
+                                        </button>
+                                        <span className="px-3 py-1.5 text-sm text-gray-600">
+                                            หน้า {currentPage} / {totalPages}
+                                        </span>
+                                        <button
+                                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                            disabled={currentPage === totalPages}
+                                            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-50"
+                                        >
+                                            ถัดไป
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 

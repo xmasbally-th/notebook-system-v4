@@ -32,7 +32,7 @@ export default function AdminEquipmentList() {
     const [selectedType, setSelectedType] = useState('all')
     const [deleteId, setDeleteId] = useState<string | null>(null)
     const [currentPage, setCurrentPage] = useState(1)
-    const itemsPerPage = 10
+    const [pageSize, setPageSize] = useState(10)
 
     // Fetch equipment with type relation using direct fetch
     const { data: equipment, isLoading } = useQuery({
@@ -134,10 +134,10 @@ export default function AdminEquipmentList() {
     }, [equipment, searchTerm, selectedStatus, selectedType])
 
     // Pagination
-    const totalPages = Math.ceil(filteredItems.length / itemsPerPage)
+    const totalPages = Math.ceil(filteredItems.length / pageSize)
     const paginatedItems = filteredItems.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
+        (currentPage - 1) * pageSize,
+        currentPage * pageSize
     )
 
     // Stats
@@ -451,10 +451,24 @@ export default function AdminEquipmentList() {
                 )}
 
                 {/* Pagination */}
-                {totalPages > 1 && (
-                    <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                        <div className="text-sm text-gray-500">
-                            แสดง {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredItems.length)} จาก {filteredItems.length} รายการ
+                {filteredItems.length > 0 && (
+                    <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <span>แสดง</span>
+                            <select
+                                value={pageSize}
+                                onChange={(e) => {
+                                    setPageSize(Number(e.target.value))
+                                    setCurrentPage(1)
+                                }}
+                                className="border border-gray-300 rounded-lg px-2 py-1 text-sm"
+                            >
+                                <option value={10}>10</option>
+                                <option value={25}>25</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                            <span>รายการ | {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, filteredItems.length)} จาก {filteredItems.length}</span>
                         </div>
                         <div className="flex gap-2">
                             <button

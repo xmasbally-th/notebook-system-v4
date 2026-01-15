@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Clock, CheckCircle2, XCircle, Package, CalendarDays, Loader2, Bookmark, Send, AlertTriangle, Timer } from 'lucide-react'
 import Header from '@/components/layout/Header'
+import Pagination from '@/components/ui/Pagination'
 
 type LoanStatus = 'pending' | 'approved' | 'rejected' | 'returned'
 type ReservationStatus = 'pending' | 'approved' | 'ready' | 'completed' | 'rejected' | 'cancelled' | 'expired'
@@ -48,6 +49,8 @@ export default function MyLoansPage() {
     const [userId, setUserId] = useState<string | null>(null)
     const [accessToken, setAccessToken] = useState<string | null>(null)
     const [filter, setFilter] = useState<FilterTab>('all')
+    const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
 
     useEffect(() => {
         const client = getSupabaseBrowserClient()
@@ -129,6 +132,19 @@ export default function MyLoansPage() {
     const loanCount = (loans || []).length
     const reservationCount = (reservations || []).length
 
+    // Pagination
+    const totalItems = filteredItems.length
+    const paginatedItems = filteredItems.slice(
+        (currentPage - 1) * pageSize,
+        currentPage * pageSize
+    )
+
+    // Reset page when filter changes
+    const handleFilterChange = (newFilter: FilterTab) => {
+        setFilter(newFilter)
+        setCurrentPage(1)
+    }
+
     if (!userId) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -154,7 +170,7 @@ export default function MyLoansPage() {
                     {/* Filter Tabs */}
                     <div className="flex bg-white border border-gray-200 rounded-lg p-1 mb-6">
                         <button
-                            onClick={() => setFilter('all')}
+                            onClick={() => handleFilterChange('all')}
                             className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${filter === 'all'
                                 ? 'bg-gray-900 text-white'
                                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -167,7 +183,7 @@ export default function MyLoansPage() {
                             </span>
                         </button>
                         <button
-                            onClick={() => setFilter('loans')}
+                            onClick={() => handleFilterChange('loans')}
                             className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${filter === 'loans'
                                 ? 'bg-blue-600 text-white'
                                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -181,7 +197,7 @@ export default function MyLoansPage() {
                             </span>
                         </button>
                         <button
-                            onClick={() => setFilter('reservations')}
+                            onClick={() => handleFilterChange('reservations')}
                             className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${filter === 'reservations'
                                 ? 'bg-purple-600 text-white'
                                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -222,91 +238,106 @@ export default function MyLoansPage() {
                             </Link>
                         </div>
                     ) : (
-                        <div className="space-y-4">
-                            {filteredItems.map((item) => {
-                                const isLoan = item.type === 'loan'
-                                const status = item.status as (LoanStatus | ReservationStatus)
-                                const config = isLoan
-                                    ? loanStatusConfig[status as LoanStatus] || loanStatusConfig.pending
-                                    : reservationStatusConfig[status as ReservationStatus] || reservationStatusConfig.pending
-                                const equipment = item.equipment
-                                const images = Array.isArray(equipment?.images) ? equipment.images : []
-                                const imageUrl = images.length > 0 ? images[0] : 'https://placehold.co/100x100?text=No+Image'
+                        <>
+                            <div className="space-y-4">
+                                {paginatedItems.map((item) => {
+                                    const isLoan = item.type === 'loan'
+                                    const status = item.status as (LoanStatus | ReservationStatus)
+                                    const config = isLoan
+                                        ? loanStatusConfig[status as LoanStatus] || loanStatusConfig.pending
+                                        : reservationStatusConfig[status as ReservationStatus] || reservationStatusConfig.pending
+                                    const equipment = item.equipment
+                                    const images = Array.isArray(equipment?.images) ? equipment.images : []
+                                    const imageUrl = images.length > 0 ? images[0] : 'https://placehold.co/100x100?text=No+Image'
 
-                                return (
-                                    <div
-                                        key={`${item.type}-${item.id}`}
-                                        className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow"
-                                    >
-                                        <div className="flex flex-col sm:flex-row gap-4">
-                                            {/* Equipment Image */}
-                                            <div className="relative w-full sm:w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                                                <img
-                                                    src={imageUrl}
-                                                    alt={equipment?.name || 'Equipment'}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                                {/* Type Badge */}
-                                                <div className={`absolute top-1 left-1 px-2 py-0.5 rounded text-xs font-medium ${isLoan
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'bg-purple-600 text-white'
-                                                    }`}>
-                                                    {isLoan ? 'ยืม' : 'จอง'}
-                                                </div>
-                                            </div>
-
-                                            {/* Content */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                                                    <div>
-                                                        <h3 className="font-semibold text-gray-900 truncate">
-                                                            {equipment?.name || 'ไม่ระบุอุปกรณ์'}
-                                                        </h3>
-                                                        <p className="text-sm text-gray-500 font-mono">
-                                                            #{equipment?.equipment_number}
-                                                        </p>
+                                    return (
+                                        <div
+                                            key={`${item.type}-${item.id}`}
+                                            className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow"
+                                        >
+                                            <div className="flex flex-col sm:flex-row gap-4">
+                                                {/* Equipment Image */}
+                                                <div className="relative w-full sm:w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                                                    <img
+                                                        src={imageUrl}
+                                                        alt={equipment?.name || 'Equipment'}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                    {/* Type Badge */}
+                                                    <div className={`absolute top-1 left-1 px-2 py-0.5 rounded text-xs font-medium ${isLoan
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-purple-600 text-white'
+                                                        }`}>
+                                                        {isLoan ? 'ยืม' : 'จอง'}
                                                     </div>
-                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${config.color}`}>
-                                                        {config.icon}
-                                                        {config.label}
-                                                    </span>
                                                 </div>
 
-                                                <div className="flex flex-wrap gap-4 text-sm text-gray-500 mt-3">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <CalendarDays className="w-4 h-4" />
-                                                        <span>
-                                                            {new Date(item.start_date).toLocaleDateString('th-TH')} - {new Date(item.end_date).toLocaleDateString('th-TH')}
+                                                {/* Content */}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                                                        <div>
+                                                            <h3 className="font-semibold text-gray-900 truncate">
+                                                                {equipment?.name || 'ไม่ระบุอุปกรณ์'}
+                                                            </h3>
+                                                            <p className="text-sm text-gray-500 font-mono">
+                                                                #{equipment?.equipment_number}
+                                                            </p>
+                                                        </div>
+                                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${config.color}`}>
+                                                            {config.icon}
+                                                            {config.label}
                                                         </span>
                                                     </div>
-                                                    <div className="flex items-center gap-1.5 text-gray-400">
-                                                        <Clock className="w-4 h-4" />
-                                                        <span>
-                                                            {new Date(item.created_at).toLocaleDateString('th-TH', {
-                                                                day: 'numeric',
-                                                                month: 'short',
-                                                                year: 'numeric',
-                                                                hour: '2-digit',
-                                                                minute: '2-digit'
-                                                            })}
-                                                        </span>
-                                                    </div>
-                                                </div>
 
-                                                {/* Rejection Reason */}
-                                                {item.status === 'rejected' && item.rejection_reason && (
-                                                    <div className="mt-3 p-3 bg-red-50 border border-red-100 rounded-lg">
-                                                        <p className="text-sm text-red-700">
-                                                            <span className="font-medium">เหตุผลที่ปฏิเสธ:</span> {item.rejection_reason}
-                                                        </p>
+                                                    <div className="flex flex-wrap gap-4 text-sm text-gray-500 mt-3">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <CalendarDays className="w-4 h-4" />
+                                                            <span>
+                                                                {new Date(item.start_date).toLocaleDateString('th-TH')} - {new Date(item.end_date).toLocaleDateString('th-TH')}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-gray-400">
+                                                            <Clock className="w-4 h-4" />
+                                                            <span>
+                                                                {new Date(item.created_at).toLocaleDateString('th-TH', {
+                                                                    day: 'numeric',
+                                                                    month: 'short',
+                                                                    year: 'numeric',
+                                                                    hour: '2-digit',
+                                                                    minute: '2-digit'
+                                                                })}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                )}
+
+                                                    {/* Rejection Reason */}
+                                                    {item.status === 'rejected' && item.rejection_reason && (
+                                                        <div className="mt-3 p-3 bg-red-50 border border-red-100 rounded-lg">
+                                                            <p className="text-sm text-red-700">
+                                                                <span className="font-medium">เหตุผลที่ปฏิเสธ:</span> {item.rejection_reason}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
+                                    )
+                                )})
+                            </div>
+
+                            {/* Pagination */}
+                            {totalItems > 0 && (
+                                <div className="mt-6 bg-white rounded-xl border border-gray-200 overflow-hidden">
+                                    <Pagination
+                                        currentPage={currentPage}
+                                        totalItems={totalItems}
+                                        pageSize={pageSize}
+                                        onPageChange={setCurrentPage}
+                                        onPageSizeChange={setPageSize}
+                                    />
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             </div>
