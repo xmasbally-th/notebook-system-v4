@@ -103,13 +103,14 @@ export function useUserNotifications(userId?: string, accessToken?: string): Use
             const { url, key } = getSupabaseCredentials()
             if (!url || !key) throw new Error('Missing credentials')
 
+            const authHeader = accessToken ? `Bearer ${accessToken}` : `Bearer ${key}`
             const response = await fetch(
                 `${url}/rest/v1/notifications?id=eq.${notificationId}`,
                 {
                     method: 'PATCH',
                     headers: {
                         'apikey': key,
-                        'Authorization': `Bearer ${key}`,
+                        'Authorization': authHeader,
                         'Content-Type': 'application/json',
                         'Prefer': 'return=minimal'
                     },
@@ -118,6 +119,7 @@ export function useUserNotifications(userId?: string, accessToken?: string): Use
             )
 
             if (!response.ok) {
+                console.error('[markAsRead] Failed:', response.status)
                 throw new Error('Failed to mark as read')
             }
         },
@@ -133,13 +135,14 @@ export function useUserNotifications(userId?: string, accessToken?: string): Use
             const { url, key } = getSupabaseCredentials()
             if (!url || !key) throw new Error('Missing credentials')
 
+            const authHeader = accessToken ? `Bearer ${accessToken}` : `Bearer ${key}`
             const response = await fetch(
                 `${url}/rest/v1/notifications?user_id=eq.${userId}&is_read=eq.false`,
                 {
                     method: 'PATCH',
                     headers: {
                         'apikey': key,
-                        'Authorization': `Bearer ${key}`,
+                        'Authorization': authHeader,
                         'Content-Type': 'application/json',
                         'Prefer': 'return=minimal'
                     },
@@ -148,6 +151,7 @@ export function useUserNotifications(userId?: string, accessToken?: string): Use
             )
 
             if (!response.ok) {
+                console.error('[markAllAsRead] Failed:', response.status)
                 throw new Error('Failed to mark all as read')
             }
         },

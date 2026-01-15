@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
     Bell,
     CheckCircle,
@@ -22,6 +23,7 @@ interface UserNotificationBellProps {
 export default function UserNotificationBell({ userId, accessToken }: UserNotificationBellProps) {
     const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading } = useUserNotifications(userId, accessToken)
     const [showDropdown, setShowDropdown] = useState(false)
+    const router = useRouter()
 
     if (!userId) return null
 
@@ -122,6 +124,8 @@ export default function UserNotificationBell({ userId, accessToken }: UserNotifi
                                             if (!isComputed) {
                                                 markAsRead(notification.id)
                                             }
+                                            setShowDropdown(false)
+                                            router.push('/my-loans')
                                         }}
                                         className={`flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-blue-50 transition-colors border-b border-gray-50 ${!('is_read' in notification) || notification.is_read === false
                                             ? 'bg-blue-50/50'
