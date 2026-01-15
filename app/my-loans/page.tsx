@@ -322,7 +322,7 @@ export default function MyLoansPage() {
                                             </div>
                                         </div>
                                     )
-                                )})
+                                })}
                             </div>
 
                             {/* Pagination */}
