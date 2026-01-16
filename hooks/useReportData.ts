@@ -132,7 +132,7 @@ export function useReportData(dateRange: DateRange) {
                 // Overdue loans (approved but past end_date)
                 fetch(`${url}/rest/v1/loanRequests?select=id,end_date,user_id,equipment_id,profiles:user_id(first_name,last_name,email),equipment:equipment_id(name,equipment_number)&status=eq.approved&end_date=lt.${new Date().toISOString()}`, { headers }),
                 // All profiles for user stats
-                fetch(`${url}/rest/v1/profiles?select=id,email,first_name,last_name,department,role,status&status=eq.approved`, { headers })
+                fetch(`${url}/rest/v1/profiles?status=eq.approved&select=id,email,first_name,last_name,department,role,status`, { headers })
             ])
 
             const [loans, reservations, equipment, overdueLoans, profiles] = await Promise.all([
