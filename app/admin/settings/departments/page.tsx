@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import AdminLayout from '@/components/admin/AdminLayout'
+import { useDuplicateCheck } from '@/hooks/useDuplicateCheck'
 import {
     Plus,
     Loader2,
@@ -10,7 +11,9 @@ import {
     Building2,
     CheckCircle,
     Ban,
-    X
+    X,
+    AlertCircle,
+    CheckCircle2
 } from 'lucide-react'
 
 type Department = {
@@ -30,6 +33,17 @@ export default function DepartmentsPage() {
     const [isAdding, setIsAdding] = useState(false)
     const [newDeptName, setNewDeptName] = useState('')
     const [newDeptCode, setNewDeptCode] = useState('')
+
+    // Duplicate check for name
+    const {
+        isDuplicate: isNameDuplicate,
+        isChecking: isCheckingName,
+        checkDuplicate: checkName,
+        reset: resetNameCheck
+    } = useDuplicateCheck({
+        table: 'departments',
+        column: 'name'
+    })
 
     const fetchDepartments = async () => {
         setIsLoading(true)
@@ -53,6 +67,10 @@ export default function DepartmentsPage() {
 
     const handleAddDepartment = async () => {
         if (!newDeptName.trim()) return
+        if (isNameDuplicate) {
+            alert('ชื่อหน่วยงานนี้มีอยู่ในระบบแล้ว')
+            return
+        }
 
         setIsSaving(true)
         const { error } = await (supabase as any)
@@ -66,6 +84,7 @@ export default function DepartmentsPage() {
             setNewDeptName('')
             setNewDeptCode('')
             setIsAdding(false)
+            resetNameCheck()
             fetchDepartments()
         }
         setIsSaving(false)
@@ -154,14 +173,36 @@ export default function DepartmentsPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">ชื่อหน่วยงาน *</label>
-                                <input
-                                    autoFocus
-                                    type="text"
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                    placeholder="เช่น สาขาวิชาการบัญชี"
-                                    value={newDeptName}
-                                    onChange={e => setNewDeptName(e.target.value)}
-                                />
+                                <div className="relative">
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white pr-10 ${isNameDuplicate
+                                                ? 'border-red-300 bg-red-50'
+                                                : newDeptName && !isCheckingName && !isNameDuplicate
+                                                    ? 'border-green-300'
+                                                    : 'border-gray-200'
+                                            }`}
+                                        placeholder="เช่น สาขาวิชาการบัญชี"
+                                        value={newDeptName}
+                                        onChange={e => setNewDeptName(e.target.value)}
+                                        onBlur={e => checkName(e.target.value)}
+                                    />
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                        {isCheckingName && (
+                                            <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+                                        )}
+                                        {!isCheckingName && isNameDuplicate && (
+                                            <AlertCircle className="w-4 h-4 text-red-500" />
+                                        )}
+                                        {!isCheckingName && newDeptName && !isNameDuplicate && (
+                                            <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                        )}
+                                    </div>
+                                </div>
+                                {isNameDuplicate && (
+                                    <p className="text-xs text-red-500 mt-1">ชื่อหน่วยงานนี้มีอยู่ในระบบแล้ว</p>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">รหัส (ไม่บังคับ)</label>

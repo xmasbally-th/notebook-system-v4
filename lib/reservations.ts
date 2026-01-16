@@ -278,6 +278,15 @@ export async function createReservation(
         if (!response.ok) {
             const errorText = await response.text()
             console.error('[createReservation] Error:', errorText)
+
+            // Parse database trigger errors for overlapping reservations/loans
+            if (errorText.includes('OVERLAP_RESERVATION')) {
+                return { success: false, error: 'ช่วงเวลาที่เลือกมีการจองอุปกรณ์นี้อยู่แล้ว' }
+            }
+            if (errorText.includes('OVERLAP_LOAN')) {
+                return { success: false, error: 'อุปกรณ์นี้อยู่ระหว่างการยืมในช่วงเวลาที่เลือก' }
+            }
+
             return { success: false, error: 'ไม่สามารถสร้างการจองได้' }
         }
 

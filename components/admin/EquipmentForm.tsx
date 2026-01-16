@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Database } from '@/supabase/types'
-import { Loader2, Save, ArrowLeft, Package } from 'lucide-react'
+import { Loader2, Save, ArrowLeft, Package, AlertCircle, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 import ImageUpload from '@/components/ui/ImageUpload'
 import { useEquipmentTypes } from '@/hooks/useEquipmentTypes'
+import { useDuplicateCheck } from '@/hooks/useDuplicateCheck'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 type EquipmentInsert = Database['public']['Tables']['equipment']['Insert']
@@ -43,6 +44,17 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
     const equipmentTypes = Array.isArray(equipmentTypesData)
         ? equipmentTypesData.filter((t: EquipmentType) => t.is_active)
         : []
+
+    // Duplicate check for equipment_number
+    const {
+        isDuplicate: isEquipmentNumberDuplicate,
+        isChecking: isCheckingEquipmentNumber,
+        checkDuplicate: checkEquipmentNumber
+    } = useDuplicateCheck({
+        table: 'equipment',
+        column: 'equipment_number',
+        excludeId: isEditing ? initialData?.id : undefined
+    })
 
     // Form State - updated with new fields
     const [formData, setFormData] = useState<Partial<EquipmentInsert>>({
@@ -156,6 +168,10 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
             setError('กรุณาระบุหมายเลขครุภัณฑ์')
             return
         }
+        if (isEquipmentNumberDuplicate) {
+            setError('หมายเลขครุภัณฑ์นี้มีอยู่ในระบบแล้ว')
+            return
+        }
 
         mutation.mutate(formData as EquipmentInsert)
     }
@@ -239,14 +255,37 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     หมายเลขครุภัณฑ์ <span className="text-red-500">*</span>
                                 </label>
-                                <input
-                                    type="text"
-                                    required
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="เช่น IT-NB-001"
-                                    value={formData.equipment_number}
-                                    onChange={(e) => handleChange('equipment_number', e.target.value)}
-                                />
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        required
+                                        className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10 ${isEquipmentNumberDuplicate
+                                                ? 'border-red-300 bg-red-50'
+                                                : formData.equipment_number && !isCheckingEquipmentNumber && !isEquipmentNumberDuplicate
+                                                    ? 'border-green-300'
+                                                    : 'border-gray-300'
+                                            }`}
+                                        placeholder="เช่น IT-NB-001"
+                                        value={formData.equipment_number}
+                                        onChange={(e) => handleChange('equipment_number', e.target.value)}
+                                        onBlur={(e) => checkEquipmentNumber(e.target.value)}
+                                    />
+                                    {/* Validation indicator */}
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                        {isCheckingEquipmentNumber && (
+                                            <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+                                        )}
+                                        {!isCheckingEquipmentNumber && isEquipmentNumberDuplicate && (
+                                            <AlertCircle className="w-4 h-4 text-red-500" />
+                                        )}
+                                        {!isCheckingEquipmentNumber && formData.equipment_number && !isEquipmentNumberDuplicate && (
+                                            <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                        )}
+                                    </div>
+                                </div>
+                                {isEquipmentNumberDuplicate && (
+                                    <p className="text-xs text-red-500 mt-1">หมายเลขครุภัณฑ์นี้มีอยู่ในระบบแล้ว</p>
+                                )}
                             </div>
 
                             {/* Brand */}
