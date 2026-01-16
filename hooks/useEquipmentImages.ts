@@ -65,9 +65,9 @@ export function useEquipmentImages(options?: UseEquipmentImagesOptions) {
 
             for (const equipment of data) {
                 const images = Array.isArray(equipment.images) ? equipment.images : []
-                const typeName = equipmentTypes?.find(
-                    (t: any) => t.id === equipment.equipment_type_id
-                )?.name
+                const typeName = Array.isArray(equipmentTypes)
+                    ? equipmentTypes.find((t: any) => t.id === equipment.equipment_type_id)?.name
+                    : undefined
 
                 for (const imageUrl of images) {
                     if (typeof imageUrl === 'string' && imageUrl.trim()) {
