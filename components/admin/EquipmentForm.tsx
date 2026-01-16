@@ -260,10 +260,10 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
                                         type="text"
                                         required
                                         className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10 ${isEquipmentNumberDuplicate
-                                                ? 'border-red-300 bg-red-50'
-                                                : formData.equipment_number && !isCheckingEquipmentNumber && !isEquipmentNumberDuplicate
-                                                    ? 'border-green-300'
-                                                    : 'border-gray-300'
+                                            ? 'border-red-300 bg-red-50'
+                                            : formData.equipment_number && !isCheckingEquipmentNumber && !isEquipmentNumberDuplicate
+                                                ? 'border-green-300'
+                                                : 'border-gray-300'
                                             }`}
                                         placeholder="เช่น IT-NB-001"
                                         value={formData.equipment_number}
@@ -416,6 +416,8 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
                             onChange={(images) => handleChange('images', images)}
                             maxImages={5}
                             disabled={mutation.isPending}
+                            equipmentTypeId={(formData as any).equipment_type_id}
+                            equipmentId={initialData?.id}
                         />
                     </div>
 

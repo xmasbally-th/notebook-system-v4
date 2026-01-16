@@ -1,26 +1,37 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { Upload, X, ImageIcon, Loader2 } from 'lucide-react'
+import { Upload, X, ImageIcon, Loader2, FolderOpen, Copy } from 'lucide-react'
 import { uploadEquipmentImage, deleteEquipmentImage } from '@/lib/uploadImage'
+import ImageLibraryModal from './ImageLibraryModal'
+import CloneFromEquipmentModal from './CloneFromEquipmentModal'
 
 interface ImageUploadProps {
     images: string[]
     onChange: (images: string[]) => void
     maxImages?: number
     disabled?: boolean
+    equipmentTypeId?: string
+    equipmentId?: string
 }
 
 export default function ImageUpload({
     images = [],
     onChange,
     maxImages = 5,
-    disabled = false
+    disabled = false,
+    equipmentTypeId,
+    equipmentId
 }: ImageUploadProps) {
     const [isUploading, setIsUploading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [dragActive, setDragActive] = useState(false)
+    const [showLibraryModal, setShowLibraryModal] = useState(false)
+    const [showCloneModal, setShowCloneModal] = useState(false)
     const inputRef = useRef<HTMLInputElement>(null)
+
+    const remainingSlots = maxImages - images.length
+    const canUploadMore = remainingSlots > 0
 
     const handleFiles = useCallback(async (files: FileList | null) => {
         if (!files || files.length === 0) return
@@ -30,7 +41,6 @@ export default function ImageUpload({
         setIsUploading(true)
 
         try {
-            const remainingSlots = maxImages - images.length
             const filesToUpload = Array.from(files).slice(0, remainingSlots)
 
             if (filesToUpload.length === 0) {
@@ -47,7 +57,7 @@ export default function ImageUpload({
         } finally {
             setIsUploading(false)
         }
-    }, [images, maxImages, onChange, disabled])
+    }, [images, maxImages, remainingSlots, onChange, disabled])
 
     const handleRemove = useCallback(async (index: number) => {
         if (disabled) return
@@ -84,11 +94,69 @@ export default function ImageUpload({
         }
     }, [handleFiles])
 
-    const canUploadMore = images.length < maxImages
+    // Handle images selected from library
+    const handleLibrarySelect = (selectedUrls: string[]) => {
+        const urlsToAdd = selectedUrls.slice(0, remainingSlots)
+        if (urlsToAdd.length > 0) {
+            onChange([...images, ...urlsToAdd])
+        }
+    }
+
+    // Handle images cloned from another equipment
+    const handleClone = (clonedUrls: string[]) => {
+        const urlsToAdd = clonedUrls.slice(0, remainingSlots)
+        if (urlsToAdd.length > 0) {
+            onChange([...images, ...urlsToAdd])
+        }
+    }
 
     return (
         <div className="space-y-4">
-            {/* Upload Zone */}
+            {/* Action Buttons */}
+            {canUploadMore && (
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        onClick={() => !disabled && inputRef.current?.click()}
+                        disabled={disabled}
+                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Upload className="w-4 h-4" />
+                        อัปโหลดใหม่
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => !disabled && setShowLibraryModal(true)}
+                        disabled={disabled}
+                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <FolderOpen className="w-4 h-4" />
+                        เลือกจากคลัง
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => !disabled && setShowCloneModal(true)}
+                        disabled={disabled}
+                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Copy className="w-4 h-4" />
+                        คัดลอกจากอุปกรณ์อื่น
+                    </button>
+                </div>
+            )}
+
+            {/* Hidden file input */}
+            <input
+                ref={inputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => handleFiles(e.target.files)}
+                disabled={disabled}
+            />
+
+            {/* Upload Zone (drag & drop) */}
             {canUploadMore && (
                 <div
                     className={`
@@ -106,16 +174,6 @@ export default function ImageUpload({
                     onDrop={handleDrop}
                     onClick={() => !disabled && inputRef.current?.click()}
                 >
-                    <input
-                        ref={inputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={(e) => handleFiles(e.target.files)}
-                        disabled={disabled}
-                    />
-
                     {isUploading ? (
                         <div className="flex flex-col items-center gap-2">
                             <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
@@ -198,6 +256,24 @@ export default function ImageUpload({
             <p className="text-xs text-gray-500 text-right">
                 {images.length} / {maxImages} รูป
             </p>
+
+            {/* Image Library Modal */}
+            <ImageLibraryModal
+                isOpen={showLibraryModal}
+                onClose={() => setShowLibraryModal(false)}
+                onSelect={handleLibrarySelect}
+                maxSelectable={remainingSlots}
+                currentEquipmentTypeId={equipmentTypeId}
+            />
+
+            {/* Clone from Equipment Modal */}
+            <CloneFromEquipmentModal
+                isOpen={showCloneModal}
+                onClose={() => setShowCloneModal(false)}
+                onClone={handleClone}
+                maxSelectable={remainingSlots}
+                excludeEquipmentId={equipmentId}
+            />
         </div>
     )
 }
