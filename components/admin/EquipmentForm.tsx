@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { Database } from '@/supabase/types'
-import { Loader2, Save, ArrowLeft, Package, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Loader2, Save, ArrowLeft, Package, AlertCircle, CheckCircle2, Copy } from 'lucide-react'
 import Link from 'next/link'
 import ImageUpload from '@/components/ui/ImageUpload'
 import { useEquipmentTypes } from '@/hooks/useEquipmentTypes'
@@ -24,6 +24,7 @@ function getSupabaseCredentials() {
 interface EquipmentFormProps {
     initialData?: Equipment
     isEditing?: boolean
+    cloneFromId?: string
 }
 
 const STATUS_OPTIONS = [
@@ -33,10 +34,12 @@ const STATUS_OPTIONS = [
     { value: 'retired', label: 'เลิกใช้งาน', color: 'bg-gray-100 text-gray-600' },
 ]
 
-export default function EquipmentForm({ initialData, isEditing = false }: EquipmentFormProps) {
+export default function EquipmentForm({ initialData, isEditing = false, cloneFromId }: EquipmentFormProps) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const [error, setError] = useState<string | null>(null)
+    const [isCloning, setIsCloning] = useState(!!cloneFromId)
+    const equipmentNumberRef = useRef<HTMLInputElement>(null)
 
     // Fetch equipment types using fixed hook
     const { data: equipmentTypesData } = useEquipmentTypes()
@@ -44,6 +47,30 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
     const equipmentTypes = Array.isArray(equipmentTypesData)
         ? equipmentTypesData.filter((t: EquipmentType) => t.is_active)
         : []
+
+    // Fetch equipment to clone
+    const { data: cloneData } = useQuery({
+        queryKey: ['equipment-clone', cloneFromId],
+        enabled: !!cloneFromId,
+        queryFn: async () => {
+            if (!cloneFromId) return null
+            const { url, key } = getSupabaseCredentials()
+            if (!url || !key) return null
+
+            const response = await fetch(
+                `${url}/rest/v1/equipment?id=eq.${cloneFromId}&select=*`,
+                {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`
+                    }
+                }
+            )
+            if (!response.ok) return null
+            const data = await response.json()
+            return data[0] || null
+        }
+    })
 
     // Duplicate check for equipment_number
     const {
@@ -69,6 +96,29 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
         images: (initialData?.images as any) || [],
         is_active: initialData?.is_active ?? true,
     })
+
+    // Pre-fill form when clone data is loaded
+    useEffect(() => {
+        if (cloneData && isCloning) {
+            setFormData({
+                name: cloneData.name || '',
+                equipment_number: '', // Leave empty for user to fill
+                brand: (cloneData as any)?.brand || '',
+                model: (cloneData as any)?.model || '',
+                equipment_type_id: (cloneData as any)?.equipment_type_id || '',
+                status: ((cloneData as any)?.status_new || cloneData.status || 'ready') as any,
+                location: (cloneData.location as any) || { building: '', room: '' },
+                specifications: (cloneData.specifications as any) || {},
+                images: (cloneData.images as any) || [],
+                is_active: cloneData.is_active ?? true,
+            })
+            setIsCloning(false)
+            // Focus on equipment_number field
+            setTimeout(() => {
+                equipmentNumberRef.current?.focus()
+            }, 100)
+        }
+    }, [cloneData, isCloning])
 
     const mutation = useMutation({
         mutationFn: async (data: EquipmentInsert) => {
@@ -257,6 +307,7 @@ export default function EquipmentForm({ initialData, isEditing = false }: Equipm
                                 </label>
                                 <div className="relative">
                                     <input
+                                        ref={equipmentNumberRef}
                                         type="text"
                                         required
                                         className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10 ${isEquipmentNumberDuplicate

@@ -9,8 +9,9 @@ import AdminLayout from '@/components/admin/AdminLayout'
 import {
     Plus, Edit, Trash2, Search, Package,
     CheckCircle, Users, Wrench, Archive,
-    AlertTriangle, Filter, ChevronDown
+    AlertTriangle, Filter, ChevronDown, Copy, Layers
 } from 'lucide-react'
+import BatchAddModal from '@/components/admin/BatchAddModal'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 type EquipmentType = Database['public']['Tables']['equipment_types']['Row']
@@ -31,6 +32,7 @@ export default function AdminEquipmentList() {
     const [selectedStatus, setSelectedStatus] = useState('all')
     const [selectedType, setSelectedType] = useState('all')
     const [deleteId, setDeleteId] = useState<string | null>(null)
+    const [showBatchModal, setShowBatchModal] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
 
@@ -220,13 +222,22 @@ export default function AdminEquipmentList() {
                 <div className="p-4 border-b border-gray-200 space-y-4">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <h2 className="text-lg font-semibold text-gray-900">รายการอุปกรณ์</h2>
-                        <Link
-                            href="/admin/equipment/new"
-                            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
-                        >
-                            <Plus className="w-4 h-4" />
-                            เพิ่มอุปกรณ์
-                        </Link>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowBatchModal(true)}
+                                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium shadow-sm"
+                            >
+                                <Layers className="w-4 h-4" />
+                                เพิ่มหลายตัว
+                            </button>
+                            <Link
+                                href="/admin/equipment/new"
+                                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
+                            >
+                                <Plus className="w-4 h-4" />
+                                เพิ่มอุปกรณ์
+                            </Link>
+                        </div>
                     </div>
 
                     {/* Filters */}
@@ -357,6 +368,13 @@ export default function AdminEquipmentList() {
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex items-center justify-end gap-1">
                                                         <Link
+                                                            href={`/admin/equipment/new?clone=${item.id}`}
+                                                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                                            title="สร้างสำเนา"
+                                                        >
+                                                            <Copy className="w-4 h-4" />
+                                                        </Link>
+                                                        <Link
                                                             href={`/admin/equipment/${item.id}`}
                                                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                                             title="แก้ไข"
@@ -427,6 +445,12 @@ export default function AdminEquipmentList() {
 
                                                 {/* Actions */}
                                                 <div className="mt-3 flex gap-2">
+                                                    <Link
+                                                        href={`/admin/equipment/new?clone=${item.id}`}
+                                                        className="flex items-center justify-center gap-1.5 px-3 py-2 bg-purple-100 text-purple-600 text-sm font-medium rounded-lg hover:bg-purple-200 transition-colors"
+                                                    >
+                                                        <Copy className="w-4 h-4" />
+                                                    </Link>
                                                     <Link
                                                         href={`/admin/equipment/${item.id}`}
                                                         className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
@@ -552,6 +576,12 @@ export default function AdminEquipmentList() {
                     </div>
                 </div>
             )}
+
+            {/* Batch Add Modal */}
+            <BatchAddModal
+                isOpen={showBatchModal}
+                onClose={() => setShowBatchModal(false)}
+            />
         </AdminLayout>
     )
 }
