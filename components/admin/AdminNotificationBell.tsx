@@ -74,76 +74,76 @@ export default function AdminNotificationBell({ isAdmin }: AdminNotificationBell
                         </button>
                     </div>
 
-                    {/* Notification Items */}
+                    {/* Notification Items - Only show if pending */}
                     <div className="max-h-80 overflow-y-auto">
                         {/* Pending Users */}
-                        <Link
-                            href="/admin/users"
-                            onClick={() => setShowDropdown(false)}
-                            className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors border-b border-gray-50"
-                        >
-                            <div className={`p-2 rounded-lg ${pendingUsersCount > 0 ? 'bg-orange-100' : 'bg-gray-100'}`}>
-                                <Users className={`w-5 h-5 ${pendingUsersCount > 0 ? 'text-orange-600' : 'text-gray-400'}`} />
-                            </div>
-                            <div className="flex-1">
-                                <p className="font-medium text-gray-900 text-sm">ผู้ใช้รอการอนุมัติ</p>
-                                <p className="text-gray-500 text-xs">คลิกเพื่อจัดการผู้ใช้</p>
-                            </div>
-                            {pendingUsersCount > 0 && (
+                        {pendingUsersCount > 0 && (
+                            <Link
+                                href="/admin/users"
+                                onClick={() => setShowDropdown(false)}
+                                className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors border-b border-gray-50"
+                            >
+                                <div className="p-2 rounded-lg bg-orange-100">
+                                    <Users className="w-5 h-5 text-orange-600" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="font-medium text-gray-900 text-sm">ผู้ใช้รอการอนุมัติ</p>
+                                    <p className="text-gray-500 text-xs">คลิกเพื่อจัดการผู้ใช้</p>
+                                </div>
                                 <span className="bg-orange-500 text-white text-xs font-bold rounded-full min-w-[24px] h-6 flex items-center justify-center px-2">
                                     {pendingUsersCount}
                                 </span>
-                            )}
-                        </Link>
+                            </Link>
+                        )}
 
                         {/* Pending Loans */}
-                        <Link
-                            href="/admin/loans"
-                            onClick={() => setShowDropdown(false)}
-                            className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors border-b border-gray-50"
-                        >
-                            <div className={`p-2 rounded-lg ${pendingLoansCount > 0 ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                                <ClipboardList className={`w-5 h-5 ${pendingLoansCount > 0 ? 'text-blue-600' : 'text-gray-400'}`} />
-                            </div>
-                            <div className="flex-1">
-                                <p className="font-medium text-gray-900 text-sm">คำขอยืมรอการอนุมัติ</p>
-                                <p className="text-gray-500 text-xs">คลิกเพื่อจัดการคำขอยืม</p>
-                            </div>
-                            {pendingLoansCount > 0 && (
+                        {pendingLoansCount > 0 && (
+                            <Link
+                                href="/admin/loans"
+                                onClick={() => setShowDropdown(false)}
+                                className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors border-b border-gray-50"
+                            >
+                                <div className="p-2 rounded-lg bg-blue-100">
+                                    <ClipboardList className="w-5 h-5 text-blue-600" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="font-medium text-gray-900 text-sm">คำขอยืมรอการอนุมัติ</p>
+                                    <p className="text-gray-500 text-xs">คลิกเพื่อจัดการคำขอยืม</p>
+                                </div>
                                 <span className="bg-blue-500 text-white text-xs font-bold rounded-full min-w-[24px] h-6 flex items-center justify-center px-2">
                                     {pendingLoansCount}
                                 </span>
-                            )}
-                        </Link>
+                            </Link>
+                        )}
 
                         {/* Pending Reservations */}
-                        <Link
-                            href="/admin/reservations"
-                            onClick={() => setShowDropdown(false)}
-                            className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors"
-                        >
-                            <div className={`p-2 rounded-lg ${pendingReservationsCount > 0 ? 'bg-purple-100' : 'bg-gray-100'}`}>
-                                <Bookmark className={`w-5 h-5 ${pendingReservationsCount > 0 ? 'text-purple-600' : 'text-gray-400'}`} />
-                            </div>
-                            <div className="flex-1">
-                                <p className="font-medium text-gray-900 text-sm">คำขอจองรอการอนุมัติ</p>
-                                <p className="text-gray-500 text-xs">คลิกเพื่อจัดการคำขอจอง</p>
-                            </div>
-                            {pendingReservationsCount > 0 && (
+                        {pendingReservationsCount > 0 && (
+                            <Link
+                                href="/admin/reservations"
+                                onClick={() => setShowDropdown(false)}
+                                className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors"
+                            >
+                                <div className="p-2 rounded-lg bg-purple-100">
+                                    <Bookmark className="w-5 h-5 text-purple-600" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="font-medium text-gray-900 text-sm">คำขอจองรอการอนุมัติ</p>
+                                    <p className="text-gray-500 text-xs">คลิกเพื่อจัดการคำขอจอง</p>
+                                </div>
                                 <span className="bg-purple-500 text-white text-xs font-bold rounded-full min-w-[24px] h-6 flex items-center justify-center px-2">
                                     {pendingReservationsCount}
                                 </span>
-                            )}
-                        </Link>
-                    </div>
+                            </Link>
+                        )}
 
-                    {/* Footer */}
-                    {totalPending === 0 && (
-                        <div className="px-4 py-6 text-center text-gray-400">
-                            <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                            <p className="text-sm">ไม่มีการแจ้งเตือน</p>
-                        </div>
-                    )}
+                        {/* Empty State */}
+                        {totalPending === 0 && (
+                            <div className="px-4 py-6 text-center text-gray-400">
+                                <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                <p className="text-sm">ไม่มีการแจ้งเตือน</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 

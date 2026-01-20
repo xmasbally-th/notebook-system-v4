@@ -1,13 +1,16 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import AdminLayout from '@/components/admin/AdminLayout'
 import ReportStatsCard from '@/components/admin/reports/ReportStatsCard'
 import ReportDateRangePicker from '@/components/admin/reports/ReportDateRangePicker'
 import ReportTable, { columnRenderers } from '@/components/admin/reports/ReportTable'
-import { useReportData, DateRange, UserStats } from '@/hooks/useReportData'
+import ReportPDFExport from '@/components/admin/reports/ReportPDFExport'
+import { useReportData, DateRange, UserStats, StaffActivityItem } from '@/hooks/useReportData'
 import { exportOverdueReportCSV, exportPopularEquipmentCSV, exportToCSV, calculatePercentage } from '@/lib/reports'
-import { formatThaiDate } from '@/lib/formatThaiDate'
+import { formatThaiDate, formatThaiDateTime } from '@/lib/formatThaiDate'
+import { getActionTypeLabel, getActionTypeIcon } from '@/lib/staffActivityLog'
 import {
     ClipboardList,
     Package,
@@ -16,10 +19,23 @@ import {
     Users,
     Calendar,
     BarChart3,
-    Clock
+    Clock,
+    Activity,
+    FileText,
+    Printer,
+    FileDown
 } from 'lucide-react'
 
-type TabType = 'overview' | 'loans' | 'equipment' | 'reservations' | 'users'
+// Dynamic imports for charts (recharts is heavy, load only when needed)
+const LoanStatusPieChart = dynamic(() => import('@/components/admin/reports/ReportCharts').then(mod => ({ default: mod.LoanStatusPieChart })), { ssr: false })
+const ReservationStatusPieChart = dynamic(() => import('@/components/admin/reports/ReportCharts').then(mod => ({ default: mod.ReservationStatusPieChart })), { ssr: false })
+const EquipmentStatusPieChart = dynamic(() => import('@/components/admin/reports/ReportCharts').then(mod => ({ default: mod.EquipmentStatusPieChart })), { ssr: false })
+const ActivityBarChart = dynamic(() => import('@/components/admin/reports/ReportCharts').then(mod => ({ default: mod.ActivityBarChart })), { ssr: false })
+const MonthlyTrendChart = dynamic(() => import('@/components/admin/reports/ReportCharts').then(mod => ({ default: mod.MonthlyTrendChart })), { ssr: false })
+const StaffActivityBarChart = dynamic(() => import('@/components/admin/reports/ReportCharts').then(mod => ({ default: mod.StaffActivityBarChart })), { ssr: false })
+const DailyActivityChart = dynamic(() => import('@/components/admin/reports/ReportCharts').then(mod => ({ default: mod.DailyActivityChart })), { ssr: false })
+
+type TabType = 'overview' | 'loans' | 'equipment' | 'reservations' | 'users' | 'activity' | 'monthly'
 type UserSortKey = 'name' | 'department' | 'loan_count' | 'total_activity' | 'overdue_count'
 
 export default function AdminReportsPage() {
@@ -45,7 +61,9 @@ export default function AdminReportsPage() {
         { id: 'loans', label: 'การยืม-คืน', icon: ClipboardList },
         { id: 'equipment', label: 'อุปกรณ์', icon: Package },
         { id: 'reservations', label: 'การจอง', icon: Calendar },
-        { id: 'users', label: 'ผู้ใช้', icon: Users }
+        { id: 'users', label: 'ผู้ใช้', icon: Users },
+        { id: 'activity', label: 'กิจกรรม', icon: Activity },
+        { id: 'monthly', label: 'สรุปเดือน', icon: FileText }
     ]
 
     // Stats cards for overview
@@ -170,8 +188,11 @@ export default function AdminReportsPage() {
 
     return (
         <AdminLayout title="รายงาน" subtitle="รายงานและสถิติการใช้งานระบบ">
-            {/* Date Range Picker */}
-            <div className="flex justify-end mb-6">
+            {/* Header with Date Range and Export */}
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-2">
+                    <ReportPDFExport data={data} dateRange={dateRange} isLoading={isLoading} />
+                </div>
                 <ReportDateRangePicker value={dateRange} onChange={setDateRange} />
             </div>
 
@@ -279,6 +300,28 @@ export default function AdminReportsPage() {
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Charts Row */}
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div className="bg-gray-50 rounded-xl p-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">สัดส่วนสถานะการยืม</h3>
+                                    {data?.loanStats && (
+                                        <LoanStatusPieChart data={data.loanStats} />
+                                    )}
+                                </div>
+                                <div className="bg-gray-50 rounded-xl p-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">สัดส่วนสถานะการจอง</h3>
+                                    {data?.reservationStats && (
+                                        <ReservationStatusPieChart data={data.reservationStats} />
+                                    )}
+                                </div>
+                                <div className="bg-gray-50 rounded-xl p-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">สถานะอุปกรณ์</h3>
+                                    {data?.equipmentStats && (
+                                        <EquipmentStatusPieChart data={data.equipmentStats} />
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -575,16 +618,259 @@ export default function AdminReportsPage() {
                             </div>
                         </div>
                     )}
+
+                    {/* Activity Tab */}
+                    {activeTab === 'activity' && (
+                        <div className="space-y-6">
+                            {/* Activity Stats */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                <div className="bg-blue-50 rounded-xl p-4 text-center">
+                                    <p className="text-2xl font-bold text-blue-600">{data?.staffActivity?.total ?? 0}</p>
+                                    <p className="text-sm text-blue-700">กิจกรรมทั้งหมด</p>
+                                </div>
+                                <div className="bg-green-50 rounded-xl p-4 text-center">
+                                    <p className="text-2xl font-bold text-green-600">
+                                        {data?.staffActivity?.byActionType?.find(a => a.name.includes('อนุมัติ'))?.count ?? 0}
+                                    </p>
+                                    <p className="text-sm text-green-700">อนุมัติ</p>
+                                </div>
+                                <div className="bg-red-50 rounded-xl p-4 text-center">
+                                    <p className="text-2xl font-bold text-red-600">
+                                        {data?.staffActivity?.byActionType?.find(a => a.name.includes('ปฏิเสธ'))?.count ?? 0}
+                                    </p>
+                                    <p className="text-sm text-red-700">ปฏิเสธ</p>
+                                </div>
+                                <div className="bg-purple-50 rounded-xl p-4 text-center">
+                                    <p className="text-2xl font-bold text-purple-600">
+                                        {data?.staffActivity?.byStaff?.length ?? 0}
+                                    </p>
+                                    <p className="text-sm text-purple-700">เจ้าหน้าที่</p>
+                                </div>
+                            </div>
+
+                            {/* Charts Row */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* Daily Activity Chart */}
+                                <div className="bg-gray-50 rounded-xl p-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">กิจกรรมรายวัน</h3>
+                                    <DailyActivityChart data={data?.staffActivity?.dailyActivity ?? []} />
+                                </div>
+
+                                {/* Activity by Type */}
+                                <div className="bg-gray-50 rounded-xl p-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">ประเภทกิจกรรม</h3>
+                                    <ActivityBarChart data={data?.staffActivity?.byActionType ?? []} />
+                                </div>
+                            </div>
+
+                            {/* Staff Activity Table */}
+                            <div className="bg-gray-50 rounded-xl p-6">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">กิจกรรมแยกตามเจ้าหน้าที่</h3>
+                                <StaffActivityBarChart data={data?.staffActivity?.byStaff ?? []} />
+                            </div>
+
+                            {/* Recent Activities Table */}
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                                    <h3 className="text-lg font-semibold text-gray-900">
+                                        กิจกรรมล่าสุด ({data?.staffActivity?.recentActivities?.length ?? 0} รายการ)
+                                    </h3>
+                                    <button
+                                        onClick={() => {
+                                            if (!data?.staffActivity?.recentActivities) return
+                                            exportToCSV({
+                                                filename: 'รายงานกิจกรรมเจ้าหน้าที่',
+                                                headers: ['ลำดับ', 'เจ้าหน้าที่', 'กิจกรรม', 'ประเภท', 'วันที่'],
+                                                rows: data.staffActivity.recentActivities.map((activity, index) => [
+                                                    index + 1,
+                                                    activity.staff_name,
+                                                    getActionTypeLabel(activity.action_type as any),
+                                                    activity.target_type,
+                                                    formatThaiDateTime(new Date(activity.created_at))
+                                                ])
+                                            })
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                                    >
+                                        Export CSV
+                                    </button>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">เจ้าหน้าที่</th>
+                                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">กิจกรรม</th>
+                                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">ประเภท</th>
+                                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">วัน-เวลา</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {isLoading ? (
+                                                [...Array(5)].map((_, i) => (
+                                                    <tr key={i}>
+                                                        {[...Array(4)].map((_, j) => (
+                                                            <td key={j} className="px-6 py-4">
+                                                                <div className="h-4 bg-gray-100 rounded animate-pulse w-20"></div>
+                                                            </td>
+                                                        ))}
+                                                    </tr>
+                                                ))
+                                            ) : !data?.staffActivity?.recentActivities?.length ? (
+                                                <tr>
+                                                    <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                                                        ไม่มีข้อมูลกิจกรรม
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                data.staffActivity.recentActivities.map((activity) => (
+                                                    <tr key={activity.id} className="hover:bg-gray-50 transition-colors">
+                                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                                                            {activity.staff_name}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-sm text-gray-600">
+                                                            <span className="mr-2">{getActionTypeIcon(activity.action_type as any)}</span>
+                                                            {getActionTypeLabel(activity.action_type as any)}
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                                {activity.target_type}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-sm text-gray-500">
+                                                            {formatThaiDateTime(new Date(activity.created_at))}
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Monthly Tab */}
+                    {activeTab === 'monthly' && (
+                        <div className="space-y-6">
+                            {/* Monthly Trend Chart */}
+                            <div className="bg-gray-50 rounded-xl p-6">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">แนวโน้มการยืม-จองรายเดือน</h3>
+                                <MonthlyTrendChart data={data?.monthlyStats ?? []} />
+                            </div>
+
+                            {/* Monthly Stats Table */}
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                                    <h3 className="text-lg font-semibold text-gray-900">
+                                        สรุปรายเดือน
+                                    </h3>
+                                    <button
+                                        onClick={() => {
+                                            if (!data?.monthlyStats) return
+                                            exportToCSV({
+                                                filename: 'รายงานสรุปรายเดือน',
+                                                headers: ['เดือน', 'การยืม', 'การจอง', 'คืนแล้ว', 'เกินกำหนด'],
+                                                rows: data.monthlyStats.map(stat => [
+                                                    stat.month,
+                                                    stat.loans,
+                                                    stat.reservations,
+                                                    stat.returned,
+                                                    stat.overdue
+                                                ])
+                                            })
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                                    >
+                                        Export CSV
+                                    </button>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">เดือน</th>
+                                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">การยืม</th>
+                                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">การจอง</th>
+                                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">คืนแล้ว</th>
+                                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">รวม</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {isLoading ? (
+                                                [...Array(5)].map((_, i) => (
+                                                    <tr key={i}>
+                                                        {[...Array(5)].map((_, j) => (
+                                                            <td key={j} className="px-6 py-4">
+                                                                <div className="h-4 bg-gray-100 rounded animate-pulse w-16"></div>
+                                                            </td>
+                                                        ))}
+                                                    </tr>
+                                                ))
+                                            ) : !data?.monthlyStats?.length ? (
+                                                <tr>
+                                                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                                                        ไม่มีข้อมูลรายเดือน
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                data.monthlyStats.map((stat, index) => (
+                                                    <tr key={index} className="hover:bg-gray-50 transition-colors">
+                                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                                                            {stat.month}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center">
+                                                            <span className="font-semibold text-blue-600">{stat.loans}</span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center">
+                                                            <span className="font-semibold text-purple-600">{stat.reservations}</span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center">
+                                                            <span className="font-semibold text-green-600">{stat.returned}</span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center">
+                                                            <span className="font-bold text-gray-900">{stat.loans + stat.reservations}</span>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                        {data?.monthlyStats && data.monthlyStats.length > 0 && (
+                                            <tfoot className="bg-gray-50">
+                                                <tr>
+                                                    <td className="px-6 py-4 text-sm font-bold text-gray-900">รวมทั้งหมด</td>
+                                                    <td className="px-6 py-4 text-center font-bold text-blue-600">
+                                                        {data.monthlyStats.reduce((sum, s) => sum + s.loans, 0)}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center font-bold text-purple-600">
+                                                        {data.monthlyStats.reduce((sum, s) => sum + s.reservations, 0)}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center font-bold text-green-600">
+                                                        {data.monthlyStats.reduce((sum, s) => sum + s.returned, 0)}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center font-bold text-gray-900">
+                                                        {data.monthlyStats.reduce((sum, s) => sum + s.loans + s.reservations, 0)}
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        )}
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* Error State */}
-            {error && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700">
-                    <p className="font-medium">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
-                    <p className="text-sm mt-1">{(error as Error).message}</p>
-                </div>
-            )}
-        </AdminLayout>
+            {
+                error && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700">
+                        <p className="font-medium">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+                        <p className="text-sm mt-1">{(error as Error).message}</p>
+                    </div>
+                )
+            }
+        </AdminLayout >
     )
 }

@@ -3,8 +3,22 @@
 -- Description: Add hard delete capability and auto-purge for notifications
 
 -- ============================================
--- 1. RLS POLICY - Admin can delete notifications
+-- 1. RLS POLICIES - Admin can view and delete notifications
 -- ============================================
+
+-- Admin can SELECT all notifications (for delete preview)
+DROP POLICY IF EXISTS "Admin can view all notifications" ON notifications;
+CREATE POLICY "Admin can view all notifications" ON notifications
+FOR SELECT USING (
+    EXISTS (
+        SELECT 1 FROM profiles 
+        WHERE id = auth.uid() 
+        AND role = 'admin' 
+        AND status = 'approved'
+    )
+);
+
+-- Admin can DELETE notifications
 DROP POLICY IF EXISTS "Admin can delete notifications" ON notifications;
 CREATE POLICY "Admin can delete notifications" ON notifications
 FOR DELETE USING (

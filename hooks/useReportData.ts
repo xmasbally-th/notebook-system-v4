@@ -80,6 +80,34 @@ export interface UserStats {
     overdue_count: number
 }
 
+export interface StaffActivityItem {
+    id: string
+    staff_id: string
+    staff_name: string
+    staff_role: string
+    action_type: string
+    target_type: string
+    target_id: string
+    created_at: string
+    details: Record<string, any>
+}
+
+export interface StaffActivityStats {
+    total: number
+    byActionType: { name: string; count: number }[]
+    byStaff: { name: string; approve: number; reject: number; return: number }[]
+    recentActivities: StaffActivityItem[]
+    dailyActivity: { date: string; count: number }[]
+}
+
+export interface MonthlyStats {
+    month: string
+    loans: number
+    reservations: number
+    returned: number
+    overdue: number
+}
+
 export interface ReportData {
     loanStats: LoanStats
     reservationStats: ReservationStats
@@ -89,6 +117,8 @@ export interface ReportData {
     todayLoans: number
     userStats: UserStats[]
     departments: string[]
+    staffActivity: StaffActivityStats
+    monthlyStats: MonthlyStats[]
 }
 
 export function useReportData(dateRange: DateRange) {
@@ -121,7 +151,8 @@ export function useReportData(dateRange: DateRange) {
                 reservationsRes,
                 equipmentRes,
                 overdueRes,
-                profilesRes
+                profilesRes,
+                staffActivityRes
             ] = await Promise.all([
                 // Loans in date range
                 fetch(`${url}/rest/v1/loanRequests?select=id,status,created_at,end_date,user_id,equipment_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`, { headers }),
@@ -132,15 +163,18 @@ export function useReportData(dateRange: DateRange) {
                 // Overdue loans (approved but past end_date)
                 fetch(`${url}/rest/v1/loanRequests?select=id,end_date,user_id,equipment_id,profiles:user_id(first_name,last_name,email),equipment:equipment_id(name,equipment_number)&status=eq.approved&end_date=lt.${new Date().toISOString()}`, { headers }),
                 // All profiles for user stats
-                fetch(`${url}/rest/v1/profiles?status=eq.approved&select=id,email,first_name,last_name,department,role,status`, { headers })
+                fetch(`${url}/rest/v1/profiles?status=eq.approved&select=id,email,first_name,last_name,department,role,status`, { headers }),
+                // Staff activity log in date range
+                fetch(`${url}/rest/v1/staff_activity_log?select=id,staff_id,staff_role,action_type,target_type,target_id,created_at,details,profiles:staff_id(first_name,last_name)&created_at=gte.${fromDate}&created_at=lte.${toDate}&order=created_at.desc`, { headers })
             ])
 
-            const [loans, reservations, equipment, overdueLoans, profiles] = await Promise.all([
+            const [loans, reservations, equipment, overdueLoans, profiles, staffActivityLog] = await Promise.all([
                 loansRes.json(),
                 reservationsRes.json(),
                 equipmentRes.json(),
                 overdueRes.json(),
-                profilesRes.json()
+                profilesRes.json(),
+                staffActivityRes.json()
             ])
 
             // Calculate loan stats
@@ -276,6 +310,148 @@ export function useReportData(dateRange: DateRange) {
             // Extract unique departments
             const departments = Array.from(new Set(userStats.map(u => u.department))).filter(Boolean).sort()
 
+            // Process staff activity log
+            const activityLog = Array.isArray(staffActivityLog) ? staffActivityLog : []
+
+            // Get action type label
+            const getActionLabel = (actionType: string): string => {
+                const labels: Record<string, string> = {
+                    'approve_loan': 'อนุมัติยืม',
+                    'reject_loan': 'ปฏิเสธยืม',
+                    'mark_returned': 'บันทึกคืน',
+                    'approve_reservation': 'อนุมัติจอง',
+                    'reject_reservation': 'ปฏิเสธจอง',
+                    'mark_ready': 'พร้อมรับ',
+                    'convert_to_loan': 'แปลงเป็นยืม',
+                    'cancel_reservation': 'ยกเลิกจอง',
+                    'self_borrow': 'ยืมเอง',
+                    'self_reserve': 'จองเอง',
+                    'export_data': 'ส่งออกข้อมูล',
+                    'import_data': 'นำเข้าข้อมูล',
+                    'soft_delete_data': 'ลบข้อมูล',
+                    'hard_delete_notifications': 'ลบการแจ้งเตือน',
+                    'restore_data': 'กู้คืนข้อมูล'
+                }
+                return labels[actionType] || actionType
+            }
+
+            // Aggregate by action type
+            const actionTypeCounts: Record<string, number> = {}
+            activityLog.forEach((activity: any) => {
+                const actionType = activity.action_type
+                actionTypeCounts[actionType] = (actionTypeCounts[actionType] || 0) + 1
+            })
+            const byActionType = Object.entries(actionTypeCounts)
+                .map(([action, count]) => ({ name: getActionLabel(action), count }))
+                .sort((a, b) => b.count - a.count)
+
+            // Aggregate by staff
+            const staffCounts: Record<string, { name: string; approve: number; reject: number; return: number }> = {}
+            activityLog.forEach((activity: any) => {
+                const staffId = activity.staff_id
+                const staffName = activity.profiles
+                    ? `${activity.profiles.first_name || ''} ${activity.profiles.last_name || ''}`.trim()
+                    : 'Unknown'
+
+                if (!staffCounts[staffId]) {
+                    staffCounts[staffId] = { name: staffName, approve: 0, reject: 0, return: 0 }
+                }
+
+                if (activity.action_type.includes('approve')) {
+                    staffCounts[staffId].approve++
+                } else if (activity.action_type.includes('reject')) {
+                    staffCounts[staffId].reject++
+                } else if (activity.action_type === 'mark_returned') {
+                    staffCounts[staffId].return++
+                }
+            })
+            const byStaff = Object.values(staffCounts)
+                .sort((a, b) => (b.approve + b.reject + b.return) - (a.approve + a.reject + a.return))
+
+            // Daily activity count
+            const dailyCounts: Record<string, number> = {}
+            activityLog.forEach((activity: any) => {
+                const date = new Date(activity.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
+                dailyCounts[date] = (dailyCounts[date] || 0) + 1
+            })
+            const dailyActivity = Object.entries(dailyCounts)
+                .map(([date, count]) => ({ date, count }))
+                .slice(-14) // Last 14 days
+
+            // Recent activities
+            const recentActivities: StaffActivityItem[] = activityLog.slice(0, 20).map((activity: any) => ({
+                id: activity.id,
+                staff_id: activity.staff_id,
+                staff_name: activity.profiles
+                    ? `${activity.profiles.first_name || ''} ${activity.profiles.last_name || ''}`.trim()
+                    : 'Unknown',
+                staff_role: activity.staff_role,
+                action_type: activity.action_type,
+                target_type: activity.target_type,
+                target_id: activity.target_id,
+                created_at: activity.created_at,
+                details: activity.details || {}
+            }))
+
+            const staffActivity: StaffActivityStats = {
+                total: activityLog.length,
+                byActionType,
+                byStaff,
+                recentActivities,
+                dailyActivity
+            }
+
+            // Calculate monthly stats from loans data
+            const monthlyData: Record<string, MonthlyStats> = {}
+            const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+
+            if (Array.isArray(loans)) {
+                loans.forEach((loan: any) => {
+                    const date = new Date(loan.created_at)
+                    const monthKey = `${date.getFullYear()}-${date.getMonth()}`
+                    const monthLabel = `${thaiMonths[date.getMonth()]} ${date.getFullYear() + 543 - 2500}`
+
+                    if (!monthlyData[monthKey]) {
+                        monthlyData[monthKey] = {
+                            month: monthLabel,
+                            loans: 0,
+                            reservations: 0,
+                            returned: 0,
+                            overdue: 0
+                        }
+                    }
+
+                    monthlyData[monthKey].loans++
+                    if (loan.status === 'returned') {
+                        monthlyData[monthKey].returned++
+                    }
+                })
+            }
+
+            if (Array.isArray(reservations)) {
+                reservations.forEach((res: any) => {
+                    const date = new Date(res.created_at)
+                    const monthKey = `${date.getFullYear()}-${date.getMonth()}`
+                    const monthLabel = `${thaiMonths[date.getMonth()]} ${date.getFullYear() + 543 - 2500}`
+
+                    if (!monthlyData[monthKey]) {
+                        monthlyData[monthKey] = {
+                            month: monthLabel,
+                            loans: 0,
+                            reservations: 0,
+                            returned: 0,
+                            overdue: 0
+                        }
+                    }
+
+                    monthlyData[monthKey].reservations++
+                })
+            }
+
+            const monthlyStats = Object.entries(monthlyData)
+                .sort((a, b) => a[0].localeCompare(b[0]))
+                .map(([_, data]) => data)
+
             return {
                 loanStats,
                 reservationStats,
@@ -284,7 +460,9 @@ export function useReportData(dateRange: DateRange) {
                 overdueItems,
                 todayLoans,
                 userStats,
-                departments
+                departments,
+                staffActivity,
+                monthlyStats
             }
         }
     })
