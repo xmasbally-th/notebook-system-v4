@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Trash2, AlertTriangle, FileSpreadsheet, Calendar, Package, Archive, CheckCircle } from 'lucide-react'
+import { Trash2, AlertTriangle, FileSpreadsheet, Calendar, Package, Archive, CheckCircle, Bell } from 'lucide-react'
 import ReportDateRangePicker from '@/components/admin/reports/ReportDateRangePicker'
 import {
     DataType,
@@ -11,7 +11,11 @@ import {
     getStatusOptions,
     PreviewData,
     DeleteResult,
-    RATE_LIMITS
+    RATE_LIMITS,
+    fetchNotificationsPreview,
+    hardDeleteNotifications,
+    getNotificationTypeOptions,
+    NotificationDeleteResult
 } from '@/lib/dataManagement'
 import { logStaffActivity } from '@/lib/staffActivityLog'
 
@@ -35,21 +39,27 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
     const [isLoading, setIsLoading] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
     const [showConfirm, setShowConfirm] = useState(false)
-    const [deleteResult, setDeleteResult] = useState<DeleteResult | null>(null)
+    const [deleteResult, setDeleteResult] = useState<DeleteResult | NotificationDeleteResult | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [selectedNotificationTypes, setSelectedNotificationTypes] = useState<string[]>([])
 
     const dataTypeOptions = [
         { value: 'loans' as DataType, label: 'รายการยืม-คืน', icon: FileSpreadsheet },
         { value: 'reservations' as DataType, label: 'รายการจอง', icon: Calendar },
-        { value: 'equipment' as DataType, label: 'ข้อมูลอุปกรณ์', icon: Package }
+        { value: 'equipment' as DataType, label: 'ข้อมูลอุปกรณ์', icon: Package },
+        { value: 'notifications' as DataType, label: 'การแจ้งเตือน', icon: Bell }
     ]
 
-    const statusOptions = getStatusOptions(dataType).filter(s =>
-        ['returned', 'cancelled', 'rejected', 'completed', 'expired', 'retired'].includes(s.value)
-    )
+    const statusOptions = dataType === 'notifications'
+        ? getStatusOptions(dataType)
+        : getStatusOptions(dataType).filter(s =>
+            ['returned', 'cancelled', 'rejected', 'completed', 'expired', 'retired', 'read', 'unread'].includes(s.value)
+        )
+
+    const notificationTypeOptions = getNotificationTypeOptions()
 
     const handlePreview = useCallback(async () => {
-        if (selectedStatuses.length === 0) {
+        if (dataType !== 'notifications' && selectedStatuses.length === 0) {
             setError('กรุณาเลือกสถานะอย่างน้อย 1 รายการ')
             return
         }
@@ -59,7 +69,12 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
         setDeleteResult(null)
 
         try {
-            const data = await fetchDeletePreview(dataType, dateRange, selectedStatuses)
+            let data: PreviewData
+            if (dataType === 'notifications') {
+                data = await fetchNotificationsPreview(dateRange, selectedStatuses, selectedNotificationTypes)
+            } else {
+                data = await fetchDeletePreview(dataType, dateRange, selectedStatuses)
+            }
             setPreview(data)
             // Auto-select all
             if (data.sample) {
@@ -71,7 +86,7 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
         } finally {
             setIsLoading(false)
         }
-    }, [dataType, dateRange, selectedStatuses])
+    }, [dataType, dateRange, selectedStatuses, selectedNotificationTypes])
 
     const handleDelete = useCallback(async () => {
         if (selectedIds.length === 0) return
@@ -80,7 +95,16 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
         setError(null)
 
         try {
-            const result = await softDeleteData(selectedIds, dataType)
+            let result: DeleteResult | NotificationDeleteResult
+
+            if (dataType === 'notifications') {
+                // Hard delete for notifications (no backup)
+                result = await hardDeleteNotifications(selectedIds)
+            } else {
+                // Soft delete for other data types
+                result = await softDeleteData(selectedIds, dataType)
+            }
+
             setDeleteResult(result)
             setShowConfirm(false)
 
@@ -88,18 +112,19 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
             await logStaffActivity({
                 staffId: userId,
                 staffRole: 'admin',
-                actionType: 'soft_delete_data',
-                targetType: 'loan',
+                actionType: dataType === 'notifications' ? 'hard_delete_notifications' : 'soft_delete_data',
+                targetType: dataType === 'notifications' ? 'notification' : 'loan',
                 targetId: 'bulk',
                 details: {
                     dataType,
                     deletedCount: result.deleted,
-                    backedUpCount: result.backedUp,
+                    backedUpCount: 'backedUp' in result ? result.backedUp : 0,
                     dateRange: {
                         from: dateRange.from.toISOString(),
                         to: dateRange.to.toISOString()
                     },
-                    statuses: selectedStatuses
+                    statuses: selectedStatuses,
+                    notificationTypes: selectedNotificationTypes
                 }
             })
 
@@ -113,7 +138,7 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
         } finally {
             setIsDeleting(false)
         }
-    }, [selectedIds, dataType, userId, dateRange, selectedStatuses])
+    }, [selectedIds, dataType, userId, dateRange, selectedStatuses, selectedNotificationTypes])
 
     const toggleStatus = (status: string) => {
         setSelectedStatuses(prev =>
@@ -146,15 +171,26 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
     return (
         <div className="space-y-6">
             {/* Warning */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+            <div className={`rounded-xl p-4 ${dataType === 'notifications' ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'}`}>
                 <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5" />
+                    <AlertTriangle className={`w-6 h-6 flex-shrink-0 mt-0.5 ${dataType === 'notifications' ? 'text-red-600' : 'text-yellow-600'}`} />
                     <div>
-                        <h3 className="font-semibold text-yellow-900 mb-1">⚠️ การลบข้อมูล (Soft Delete)</h3>
-                        <p className="text-sm text-yellow-700">
-                            ข้อมูลที่ลบจะถูกเก็บ backup ไว้ 30 วัน สามารถกู้คืนได้ภายหลัง
-                        </p>
-                        <p className="text-xs text-yellow-600 mt-1">
+                        {dataType === 'notifications' ? (
+                            <>
+                                <h3 className="font-semibold text-red-900 mb-1">🔔 การลบการแจ้งเตือน (Hard Delete)</h3>
+                                <p className="text-sm text-red-700">
+                                    การแจ้งเตือนจะถูกลบถาวร ไม่สามารถกู้คืนได้
+                                </p>
+                            </>
+                        ) : (
+                            <>
+                                <h3 className="font-semibold text-yellow-900 mb-1">⚠️ การลบข้อมูล (Soft Delete)</h3>
+                                <p className="text-sm text-yellow-700">
+                                    ข้อมูลที่ลบจะถูกเก็บ backup ไว้ 30 วัน สามารถกู้คืนได้ภายหลัง
+                                </p>
+                            </>
+                        )}
+                        <p className={`text-xs mt-1 ${dataType === 'notifications' ? 'text-red-600' : 'text-yellow-600'}`}>
                             จำกัด {RATE_LIMITS.delete.maxRecords} รายการต่อครั้ง
                         </p>
                     </div>
@@ -173,7 +209,8 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
                                 key={option.value}
                                 onClick={() => {
                                     setDataType(option.value)
-                                    setSelectedStatuses(['returned', 'cancelled'])
+                                    setSelectedStatuses(option.value === 'notifications' ? ['read'] : ['returned', 'cancelled'])
+                                    setSelectedNotificationTypes([])
                                     setPreview(null)
                                     setDeleteResult(null)
                                 }}
@@ -194,7 +231,7 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
             {dataType !== 'equipment' && statusOptions.length > 0 && (
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">
-                        เลือกสถานะที่ต้องการลบ <span className="text-red-500">*</span>
+                        {dataType === 'notifications' ? 'เลือกสถานะการอ่าน' : 'เลือกสถานะที่ต้องการลบ'} <span className="text-red-500">*</span>
                     </label>
                     <div className="flex flex-wrap gap-2">
                         {statusOptions.map(status => (
@@ -207,6 +244,36 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
                                     }`}
                             >
                                 {status.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Notification Type Filter */}
+            {dataType === 'notifications' && (
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                        กรองตามประเภทการแจ้งเตือน <span className="text-gray-400">(ไม่เลือก = ทุกประเภท)</span>
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                        {notificationTypeOptions.map(type => (
+                            <button
+                                key={type.value}
+                                onClick={() => {
+                                    setSelectedNotificationTypes(prev =>
+                                        prev.includes(type.value)
+                                            ? prev.filter(t => t !== type.value)
+                                            : [...prev, type.value]
+                                    )
+                                    setPreview(null)
+                                }}
+                                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${selectedNotificationTypes.includes(type.value)
+                                    ? 'bg-orange-500 text-white'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                            >
+                                {type.label}
                             </button>
                         ))}
                     </div>
@@ -242,7 +309,9 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
                     </div>
                     <div className="text-sm space-y-1">
                         <p className="text-green-700">✓ ลบสำเร็จ: {deleteResult.deleted} รายการ</p>
-                        <p className="text-blue-700">📦 สร้าง Backup: {deleteResult.backedUp} รายการ</p>
+                        {'backedUp' in deleteResult && (
+                            <p className="text-blue-700">📦 สร้าง Backup: {deleteResult.backedUp} รายการ</p>
+                        )}
                     </div>
                     {deleteResult.errors.length > 0 && (
                         <ul className="text-xs text-red-600 mt-2">
@@ -363,7 +432,10 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
                                 คุณกำลังจะลบข้อมูล <span className="font-bold text-red-600">{selectedIds.length}</span> รายการ
                             </p>
                             <p className="text-sm text-gray-500 mt-2">
-                                ข้อมูลจะถูกเก็บ backup ไว้ 30 วัน
+                                {dataType === 'notifications'
+                                    ? '⚠️ การแจ้งเตือนจะถูกลบถาวร ไม่สามารถกู้คืนได้'
+                                    : 'ข้อมูลจะถูกเก็บ backup ไว้ 30 วัน'
+                                }
                             </p>
                         </div>
                         <div className="flex gap-3">

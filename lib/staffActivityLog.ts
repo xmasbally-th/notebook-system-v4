@@ -15,6 +15,7 @@ export type ActionType =
     | 'export_data'
     | 'import_data'
     | 'soft_delete_data'
+    | 'hard_delete_notifications'
     | 'restore_data'
 
 
@@ -22,7 +23,7 @@ export interface ActivityLogEntry {
     staffId: string
     staffRole: 'staff' | 'admin'
     actionType: ActionType
-    targetType: 'loan' | 'reservation'
+    targetType: 'loan' | 'reservation' | 'notification'
     targetId: string
     targetUserId?: string
     isSelfAction?: boolean
@@ -107,6 +108,7 @@ export function getActionTypeLabel(actionType: ActionType): string {
         'export_data': 'ส่งออกข้อมูล',
         'import_data': 'นำเข้าข้อมูล',
         'soft_delete_data': 'ลบข้อมูล',
+        'hard_delete_notifications': 'ลบการแจ้งเตือน',
         'restore_data': 'กู้คืนข้อมูล'
     }
     return labels[actionType] || actionType
@@ -130,6 +132,7 @@ export function getActionTypeIcon(actionType: ActionType): string {
         'export_data': '📤',
         'import_data': '📥',
         'soft_delete_data': '🗑️',
+        'hard_delete_notifications': '🔔',
         'restore_data': '♻️'
     }
     return icons[actionType] || '📝'

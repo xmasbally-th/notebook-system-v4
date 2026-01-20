@@ -10,7 +10,7 @@ import { formatThaiDate } from './formatThaiDate'
 // Types
 // ============================================
 
-export type DataType = 'loans' | 'reservations' | 'equipment'
+export type DataType = 'loans' | 'reservations' | 'equipment' | 'notifications'
 export type ExportFormat = 'csv' | 'json'
 
 export interface DateRange {
@@ -74,6 +74,7 @@ function getTableName(dataType: DataType): string {
         case 'loans': return 'loanRequests'
         case 'reservations': return 'reservations'
         case 'equipment': return 'equipment'
+        case 'notifications': return 'notifications'
     }
 }
 
@@ -82,6 +83,7 @@ function getDataTypeLabel(dataType: DataType): string {
         case 'loans': return 'รายการยืม-คืน'
         case 'reservations': return 'รายการจอง'
         case 'equipment': return 'ข้อมูลอุปกรณ์'
+        case 'notifications': return 'การแจ้งเตือน'
     }
 }
 
@@ -365,7 +367,8 @@ export async function validateImportData(
     const requiredFields: Record<DataType, string[]> = {
         loans: ['user_id', 'equipment_id', 'start_date', 'end_date'],
         reservations: ['user_id', 'equipment_id', 'start_date', 'end_date'],
-        equipment: ['equipment_number', 'name']
+        equipment: ['equipment_number', 'name'],
+        notifications: ['user_id', 'type', 'title']
     }
 
     const required = requiredFields[dataType]
@@ -543,6 +546,129 @@ export async function softDeleteData(
 }
 
 // ============================================
+// Hard Delete Notifications (No Backup)
+// ============================================
+
+export interface NotificationDeleteResult {
+    deleted: number
+    errors: string[]
+}
+
+export async function fetchNotificationsPreview(
+    dateRange: DateRange,
+    readStatusFilter?: string[],
+    typeFilter?: string[]
+): Promise<PreviewData> {
+    const { url, key } = getSupabaseCredentials()
+    const token = await getAccessToken()
+
+    if (!url || !key || !token) {
+        throw new Error('Missing credentials')
+    }
+
+    const headers = {
+        'apikey': key,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+    }
+
+    const fromDate = dateRange.from.toISOString()
+    const toDate = dateRange.to.toISOString()
+
+    let endpoint = `${url}/rest/v1/notifications?select=id,user_id,type,title,message,is_read,created_at`
+    endpoint += `&created_at=gte.${fromDate}&created_at=lte.${toDate}`
+
+    // Filter by read status
+    if (readStatusFilter && readStatusFilter.length > 0) {
+        if (readStatusFilter.includes('read') && !readStatusFilter.includes('unread')) {
+            endpoint += '&is_read=eq.true'
+        } else if (readStatusFilter.includes('unread') && !readStatusFilter.includes('read')) {
+            endpoint += '&is_read=eq.false'
+        }
+    }
+
+    // Filter by notification type
+    if (typeFilter && typeFilter.length > 0) {
+        const typeList = typeFilter.map(t => `"${t}"`).join(',')
+        endpoint += `&type=in.(${typeList})`
+    }
+
+    endpoint += '&order=created_at.desc&limit=50'
+
+    const response = await fetch(endpoint, { headers })
+    if (!response.ok) {
+        throw new Error(`Failed to fetch notifications: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const records = Array.isArray(data) ? data : []
+
+    return {
+        total: records.length,
+        sample: records.slice(0, 10),
+        columns: records.length > 0 ? Object.keys(records[0]) : []
+    }
+}
+
+export async function hardDeleteNotifications(
+    ids: string[]
+): Promise<NotificationDeleteResult> {
+    const { url, key } = getSupabaseCredentials()
+    const token = await getAccessToken()
+
+    if (!url || !key || !token) {
+        throw new Error('Missing credentials')
+    }
+
+    // Check rate limit
+    if (ids.length > RATE_LIMITS.delete.maxRecords) {
+        throw new Error(`จำนวนข้อมูลเกิน ${RATE_LIMITS.delete.maxRecords} รายการต่อครั้ง`)
+    }
+
+    const headers = {
+        'apikey': key,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+    }
+
+    const result: NotificationDeleteResult = { deleted: 0, errors: [] }
+
+    // Delete each notification (no backup needed)
+    for (const id of ids) {
+        try {
+            const deleteRes = await fetch(
+                `${url}/rest/v1/notifications?id=eq.${id}`,
+                { method: 'DELETE', headers }
+            )
+
+            if (deleteRes.ok) {
+                result.deleted++
+            } else {
+                const errorText = await deleteRes.text()
+                result.errors.push(`ไม่สามารถลบ ID: ${id} - ${errorText}`)
+            }
+        } catch (error) {
+            result.errors.push(`Error deleting ID ${id}: ${error}`)
+        }
+    }
+
+    return result
+}
+
+export function getNotificationTypeOptions(): { value: string; label: string }[] {
+    return [
+        { value: 'loan_approved', label: 'อนุมัติคำขอยืม' },
+        { value: 'loan_rejected', label: 'ปฏิเสธคำขอยืม' },
+        { value: 'equipment_due_soon', label: 'ใกล้ถึงกำหนดคืน' },
+        { value: 'equipment_overdue', label: 'เลยกำหนดคืน' },
+        { value: 'reservation_confirmed', label: 'ยืนยันการจอง' },
+        { value: 'reservation_ready', label: 'พร้อมรับอุปกรณ์' },
+        { value: 'reservation_approved', label: 'อนุมัติการจอง' },
+        { value: 'reservation_rejected', label: 'ปฏิเสธการจอง' }
+    ]
+}
+
+// ============================================
 // Status Options
 // ============================================
 
@@ -572,6 +698,11 @@ export function getStatusOptions(dataType: DataType): { value: string; label: st
                 { value: 'borrowed', label: 'ถูกยืม' },
                 { value: 'maintenance', label: 'ซ่อมบำรุง' },
                 { value: 'retired', label: 'ปลดระวาง' }
+            ]
+        case 'notifications':
+            return [
+                { value: 'read', label: 'อ่านแล้ว' },
+                { value: 'unread', label: 'ยังไม่อ่าน' }
             ]
     }
 }
