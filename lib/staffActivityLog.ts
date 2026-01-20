@@ -12,6 +12,11 @@ export type ActionType =
     | 'cancel_reservation'
     | 'self_borrow'
     | 'self_reserve'
+    | 'export_data'
+    | 'import_data'
+    | 'soft_delete_data'
+    | 'restore_data'
+
 
 export interface ActivityLogEntry {
     staffId: string
@@ -98,7 +103,11 @@ export function getActionTypeLabel(actionType: ActionType): string {
         'convert_to_loan': 'แปลงเป็นคำขอยืม',
         'cancel_reservation': 'ยกเลิกการจอง',
         'self_borrow': 'ยืมด้วยตัวเอง',
-        'self_reserve': 'จองด้วยตัวเอง'
+        'self_reserve': 'จองด้วยตัวเอง',
+        'export_data': 'ส่งออกข้อมูล',
+        'import_data': 'นำเข้าข้อมูล',
+        'soft_delete_data': 'ลบข้อมูล',
+        'restore_data': 'กู้คืนข้อมูล'
     }
     return labels[actionType] || actionType
 }
@@ -117,7 +126,11 @@ export function getActionTypeIcon(actionType: ActionType): string {
         'convert_to_loan': '🔄',
         'cancel_reservation': '🚫',
         'self_borrow': '👤',
-        'self_reserve': '👤'
+        'self_reserve': '👤',
+        'export_data': '📤',
+        'import_data': '📥',
+        'soft_delete_data': '🗑️',
+        'restore_data': '♻️'
     }
     return icons[actionType] || '📝'
 }
