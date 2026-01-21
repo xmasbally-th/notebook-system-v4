@@ -35,7 +35,7 @@ interface Equipment {
     equipment_number: string
     name: string
     status: string
-    type_id: string | null
+    equipment_type_id: string | null
     equipment_type?: {
         name: string
     }
@@ -102,7 +102,7 @@ export default function SpecialLoanForm({ onClose, onSuccess }: Props) {
             if (!url || !key) return []
 
             const response = await fetch(
-                `${url}/rest/v1/equipment?type_id=eq.${selectedTypeId}&status=eq.ready&select=id,equipment_number,name,status,type_id,equipment_type:equipment_types(name)&order=equipment_number`,
+                `${url}/rest/v1/equipment?equipment_type_id=eq.${selectedTypeId}&status=eq.ready&select=id,equipment_number,name,status,equipment_type_id,equipment_types(name)&order=equipment_number`,
                 { headers: { 'apikey': key, 'Authorization': `Bearer ${key}` } }
             )
             if (!response.ok) return []
@@ -357,10 +357,10 @@ export default function SpecialLoanForm({ onClose, onSuccess }: Props) {
                                                 type="button"
                                                 onClick={() => toggleEquipment(eq.id)}
                                                 className={`p-2 text-left rounded-lg border transition-colors ${hasConflict
-                                                        ? 'border-red-300 bg-red-50'
-                                                        : isSelected
-                                                            ? 'border-blue-500 bg-blue-50'
-                                                            : 'border-gray-200 hover:border-blue-300'
+                                                    ? 'border-red-300 bg-red-50'
+                                                    : isSelected
+                                                        ? 'border-blue-500 bg-blue-50'
+                                                        : 'border-gray-200 hover:border-blue-300'
                                                     }`}
                                             >
                                                 <div className="flex items-center gap-2">

@@ -56,6 +56,20 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
     maxDate.setDate(maxDate.getDate() + maxAdvanceDays)
     const maxDateStr = maxDate.toISOString().split('T')[0]
 
+    // Calculate max end date based on start date and max loan days
+    // Example: if startDate is 26th and maxDays is 3, maxEndDate should be 28th
+    // (26=day1, 27=day2, 28=day3)
+    const maxLoanDays = config?.maxDays || 7
+    const maxEndDateStr = (() => {
+        if (!startDate) return maxDateStr
+        const start = new Date(startDate)
+        // Add (maxLoanDays - 1) because the start day counts as day 1
+        start.setDate(start.getDate() + maxLoanDays - 1)
+        const maxEndDate = start.toISOString().split('T')[0]
+        // Return the earlier of maxLoanDays or maxAdvanceBookingDays
+        return maxEndDate < maxDateStr ? maxEndDate : maxDateStr
+    })()
+
     // Check for date conflicts with existing reservations/loans
     const isDateConflict = (date: string): boolean => {
         if (!availability) return false
@@ -253,7 +267,7 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
                             type="date"
                             required
                             min={startDate || minDate}
-                            max={maxDateStr}
+                            max={maxEndDateStr}
                             className="w-full rounded-lg border-gray-300 border shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm p-2.5"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}

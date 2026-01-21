@@ -53,6 +53,17 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
     // Get min date (today)
     const today = new Date().toISOString().split('T')[0]
 
+    // Calculate max end date based on start date and max loan days
+    // Example: if startDate is 26th and maxDays is 3, maxEndDate should be 28th
+    // (26=day1, 27=day2, 28=day3)
+    const maxEndDate = (() => {
+        if (!startDate || !config) return ''
+        const start = new Date(startDate)
+        // Add (maxDays - 1) because the start day counts as day 1
+        start.setDate(start.getDate() + config.maxDays - 1)
+        return start.toISOString().split('T')[0]
+    })()
+
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
 
@@ -180,6 +191,7 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
                             name="endDate"
                             required
                             min={startDate || today}
+                            max={maxEndDate || undefined}
                             className="w-full rounded-lg border-gray-300 border shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-2.5"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}

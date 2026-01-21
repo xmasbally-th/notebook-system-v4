@@ -62,17 +62,19 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     const breakEndTime = config?.break_end_time?.slice(0, 5) || null
 
     // Calculate max end date for borrow mode
+    // Example: if start=today(26th) and maxDays=3, maxEnd=28th (26=day1, 27=day2, 28=day3)
     const getMaxEndDate = () => {
         const start = new Date(today)
-        start.setDate(start.getDate() + maxDays)
+        start.setDate(start.getDate() + maxDays - 1)
         return start.toISOString().split('T')[0]
     }
 
     // Calculate max end date for reserve mode
+    // Example: if start=26th and maxDays=3, maxEnd=28th (26=day1, 27=day2, 28=day3)
     const getReserveMaxEndDate = () => {
         if (!reserveStartDate) return ''
         const start = new Date(reserveStartDate)
-        start.setDate(start.getDate() + maxDays)
+        start.setDate(start.getDate() + maxDays - 1)
         return start.toISOString().split('T')[0]
     }
 
@@ -331,8 +333,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                 <button
                                     onClick={() => setMode('borrow')}
                                     className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${mode === 'borrow'
-                                            ? 'bg-white text-blue-600 shadow-sm'
-                                            : 'text-gray-600 hover:text-gray-900'
+                                        ? 'bg-white text-blue-600 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
                                         }`}
                                 >
                                     <Send className="w-4 h-4" />
@@ -341,8 +343,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                 <button
                                     onClick={() => setMode('reserve')}
                                     className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${mode === 'reserve'
-                                            ? 'bg-white text-purple-600 shadow-sm'
-                                            : 'text-gray-600 hover:text-gray-900'
+                                        ? 'bg-white text-purple-600 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
                                         }`}
                                 >
                                     <Bookmark className="w-4 h-4" />
@@ -550,8 +552,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                             onClick={handleSubmit}
                             disabled={isSubmitting || !isFormValid}
                             className={`w-full flex items-center justify-center gap-2 px-4 py-3 font-medium rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors ${mode === 'borrow'
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                    : 'bg-purple-600 text-white hover:bg-purple-700'
+                                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                : 'bg-purple-600 text-white hover:bg-purple-700'
                                 }`}
                         >
                             {isSubmitting ? (
