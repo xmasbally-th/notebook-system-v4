@@ -18,7 +18,8 @@ import {
     User,
     Activity,
     CalendarPlus,
-    Database
+    Database,
+    BarChart3
 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
@@ -41,6 +42,7 @@ const menuItems = [
     { href: '/admin/reservations', label: 'จัดการการจอง', icon: CalendarPlus },
     { href: '/admin/staff-activity', label: 'ประวัติการทำงาน', icon: Activity },
     { href: '/admin/data-management', label: 'จัดการข้อมูล', icon: Database },
+    { href: '/admin/reports', label: 'รายงาน', icon: BarChart3 },
     { href: '/admin/settings', label: 'ตั้งค่าระบบ', icon: Settings },
 ]
 
