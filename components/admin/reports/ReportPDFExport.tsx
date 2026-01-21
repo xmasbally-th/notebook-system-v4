@@ -59,7 +59,7 @@ export default function ReportPDFExport({ data, dateRange, isLoading }: ReportPD
                     src: '/fonts/Sarabun-Regular.ttf'
                 })
             } catch {
-                console.log('Using default font')
+                // Using default font
             }
 
             // Create PDF document

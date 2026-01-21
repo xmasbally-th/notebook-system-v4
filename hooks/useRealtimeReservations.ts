@@ -42,7 +42,7 @@ export function useRealtimeReservations(enabled: boolean) {
     const { data: pendingReservationsData, isLoading, refetch } = useQuery({
         queryKey: ['pending-reservations-count'],
         queryFn: async () => {
-            console.log('[useRealtimeReservations] Fetching pending reservations...')
+
 
             try {
                 const { url, key } = getSupabaseCredentials()
@@ -54,7 +54,7 @@ export function useRealtimeReservations(enabled: boolean) {
                 // Get user's access token for RLS
                 const accessToken = await getAccessToken()
                 if (!accessToken) {
-                    console.log('[useRealtimeReservations] No access token, user not logged in')
+
                     return { reservations: [], count: 0 }
                 }
 
@@ -84,7 +84,7 @@ export function useRealtimeReservations(enabled: boolean) {
                 const countHeader = response.headers.get('content-range')
                 const count = countHeader ? parseInt(countHeader.split('/')[1]) || 0 : data.length
 
-                console.log('[useRealtimeReservations] Success:', { count, reservations: data.length })
+
                 return { reservations: data, count }
             } catch (err: any) {
                 console.error('[useRealtimeReservations] Exception:', err?.message || err)

@@ -161,8 +161,6 @@ export default function EquipmentForm({ initialData, isEditing = false, cloneFro
                 is_active: data.is_active ?? true,
             }
 
-            console.log('[EquipmentForm] Submitting with user token:', submitData)
-
             // Use user's access token in Authorization header for RLS
             const authHeaders = {
                 'apikey': key,

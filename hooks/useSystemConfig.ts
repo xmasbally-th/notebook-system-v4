@@ -23,11 +23,11 @@ export function useSystemConfig() {
         retry: 1,       // Retry once only
         retryDelay: 1000,
         queryFn: async (): Promise<SystemConfig> => {
-            console.log('[useSystemConfig] Starting fetch...')
+
 
             try {
                 const client = getSupabaseClient()
-                console.log('[useSystemConfig] Client created:', !!client)
+
 
                 if (!client) {
                     console.error('[useSystemConfig] No client available')
@@ -36,7 +36,7 @@ export function useSystemConfig() {
 
                 // Wrap in timeout to prevent hanging
                 const timeoutMs = 8000
-                console.log('[useSystemConfig] Executing query with timeout:', timeoutMs)
+
 
                 const queryPromise = client
                     .from('system_config')
@@ -51,7 +51,7 @@ export function useSystemConfig() {
                 })
 
                 const { data, error } = await Promise.race([queryPromise, timeoutPromise])
-                console.log('[useSystemConfig] Query completed:', { hasData: !!data, dataLength: data?.length, error: error?.message })
+
 
                 if (error) {
                     console.error('[useSystemConfig] Supabase error:', error.message, error.code)
@@ -66,7 +66,7 @@ export function useSystemConfig() {
                     return getDefaultConfig()
                 }
 
-                console.log('[useSystemConfig] Success - returning config')
+
                 return config as SystemConfig
             } catch (err: any) {
                 console.error('[useSystemConfig] Exception:', err?.message || err)

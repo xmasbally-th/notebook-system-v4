@@ -60,15 +60,7 @@ export default function StaffOverduePage() {
             equipmentName: string
             daysOverdue: number
         }) => {
-            // In a real implementation, this would send an email
-            // For now, we'll just log the reminder
-            console.log('Sending reminder:', {
-                loanId,
-                borrowerEmail,
-                borrowerName,
-                equipmentName,
-                daysOverdue
-            })
+            // In a real implementation, this would send an email via Resend, SendGrid, or AWS SES
 
             // Update loan with last reminder timestamp
             const { url, key } = getSupabaseCredentials()

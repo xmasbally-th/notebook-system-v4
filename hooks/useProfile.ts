@@ -26,7 +26,7 @@ export function useProfile(userId?: string) {
         staleTime: 30000, // 30 seconds
         retry: 1,
         queryFn: async () => {
-            console.log('[useProfile] Fetching profile...', userId ? `userId: ${userId}` : 'current user')
+
 
             try {
                 const { url, key } = getSupabaseCredentials()
@@ -43,13 +43,13 @@ export function useProfile(userId?: string) {
                 if (!targetUserId) {
                     const { data: { user } } = await client.auth.getUser()
                     if (!user) {
-                        console.log('[useProfile] No authenticated user')
+
                         return null
                     }
                     targetUserId = user.id
                 }
 
-                console.log('[useProfile] Fetching profile for:', targetUserId)
+
 
                 // Get user's access token for proper RLS
                 const { data: { session } } = await client.auth.getSession()
@@ -73,7 +73,7 @@ export function useProfile(userId?: string) {
                 }
 
                 const data = await response.json()
-                console.log('[useProfile] Success:', data?.length > 0 ? 'found' : 'not found')
+
 
                 if (Array.isArray(data) && data.length > 0) {
                     return data[0] as Profile

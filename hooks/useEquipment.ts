@@ -27,7 +27,7 @@ export function useEquipment(id?: string) {
         staleTime: 0,
         retry: 1,
         queryFn: async () => {
-            console.log('[useEquipment] Fetching equipment...', id ? `id: ${id}` : 'all')
+
 
             try {
                 const { url, key } = getSupabaseCredentials()
@@ -57,7 +57,7 @@ export function useEquipment(id?: string) {
                 }
 
                 const data = await response.json()
-                console.log('[useEquipment] Success:', Array.isArray(data) ? `${data.length} items` : 'single item')
+
 
                 // Process data to ensure arrays are correct
                 const processItem = (item: any) => ({

@@ -80,7 +80,7 @@ function generateFilename(originalName: string): string {
  * Returns the public URL of the uploaded image
  */
 export async function uploadEquipmentImage(file: File): Promise<string> {
-    console.log('[uploadImage] Starting upload for:', file.name)
+
 
     const { url, key } = getSupabaseCredentials()
     if (!url || !key) {
@@ -105,16 +105,16 @@ export async function uploadEquipmentImage(file: File): Promise<string> {
     }
 
     // Compress image
-    console.log('[uploadImage] Compressing image...')
+
     const compressedBlob = await compressImage(file)
-    console.log('[uploadImage] Compressed to:', compressedBlob.size, 'bytes')
+
 
     // Generate filename
     const filename = generateFilename(file.name)
     const filePath = `equipment/${filename}`
 
     // Upload using direct fetch API to Supabase Storage
-    console.log('[uploadImage] Uploading to:', filePath)
+
     const uploadUrl = `${url}/storage/v1/object/${BUCKET_NAME}/${filePath}`
 
     const response = await fetch(uploadUrl, {
@@ -128,7 +128,7 @@ export async function uploadEquipmentImage(file: File): Promise<string> {
         body: compressedBlob
     })
 
-    console.log('[uploadImage] Response status:', response.status)
+
 
     if (!response.ok) {
         const errorText = await response.text()
@@ -138,7 +138,7 @@ export async function uploadEquipmentImage(file: File): Promise<string> {
 
     // Construct public URL
     const publicUrl = `${url}/storage/v1/object/public/${BUCKET_NAME}/${filePath}`
-    console.log('[uploadImage] Success:', publicUrl)
+
 
     return publicUrl
 }
@@ -147,7 +147,7 @@ export async function uploadEquipmentImage(file: File): Promise<string> {
  * Delete image from Supabase Storage using direct fetch API
  */
 export async function deleteEquipmentImage(imageUrl: string): Promise<void> {
-    console.log('[uploadImage] Deleting:', imageUrl)
+
 
     const { url, key } = getSupabaseCredentials()
     if (!url || !key) {
@@ -186,7 +186,7 @@ export async function deleteEquipmentImage(imageUrl: string): Promise<void> {
         throw new Error('ไม่สามารถลบรูปภาพได้')
     }
 
-    console.log('[uploadImage] Deleted successfully')
+
 }
 
 /**

@@ -29,11 +29,11 @@ export function useEquipmentTypes(id?: string) {
         staleTime: 0,  // Always refetch on mount for admin page
         retry: 1,
         queryFn: async () => {
-            console.log('[useEquipmentTypes] Fetching equipment types...', id ? `id: ${id}` : 'all')
+
 
             try {
                 const { url, key } = getSupabaseCredentials()
-                console.log('[useEquipmentTypes] Credentials:', { hasUrl: !!url, hasKey: !!key })
+
 
                 if (!url || !key) {
                     console.error('[useEquipmentTypes] Missing credentials')
@@ -45,7 +45,7 @@ export function useEquipmentTypes(id?: string) {
                     ? `${url}/rest/v1/equipment_types?id=eq.${id}&select=*`
                     : `${url}/rest/v1/equipment_types?select=*&order=name.asc`
 
-                console.log('[useEquipmentTypes] Fetching from:', endpoint)
+
 
                 const response = await fetch(endpoint, {
                     method: 'GET',
@@ -57,7 +57,7 @@ export function useEquipmentTypes(id?: string) {
                     }
                 })
 
-                console.log('[useEquipmentTypes] Response status:', response.status)
+
 
                 if (!response.ok) {
                     const errorText = await response.text()
@@ -66,7 +66,7 @@ export function useEquipmentTypes(id?: string) {
                 }
 
                 const data = await response.json()
-                console.log('[useEquipmentTypes] Success:', Array.isArray(data) ? `${data.length} items` : 'single item')
+
 
                 if (id && Array.isArray(data) && data.length > 0) {
                     return data[0] as EquipmentType

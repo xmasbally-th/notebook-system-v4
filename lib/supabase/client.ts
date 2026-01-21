@@ -5,13 +5,7 @@ import { Database } from '@/supabase/types'
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-// Log env vars status for debugging 
-if (typeof window !== 'undefined') {
-    console.log('Supabase client init:', {
-        urlSet: !!SUPABASE_URL,
-        keySet: !!SUPABASE_ANON_KEY
-    })
-}
+
 
 // Create client only if env vars are available
 function createClient() {

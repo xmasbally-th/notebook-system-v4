@@ -42,7 +42,7 @@ export function useRealtimeLoans(isAdmin: boolean) {
     const { data: pendingLoansData, isLoading, refetch } = useQuery({
         queryKey: ['pending-loans-count'],
         queryFn: async () => {
-            console.log('[useRealtimeLoans] Fetching pending loans...')
+
 
             try {
                 const { url, key } = getSupabaseCredentials()
@@ -54,7 +54,7 @@ export function useRealtimeLoans(isAdmin: boolean) {
                 // Get user's access token for RLS
                 const accessToken = await getAccessToken()
                 if (!accessToken) {
-                    console.log('[useRealtimeLoans] No access token, user not logged in')
+
                     return { loans: [], count: 0 }
                 }
 
@@ -80,7 +80,7 @@ export function useRealtimeLoans(isAdmin: boolean) {
                 const countHeader = response.headers.get('content-range')
                 const count = countHeader ? parseInt(countHeader.split('/')[1]) || 0 : data.length
 
-                console.log('[useRealtimeLoans] Success:', { count, loans: data.length })
+
                 return { loans: data, count }
             } catch (err: any) {
                 console.error('[useRealtimeLoans] Exception:', err?.message || err)
