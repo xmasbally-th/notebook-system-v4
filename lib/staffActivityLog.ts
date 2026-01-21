@@ -17,13 +17,16 @@ export type ActionType =
     | 'soft_delete_data'
     | 'hard_delete_notifications'
     | 'restore_data'
+    | 'create_special_loan'
+    | 'complete_special_loan'
+    | 'cancel_special_loan'
 
 
 export interface ActivityLogEntry {
     staffId: string
     staffRole: 'staff' | 'admin'
     actionType: ActionType
-    targetType: 'loan' | 'reservation' | 'notification'
+    targetType: 'loan' | 'reservation' | 'notification' | 'special_loan'
     targetId: string
     targetUserId?: string
     isSelfAction?: boolean
@@ -109,7 +112,10 @@ export function getActionTypeLabel(actionType: ActionType): string {
         'import_data': 'นำเข้าข้อมูล',
         'soft_delete_data': 'ลบข้อมูล',
         'hard_delete_notifications': 'ลบการแจ้งเตือน',
-        'restore_data': 'กู้คืนข้อมูล'
+        'restore_data': 'กู้คืนข้อมูล',
+        'create_special_loan': 'สร้างยืมพิเศษ',
+        'complete_special_loan': 'บันทึกคืนยืมพิเศษ',
+        'cancel_special_loan': 'ยกเลิกยืมพิเศษ'
     }
     return labels[actionType] || actionType
 }
@@ -133,7 +139,10 @@ export function getActionTypeIcon(actionType: ActionType): string {
         'import_data': '📥',
         'soft_delete_data': '🗑️',
         'hard_delete_notifications': '🔔',
-        'restore_data': '♻️'
+        'restore_data': '♻️',
+        'create_special_loan': '📋',
+        'complete_special_loan': '✅',
+        'cancel_special_loan': '🚫'
     }
     return icons[actionType] || '📝'
 }

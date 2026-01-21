@@ -1,7 +1,10 @@
 'use client'
 
 import { useSystemConfig } from '@/hooks/useSystemConfig'
-import { ShieldCheck, AlertCircle, Users, Loader2 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { ShieldCheck, AlertCircle, Users, Loader2, AlertTriangle, Calendar, Package, ChevronDown, ChevronUp } from 'lucide-react'
+import { useState } from 'react'
+import { getActiveSpecialLoans, SpecialLoan } from '@/lib/specialLoans'
 
 type LoanLimitsByType = {
     student: { max_days: number; max_items: number }
@@ -17,6 +20,14 @@ const userTypeLabels: Record<string, string> = {
 
 export default function RulesSection() {
     const { data: config, isLoading } = useSystemConfig()
+    const [showEquipmentList, setShowEquipmentList] = useState(false)
+
+    // Fetch active special loans
+    const { data: activeSpecialLoans = [] } = useQuery<SpecialLoan[]>({
+        queryKey: ['active-special-loans'],
+        queryFn: () => getActiveSpecialLoans(),
+        staleTime: 60000
+    })
 
     if (isLoading) {
         return (
@@ -31,6 +42,15 @@ export default function RulesSection() {
     }
 
     const loanLimits = config?.loan_limits_by_type as LoanLimitsByType | null
+
+    const formatDate = (dateStr: string) => {
+        const date = new Date(dateStr)
+        return date.toLocaleDateString('th-TH', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        })
+    }
 
     // Simplified rules - removed duplicate operating hours (now shown in HoursSection)
     const rules = [
@@ -62,6 +82,59 @@ export default function RulesSection() {
                         กรุณาปฏิบัติตามกฎระเบียบเพื่อให้บริการยืม-คืนเป็นไปอย่างราบรื่น
                     </p>
                 </div>
+
+                {/* Special Loan Notice */}
+                {activeSpecialLoans.length > 0 && (
+                    <div className="mb-8 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 md:p-6">
+                        <div className="flex items-start gap-3">
+                            <div className="p-2 bg-amber-100 rounded-lg">
+                                <AlertTriangle className="w-5 h-5 text-amber-600" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="font-semibold text-amber-900 mb-2">
+                                    ⚠️ แจ้งเตือนการยืมพิเศษ
+                                </h3>
+                                {activeSpecialLoans.map((loan) => (
+                                    <div key={loan.id} className="mb-3 last:mb-0">
+                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-amber-800">
+                                            <span className="flex items-center gap-1">
+                                                <Calendar className="w-4 h-4" />
+                                                {formatDate(loan.loan_date)} - {formatDate(loan.return_date)}
+                                            </span>
+                                            <span className="flex items-center gap-1">
+                                                <Package className="w-4 h-4" />
+                                                {loan.equipment_type_name} × {loan.quantity}
+                                            </span>
+                                        </div>
+                                        {loan.equipment_numbers && loan.equipment_numbers.length > 0 && (
+                                            <div className="mt-2">
+                                                <button
+                                                    onClick={() => setShowEquipmentList(!showEquipmentList)}
+                                                    className="text-xs text-amber-700 hover:text-amber-900 flex items-center gap-1"
+                                                >
+                                                    หมายเลขครุภัณฑ์ที่ไม่พร้อมให้บริการ
+                                                    {showEquipmentList ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                                </button>
+                                                {showEquipmentList && (
+                                                    <div className="mt-2 flex flex-wrap gap-1">
+                                                        {loan.equipment_numbers.map((num, idx) => (
+                                                            <span
+                                                                key={idx}
+                                                                className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs"
+                                                            >
+                                                                {num}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {rules.map((rule, index) => (
@@ -115,3 +188,4 @@ export default function RulesSection() {
         </section>
     )
 }
+

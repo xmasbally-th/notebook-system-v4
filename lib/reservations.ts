@@ -211,6 +211,24 @@ async function checkTimeConflictFallback(
             if (loans.length > 0) return true
         }
 
+        // Check special loan requests
+        const startDateStr = startDate.toISOString().split('T')[0]
+        const endDateStr = endDate.toISOString().split('T')[0]
+        const specialLoanQuery = `${url}/rest/v1/special_loan_requests?status=eq.active&loan_date=lte.${endDateStr}&return_date=gte.${startDateStr}&select=equipment_ids`
+
+        const specialLoanRes = await fetch(specialLoanQuery, {
+            headers: { 'apikey': key, 'Authorization': authHeader }
+        })
+
+        if (specialLoanRes.ok) {
+            const specialLoans = await specialLoanRes.json()
+            for (const sl of specialLoans) {
+                if (sl.equipment_ids?.includes(equipmentId)) {
+                    return true // Equipment is blocked by special loan
+                }
+            }
+        }
+
         return false
     } catch (error) {
         console.error('[checkTimeConflictFallback] Error:', error)
