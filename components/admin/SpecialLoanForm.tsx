@@ -99,7 +99,7 @@ export default function SpecialLoanForm({ onClose, onSuccess }: Props) {
             if (!url || !key) return []
 
             const response = await fetch(
-                `${url}/rest/v1/equipment?equipment_type_id=eq.${selectedTypeId}&status=eq.ready&select=id,equipment_number,name,status,equipment_type_id&order=equipment_number`,
+                `${url}/rest/v1/equipment?equipment_type_id=eq.${selectedTypeId}&status=eq.active&select=id,equipment_number,name,status,equipment_type_id&order=equipment_number`,
                 { headers: { 'apikey': key, 'Authorization': `Bearer ${key}` } }
             )
             if (!response.ok) return []
@@ -315,63 +315,104 @@ export default function SpecialLoanForm({ onClose, onSuccess }: Props) {
 
                     {/* Equipment Selection */}
                     {selectedTypeId && (
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
+                        <div className="space-y-3">
+                            {/* Header with count and actions */}
+                            <div className="flex items-center justify-between">
                                 <label className="text-sm font-medium text-gray-700">
-                                    เลือกอุปกรณ์ ({selectedEquipmentIds.length} / {equipment.length})
+                                    <Package className="w-4 h-4 inline mr-1" />
+                                    เลือกอุปกรณ์
+                                    <span className="ml-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                                        {selectedEquipmentIds.length} / {equipment.length}
+                                    </span>
                                 </label>
                                 <div className="flex gap-2">
                                     <button
                                         type="button"
                                         onClick={selectAll}
-                                        className="text-xs text-blue-600 hover:underline"
+                                        className="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
                                     >
                                         เลือกทั้งหมด
                                     </button>
                                     <button
                                         type="button"
                                         onClick={deselectAll}
-                                        className="text-xs text-gray-500 hover:underline"
+                                        className="px-2 py-1 text-xs bg-gray-50 text-gray-600 rounded hover:bg-gray-100 transition-colors"
                                     >
-                                        ยกเลิกทั้งหมด
+                                        ยกเลิก
                                     </button>
                                 </div>
                             </div>
+
+                            {/* Selected items display (compact chips) */}
+                            {selectedEquipmentIds.length > 0 && (
+                                <div className="flex flex-wrap gap-1 p-2 bg-blue-50 rounded-lg max-h-20 overflow-y-auto">
+                                    {selectedEquipmentIds.map(id => {
+                                        const eq = equipment.find(e => e.id === id)
+                                        if (!eq) return null
+                                        return (
+                                            <span
+                                                key={id}
+                                                className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full"
+                                            >
+                                                {eq.equipment_number}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => { e.stopPropagation(); toggleEquipment(id) }}
+                                                    className="hover:bg-blue-700 rounded-full p-0.5"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </span>
+                                        )
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Equipment list */}
                             {isLoadingEquipment ? (
-                                <div className="flex items-center justify-center py-8">
-                                    <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                                <div className="flex items-center justify-center py-6">
+                                    <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                                    <span className="ml-2 text-sm text-gray-500">กำลังโหลด...</span>
                                 </div>
                             ) : equipment.length === 0 ? (
-                                <p className="text-center py-8 text-gray-500">ไม่มีอุปกรณ์พร้อมใช้งาน</p>
+                                <p className="text-center py-6 text-gray-500 text-sm">ไม่มีอุปกรณ์พร้อมใช้งาน</p>
                             ) : (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-2 border border-gray-200 rounded-lg">
-                                    {equipment.map(eq => {
-                                        const isSelected = selectedEquipmentIds.includes(eq.id)
-                                        const hasConflict = conflictIds.includes(eq.id)
-                                        return (
-                                            <button
-                                                key={eq.id}
-                                                type="button"
-                                                onClick={() => toggleEquipment(eq.id)}
-                                                className={`p-2 text-left rounded-lg border transition-colors ${hasConflict
-                                                    ? 'border-red-300 bg-red-50'
-                                                    : isSelected
-                                                        ? 'border-blue-500 bg-blue-50'
-                                                        : 'border-gray-200 hover:border-blue-300'
-                                                    }`}
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`w-5 h-5 rounded border flex items-center justify-center ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                    {/* Scrollable list - max 6 items visible */}
+                                    <div className="max-h-36 overflow-y-auto divide-y divide-gray-100">
+                                        {equipment.map(eq => {
+                                            const isSelected = selectedEquipmentIds.includes(eq.id)
+                                            const hasConflict = conflictIds.includes(eq.id)
+                                            return (
+                                                <button
+                                                    key={eq.id}
+                                                    type="button"
+                                                    onClick={() => toggleEquipment(eq.id)}
+                                                    className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${hasConflict
+                                                            ? 'bg-red-50 hover:bg-red-100'
+                                                            : isSelected
+                                                                ? 'bg-blue-50 hover:bg-blue-100'
+                                                                : 'bg-white hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${isSelected
+                                                            ? 'bg-blue-600 border-blue-600'
+                                                            : hasConflict
+                                                                ? 'border-red-300'
+                                                                : 'border-gray-300'
                                                         }`}>
                                                         {isSelected && <Check className="w-3 h-3 text-white" />}
                                                     </div>
-                                                    <span className="text-sm font-medium truncate">
+                                                    <span className={`text-sm font-mono ${hasConflict ? 'text-red-700' : 'text-gray-900'}`}>
                                                         {eq.equipment_number}
                                                     </span>
-                                                </div>
-                                            </button>
-                                        )
-                                    })}
+                                                    {hasConflict && (
+                                                        <span className="ml-auto text-xs text-red-600">มีการจอง</span>
+                                                    )}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
                                 </div>
                             )}
                         </div>
