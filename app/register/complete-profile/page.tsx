@@ -1,26 +1,31 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useActionState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSupabaseBrowserClient, getSupabaseCredentials } from '@/lib/supabase-helpers'
 import { Loader2 } from 'lucide-react'
-import { notifyNewRegistration } from '@/app/register/actions'
+import { completeRegistrationAction, RegistrationState } from '@/app/register/actions'
+import Turnstile from 'react-turnstile'
 
 // Types
 type Department = { id: string, name: string }
 
+const initialState: RegistrationState = {}
+
 export default function CompleteProfilePage() {
     const router = useRouter()
-    const [loading, setLoading] = useState(false)
     const [departments, setDepartments] = useState<Department[]>([])
+    const [turnstileToken, setTurnstileToken] = useState('')
 
-    // Form State
+    // Form State for controlled inputs (needed for fetching initial data)
     const [title, setTitle] = useState('นาย')
     const [firstName, setFirstName] = useState('')
     const [lastName, setLastName] = useState('')
     const [phone, setPhone] = useState('')
     const [userType, setUserType] = useState('student')
     const [departmentId, setDepartmentId] = useState('')
+
+    const [state, formAction, isPending] = useActionState(completeRegistrationAction, initialState)
 
     // Fetch initial data
     useEffect(() => {
@@ -51,6 +56,7 @@ export default function CompleteProfilePage() {
             if (profile) {
                 if (profile.first_name) setFirstName(profile.first_name)
                 if (profile.last_name) setLastName(profile.last_name)
+                // Note: We could also set other fields if they exist, but requirement usually is to complete missing info
             }
 
             // 3. Load Departments using direct fetch
@@ -64,57 +70,12 @@ export default function CompleteProfilePage() {
         init()
     }, [router])
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setLoading(true)
-
-        try {
-            const client = getSupabaseBrowserClient()
-            const { url, key } = getSupabaseCredentials()
-            if (!client) throw new Error('No client available')
-
-            // Get session for access token
-            const { data: { session } } = await client.auth.getSession()
-            const { data: { user } } = await client.auth.getUser()
-            if (!user || !session) throw new Error('No user found')
-
-            const updates = {
-                title,
-                first_name: firstName,
-                last_name: lastName,
-                phone_number: phone,
-                user_type: userType,
-                department_id: departmentId,
-                updated_at: new Date().toISOString(),
-            }
-
-            const response = await fetch(
-                `${url}/rest/v1/profiles?id=eq.${user.id}`,
-                {
-                    method: 'PATCH',
-                    headers: {
-                        'apikey': key,
-                        'Authorization': `Bearer ${session.access_token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(updates)
-                }
-            )
-
-            if (!response.ok) throw new Error('Failed to update profile')
-
-            // Notify Admin via Discord
-            await notifyNewRegistration(user.id)
-
-            // Success -> Redirect to Pending Approval page
+    // Handle Success Redirect
+    useEffect(() => {
+        if (state.success) {
             router.replace('/pending-approval')
-
-        } catch (error: any) {
-            alert('Error updating profile: ' + error.message)
-        } finally {
-            setLoading(false)
         }
-    }
+    }, [state.success, router])
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -129,7 +90,14 @@ export default function CompleteProfilePage() {
 
             <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-                    <form className="space-y-6" onSubmit={handleSubmit}>
+                    <form className="space-y-6" action={formAction}>
+
+                        {/* Error Message */}
+                        {state.error && (
+                            <div className="p-3 rounded-md bg-red-50 text-red-600 text-sm">
+                                {state.error}
+                            </div>
+                        )}
 
                         {/* Title & Name */}
                         <div className="grid grid-cols-12 gap-4">
@@ -137,6 +105,7 @@ export default function CompleteProfilePage() {
                                 <label htmlFor="title" className="block text-sm font-medium text-gray-700">Title</label>
                                 <select
                                     id="title"
+                                    name="title"
                                     required
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
                                     value={title}
@@ -192,6 +161,7 @@ export default function CompleteProfilePage() {
                             <label htmlFor="user-type" className="block text-sm font-medium text-gray-700">User Type</label>
                             <select
                                 id="user-type"
+                                name="user-type"
                                 required
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
                                 value={userType}
@@ -207,6 +177,7 @@ export default function CompleteProfilePage() {
                             <label htmlFor="department" className="block text-sm font-medium text-gray-700">Department / Faculty</label>
                             <select
                                 id="department"
+                                name="department"
                                 required
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
                                 value={departmentId}
@@ -221,13 +192,22 @@ export default function CompleteProfilePage() {
                             </select>
                         </div>
 
+                        {/* Turnstile & Submit */}
                         <div>
+                            <div className="mb-4 flex justify-center">
+                                <Turnstile
+                                    sitekey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
+                                    onVerify={token => setTurnstileToken(token)}
+                                />
+                                <input type="hidden" name="cf-turnstile-response" value={turnstileToken} />
+                            </div>
+
                             <button
                                 type="submit"
-                                disabled={loading}
-                                className="flex w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+                                disabled={isPending || !turnstileToken}
+                                className="flex w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {loading ? (
+                                {isPending ? (
                                     <>
                                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                         Saving...
