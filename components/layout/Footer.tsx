@@ -23,12 +23,12 @@ export default function Footer() {
 
                     {/* Quick Links */}
                     <div>
-                        <h4 className="text-white font-semibold mb-4">Quick Links</h4>
+                        <h4 className="text-white font-semibold mb-4">ลิงก์ด่วน</h4>
                         <ul className="space-y-2 text-sm">
-                            <li><a href="/" className="hover:text-blue-400 transition-colors">Home</a></li>
-                            <li><a href="/login" className="hover:text-blue-400 transition-colors">Login</a></li>
-                            <li><a href="#" className="hover:text-blue-400 transition-colors">Rules & Regulations</a></li>
-                            <li><a href="#" className="hover:text-blue-400 transition-colors">Report Issue</a></li>
+                            <li><a href="/" className="hover:text-blue-400 transition-colors">หน้าแรก</a></li>
+                            <li><a href="/equipment" className="hover:text-blue-400 transition-colors">อุปกรณ์</a></li>
+                            <li><a href="/user-guide" className="hover:text-blue-400 transition-colors">คู่มือการใช้งาน</a></li>
+                            <li><a href="/login" className="hover:text-blue-400 transition-colors">เข้าสู่ระบบ</a></li>
                         </ul>
                     </div>
 
@@ -38,15 +38,15 @@ export default function Footer() {
                         <ul className="space-y-3 text-sm">
                             <li className="flex items-center gap-3">
                                 <MapPin className="w-4 h-4 text-blue-500 shrink-0" />
-                                <span>Building 5, Room 502<br />IT Department Office</span>
+                                <span>ห้องบริการวิชาการ ชั้น 2<br />คณะวิทยาการจัดการ มหาวิทยาลัยราชภัฏลำปาง</span>
                             </li>
                             <li className="flex items-center gap-3">
                                 <Phone className="w-4 h-4 text-blue-500 shrink-0" />
-                                <span>02-123-4567</span>
+                                <span>089-8555668</span>
                             </li>
                             <li className="flex items-center gap-3">
                                 <Mail className="w-4 h-4 text-blue-500 shrink-0" />
-                                <span>support@university.ac.th</span>
+                                <span>xmasball@g.lpru.ac.th</span>
                             </li>
                         </ul>
                     </div>
