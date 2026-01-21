@@ -5,6 +5,7 @@ import { ReportData, StaffActivityItem } from '@/hooks/useReportData'
 import { exportToCSV } from '@/lib/reports'
 import { formatThaiDateTime } from '@/lib/formatThaiDate'
 import { getActionTypeLabel, getActionTypeIcon } from '@/lib/staffActivityLog'
+import { User } from 'lucide-react'
 
 // Dynamic imports for charts
 const ActivityBarChart = dynamic(() => import('@/components/admin/reports/ReportCharts').then(mod => ({ default: mod.ActivityBarChart })), { ssr: false })
@@ -125,7 +126,16 @@ export default function ActivityTab({ data, isLoading }: ActivityTabProps) {
                                 data.staffActivity.recentActivities.map((activity) => (
                                     <tr key={activity.id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                                            {activity.staff_name}
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                                                    {activity.staff_avatar ? (
+                                                        <img src={activity.staff_avatar} alt="" className="w-8 h-8 object-cover" />
+                                                    ) : (
+                                                        <User className="w-4 h-4 text-gray-400" />
+                                                    )}
+                                                </div>
+                                                {activity.staff_name}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-600">
                                             <span className="mr-2">{getActionTypeIcon(activity.action_type as any)}</span>

@@ -83,6 +83,7 @@ export interface UserStats {
     email: string
     first_name: string
     last_name: string
+    avatar_url?: string | null
     department: string
     user_type: string
     loan_count: number
@@ -96,6 +97,7 @@ export interface StaffActivityItem {
     staff_id: string
     staff_name: string
     staff_role: string
+    staff_avatar?: string | null
     action_type: string
     target_type: string
     target_id: string
@@ -106,7 +108,7 @@ export interface StaffActivityItem {
 export interface StaffActivityStats {
     total: number
     byActionType: { name: string; count: number }[]
-    byStaff: { name: string; approve: number; reject: number; return: number }[]
+    byStaff: { name: string; approve: number; reject: number; return: number; avatar?: string | null }[]
     recentActivities: StaffActivityItem[]
     dailyActivity: { date: string; count: number }[]
 }
@@ -172,10 +174,10 @@ export function useReportData(dateRange: DateRange) {
                 fetch(`${url}/rest/v1/equipment?select=id,name,equipment_number,status`, { headers }),
                 // Overdue loans (approved but past end_date)
                 fetch(`${url}/rest/v1/loanRequests?select=id,end_date,user_id,equipment_id,profiles:user_id(first_name,last_name,email),equipment:equipment_id(name,equipment_number)&status=eq.approved&end_date=lt.${new Date().toISOString()}`, { headers }),
-                // All profiles for user stats
-                fetch(`${url}/rest/v1/profiles?status=eq.approved&select=id,email,first_name,last_name,department,role,status`, { headers }),
-                // Staff activity log in date range
-                fetch(`${url}/rest/v1/staff_activity_log?select=id,staff_id,staff_role,action_type,target_type,target_id,created_at,details,profiles:staff_id(first_name,last_name)&created_at=gte.${fromDate}&created_at=lte.${toDate}&order=created_at.desc`, { headers })
+                // All profiles for user stats (added avatar_url)
+                fetch(`${url}/rest/v1/profiles?status=eq.approved&select=id,email,first_name,last_name,avatar_url,department,role,status`, { headers }),
+                // Staff activity log in date range - REMOVED profiles embed to fix FK issue
+                fetch(`${url}/rest/v1/staff_activity_log?select=id,staff_id,staff_role,action_type,target_type,target_id,created_at,details&created_at=gte.${fromDate}&created_at=lte.${toDate}&order=created_at.desc`, { headers })
             ])
 
             const [loans, reservations, equipment, overdueLoans, profiles, staffActivityLog] = await Promise.all([
@@ -194,7 +196,7 @@ export function useReportData(dateRange: DateRange) {
             const popularEquipment = calculatePopularEquipment(loans, equipment)
             const overdueItems = formatOverdueItems(overdueLoans)
             const { userStats, departments } = calculateUserStats(profiles, loans, reservations, overdueLoans)
-            const staffActivity = processStaffActivityLog(staffActivityLog)
+            const staffActivity = processStaffActivityLog(staffActivityLog, profiles)
             const monthlyStats = calculateMonthlyStats(loans, reservations)
 
             // Count today's loans

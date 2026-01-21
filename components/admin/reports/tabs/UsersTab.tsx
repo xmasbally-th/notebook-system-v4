@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { ReportData, UserStats } from '@/hooks/useReportData'
 import { exportToCSV } from '@/lib/reports'
+import { User } from 'lucide-react'
 
 type UserSortKey = 'name' | 'department' | 'loan_count' | 'total_activity' | 'overdue_count'
 
@@ -197,7 +198,16 @@ export default function UsersTab({ data, isLoading }: UsersTabProps) {
                                     <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4 text-sm text-gray-700">{index + 1}</td>
                                         <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                                            {`${user.first_name} ${user.last_name}`.trim() || '-'}
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                                                    {user.avatar_url ? (
+                                                        <img src={user.avatar_url} alt="" className="w-8 h-8 object-cover" />
+                                                    ) : (
+                                                        <User className="w-4 h-4 text-gray-400" />
+                                                    )}
+                                                </div>
+                                                {`${user.first_name} ${user.last_name}`.trim() || '-'}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
                                         <td className="px-6 py-4">

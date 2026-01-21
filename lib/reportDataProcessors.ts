@@ -182,6 +182,7 @@ export function calculateUserStats(
                 email: profile.email || '-',
                 first_name: profile.first_name || '',
                 last_name: profile.last_name || '',
+                avatar_url: profile.avatar_url,
                 department: getDepartmentName(profile.department),
                 user_type: profile.role || 'user',
                 loan_count: loanCount,
@@ -200,8 +201,14 @@ export function calculateUserStats(
 /**
  * Process staff activity log data
  */
-export function processStaffActivityLog(activityLog: any[]): StaffActivityStats {
+export function processStaffActivityLog(activityLog: any[], profiles: any[] = []): StaffActivityStats {
     const activities = Array.isArray(activityLog) ? activityLog : []
+
+    // Create profile map for quick lookup
+    const profileMap = new Map()
+    if (Array.isArray(profiles)) {
+        profiles.forEach(p => profileMap.set(p.id, p))
+    }
 
     // Get action type label
     const getActionLabel = (actionType: string): string => {
@@ -219,15 +226,25 @@ export function processStaffActivityLog(activityLog: any[]): StaffActivityStats 
         .sort((a, b) => b.count - a.count)
 
     // Aggregate by staff
-    const staffCounts: Record<string, { name: string; approve: number; reject: number; return: number }> = {}
+    const staffCounts: Record<string, { name: string; approve: number; reject: number; return: number; avatar?: string | null }> = {}
     activities.forEach((activity: any) => {
         const staffId = activity.staff_id
-        const staffName = activity.profiles
-            ? `${activity.profiles.first_name || ''} ${activity.profiles.last_name || ''}`.trim()
-            : 'Unknown'
+        let staffName = 'Unknown'
+        let staffAvatar: string | null = null
+
+        // Try lookup from profile map
+        const profile = profileMap.get(staffId)
+        if (profile) {
+            staffName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+            staffAvatar = profile.avatar_url
+        } else if (activity.profiles) {
+            // Fallback to embedded (if exists)
+            staffName = `${activity.profiles.first_name || ''} ${activity.profiles.last_name || ''}`.trim()
+            staffAvatar = activity.profiles.avatar_url
+        }
 
         if (!staffCounts[staffId]) {
-            staffCounts[staffId] = { name: staffName, approve: 0, reject: 0, return: 0 }
+            staffCounts[staffId] = { name: staffName, approve: 0, reject: 0, return: 0, avatar: staffAvatar }
         }
 
         if (activity.action_type.includes('approve')) {
@@ -252,19 +269,33 @@ export function processStaffActivityLog(activityLog: any[]): StaffActivityStats 
         .slice(-14)
 
     // Recent activities
-    const recentActivities: StaffActivityItem[] = activities.slice(0, 20).map((activity: any) => ({
-        id: activity.id,
-        staff_id: activity.staff_id,
-        staff_name: activity.profiles
-            ? `${activity.profiles.first_name || ''} ${activity.profiles.last_name || ''}`.trim()
-            : 'Unknown',
-        staff_role: activity.staff_role,
-        action_type: activity.action_type,
-        target_type: activity.target_type,
-        target_id: activity.target_id,
-        created_at: activity.created_at,
-        details: activity.details || {}
-    }))
+    const recentActivities: StaffActivityItem[] = activities.slice(0, 20).map((activity: any) => {
+        // Resolve name again for recent list
+        let staffName = 'Unknown'
+        let staffAvatar: string | null = null
+
+        const profile = profileMap.get(activity.staff_id)
+        if (profile) {
+            staffName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+            staffAvatar = profile.avatar_url
+        } else if (activity.profiles) {
+            staffName = `${activity.profiles.first_name || ''} ${activity.profiles.last_name || ''}`.trim()
+            staffAvatar = activity.profiles.avatar_url
+        }
+
+        return {
+            id: activity.id,
+            staff_id: activity.staff_id,
+            staff_name: staffName,
+            staff_role: activity.staff_role,
+            staff_avatar: staffAvatar,
+            action_type: activity.action_type,
+            target_type: activity.target_type,
+            target_id: activity.target_id,
+            created_at: activity.created_at,
+            details: activity.details || {}
+        }
+    })
 
     return {
         total: activities.length,

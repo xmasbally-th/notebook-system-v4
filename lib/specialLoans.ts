@@ -175,7 +175,8 @@ export async function getSpecialLoans(
     const accessToken = await getAccessToken()
     if (!accessToken) return []
 
-    let endpoint = `${url}/rest/v1/special_loan_requests?select=*,borrower:profiles!borrower_id(first_name,last_name,email)&order=created_at.desc`
+    // 1. Fetch special loans (without joining profiles to avoid FK issue)
+    let endpoint = `${url}/rest/v1/special_loan_requests?select=*&order=created_at.desc`
     if (status) {
         endpoint += `&status=eq.${status}`
     }
@@ -189,7 +190,40 @@ export async function getSpecialLoans(
         })
 
         if (!response.ok) return []
-        return await response.json()
+        const loans: SpecialLoan[] = await response.json()
+
+        if (loans.length === 0) return []
+
+        // 2. Fetch profiles manually
+        const borrowerIds = Array.from(new Set(loans.map(l => l.borrower_id)))
+
+        let profileMap = new Map()
+        if (borrowerIds.length > 0) {
+            const profileResponse = await fetch(
+                `${url}/rest/v1/profiles?id=in.(${borrowerIds.join(',')})&select=id,first_name,last_name,email`,
+                {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                }
+            )
+
+            if (profileResponse.ok) {
+                const profiles = await profileResponse.json()
+                profiles.forEach((p: any) => profileMap.set(p.id, p))
+            }
+        }
+
+        // 3. Merge data
+        return loans.map(loan => ({
+            ...loan,
+            borrower: profileMap.get(loan.borrower_id) || {
+                first_name: null,
+                last_name: null,
+                email: null
+            }
+        }))
     } catch {
         return []
     }
