@@ -36,9 +36,6 @@ interface Equipment {
     name: string
     status: string
     equipment_type_id: string | null
-    equipment_type?: {
-        name: string
-    }
 }
 
 interface EquipmentType {
@@ -102,7 +99,7 @@ export default function SpecialLoanForm({ onClose, onSuccess }: Props) {
             if (!url || !key) return []
 
             const response = await fetch(
-                `${url}/rest/v1/equipment?equipment_type_id=eq.${selectedTypeId}&status=eq.ready&select=id,equipment_number,name,status,equipment_type_id,equipment_types(name)&order=equipment_number`,
+                `${url}/rest/v1/equipment?equipment_type_id=eq.${selectedTypeId}&status=eq.ready&select=id,equipment_number,name,status,equipment_type_id&order=equipment_number`,
                 { headers: { 'apikey': key, 'Authorization': `Bearer ${key}` } }
             )
             if (!response.ok) return []
