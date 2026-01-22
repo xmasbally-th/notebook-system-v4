@@ -25,6 +25,8 @@ import {
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import Image from 'next/image'
+import { useSystemConfig } from '@/hooks/useSystemConfig'
 
 // Get Supabase client for auth operations
 function getSupabaseClient() {
@@ -53,6 +55,7 @@ export default function AdminSidebar() {
     const router = useRouter()
     const [isCollapsed, setIsCollapsed] = useState(false)
     const [isMobileOpen, setIsMobileOpen] = useState(false)
+    const { data: systemConfig } = useSystemConfig()
 
     const handleSignOut = async () => {
         const client = getSupabaseClient()
@@ -100,13 +103,24 @@ export default function AdminSidebar() {
                 {/* Brand */}
                 <div className="p-4 border-b border-blue-600/50">
                     <Link href="/" className="flex items-center gap-3">
-                        <div className="p-2 bg-white/10 rounded-xl backdrop-blur-sm">
-                            <Laptop className="w-6 h-6 text-orange-400" />
-                        </div>
+                        {systemConfig?.document_logo_url ? (
+                            <div className="w-10 h-10 relative flex-shrink-0 bg-white/10 rounded-xl backdrop-blur-sm p-1">
+                                <Image
+                                    src={systemConfig.document_logo_url}
+                                    alt="Logo"
+                                    fill
+                                    className="object-contain"
+                                />
+                            </div>
+                        ) : (
+                            <div className="p-2 bg-white/10 rounded-xl backdrop-blur-sm">
+                                <Laptop className="w-6 h-6 text-orange-400" />
+                            </div>
+                        )}
                         {!isCollapsed && (
                             <div className="flex flex-col">
                                 <span className="font-bold text-lg leading-tight">Admin Panel</span>
-                                <span className="text-xs text-blue-200">Notebook System</span>
+                                <span className="text-xs text-blue-200">ระบบยืม-คืนพัสดุฯ</span>
                             </div>
                         )}
                     </Link>

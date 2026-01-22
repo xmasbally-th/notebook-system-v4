@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import { Loader2, Clock, CheckCircle2, Mail, Phone, LogOut, Laptop, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useToast } from '@/components/ui/toast'
+import { useSystemConfig } from '@/hooks/useSystemConfig'
 
 // Get Supabase credentials and client
 function getSupabaseCredentials() {
@@ -31,6 +33,7 @@ export default function PendingApprovalPage() {
     const [loggingOut, setLoggingOut] = useState(false)
     const [isChecking, setIsChecking] = useState(false)
     const previousStatusRef = useRef<string | null>(null)
+    const { data: systemConfig } = useSystemConfig()
 
     // Check auth and profile status
     useEffect(() => {
@@ -138,14 +141,25 @@ export default function PendingApprovalPage() {
                 </div>
 
                 <div className="relative z-10 flex flex-col justify-center items-center w-full p-12 text-center">
-                    <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-sm mb-6">
-                        <Laptop className="w-16 h-16 text-white" />
-                    </div>
-                    <h1 className="text-4xl font-bold text-white mb-4">
-                        ระบบยืม-คืน<span className="text-orange-400">โน้ตบุ๊ก</span>
+                    {systemConfig?.document_logo_url ? (
+                        <div className="w-24 h-24 relative mb-6 bg-white/10 rounded-2xl backdrop-blur-sm p-2">
+                            <Image
+                                src={systemConfig.document_logo_url}
+                                alt="Logo"
+                                fill
+                                className="object-contain"
+                            />
+                        </div>
+                    ) : (
+                        <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-sm mb-6">
+                            <Laptop className="w-16 h-16 text-white" />
+                        </div>
+                    )}
+                    <h1 className="text-3xl font-bold text-white mb-4">
+                        ระบบยืม-คืน<span className="text-orange-400">พัสดุและครุภัณฑ์</span>
                     </h1>
                     <p className="text-blue-100 text-lg max-w-sm">
-                        บริการยืมอุปกรณ์คอมพิวเตอร์สำหรับนักศึกษาและบุคลากร
+                        คณะวิทยาการจัดการ มหาวิทยาลัยราชภัฏลำปาง
                     </p>
 
                     <div className="mt-12 flex gap-4">
@@ -165,10 +179,21 @@ export default function PendingApprovalPage() {
             <div className="flex-1 flex flex-col justify-center items-center p-6 md:p-12 bg-gray-50">
                 {/* Mobile Logo */}
                 <div className="md:hidden flex items-center gap-3 mb-8">
-                    <div className="p-2 bg-blue-600 rounded-lg">
-                        <Laptop className="w-6 h-6 text-white" />
-                    </div>
-                    <span className="text-xl font-bold text-gray-900">Notebook System</span>
+                    {systemConfig?.document_logo_url ? (
+                        <div className="w-10 h-10 relative">
+                            <Image
+                                src={systemConfig.document_logo_url}
+                                alt="Logo"
+                                fill
+                                className="object-contain"
+                            />
+                        </div>
+                    ) : (
+                        <div className="p-2 bg-blue-600 rounded-lg">
+                            <Laptop className="w-6 h-6 text-white" />
+                        </div>
+                    )}
+                    <span className="text-lg font-bold text-gray-900">ระบบยืม-คืนพัสดุฯ</span>
                 </div>
 
                 <div className="w-full max-w-md">

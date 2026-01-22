@@ -2,11 +2,13 @@
 
 import React from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Laptop, LogIn, LogOut, User, Menu, X, Package, Monitor, HelpCircle } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import UserNotificationBell from '@/components/ui/UserNotificationBell'
+import { useSystemConfig } from '@/hooks/useSystemConfig'
 
 // Get Supabase client for auth operations
 function getSupabaseClient() {
@@ -21,6 +23,7 @@ export default function Header() {
     const [accessToken, setAccessToken] = useState<string | null>(null)
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const router = useRouter()
+    const { data: systemConfig } = useSystemConfig()
 
     useEffect(() => {
         const checkUser = async () => {
@@ -50,12 +53,23 @@ export default function Header() {
                 <div className="flex justify-between items-center h-16">
                     {/* Logo & Brand */}
                     <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity z-50 relative">
-                        <div className="p-2 bg-blue-600 rounded-lg shadow-sm">
-                            <Laptop className="w-6 h-6 text-white" />
-                        </div>
+                        {systemConfig?.document_logo_url ? (
+                            <div className="w-10 h-10 relative flex-shrink-0">
+                                <Image
+                                    src={systemConfig.document_logo_url}
+                                    alt="Logo"
+                                    fill
+                                    className="object-contain"
+                                />
+                            </div>
+                        ) : (
+                            <div className="p-2 bg-blue-600 rounded-lg shadow-sm">
+                                <Laptop className="w-6 h-6 text-white" />
+                            </div>
+                        )}
                         <div className="flex flex-col">
-                            <span className="text-lg font-bold text-gray-900 leading-tight">Notebook System</span>
-                            <span className="text-xs text-gray-500 font-medium">Equipment Lending Service</span>
+                            <span className="text-sm font-bold text-gray-900 leading-tight">ระบบยืม-คืนพัสดุฯ</span>
+                            <span className="text-[10px] text-gray-500 font-medium">คณะวิทยาการจัดการ มรภ.ลำปาง</span>
                         </div>
                     </Link>
 

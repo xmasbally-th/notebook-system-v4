@@ -5,8 +5,8 @@ import { Inter } from 'next/font/google'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-    title: 'Equipment Lending System V4',
-    description: 'Manage equipment lending and reservations',
+    title: 'ระบบยืม-คืนพัสดุและครุภัณฑ์ คณะวิทยาการจัดการ มรภ.ลำปาง',
+    description: 'ระบบยืม-คืนพัสดุและครุภัณฑ์ คณะวิทยาการจัดการ มหาวิทยาลัยราชภัฏลำปาง',
     icons: {
         icon: '/favicon.svg',
     },
