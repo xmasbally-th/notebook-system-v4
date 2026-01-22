@@ -7,6 +7,8 @@ export interface SpecialLoan {
     borrower_id: string
     borrower_name: string
     borrower_phone: string | null
+    borrower_title: string | null
+    borrower_department: string | null
     equipment_type_id: string | null
     equipment_type_name: string
     quantity: number
@@ -27,6 +29,8 @@ export interface SpecialLoan {
         first_name: string | null
         last_name: string | null
         email: string | null
+        title: string | null
+        department_id: string | null
     }
     equipment_type?: {
         name: string
@@ -198,9 +202,11 @@ export async function getSpecialLoans(
         const borrowerIds = Array.from(new Set(loans.map(l => l.borrower_id)))
 
         let profileMap = new Map()
+        let departmentMap = new Map()
+
         if (borrowerIds.length > 0) {
             const profileResponse = await fetch(
-                `${url}/rest/v1/profiles?id=in.(${borrowerIds.join(',')})&select=id,first_name,last_name,email`,
+                `${url}/rest/v1/profiles?id=in.(${borrowerIds.join(',')})&select=id,first_name,last_name,email,title,department_id`,
                 {
                     headers: {
                         'apikey': key,
@@ -212,18 +218,45 @@ export async function getSpecialLoans(
             if (profileResponse.ok) {
                 const profiles = await profileResponse.json()
                 profiles.forEach((p: any) => profileMap.set(p.id, p))
+
+                // Fetch department names
+                const deptIds = Array.from(new Set(profiles.map((p: any) => p.department_id).filter(Boolean)))
+                if (deptIds.length > 0) {
+                    const deptResponse = await fetch(
+                        `${url}/rest/v1/departments?id=in.(${deptIds.join(',')})&select=id,name`,
+                        {
+                            headers: {
+                                'apikey': key,
+                                'Authorization': `Bearer ${accessToken}`
+                            }
+                        }
+                    )
+                    if (deptResponse.ok) {
+                        const depts = await deptResponse.json()
+                        depts.forEach((d: any) => departmentMap.set(d.id, d.name))
+                    }
+                }
             }
         }
 
         // 3. Merge data
-        return loans.map(loan => ({
-            ...loan,
-            borrower: profileMap.get(loan.borrower_id) || {
-                first_name: null,
-                last_name: null,
-                email: null
+        return loans.map(loan => {
+            const profile = profileMap.get(loan.borrower_id)
+            const deptName = profile?.department_id ? departmentMap.get(profile.department_id) : null
+
+            return {
+                ...loan,
+                borrower_title: profile?.title || null,
+                borrower_department: deptName || null,
+                borrower: profile || {
+                    first_name: null,
+                    last_name: null,
+                    email: null,
+                    title: null,
+                    department_id: null
+                }
             }
-        }))
+        })
     } catch {
         return []
     }

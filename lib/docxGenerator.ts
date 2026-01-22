@@ -36,6 +36,8 @@ function formatShortDate(dateStr: string): string {
 export interface SpecialLoanTemplateData {
     borrower_name: string
     borrower_phone: string
+    title: string
+    department: string
     equipment_type: string
     quantity: number
     loan_date: string
@@ -62,6 +64,8 @@ export function loanToTemplateData(loan: SpecialLoan, organization: string = 'à¸
     return {
         borrower_name: loan.borrower_name,
         borrower_phone: loan.borrower_phone || '',
+        title: loan.borrower_title || '',
+        department: loan.borrower_department || '',
         equipment_type: loan.equipment_type_name,
         quantity: loan.quantity,
         loan_date: formatThaiDate(loan.loan_date),
