@@ -20,7 +20,11 @@ import {
     Trash2,
     Settings,
     Megaphone,
-    RefreshCw
+    RefreshCw,
+    FileText,
+    Upload,
+    Image as ImageIcon,
+    X
 } from 'lucide-react'
 import { Database } from '@/supabase/types'
 
@@ -44,13 +48,14 @@ const userTypeLabels: Record<string, string> = {
     staff: 'บุคลากร'
 }
 
-type TabType = 'limits' | 'hours' | 'features' | 'notifications'
+type TabType = 'limits' | 'hours' | 'features' | 'notifications' | 'documents'
 
 const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     { id: 'limits', label: 'ขีดจำกัด', icon: <Users className="w-4 h-4" /> },
     { id: 'hours', label: 'เวลาทำการ', icon: <Clock className="w-4 h-4" /> },
     { id: 'features', label: 'ฟีเจอร์', icon: <Zap className="w-4 h-4" /> },
     { id: 'notifications', label: 'แจ้งเตือน', icon: <Megaphone className="w-4 h-4" /> },
+    { id: 'documents', label: 'เอกสาร', icon: <FileText className="w-4 h-4" /> },
 ]
 
 export default function AdminSettingsPage() {
@@ -63,6 +68,8 @@ export default function AdminSettingsPage() {
     const [loanLimits, setLoanLimits] = useState<LoanLimitsByType>(defaultLoanLimits)
     const [closedDates, setClosedDates] = useState<string[]>([])
     const [newClosedDate, setNewClosedDate] = useState('')
+    const [logoUrl, setLogoUrl] = useState<string | null>(null)
+    const [isUploadingLogo, setIsUploadingLogo] = useState(false)
 
     useEffect(() => {
         if (config) {
@@ -85,6 +92,7 @@ export default function AdminSettingsPage() {
             if (config.closed_dates) {
                 setClosedDates(config.closed_dates as string[])
             }
+            setLogoUrl(config.document_logo_url || null)
         }
     }, [config])
 
@@ -112,6 +120,67 @@ export default function AdminSettingsPage() {
     const handleRemoveClosedDate = (date: string) => {
         setClosedDates(prev => prev.filter(d => d !== date))
         setIsDirty(true)
+    }
+
+    const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น')
+            return
+        }
+
+        // Validate file size (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            alert('ไฟล์ต้องมีขนาดไม่เกิน 2MB')
+            return
+        }
+
+        setIsUploadingLogo(true)
+        try {
+            const { uploadEquipmentImage } = await import('@/lib/uploadImage')
+            const url = await uploadEquipmentImage(file)
+            setLogoUrl(url)
+
+            // Save immediately
+            updateMutation.mutate({ document_logo_url: url }, {
+                onSuccess: () => {
+                    alert('อัปโหลดโลโก้เรียบร้อยแล้ว')
+                },
+                onError: (err) => {
+                    alert(`เกิดข้อผิดพลาด: ${err.message}`)
+                }
+            })
+        } catch (err: any) {
+            alert(err.message || 'ไม่สามารถอัปโหลดรูปภาพได้')
+        } finally {
+            setIsUploadingLogo(false)
+        }
+    }
+
+    const handleLogoDelete = async () => {
+        if (!logoUrl) return
+        if (!confirm('ต้องการลบโลโก้หรือไม่?')) return
+
+        try {
+            const { deleteEquipmentImage } = await import('@/lib/uploadImage')
+            await deleteEquipmentImage(logoUrl)
+            setLogoUrl(null)
+
+            // Save immediately
+            updateMutation.mutate({ document_logo_url: null }, {
+                onSuccess: () => {
+                    alert('ลบโลโก้เรียบร้อยแล้ว')
+                },
+                onError: (err) => {
+                    alert(`เกิดข้อผิดพลาด: ${err.message}`)
+                }
+            })
+        } catch (err: any) {
+            alert(err.message || 'ไม่สามารถลบรูปภาพได้')
+        }
     }
 
     const handleSave = () => {
@@ -553,6 +622,90 @@ export default function AdminSettingsPage() {
                                 </div>
                             </section>
                         </>
+                    )}
+
+                    {/* Documents Tab */}
+                    {activeTab === 'documents' && (
+                        <section className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm">
+                            <div className="flex items-center gap-3 mb-5">
+                                <div className="p-2 bg-teal-50 rounded-xl">
+                                    <FileText className="w-5 h-5 text-teal-600" />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-semibold text-gray-900">โลโก้เอกสาร</h2>
+                                    <p className="text-sm text-gray-500">โลโก้สำหรับแสดงในใบยืมพิเศษและเอกสารอื่นๆ</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                {/* Logo Preview */}
+                                <div className="flex flex-col items-center p-6 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                                    {logoUrl ? (
+                                        <div className="relative group">
+                                            <img
+                                                src={logoUrl}
+                                                alt="Document Logo"
+                                                className="max-w-[200px] max-h-[200px] object-contain rounded-lg shadow-sm"
+                                            />
+                                            <button
+                                                onClick={handleLogoDelete}
+                                                className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                                title="ลบโลโก้"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center">
+                                            <ImageIcon className="w-16 h-16 mx-auto text-gray-300 mb-3" />
+                                            <p className="text-gray-500 text-sm">ยังไม่มีโลโก้</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Upload Button */}
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <label className="flex-1">
+                                        <input
+                                            type="file"
+                                            accept="image/png,image/jpeg,image/jpg"
+                                            onChange={handleLogoUpload}
+                                            className="hidden"
+                                            disabled={isUploadingLogo}
+                                        />
+                                        <div className={`
+                                            flex items-center justify-center gap-2 px-4 py-3 
+                                            border-2 border-dashed border-teal-300 rounded-xl 
+                                            cursor-pointer hover:bg-teal-50 transition-colors
+                                            ${isUploadingLogo ? 'opacity-50 cursor-not-allowed' : ''}
+                                        `}>
+                                            {isUploadingLogo ? (
+                                                <Loader2 className="w-5 h-5 animate-spin text-teal-600" />
+                                            ) : (
+                                                <Upload className="w-5 h-5 text-teal-600" />
+                                            )}
+                                            <span className="text-teal-700 font-medium">
+                                                {isUploadingLogo ? 'กำลังอัปโหลด...' : 'อัปโหลดโลโก้ใหม่'}
+                                            </span>
+                                        </div>
+                                    </label>
+
+                                    {logoUrl && (
+                                        <button
+                                            onClick={handleLogoDelete}
+                                            className="flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            <span>ลบโลโก้</span>
+                                        </button>
+                                    )}
+                                </div>
+
+                                <p className="text-xs text-gray-400 text-center">
+                                    รองรับไฟล์ PNG, JPG ขนาดไม่เกิน 2MB แนะนำขนาด 200x200 พิกเซล
+                                </p>
+                            </div>
+                        </section>
                     )}
                 </div>
             </div>

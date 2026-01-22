@@ -275,6 +275,7 @@ export interface Database {
                     discord_webhook_url: string | null
                     announcement_message: string | null
                     announcement_active: boolean
+                    document_logo_url: string | null
                     updated_at: string
                 }
                 Insert: {
@@ -293,6 +294,7 @@ export interface Database {
                     discord_webhook_url?: string | null
                     announcement_message?: string | null
                     announcement_active?: boolean
+                    document_logo_url?: string | null
                     updated_at?: string
                 }
                 Update: {
@@ -311,6 +313,7 @@ export interface Database {
                     discord_webhook_url?: string | null
                     announcement_message?: string | null
                     announcement_active?: boolean
+                    document_logo_url?: string | null
                     updated_at?: string
                 }
             }

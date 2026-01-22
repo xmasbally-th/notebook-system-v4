@@ -21,6 +21,7 @@ import {
 import { getSpecialLoans, completeSpecialLoan, cancelSpecialLoan, SpecialLoan } from '@/lib/specialLoans'
 import SpecialLoanForm from '@/components/admin/SpecialLoanForm'
 import SpecialLoanPrint from '@/components/admin/SpecialLoanPrint'
+import { useSystemConfig } from '@/hooks/useSystemConfig'
 
 type TabType = 'active' | 'returned' | 'all'
 
@@ -31,6 +32,9 @@ export default function AdminSpecialLoansPage() {
     const [printLoan, setPrintLoan] = useState<SpecialLoan | null>(null)
     const [expandedId, setExpandedId] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
+
+    // Fetch system config for logo
+    const { data: config } = useSystemConfig()
 
     // Fetch special loans
     const { data: loans = [], isLoading } = useQuery({
@@ -155,8 +159,8 @@ export default function AdminSpecialLoansPage() {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as TabType)}
                             className={`flex-1 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
-                                    ? 'border-blue-600 text-blue-600 bg-blue-50/50'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                                ? 'border-blue-600 text-blue-600 bg-blue-50/50'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
                                 }`}
                         >
                             {tab.label} ({tab.count})
@@ -321,6 +325,7 @@ export default function AdminSpecialLoansPage() {
                 <SpecialLoanPrint
                     loan={printLoan}
                     onClose={() => setPrintLoan(null)}
+                    logoUrl={config?.document_logo_url}
                 />
             )}
         </AdminLayout>

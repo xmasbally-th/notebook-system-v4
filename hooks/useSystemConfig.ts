@@ -99,7 +99,8 @@ function getDefaultConfig(): SystemConfig {
             student: { max_days: 3, max_items: 1 },
             lecturer: { max_days: 7, max_items: 3 },
             staff: { max_days: 5, max_items: 2 }
-        }
+        },
+        document_logo_url: null
     } as SystemConfig
 }
 
