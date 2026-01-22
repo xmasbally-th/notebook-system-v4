@@ -1,15 +1,15 @@
 'use client'
 
 import { useEquipment } from '@/hooks/useEquipment'
-import { usePagination } from '@/hooks/usePagination'
 import { useRecentlyBorrowed, isRecentlyBorrowed, sortByRecentlyBorrowed } from '@/hooks/useRecentlyBorrowed'
-import { useState, useMemo } from 'react'
-import EquipmentCardWithBorrow from './EquipmentCardWithBorrow'
+import { useState, useMemo, useEffect } from 'react'
 import { Database } from '@/supabase/types'
-import { Search, Filter, X, Package } from 'lucide-react'
-import { CartProvider } from '@/components/cart/CartContext'
+import { Search, X, Package, Plus, Check, Clock, CheckCircle, Users, Wrench, ArrowRight } from 'lucide-react'
+import { CartProvider, useCart } from '@/components/cart/CartContext'
 import CartButton from '@/components/cart/CartButton'
 import CartDrawer from '@/components/cart/CartDrawer'
+import Link from 'next/link'
+import { cn } from '@/lib/utils'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 type EquipmentType = {
@@ -22,6 +22,14 @@ interface EquipmentListWithFiltersProps {
     equipmentTypes: EquipmentType[]
 }
 
+const STATUS_CONFIG = {
+    ready: { label: 'พร้อมให้ยืม', color: 'bg-green-100 text-green-700', icon: CheckCircle, canBorrow: true },
+    active: { label: 'พร้อมให้ยืม', color: 'bg-green-100 text-green-700', icon: CheckCircle, canBorrow: true },
+    borrowed: { label: 'กำลังถูกยืม', color: 'bg-orange-100 text-orange-700', icon: Users, canBorrow: false },
+    maintenance: { label: 'ซ่อมบำรุง', color: 'bg-yellow-100 text-yellow-700', icon: Wrench, canBorrow: false },
+    retired: { label: 'เลิกใช้งาน', color: 'bg-gray-100 text-gray-600', icon: Package, canBorrow: false },
+}
+
 function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps) {
     const { data: equipment, isLoading, error } = useEquipment()
     const { data: recentlyBorrowed = [] } = useRecentlyBorrowed()
@@ -29,13 +37,17 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
     const [selectedTypeId, setSelectedTypeId] = useState<string>('all')
     const [selectedStatus, setSelectedStatus] = useState<string>('all')
     const [isCartOpen, setIsCartOpen] = useState(false)
+    const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
+
+    const { isInCart, addItem, removeItem, isAtLimit } = useCart()
 
     // Filter logic
     const filteredItems = useMemo(() => {
         if (!equipment) return []
 
         let items = (equipment as Equipment[]).filter(item => {
-            // Search filter
+            // Search filter - ค้นหาชื่อ, หมายเลขครุภัณฑ์, ยี่ห้อ, รุ่น
             const searchLower = searchTerm.toLowerCase()
             const matchesSearch = !searchTerm ||
                 item.name.toLowerCase().includes(searchLower) ||
@@ -46,7 +58,7 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
             // Type filter
             const matchesType = selectedTypeId === 'all' || item.equipment_type_id === selectedTypeId
 
-            // Status filter (only show active/ready by default for borrowing)
+            // Status filter
             const matchesStatus = selectedStatus === 'all' || item.status === selectedStatus
 
             return matchesSearch && matchesType && matchesStatus
@@ -56,36 +68,45 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
         return sortByRecentlyBorrowed(items, recentlyBorrowed)
     }, [equipment, searchTerm, selectedTypeId, selectedStatus, recentlyBorrowed])
 
-    const {
-        paginatedItems,
-        currentPage,
-        totalPages,
-        nextPage,
-        previousPage,
-        resetPage,
-        goToPage
-    } = usePagination(filteredItems, 8) // Increased to 8 items per page
+    // Pagination
+    const totalPages = Math.ceil(filteredItems.length / pageSize)
+    const paginatedItems = filteredItems.slice(
+        (currentPage - 1) * pageSize,
+        currentPage * pageSize
+    )
+
+    // Reset page when filters change
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [searchTerm, selectedTypeId, selectedStatus])
 
     const clearFilters = () => {
         setSearchTerm('')
         setSelectedTypeId('all')
         setSelectedStatus('all')
-        resetPage()
+        setCurrentPage(1)
     }
 
     const hasActiveFilters = searchTerm || selectedTypeId !== 'all' || selectedStatus !== 'all'
 
+    const handleCartToggle = (item: Equipment, imageUrl: string) => {
+        if (isInCart(item.id)) {
+            removeItem(item.id)
+        } else {
+            addItem({
+                id: item.id,
+                name: item.name,
+                equipment_number: item.equipment_number,
+                imageUrl,
+            })
+        }
+    }
+
     if (isLoading) {
         return (
             <div className="space-y-6">
-                {/* Filter Skeleton */}
                 <div className="h-16 bg-white rounded-xl border border-gray-200 animate-pulse" />
-                {/* Grid Skeleton */}
-                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-                    {[...Array(8)].map((_, i) => (
-                        <div key={i} className="aspect-square sm:aspect-[4/3] animate-pulse rounded-xl bg-gray-200" />
-                    ))}
-                </div>
+                <div className="bg-white rounded-xl border border-gray-200 animate-pulse h-96" />
             </div>
         )
     }
@@ -99,32 +120,42 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
     }
 
     return (
-        <div className="space-y-6">
-            {/* Filters Bar */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    {/* Search */}
-                    <div className="relative flex-1 max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="ค้นหาอุปกรณ์..."
-                            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                            value={searchTerm}
-                            onChange={(e) => { setSearchTerm(e.target.value); resetPage() }}
-                        />
+        <div className="space-y-4">
+            {/* Main Content Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                {/* Header & Filters */}
+                <div className="p-4 border-b border-gray-200 space-y-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <h2 className="text-lg font-semibold text-gray-900">รายการอุปกรณ์</h2>
+                        {hasActiveFilters && (
+                            <span className="text-sm text-gray-500">
+                                พบ <span className="font-semibold text-gray-900">{filteredItems.length}</span> รายการ
+                            </span>
+                        )}
                     </div>
 
-                    {/* Filter Controls */}
-                    <div className="flex flex-wrap gap-3">
+                    {/* Filters */}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        {/* Search */}
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="ค้นหาชื่อ, หมายเลขครุภัณฑ์, ยี่ห้อ..."
+                                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+
                         {/* Type Filter */}
                         <select
-                            className="px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                            className="px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm min-w-[140px]"
                             value={selectedTypeId}
-                            onChange={(e) => { setSelectedTypeId(e.target.value); resetPage() }}
+                            onChange={(e) => setSelectedTypeId(e.target.value)}
                         >
                             <option value="all">ทุกประเภท</option>
-                            {equipmentTypes.map(type => (
+                            {equipmentTypes?.map(type => (
                                 <option key={type.id} value={type.id}>
                                     {type.icon} {type.name}
                                 </option>
@@ -133,9 +164,9 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
 
                         {/* Status Filter */}
                         <select
-                            className="px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                            className="px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm min-w-[140px]"
                             value={selectedStatus}
-                            onChange={(e) => { setSelectedStatus(e.target.value); resetPage() }}
+                            onChange={(e) => setSelectedStatus(e.target.value)}
                         >
                             <option value="all">ทุกสถานะ</option>
                             <option value="ready">พร้อมให้ยืม</option>
@@ -147,132 +178,297 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                         {hasActiveFilters && (
                             <button
                                 onClick={clearFilters}
-                                className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             >
                                 <X className="w-4 h-4" />
-                                ล้างตัวกรอง
+                                ล้าง
                             </button>
                         )}
                     </div>
                 </div>
 
-                {/* Active Filters Summary */}
-                {hasActiveFilters && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                        <p className="text-sm text-gray-500">
-                            พบ <span className="font-semibold text-gray-900">{filteredItems.length}</span> รายการ
-                        </p>
+                {/* Loading & Empty States */}
+                {paginatedItems.length === 0 ? (
+                    <div className="p-12 text-center">
+                        <Package className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                        <p className="text-gray-500">ไม่พบอุปกรณ์ที่ค้นหา</p>
+                        {hasActiveFilters && (
+                            <button
+                                onClick={clearFilters}
+                                className="text-blue-600 hover:underline text-sm mt-2"
+                            >
+                                ล้างตัวกรอง
+                            </button>
+                        )}
                     </div>
-                )}
-            </div>
+                ) : (
+                    <>
+                        {/* Desktop Table */}
+                        <div className="hidden lg:block overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">อุปกรณ์</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">หมายเลขครุภัณฑ์</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ยี่ห้อ/รุ่น</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">เลือก</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {paginatedItems.map((item) => {
+                                        const images = Array.isArray(item.images) ? item.images : []
+                                        const imageUrl = images.length > 0 ? (images[0] as string) : 'https://placehold.co/100x100?text=No+Image'
+                                        const statusConfig = STATUS_CONFIG[item.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.ready
+                                        const StatusIcon = statusConfig.icon
+                                        const inCart = isInCart(item.id)
+                                        const isRecent = isRecentlyBorrowed(item.id, recentlyBorrowed)
 
-            {/* Equipment Type Pills (Quick Filter) */}
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                <button
-                    onClick={() => { setSelectedTypeId('all'); resetPage() }}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedTypeId === 'all'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300 hover:text-blue-600'
-                        }`}
-                >
-                    ทั้งหมด
-                </button>
-                {equipmentTypes.map(type => (
-                    <button
-                        key={type.id}
-                        onClick={() => { setSelectedTypeId(type.id); resetPage() }}
-                        className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${selectedTypeId === type.id
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300 hover:text-blue-600'
-                            }`}
-                    >
-                        <span>{type.icon}</span>
-                        {type.name}
-                    </button>
-                ))}
-            </div>
+                                        return (
+                                            <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-12 w-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                                                            <img
+                                                                src={imageUrl}
+                                                                alt={item.name}
+                                                                className="h-12 w-12 object-cover"
+                                                            />
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <Link href={`/equipment/${item.id}`} className="text-sm font-medium text-gray-900 hover:text-blue-600">
+                                                                {item.name}
+                                                            </Link>
+                                                            {isRecent && (
+                                                                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700">
+                                                                    <Clock className="w-3 h-3" />
+                                                                    ยืมล่าสุด
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm text-gray-900 font-mono">{item.equipment_number}</span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm text-gray-900">{item.brand || '-'}</div>
+                                                    <div className="text-xs text-gray-500">{item.model || ''}</div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={cn(
+                                                        "inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full",
+                                                        statusConfig.color
+                                                    )}>
+                                                        <StatusIcon className="w-3 h-3" />
+                                                        {statusConfig.label}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        {statusConfig.canBorrow ? (
+                                                            <button
+                                                                onClick={() => handleCartToggle(item, imageUrl)}
+                                                                disabled={!inCart && isAtLimit}
+                                                                className={cn(
+                                                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                                                                    inCart
+                                                                        ? "bg-green-600 text-white hover:bg-green-700"
+                                                                        : isAtLimit
+                                                                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                                            : "bg-blue-600 text-white hover:bg-blue-700"
+                                                                )}
+                                                            >
+                                                                {inCart ? (
+                                                                    <>
+                                                                        <Check className="w-4 h-4" />
+                                                                        เลือกแล้ว
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Plus className="w-4 h-4" />
+                                                                        เลือก
+                                                                    </>
+                                                                )}
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-sm text-gray-400">ไม่พร้อมยืม</span>
+                                                        )}
+                                                        <Link
+                                                            href={`/equipment/${item.id}`}
+                                                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="ดูรายละเอียด"
+                                                        >
+                                                            <ArrowRight className="w-4 h-4" />
+                                                        </Link>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
 
-            {/* Equipment Grid */}
-            {paginatedItems.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 py-16 text-center">
-                    <Package className="w-12 h-12 text-gray-300 mb-4" />
-                    <p className="text-lg font-medium text-gray-500">ไม่พบอุปกรณ์</p>
-                    <p className="text-sm text-gray-400 mt-1">ลองปรับตัวกรองหรือคำค้นหา</p>
-                    {hasActiveFilters && (
-                        <button
-                            onClick={clearFilters}
-                            className="mt-4 text-blue-600 hover:text-blue-700 text-sm font-medium"
-                        >
-                            ล้างตัวกรองทั้งหมด
-                        </button>
-                    )}
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-                    {paginatedItems.map((item) => (
-                        <EquipmentCardWithBorrow
-                            key={item.id}
-                            item={item}
-                            isRecentlyBorrowed={isRecentlyBorrowed(item.id, recentlyBorrowed)}
-                        />
-                    ))}
-                </div>
-            )}
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-gray-200">
-                    <p className="text-sm text-gray-500">
-                        หน้า {currentPage} จาก {totalPages} ({filteredItems.length} รายการ)
-                    </p>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={previousPage}
-                            disabled={currentPage === 1}
-                            className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            ก่อนหน้า
-                        </button>
-
-                        {/* Page Numbers */}
-                        <div className="hidden sm:flex gap-1">
-                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                let pageNum: number
-                                if (totalPages <= 5) {
-                                    pageNum = i + 1
-                                } else if (currentPage <= 3) {
-                                    pageNum = i + 1
-                                } else if (currentPage >= totalPages - 2) {
-                                    pageNum = totalPages - 4 + i
-                                } else {
-                                    pageNum = currentPage - 2 + i
-                                }
+                        {/* Mobile Cards */}
+                        <div className="lg:hidden p-4 space-y-3">
+                            {paginatedItems.map((item) => {
+                                const images = Array.isArray(item.images) ? item.images : []
+                                const imageUrl = images.length > 0 ? (images[0] as string) : 'https://placehold.co/100x100?text=No+Image'
+                                const statusConfig = STATUS_CONFIG[item.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.ready
+                                const StatusIcon = statusConfig.icon
+                                const inCart = isInCart(item.id)
+                                const isRecent = isRecentlyBorrowed(item.id, recentlyBorrowed)
 
                                 return (
-                                    <button
-                                        key={pageNum}
-                                        onClick={() => goToPage(pageNum)}
-                                        className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${currentPage === pageNum
-                                            ? 'bg-blue-600 text-white'
-                                            : 'border border-gray-300 hover:bg-gray-50'
-                                            }`}
-                                    >
-                                        {pageNum}
-                                    </button>
+                                    <div key={item.id} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                        <div className="flex items-start gap-3">
+                                            {/* Image */}
+                                            <div className="h-16 w-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-200">
+                                                <img
+                                                    src={imageUrl}
+                                                    alt={item.name}
+                                                    className="h-16 w-16 object-cover"
+                                                />
+                                            </div>
+
+                                            {/* Info */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <Link href={`/equipment/${item.id}`} className="font-medium text-gray-900 truncate hover:text-blue-600">
+                                                                {item.name}
+                                                            </Link>
+                                                            {isRecent && (
+                                                                <Clock className="w-4 h-4 text-blue-600" />
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 font-mono">{item.equipment_number}</p>
+                                                    </div>
+                                                    <span className={cn(
+                                                        "flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full",
+                                                        statusConfig.color
+                                                    )}>
+                                                        <StatusIcon className="w-3 h-3" />
+                                                    </span>
+                                                </div>
+
+                                                {/* Details */}
+                                                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                                                    {(item.brand || item.model) && (
+                                                        <span>{item.brand} {item.model}</span>
+                                                    )}
+                                                </div>
+
+                                                {/* Actions */}
+                                                <div className="mt-3 flex gap-2">
+                                                    {statusConfig.canBorrow ? (
+                                                        <button
+                                                            onClick={() => handleCartToggle(item, imageUrl)}
+                                                            disabled={!inCart && isAtLimit}
+                                                            className={cn(
+                                                                "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                                                                inCart
+                                                                    ? "bg-green-600 text-white"
+                                                                    : isAtLimit
+                                                                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                                        : "bg-blue-600 text-white"
+                                                            )}
+                                                        >
+                                                            {inCart ? (
+                                                                <>
+                                                                    <Check className="w-4 h-4" />
+                                                                    เลือกแล้ว
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Plus className="w-4 h-4" />
+                                                                    เลือก
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    ) : (
+                                                        <span className="flex-1 flex items-center justify-center px-3 py-2 bg-gray-100 text-gray-400 rounded-lg text-sm">
+                                                            ไม่พร้อมยืม
+                                                        </span>
+                                                    )}
+                                                    <Link
+                                                        href={`/equipment/${item.id}`}
+                                                        className="flex items-center justify-center px-3 py-2 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                                                    >
+                                                        <ArrowRight className="w-4 h-4" />
+                                                    </Link>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 )
                             })}
                         </div>
+                    </>
+                )}
 
-                        <button
-                            onClick={nextPage}
-                            disabled={currentPage === totalPages}
-                            className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            ถัดไป
-                        </button>
+                {/* Pagination */}
+                {filteredItems.length > 0 && (
+                    <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <span>แสดง</span>
+                            <select
+                                value={pageSize}
+                                onChange={(e) => {
+                                    setPageSize(Number(e.target.value))
+                                    setCurrentPage(1)
+                                }}
+                                className="border border-gray-300 rounded-lg px-2 py-1 text-sm"
+                            >
+                                <option value={10}>10</option>
+                                <option value={25}>25</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                            <span>รายการ | {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, filteredItems.length)} จาก {filteredItems.length}</span>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-50"
+                            >
+                                ก่อนหน้า
+                            </button>
+                            <div className="hidden sm:flex items-center gap-1">
+                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                    let pageNum = i + 1
+                                    if (totalPages > 5) {
+                                        if (currentPage > 3) pageNum = currentPage - 2 + i
+                                        if (currentPage > totalPages - 2) pageNum = totalPages - 4 + i
+                                    }
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            onClick={() => setCurrentPage(pageNum)}
+                                            className={`w-8 h-8 rounded-lg text-sm font-medium ${currentPage === pageNum
+                                                ? 'bg-blue-600 text-white'
+                                                : 'hover:bg-gray-100 text-gray-700'
+                                                }`}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages || totalPages === 0}
+                                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-50"
+                            >
+                                ถัดไป
+                            </button>
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
 
             {/* Cart Button & Drawer */}
             <CartButton onClick={() => setIsCartOpen(true)} />
