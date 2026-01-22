@@ -50,7 +50,7 @@ export default function EquipmentCardWithBorrow({ item, isRecentlyBorrowed = fal
     }
 
     return (
-        <div className="group relative flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+        <div className="group relative flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 max-w-[300px] mx-auto">
             {/* Recently Borrowed Badge */}
             {isRecentlyBorrowed && (
                 <div className="absolute left-2 top-2 z-10">
@@ -61,12 +61,13 @@ export default function EquipmentCardWithBorrow({ item, isRecentlyBorrowed = fal
                 </div>
             )}
 
-            {/* Image Area - Compact Thumbnail */}
-            <Link href={`/equipment/${item.id}`} className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
+            {/* Image Area - Responsive Thumbnail (max 300x300px) */}
+            <Link href={`/equipment/${item.id}`} className="relative aspect-square w-full max-h-[300px] overflow-hidden bg-gray-100">
                 <img
                     src={imageUrl}
                     alt={item.name}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy"
                 />
                 {/* Status Badge */}
                 <div className="absolute right-2 top-2">
