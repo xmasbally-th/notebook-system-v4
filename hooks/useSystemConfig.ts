@@ -100,7 +100,8 @@ function getDefaultConfig(): SystemConfig {
             lecturer: { max_days: 7, max_items: 3 },
             staff: { max_days: 5, max_items: 2 }
         },
-        document_logo_url: null
+        document_logo_url: null,
+        document_template_url: null
     } as SystemConfig
 }
 

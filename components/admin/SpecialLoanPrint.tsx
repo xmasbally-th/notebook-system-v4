@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useRef } from 'react'
-import { X, Printer } from 'lucide-react'
+import React, { useRef, useState } from 'react'
+import { X, Printer, Download, Loader2 } from 'lucide-react'
 import { SpecialLoan } from '@/lib/specialLoans'
 
 interface Props {
@@ -9,25 +9,18 @@ interface Props {
     onClose: () => void
     logoUrl?: string | null
     organizationName?: string
+    templateUrl?: string | null
 }
 
-export default function SpecialLoanPrint({ loan, onClose, logoUrl, organizationName = 'คณะวิทยาการจัดการ มหาวิทยาลัยราชภัฏลำปาง' }: Props) {
+export default function SpecialLoanPrint({ loan, onClose, logoUrl, organizationName = 'คณะวิทยาการจัดการ มหาวิทยาลัยราชภัฏลำปาง', templateUrl }: Props) {
     const printRef = useRef<HTMLDivElement>(null)
+    const [isDownloading, setIsDownloading] = useState(false)
 
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr)
         return date.toLocaleDateString('th-TH', {
             day: 'numeric',
             month: 'long',
-            year: 'numeric'
-        })
-    }
-
-    const formatShortDate = (dateStr: string) => {
-        const date = new Date(dateStr)
-        return date.toLocaleDateString('th-TH', {
-            day: 'numeric',
-            month: 'short',
             year: 'numeric'
         })
     }
@@ -49,59 +42,77 @@ export default function SpecialLoanPrint({ loan, onClose, logoUrl, organizationN
                         size: A4;
                         margin: 15mm 20mm;
                     }
+                    * {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
+                    }
                     body {
                         font-family: 'TH Sarabun New', 'Sarabun', sans-serif;
                         font-size: 16pt;
-                        line-height: 1.5;
+                        line-height: 1.4;
                         color: #000;
-                        margin: 0;
-                        padding: 0;
                     }
                     .document {
                         max-width: 100%;
                     }
+                    
+                    /* Header Section */
                     .header {
-                        display: flex;
-                        align-items: flex-start;
-                        margin-bottom: 15px;
+                        display: table;
+                        width: 100%;
+                        margin-bottom: 10px;
                     }
                     .header-logo {
-                        width: 70px;
-                        flex-shrink: 0;
+                        display: table-cell;
+                        width: 80px;
+                        vertical-align: top;
                     }
                     .header-logo img {
-                        width: 60px;
-                        height: 60px;
+                        width: 70px;
+                        height: 70px;
                         object-fit: contain;
                     }
                     .header-content {
-                        flex: 1;
+                        display: table-cell;
                         text-align: center;
+                        vertical-align: top;
+                        padding-top: 5px;
                     }
                     .header-title {
-                        font-size: 18pt;
+                        font-size: 20pt;
                         font-weight: bold;
-                        color: #1e3a5f;
+                        color: #1a4a7c;
                     }
                     .header-org {
-                        font-size: 14pt;
-                        color: #1e3a5f;
+                        font-size: 16pt;
+                        color: #1a4a7c;
                         font-weight: bold;
                     }
                     .header-date {
+                        display: table-cell;
                         width: 150px;
                         text-align: right;
-                        flex-shrink: 0;
+                        vertical-align: top;
+                        padding-top: 40px;
+                    }
+                    
+                    /* Form Fields */
+                    .form-section {
+                        margin-top: 15px;
+                        line-height: 2;
                     }
                     .form-row {
-                        margin-bottom: 5px;
-                        line-height: 1.8;
+                        margin-bottom: 3px;
                     }
-                    .dotted-line {
-                        border-bottom: 1px dotted #000;
+                    .field-value {
+                        border-bottom: 1px dotted #666;
                         display: inline-block;
-                        min-width: 150px;
+                        min-width: 100px;
+                        padding: 0 5px;
                     }
+                    
+                    /* Table Section */
                     .section-title {
                         text-align: center;
                         font-weight: bold;
@@ -110,40 +121,46 @@ export default function SpecialLoanPrint({ loan, onClose, logoUrl, organizationN
                     table {
                         width: 100%;
                         border-collapse: collapse;
-                        margin-bottom: 10px;
+                        margin-bottom: 15px;
                     }
                     th, td {
                         border: 1px solid #000;
-                        padding: 6px 8px;
+                        padding: 4px 8px;
                         text-align: center;
                         font-size: 14pt;
                     }
                     th {
-                        background-color: #f5f5f5;
+                        background-color: #f8f8f8;
                         font-weight: bold;
                     }
+                    td {
+                        height: 28px;
+                    }
+                    
+                    /* Signature Section */
                     .signature-section {
                         margin-top: 20px;
                     }
                     .signature-row {
-                        display: flex;
-                        justify-content: space-between;
-                        margin-bottom: 20px;
+                        display: table;
+                        width: 100%;
+                        margin-bottom: 15px;
                     }
                     .signature-box {
-                        width: 48%;
+                        display: table-cell;
+                        width: 50%;
                         text-align: center;
+                        vertical-align: top;
                     }
-                    .signature-label {
-                        margin-bottom: 3px;
+                    .sig-line {
+                        margin-bottom: 2px;
                     }
-                    .signature-name {
-                        margin-bottom: 3px;
-                    }
+                    
+                    /* Return Section */
                     .return-section {
                         margin-top: 25px;
                         padding-top: 15px;
-                        border-top: 2px solid #000;
+                        border-top: 1px solid #000;
                     }
                     .return-title {
                         text-align: center;
@@ -156,14 +173,15 @@ export default function SpecialLoanPrint({ loan, onClose, logoUrl, organizationN
                     }
                     .checkbox {
                         display: inline-block;
-                        width: 16px;
-                        height: 16px;
+                        width: 14px;
+                        height: 14px;
                         border: 1px solid #000;
-                        margin-right: 5px;
+                        margin: 0 3px;
                         vertical-align: middle;
                     }
+                    
                     @media print {
-                        body { -webkit-print-color-adjust: exact; }
+                        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     }
                 </style>
             </head>
@@ -178,6 +196,23 @@ export default function SpecialLoanPrint({ loan, onClose, logoUrl, organizationN
             printWindow.print()
             printWindow.close()
         }, 250)
+    }
+
+    const handleDownloadDocx = async () => {
+        if (!templateUrl) {
+            alert('ยังไม่มี template DOCX กรุณาอัปโหลดที่หน้า Settings ก่อน')
+            return
+        }
+
+        setIsDownloading(true)
+        try {
+            const { generateDocxFromTemplate } = await import('@/lib/docxGenerator')
+            await generateDocxFromTemplate(templateUrl, loan)
+        } catch (err: any) {
+            alert(err.message || 'ไม่สามารถสร้างเอกสารได้')
+        } finally {
+            setIsDownloading(false)
+        }
     }
 
     // Calculate minimum rows for table (at least 8 rows)
@@ -197,6 +232,18 @@ export default function SpecialLoanPrint({ loan, onClose, logoUrl, organizationN
                         >
                             <Printer className="w-4 h-4" />
                             พิมพ์
+                        </button>
+                        <button
+                            onClick={handleDownloadDocx}
+                            disabled={isDownloading}
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                        >
+                            {isDownloading ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <Download className="w-4 h-4" />
+                            )}
+                            {isDownloading ? 'กำลังสร้าง...' : 'DOCX'}
                         </button>
                         <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
                             <X className="w-5 h-5" />
@@ -224,25 +271,27 @@ export default function SpecialLoanPrint({ loan, onClose, logoUrl, organizationN
                                     <div className="header-org">{organizationName}</div>
                                 </div>
                                 <div className="header-date">
-                                    วันที่ {formatShortDate(loan.loan_date)}
+                                    วันที่ <span className="field-value">{formatDate(loan.loan_date)}</span>
                                 </div>
                             </div>
 
                             {/* Borrower Info Form */}
-                            <div className="form-row">
-                                ด้วยข้าพเจ้า นาย/นาง/นางสาว <span className="dotted-line" style={{ minWidth: '200px' }}>{loan.borrower_name}</span>
-                                {' '}เบอร์โทร <span className="dotted-line" style={{ minWidth: '120px' }}>{loan.borrower_phone || ''}</span>
-                            </div>
-                            <div className="form-row">
-                                สังกัด/สาขาวิชา <span className="dotted-line" style={{ minWidth: '200px' }}></span>
-                                {' '}มีความประสงค์ขอยืม <span className="dotted-line" style={{ minWidth: '200px' }}>{loan.equipment_type_name}</span>
-                            </div>
-                            <div className="form-row">
-                                ตามรายการพัสดุและครุภัณฑ์ ตั้งแต่วันที่ <span className="dotted-line">{formatShortDate(loan.loan_date)}</span>
-                                {' '}ถึงวันที่ <span className="dotted-line">{formatShortDate(loan.return_date)}</span>
-                            </div>
-                            <div className="form-row">
-                                เพื่อใช้สำหรับ <span className="dotted-line" style={{ minWidth: '450px' }}>{loan.purpose}</span>
+                            <div className="form-section">
+                                <div className="form-row">
+                                    ด้วยข้าพเจ้า นาย/นาง/นางสาว <span className="field-value" style={{ minWidth: '180px' }}>{loan.borrower_name}</span>
+                                    {' '}เบอร์โทร <span className="field-value" style={{ minWidth: '120px' }}>{loan.borrower_phone || ''}</span>
+                                </div>
+                                <div className="form-row">
+                                    สังกัด/สาขาวิชา <span className="field-value" style={{ minWidth: '200px' }}></span>
+                                    {' '}มีความประสงค์ขอยืม <span className="field-value" style={{ minWidth: '180px' }}>{loan.equipment_type_name}</span>
+                                </div>
+                                <div className="form-row">
+                                    ตามรายการพัสดุและครุภัณฑ์ ตั้งแต่วันที่ <span className="field-value">{formatDate(loan.loan_date)}</span>
+                                    {' '}ถึงวันที่ <span className="field-value">{formatDate(loan.return_date)}</span>
+                                </div>
+                                <div className="form-row">
+                                    เพื่อใช้สำหรับ <span className="field-value" style={{ minWidth: '400px' }}>{loan.purpose}</span>
+                                </div>
                             </div>
 
                             {/* Equipment Table */}
@@ -251,9 +300,9 @@ export default function SpecialLoanPrint({ loan, onClose, logoUrl, organizationN
                                 <thead>
                                     <tr>
                                         <th style={{ width: '60px' }}>ลำดับที่</th>
-                                        <th style={{ width: '200px' }}>ชื่ออุปกรณ์</th>
+                                        <th style={{ width: '180px' }}>ชื่ออุปกรณ์</th>
                                         <th>หมายเลขครุภัณฑ์</th>
-                                        <th style={{ width: '120px' }}>หมายเหตุ</th>
+                                        <th style={{ width: '100px' }}>หมายเหตุ</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -268,7 +317,7 @@ export default function SpecialLoanPrint({ loan, onClose, logoUrl, organizationN
                                     {/* Empty rows */}
                                     {Array(emptyRowsCount).fill(0).map((_, idx) => (
                                         <tr key={`empty-${idx}`}>
-                                            <td>{loan.equipment_numbers.length + idx + 1}</td>
+                                            <td>&nbsp;</td>
                                             <td></td>
                                             <td></td>
                                             <td></td>
@@ -281,14 +330,14 @@ export default function SpecialLoanPrint({ loan, onClose, logoUrl, organizationN
                             <div className="signature-section">
                                 <div className="signature-row">
                                     <div className="signature-box">
-                                        <div className="signature-label">ลงชื่อ............................................ ผู้ขอยืม</div>
-                                        <div className="signature-name">(..................................................)</div>
-                                        <div>วันที่.............................................</div>
+                                        <div className="sig-line">ลงชื่อ.............................................. ผู้ขอยืม</div>
+                                        <div className="sig-line">(..................................................)</div>
+                                        <div>วันที่................................................</div>
                                     </div>
                                     <div className="signature-box">
-                                        <div className="signature-label">ลงชื่อ............................................ผู้ให้ยืม</div>
-                                        <div className="signature-name">(..................................................)</div>
-                                        <div>วันที่.............................................</div>
+                                        <div className="sig-line">ลงชื่อ..............................................ผู้ให้ยืม</div>
+                                        <div className="sig-line">(..................................................)</div>
+                                        <div>วันที่................................................</div>
                                     </div>
                                 </div>
                             </div>
@@ -298,7 +347,7 @@ export default function SpecialLoanPrint({ loan, onClose, logoUrl, organizationN
                                 <div className="return-title">บันทึกการรับคืนพัสดุและครุภัณฑ์</div>
 
                                 <div className="checkbox-row">
-                                    ได้รับคืนพัสดุและครุภัณฑ์ เมื่อวันที่......................................
+                                    ได้รับคืนพัสดุและครุภัณฑ์ เมื่อวันที่.........................................
                                     {' '}<span className="checkbox"></span> ครบถ้วน/สภาพปกติ
                                     {' '}<span className="checkbox"></span> ไม่ครบ/สภาพไม่ปกติ
                                 </div>
@@ -306,14 +355,14 @@ export default function SpecialLoanPrint({ loan, onClose, logoUrl, organizationN
                                 <div className="signature-section">
                                     <div className="signature-row">
                                         <div className="signature-box">
-                                            <div className="signature-label">ลงชื่อ............................................ ผู้รับคืน</div>
-                                            <div className="signature-name">(..................................................)</div>
-                                            <div>วันที่.............................................</div>
+                                            <div className="sig-line">ลงชื่อ.............................................. ผู้รับคืน</div>
+                                            <div className="sig-line">(..................................................)</div>
+                                            <div>วันที่................................................</div>
                                         </div>
                                         <div className="signature-box">
-                                            <div className="signature-label">ลงชื่อ............................................ผู้ส่งคืน</div>
-                                            <div className="signature-name">(..................................................)</div>
-                                            <div>วันที่.............................................</div>
+                                            <div className="sig-line">ลงชื่อ..............................................ผู้ส่งคืน</div>
+                                            <div className="sig-line">(..................................................)</div>
+                                            <div>วันที่................................................</div>
                                         </div>
                                     </div>
                                 </div>

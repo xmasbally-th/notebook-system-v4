@@ -276,6 +276,7 @@ export interface Database {
                     announcement_message: string | null
                     announcement_active: boolean
                     document_logo_url: string | null
+                    document_template_url: string | null
                     updated_at: string
                 }
                 Insert: {
@@ -295,6 +296,7 @@ export interface Database {
                     announcement_message?: string | null
                     announcement_active?: boolean
                     document_logo_url?: string | null
+                    document_template_url?: string | null
                     updated_at?: string
                 }
                 Update: {
@@ -314,6 +316,7 @@ export interface Database {
                     announcement_message?: string | null
                     announcement_active?: boolean
                     document_logo_url?: string | null
+                    document_template_url?: string | null
                     updated_at?: string
                 }
             }

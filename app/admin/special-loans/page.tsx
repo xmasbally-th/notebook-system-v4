@@ -326,6 +326,7 @@ export default function AdminSpecialLoansPage() {
                     loan={printLoan}
                     onClose={() => setPrintLoan(null)}
                     logoUrl={config?.document_logo_url}
+                    templateUrl={config?.document_template_url}
                 />
             )}
         </AdminLayout>
