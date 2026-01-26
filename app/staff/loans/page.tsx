@@ -10,6 +10,7 @@ import {
     Calendar, ArrowUpRight, MessageSquare
 } from 'lucide-react'
 import { useToast } from '@/components/ui/toast'
+import { approveLoan } from './actions'
 
 const STATUS_CONFIG = {
     pending: { label: 'รออนุมัติ', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
@@ -59,6 +60,14 @@ export default function StaffLoansPage() {
     // Approve/Reject Mutation
     const updateStatusMutation = useMutation({
         mutationFn: async ({ id, status, reason }: { id: string, status: 'approved' | 'rejected', reason?: string }) => {
+            // For approval, use Server Action (handles Discord notification)
+            if (status === 'approved') {
+                const result = await approveLoan(id)
+                if (!result.success) throw new Error(result.error)
+                return { id, status }
+            }
+
+            // For rejection, keep existing client-side logic (or move to action later if needed)
             const { url, key } = getSupabaseCredentials()
 
             const { createBrowserClient } = await import('@supabase/ssr')

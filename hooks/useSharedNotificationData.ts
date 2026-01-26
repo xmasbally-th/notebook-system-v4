@@ -14,6 +14,7 @@ interface LoanRequest {
     equipment_id: string
     start_date: string
     end_date: string
+    return_time: string | null
     status: string
     created_at: string
     equipment?: {
@@ -148,7 +149,12 @@ export function useSharedNotificationData(): SharedNotificationData {
 
     const overdue = activeLoans.filter((loan: LoanRequest) => {
         const endDate = new Date(loan.end_date)
-        return endDate < today
+        if (loan.return_time) {
+            const [hours, minutes] = loan.return_time.split(':').map(Number)
+            endDate.setHours(hours, minutes, 0, 0)
+            return endDate < now
+        }
+        return endDate < today // Default to < midnight of today (meaning yesterday was last day)
     })
 
     const refetch = () => {

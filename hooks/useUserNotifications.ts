@@ -172,7 +172,16 @@ export function useUserNotifications(userId?: string, accessToken?: string): Use
         const myActiveLoans = sharedData.activeLoans.filter(loan => loan.user_id === userId)
 
         myActiveLoans.forEach(loan => {
+            // Calculate precise end datetime
             const endDate = new Date(loan.end_date)
+
+            // If return_time exists, set it. Otherwise, set to End of Day (23:59:59)
+            if (loan.return_time) {
+                const [hours, minutes] = loan.return_time.split(':').map(Number)
+                endDate.setHours(hours, minutes, 0, 0)
+            } else {
+                endDate.setHours(23, 59, 59, 999)
+            }
 
             // Due within 24 hours but not overdue
             if (endDate <= tomorrow && endDate >= now) {

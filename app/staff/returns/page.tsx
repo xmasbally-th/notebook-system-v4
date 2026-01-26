@@ -81,7 +81,8 @@ export default function StaffReturnsPage() {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    status: 'returned'
+                    status: 'returned',
+                    returned_at: new Date().toISOString()
                 })
             })
 
