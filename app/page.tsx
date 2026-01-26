@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Laptop, Tablet, Headphones, Monitor, ArrowRight, LogIn, Package } from 'lucide-react'
+import ActiveEvaluationPrompt from '@/components/evaluations/ActiveEvaluationPrompt'
 
 export default async function Home() {
     const supabase = await createClient()
@@ -36,6 +37,8 @@ export default async function Home() {
     return (
         <div className="min-h-screen bg-white flex flex-col font-sans">
             <Header />
+
+            <ActiveEvaluationPrompt />
 
             <main className="flex-grow">
                 {/* Hero Section - Blue & White with Orange Accent */}

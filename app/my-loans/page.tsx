@@ -1,12 +1,13 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getSupabaseBrowserClient, getSupabaseCredentials } from '@/lib/supabase-helpers'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Clock, CheckCircle2, XCircle, Package, CalendarDays, Loader2, Bookmark, Send, AlertTriangle, Timer } from 'lucide-react'
+import { Clock, CheckCircle2, XCircle, Package, CalendarDays, Loader2, Bookmark, Send, AlertTriangle, Timer, Star } from 'lucide-react'
 import Header from '@/components/layout/Header'
 import Pagination from '@/components/ui/Pagination'
+import EvaluationModal from '@/components/evaluations/EvaluationModal'
 
 type LoanStatus = 'pending' | 'approved' | 'rejected' | 'returned'
 type ReservationStatus = 'pending' | 'approved' | 'ready' | 'completed' | 'rejected' | 'cancelled' | 'expired'
@@ -43,14 +44,23 @@ interface HistoryItem {
         equipment_number: string
         images: string[]
     }
+    evaluations?: {
+        id: string
+        rating: number
+    }[]
 }
 
 export default function MyLoansPage() {
+    const queryClient = useQueryClient()
     const [userId, setUserId] = useState<string | null>(null)
     const [accessToken, setAccessToken] = useState<string | null>(null)
     const [filter, setFilter] = useState<FilterTab>('all')
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
+
+    // Evaluation state
+    const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false)
+    const [selectedLoan, setSelectedLoan] = useState<any>(null)
 
     useEffect(() => {
         const client = getSupabaseBrowserClient()
@@ -71,8 +81,9 @@ export default function MyLoansPage() {
             const { url, key } = getSupabaseCredentials()
             if (!url || !key || !userId || !accessToken) return []
 
+            // Added evaluations to select
             const response = await fetch(
-                `${url}/rest/v1/loanRequests?user_id=eq.${userId}&select=*,equipment(id,name,equipment_number,images)&order=created_at.desc`,
+                `${url}/rest/v1/loanRequests?user_id=eq.${userId}&select=*,equipment(id,name,equipment_number,images),evaluations(id,rating)&order=created_at.desc`,
                 {
                     headers: {
                         'apikey': key,
@@ -143,6 +154,15 @@ export default function MyLoansPage() {
     const handleFilterChange = (newFilter: FilterTab) => {
         setFilter(newFilter)
         setCurrentPage(1)
+    }
+
+    const handleEvaluate = (loan: any) => {
+        setSelectedLoan(loan)
+        setIsEvaluationModalOpen(true)
+    }
+
+    const handleEvaluationSuccess = () => {
+        queryClient.invalidateQueries({ queryKey: ['my-loans'] })
     }
 
     if (!userId) {
@@ -250,10 +270,16 @@ export default function MyLoansPage() {
                                     const images = Array.isArray(equipment?.images) ? equipment.images : []
                                     const imageUrl = images.length > 0 ? images[0] : 'https://placehold.co/100x100?text=No+Image'
 
+                                    // Evaluation logic for loans
+                                    const isReturned = isLoan && item.status === 'returned'
+                                    const evaluations = item.evaluations || []
+                                    const isEvaluated = evaluations.length > 0
+                                    const rating = isEvaluated ? evaluations[0].rating : 0
+
                                     return (
                                         <div
                                             key={`${item.type}-${item.id}`}
-                                            className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow"
+                                            className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow relative"
                                         >
                                             <div className="flex flex-col sm:flex-row gap-4">
                                                 {/* Equipment Image */}
@@ -276,38 +302,71 @@ export default function MyLoansPage() {
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                                                         <div>
-                                                            <h3 className="font-semibold text-gray-900 truncate">
-                                                                {equipment?.name || 'ไม่ระบุอุปกรณ์'}
-                                                            </h3>
+                                                            <div className="flex items-center gap-2">
+                                                                <h3 className="font-semibold text-gray-900 truncate">
+                                                                    {equipment?.name || 'ไม่ระบุอุปกรณ์'}
+                                                                </h3>
+                                                                {/* Pending Evaluation Badge */}
+                                                                {isReturned && !isEvaluated && (
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 animate-pulse">
+                                                                        รอการประเมิน
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                             <p className="text-sm text-gray-500 font-mono">
                                                                 #{equipment?.equipment_number}
                                                             </p>
                                                         </div>
-                                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${config.color}`}>
-                                                            {config.icon}
-                                                            {config.label}
-                                                        </span>
+                                                        <div className="flex gap-2">
+                                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${config.color}`}>
+                                                                {config.icon}
+                                                                {config.label}
+                                                            </span>
+                                                        </div>
                                                     </div>
 
-                                                    <div className="flex flex-wrap gap-4 text-sm text-gray-500 mt-3">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <CalendarDays className="w-4 h-4" />
-                                                            <span>
-                                                                {new Date(item.start_date).toLocaleDateString('th-TH')} - {new Date(item.end_date).toLocaleDateString('th-TH')}
-                                                            </span>
+                                                    <div className="flex flex-wrap items-center justify-between gap-4 mt-3">
+                                                        <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <CalendarDays className="w-4 h-4" />
+                                                                <span>
+                                                                    {new Date(item.start_date).toLocaleDateString('th-TH')} - {new Date(item.end_date).toLocaleDateString('th-TH')}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5 text-gray-400">
+                                                                <Clock className="w-4 h-4" />
+                                                                <span>
+                                                                    {new Date(item.created_at).toLocaleDateString('th-TH', {
+                                                                        day: 'numeric',
+                                                                        month: 'short',
+                                                                        year: 'numeric',
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit'
+                                                                    })}
+                                                                </span>
+                                                            </div>
                                                         </div>
-                                                        <div className="flex items-center gap-1.5 text-gray-400">
-                                                            <Clock className="w-4 h-4" />
-                                                            <span>
-                                                                {new Date(item.created_at).toLocaleDateString('th-TH', {
-                                                                    day: 'numeric',
-                                                                    month: 'short',
-                                                                    year: 'numeric',
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit'
-                                                                })}
-                                                            </span>
-                                                        </div>
+
+                                                        {/* Evaluation Action */}
+                                                        {isReturned && (
+                                                            <div className="mt-2 sm:mt-0">
+                                                                {isEvaluated ? (
+                                                                    <div className="flex items-center gap-1 text-yellow-500 font-medium text-sm">
+                                                                        <Star className="w-4 h-4 fill-current" />
+                                                                        <span>{rating}/5</span>
+                                                                        <span className="text-gray-400 text-xs ml-1">(ประเมินแล้ว)</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => handleEvaluate(item)}
+                                                                        className="flex items-center gap-1 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-medium rounded-lg transition-colors shadow-sm"
+                                                                    >
+                                                                        <Star className="w-3 h-3" />
+                                                                        ประเมินความพึงพอใจ
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
 
                                                     {/* Rejection Reason */}
@@ -341,6 +400,13 @@ export default function MyLoansPage() {
                     )}
                 </div>
             </div>
+
+            <EvaluationModal
+                isOpen={isEvaluationModalOpen}
+                onClose={() => setIsEvaluationModalOpen(false)}
+                loan={selectedLoan}
+                onSuccess={handleEvaluationSuccess}
+            />
         </>
     )
 }
