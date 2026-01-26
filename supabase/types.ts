@@ -21,6 +21,7 @@ export interface Database {
                     user_type: 'student' | 'lecturer' | 'staff' | null
                     department_id: string | null
                     phone_number: string | null
+                    avatar_url: string | null
                     created_at: string
                     updated_at: string
                 }
@@ -35,6 +36,7 @@ export interface Database {
                     user_type?: 'student' | 'lecturer' | 'staff' | null
                     department_id?: string | null
                     phone_number?: string | null
+                    avatar_url?: string | null
                     created_at?: string
                     updated_at?: string
                 }
@@ -49,6 +51,7 @@ export interface Database {
                     user_type?: 'student' | 'lecturer' | 'staff' | null
                     department_id?: string | null
                     phone_number?: string | null
+                    avatar_url?: string | null
                     created_at?: string
                     updated_at?: string
                 }

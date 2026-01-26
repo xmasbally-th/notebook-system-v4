@@ -33,6 +33,7 @@ type User = {
     status: string
     user_type: string | null
     phone_number: string | null
+    avatar_url: string | null
     created_at: string
     departments: { name: string } | null
 }
@@ -314,8 +315,16 @@ export default function UserTable({ users }: { users: User[] }) {
                                         )}
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold text-sm">
-                                                    {getInitials(user)}
+                                                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold text-sm overflow-hidden relative">
+                                                    {user.avatar_url ? (
+                                                        <img
+                                                            src={user.avatar_url}
+                                                            alt={`${user.first_name}`}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        getInitials(user)
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <div className="font-medium text-gray-900">
@@ -461,8 +470,16 @@ export default function UserTable({ users }: { users: User[] }) {
                                         />
                                     )}
 
-                                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold flex-shrink-0">
-                                        {getInitials(user)}
+                                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold flex-shrink-0 overflow-hidden relative">
+                                        {user.avatar_url ? (
+                                            <img
+                                                src={user.avatar_url}
+                                                alt={`${user.first_name}`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            getInitials(user)
+                                        )}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
