@@ -64,7 +64,11 @@ export async function fetchExportData(options: ExportOptions): Promise<PreviewDa
         }
     }
 
-    endpoint = endpoint.replace('*', selectQuery)
+    if (selectQuery !== '*') {
+        endpoint += `&select=${selectQuery}`
+    } else {
+        endpoint += '&select=*'
+    }
 
     const response = await fetch(endpoint, { headers })
     if (!response.ok) {
@@ -123,7 +127,11 @@ export async function exportData(options: ExportOptions): Promise<Blob> {
         }
     }
 
-    endpoint = endpoint.replace('select=*', `select=${selectQuery}`)
+    if (selectQuery !== '*') {
+        endpoint += `&select=${selectQuery}`
+    } else {
+        endpoint += '&select=*'
+    }
 
     const response = await fetch(endpoint, { headers })
     if (!response.ok) {
