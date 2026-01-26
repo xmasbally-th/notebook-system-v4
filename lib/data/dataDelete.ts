@@ -148,7 +148,7 @@ export async function fetchNotificationsPreview(
 
     // Filter by notification type
     if (typeFilter && typeFilter.length > 0) {
-        const typeList = typeFilter.map(t => `"${t}"`).join(',')
+        const typeList = typeFilter.join(',')
         endpoint += `&type=in.(${typeList})`
     }
 

@@ -51,7 +51,7 @@ export async function fetchExportData(options: ExportOptions): Promise<PreviewDa
 
     // Add status filter if provided
     if (options.statusFilter && options.statusFilter.length > 0) {
-        const statusList = options.statusFilter.map(s => `"${s}"`).join(',')
+        const statusList = options.statusFilter.join(',')
         endpoint += `&status=in.(${statusList})`
     }
 
