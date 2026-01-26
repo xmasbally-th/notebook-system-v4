@@ -81,7 +81,9 @@ export default function AdminReturnsPage() {
                 },
                 body: JSON.stringify({
                     status: 'returned',
-                    returned_at: new Date().toISOString()
+                    returned_at: new Date().toISOString(),
+                    return_condition: condition,
+                    return_notes: notes
                 })
             })
 
