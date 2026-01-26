@@ -144,6 +144,8 @@ export interface Database {
                     end_date: string
                     return_time: string | null
                     returned_at: string | null
+                    return_condition: string | null
+                    return_notes: string | null
                     status: 'pending' | 'approved' | 'rejected' | 'returned'
                     created_at: string
                     updated_at: string
@@ -156,6 +158,8 @@ export interface Database {
                     end_date: string
                     return_time?: string | null
                     returned_at?: string | null
+                    return_condition?: string | null
+                    return_notes?: string | null
                     status?: 'pending' | 'approved' | 'rejected' | 'returned'
                     created_at?: string
                     updated_at?: string
@@ -168,6 +172,8 @@ export interface Database {
                     end_date?: string
                     return_time?: string | null
                     returned_at?: string | null
+                    return_condition?: string | null
+                    return_notes?: string | null
                     status?: 'pending' | 'approved' | 'rejected' | 'returned'
                     created_at?: string
                     updated_at?: string

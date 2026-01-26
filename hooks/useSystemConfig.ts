@@ -35,7 +35,7 @@ export function useSystemConfig() {
                 }
 
                 // Wrap in timeout to prevent hanging
-                const timeoutMs = 8000
+                const timeoutMs = 15000
 
 
                 const queryPromise = client
