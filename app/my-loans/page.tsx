@@ -191,41 +191,41 @@ export default function MyLoansPage() {
                     <div className="flex bg-white border border-gray-200 rounded-lg p-1 mb-6">
                         <button
                             onClick={() => handleFilterChange('all')}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${filter === 'all'
+                            className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2 px-2 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-all ${filter === 'all'
                                 ? 'bg-gray-900 text-white'
                                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                 }`}
                         >
-                            ทั้งหมด
-                            <span className={`px-2 py-0.5 rounded-full text-xs ${filter === 'all' ? 'bg-white/20' : 'bg-gray-100'
+                            <span className="truncate">ทั้งหมด</span>
+                            <span className={`px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs ${filter === 'all' ? 'bg-white/20' : 'bg-gray-100'
                                 }`}>
                                 {allItems.length}
                             </span>
                         </button>
                         <button
                             onClick={() => handleFilterChange('loans')}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${filter === 'loans'
+                            className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2 px-2 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-all ${filter === 'loans'
                                 ? 'bg-blue-600 text-white'
                                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                 }`}
                         >
-                            <Send className="w-4 h-4" />
-                            ยืม
-                            <span className={`px-2 py-0.5 rounded-full text-xs ${filter === 'loans' ? 'bg-white/20' : 'bg-gray-100'
+                            <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            <span className="truncate">ยืม</span>
+                            <span className={`px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs ${filter === 'loans' ? 'bg-white/20' : 'bg-gray-100'
                                 }`}>
                                 {loanCount}
                             </span>
                         </button>
                         <button
                             onClick={() => handleFilterChange('reservations')}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${filter === 'reservations'
+                            className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2 px-2 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-all ${filter === 'reservations'
                                 ? 'bg-purple-600 text-white'
                                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                 }`}
                         >
-                            <Bookmark className="w-4 h-4" />
-                            จอง
-                            <span className={`px-2 py-0.5 rounded-full text-xs ${filter === 'reservations' ? 'bg-white/20' : 'bg-gray-100'
+                            <Bookmark className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            <span className="truncate">จอง</span>
+                            <span className={`px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs ${filter === 'reservations' ? 'bg-white/20' : 'bg-gray-100'
                                 }`}>
                                 {reservationCount}
                             </span>
@@ -281,16 +281,16 @@ export default function MyLoansPage() {
                                             key={`${item.type}-${item.id}`}
                                             className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow relative"
                                         >
-                                            <div className="flex flex-col sm:flex-row gap-4">
+                                            <div className="flex flex-row gap-3 sm:gap-4">
                                                 {/* Equipment Image */}
-                                                <div className="relative w-full sm:w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                                                <div className="relative w-20 h-20 sm:w-24 sm:h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                                                     <img
                                                         src={imageUrl}
                                                         alt={equipment?.name || 'Equipment'}
                                                         className="w-full h-full object-cover"
                                                     />
                                                     {/* Type Badge */}
-                                                    <div className={`absolute top-1 left-1 px-2 py-0.5 rounded text-xs font-medium ${isLoan
+                                                    <div className={`absolute top-1 left-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${isLoan
                                                         ? 'bg-blue-600 text-white'
                                                         : 'bg-purple-600 text-white'
                                                         }`}>
