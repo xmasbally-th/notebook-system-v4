@@ -164,8 +164,21 @@ export default function StaffReturnsPage() {
         })
     }
 
-    const isOverdue = (endDate: string) => {
-        return new Date(endDate) < new Date()
+    const isOverdue = (request: any) => {
+        const endDate = new Date(request.end_date)
+        const now = new Date()
+
+        if (request.return_time) {
+            const [hours, minutes] = request.return_time.split(':').map(Number)
+            endDate.setHours(hours, minutes, 0, 0)
+            return endDate < now
+        }
+
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        today.setHours(0, 0, 0, 0)
+
+        const loanEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate())
+        return loanEndDate < today
     }
 
     return (
@@ -202,7 +215,7 @@ export default function StaffReturnsPage() {
                 ) : (
                     <div className="divide-y divide-gray-100">
                         {filteredLoans.map((loan: any) => {
-                            const overdue = isOverdue(loan.end_date)
+                            const overdue = isOverdue(loan)
                             return (
                                 <div key={loan.id} className={`p-4 hover:bg-gray-50 ${overdue ? 'bg-red-50' : ''}`}>
                                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -228,6 +241,7 @@ export default function StaffReturnsPage() {
                                                     <Calendar className="w-4 h-4 text-gray-400" />
                                                     <span className={overdue ? 'text-red-600 font-medium' : 'text-gray-600'}>
                                                         กำหนดคืน: {formatDate(loan.end_date)}
+                                                        {loan.return_time && ` เวลา ${loan.return_time.slice(0, 5)} น.`}
                                                         {overdue && ' (เกินกำหนด)'}
                                                     </span>
                                                 </div>
