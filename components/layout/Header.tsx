@@ -60,6 +60,7 @@ export default function Header() {
                                     alt="Logo"
                                     fill
                                     className="object-contain"
+                                    unoptimized
                                 />
                             </div>
                         ) : (

@@ -12,6 +12,15 @@ const nextConfig = {
             allowedOrigins: ['localhost:3000'],
         },
     },
+    images: {
+        remotePatterns: [
+            {
+                protocol: 'https',
+                hostname: 'kdqcypgmpogoekgklzun.supabase.co',
+                pathname: '/storage/v1/object/public/**',
+            },
+        ],
+    },
 };
 
 module.exports = nextConfig;
