@@ -41,12 +41,11 @@ export async function fetchExportData(options: ExportOptions): Promise<PreviewDa
     const fromDate = options.dateRange.from.toISOString()
     const toDate = options.dateRange.to.toISOString()
 
-    let selectQuery = '*'
-    let endpoint = `${url}/rest/v1/${tableName}?`
+    let endpoint = `${url}/rest/v1/${tableName}?select=*`
 
     // Add date filter
     if (options.dataType !== 'equipment') {
-        endpoint += `created_at=gte.${fromDate}&created_at=lte.${toDate}`
+        endpoint += `&created_at=gte.${fromDate}&created_at=lte.${toDate}`
     }
 
     // Add status filter if provided
@@ -55,28 +54,55 @@ export async function fetchExportData(options: ExportOptions): Promise<PreviewDa
         endpoint += `&status=in.(${statusList})`
     }
 
-    // Include related data
-    if (options.includeRelated) {
-        if (options.dataType === 'loans') {
-            selectQuery = '*,profiles:user_id(first_name,last_name,email),equipment:equipment_id(name,equipment_number)'
-        } else if (options.dataType === 'reservations') {
-            selectQuery = '*,profiles:user_id(first_name,last_name,email),equipment:equipment_id(name,equipment_number)'
-        }
-    }
-
-    if (selectQuery !== '*') {
-        endpoint += `&select=${selectQuery}`
-    } else {
-        endpoint += '&select=*'
-    }
-
     const response = await fetch(endpoint, { headers })
     if (!response.ok) {
         throw new Error(`Failed to fetch data: ${response.status}`)
     }
 
-    const data = await response.json()
-    const records = Array.isArray(data) ? data : []
+    let records = await response.json()
+    if (!Array.isArray(records)) records = []
+
+    // Manually fetch related data if requested (to avoid foreign key issues)
+    if (options.includeRelated && records.length > 0) {
+        if (options.dataType === 'loans' || options.dataType === 'reservations') {
+            // Fetch Profiles
+            const userIds = Array.from(new Set(records.map((r: any) => r.user_id).filter(Boolean))) as string[]
+            let profilesMap = new Map()
+
+            if (userIds.length > 0) {
+                const profilesRes = await fetch(
+                    `${url}/rest/v1/profiles?id=in.(${userIds.join(',')})&select=id,first_name,last_name,email`,
+                    { headers }
+                )
+                if (profilesRes.ok) {
+                    const profiles = await profilesRes.json()
+                    profiles.forEach((p: any) => profilesMap.set(p.id, p))
+                }
+            }
+
+            // Fetch Equipment
+            const equipmentIds = Array.from(new Set(records.map((r: any) => r.equipment_id).filter(Boolean))) as string[]
+            let equipmentMap = new Map()
+
+            if (equipmentIds.length > 0) {
+                const equipmentRes = await fetch(
+                    `${url}/rest/v1/equipment?id=in.(${equipmentIds.join(',')})&select=id,name,equipment_number`,
+                    { headers }
+                )
+                if (equipmentRes.ok) {
+                    const equipment = await equipmentRes.json()
+                    equipment.forEach((e: any) => equipmentMap.set(e.id, e))
+                }
+            }
+
+            // Merge Data
+            records = records.map((r: any) => ({
+                ...r,
+                profiles: profilesMap.get(r.user_id) || null,
+                equipment: equipmentMap.get(r.equipment_id) || null
+            }))
+        }
+    }
 
     // Get column names from first record
     const columns = records.length > 0 ? Object.keys(records[0]) : []
@@ -106,12 +132,11 @@ export async function exportData(options: ExportOptions): Promise<Blob> {
     const fromDate = options.dateRange.from.toISOString()
     const toDate = options.dateRange.to.toISOString()
 
-    let selectQuery = '*'
-    let endpoint = `${url}/rest/v1/${tableName}?`
+    let endpoint = `${url}/rest/v1/${tableName}?select=*`
 
     // Add date filter
     if (options.dataType !== 'equipment') {
-        endpoint += `created_at=gte.${fromDate}&created_at=lte.${toDate}`
+        endpoint += `&created_at=gte.${fromDate}&created_at=lte.${toDate}`
     }
 
     // Add status filter
@@ -120,30 +145,59 @@ export async function exportData(options: ExportOptions): Promise<Blob> {
         endpoint += `&status=in.(${statusList})`
     }
 
-    // Include related data
-    if (options.includeRelated) {
-        if (options.dataType === 'loans' || options.dataType === 'reservations') {
-            selectQuery = '*,profiles:user_id(first_name,last_name,email),equipment:equipment_id(name,equipment_number)'
-        }
-    }
-
-    if (selectQuery !== '*') {
-        endpoint += `&select=${selectQuery}`
-    } else {
-        endpoint += '&select=*'
-    }
-
     const response = await fetch(endpoint, { headers })
     if (!response.ok) {
         throw new Error(`Failed to fetch data: ${response.status}`)
     }
 
-    const data = await response.json()
-    const records = Array.isArray(data) ? data : []
+    let records = await response.json()
+    if (!Array.isArray(records)) records = []
 
     // Check rate limit
     if (records.length > RATE_LIMITS.export.maxRecords) {
         throw new Error(`จำนวนข้อมูลเกิน ${RATE_LIMITS.export.maxRecords} รายการ กรุณาเลือกช่วงวันที่น้อยลง`)
+    }
+
+    // Manually fetch related data if requested
+    if (options.includeRelated && records.length > 0) {
+        if (options.dataType === 'loans' || options.dataType === 'reservations') {
+            // Fetch Profiles
+            const userIds = Array.from(new Set(records.map((r: any) => r.user_id).filter(Boolean))) as string[]
+            let profilesMap = new Map()
+
+            if (userIds.length > 0) {
+                const profilesRes = await fetch(
+                    `${url}/rest/v1/profiles?id=in.(${userIds.join(',')})&select=id,first_name,last_name,email`,
+                    { headers }
+                )
+                if (profilesRes.ok) {
+                    const profiles = await profilesRes.json()
+                    profiles.forEach((p: any) => profilesMap.set(p.id, p))
+                }
+            }
+
+            // Fetch Equipment
+            const equipmentIds = Array.from(new Set(records.map((r: any) => r.equipment_id).filter(Boolean))) as string[]
+            let equipmentMap = new Map()
+
+            if (equipmentIds.length > 0) {
+                const equipmentRes = await fetch(
+                    `${url}/rest/v1/equipment?id=in.(${equipmentIds.join(',')})&select=id,name,equipment_number`,
+                    { headers }
+                )
+                if (equipmentRes.ok) {
+                    const equipment = await equipmentRes.json()
+                    equipment.forEach((e: any) => equipmentMap.set(e.id, e))
+                }
+            }
+
+            // Merge Data
+            records = records.map((r: any) => ({
+                ...r,
+                profiles: profilesMap.get(r.user_id) || null,
+                equipment: equipmentMap.get(r.equipment_id) || null
+            }))
+        }
     }
 
     if (options.format === 'json') {
