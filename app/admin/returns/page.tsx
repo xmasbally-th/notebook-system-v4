@@ -89,8 +89,8 @@ export default function AdminReturnsPage() {
 
             if (!loanResponse.ok) throw new Error('Failed to update loan')
 
-            // Update equipment status back to ready (if not damaged)
-            const newStatus = condition === 'good' ? 'ready' : 'maintenance'
+            // Update equipment status back to active (if not damaged)
+            const newStatus = condition === 'good' ? 'active' : 'maintenance'
             const equipmentResponse = await fetch(`${url}/rest/v1/equipment?id=eq.${equipmentId}`, {
                 method: 'PATCH',
                 headers: {
