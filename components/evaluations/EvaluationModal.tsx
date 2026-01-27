@@ -151,57 +151,59 @@ export default function EvaluationModal({ isOpen, onClose, loan, onSuccess }: Ev
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl my-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-white rounded-none sm:rounded-xl shadow-xl w-full max-w-3xl my-0 sm:my-8 h-full sm:h-auto flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-100 sticky top-0 bg-white rounded-t-xl z-10">
+                <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100 sticky top-0 bg-white sm:rounded-t-xl z-20 shadow-sm sm:shadow-none">
                     <div>
-                        <h2 className="text-xl font-bold text-gray-900">แบบประเมินความพึงพอใจ</h2>
-                        <p className="text-sm text-gray-500 mt-1">
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-900">แบบประเมินความพึงพอใจ</h2>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1 line-clamp-1">
                             อุปกรณ์: {loan.equipment?.name} (#{loan.equipment?.equipment_number})
                         </p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
                     >
                         <X className="w-5 h-5 text-gray-500" />
                     </button>
                 </div>
 
                 {/* Content */}
-                <div className="p-6 space-y-8">
+                <div className="flex-1 p-4 sm:p-6 space-y-6 sm:space-y-8 overflow-y-auto">
                     {/* Sections */}
                     {SECTIONS.map((section) => (
-                        <div key={section.category} className="space-y-4">
-                            <h3 className="text-lg font-semibold text-gray-900 border-l-4 border-blue-600 pl-3">
+                        <div key={section.category} className="space-y-3 sm:space-y-4">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 border-l-4 border-blue-600 pl-2 sm:pl-3">
                                 {section.title}
                             </h3>
-                            <div className="space-y-4 pl-4">
+                            <div className="space-y-3 sm:space-y-4 sm:pl-4">
                                 {section.questions.map((q) => (
-                                    <div key={q.key} className="bg-gray-50 rounded-lg p-4">
+                                    <div key={q.key} className="bg-gray-50 rounded-lg p-3 sm:p-4">
                                         <div className="mb-3">
-                                            <p className="font-medium text-gray-900">{q.label}</p>
+                                            <p className="font-medium text-gray-900 text-sm sm:text-base">{q.label}</p>
                                             {q.description && (
-                                                <p className="text-sm text-gray-500 mt-1">{q.description}</p>
+                                                <p className="text-xs sm:text-sm text-gray-500 mt-1">{q.description}</p>
                                             )}
                                         </div>
-                                        <div className="flex gap-2">
-                                            {[1, 2, 3, 4, 5].map((star) => (
-                                                <button
-                                                    key={star}
-                                                    onClick={() => handleRate(section.category, q.key, star)}
-                                                    className="p-1 hover:scale-110 transition-transform focus:outline-none"
-                                                >
-                                                    <Star
-                                                        className={`w-8 h-8 ${ratings[section.category][q.key] >= star
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <div className="flex gap-1 sm:gap-2">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <button
+                                                        key={star}
+                                                        onClick={() => handleRate(section.category, q.key, star)}
+                                                        className="p-1 hover:scale-110 transition-transform focus:outline-none"
+                                                    >
+                                                        <Star
+                                                            className={`w-6 h-6 sm:w-8 sm:h-8 ${ratings[section.category][q.key] >= star
                                                                 ? 'fill-yellow-400 text-yellow-400'
                                                                 : 'text-gray-300'
-                                                            }`}
-                                                    />
-                                                </button>
-                                            ))}
-                                            <span className="ml-2 text-sm text-gray-500 self-center">
+                                                                }`}
+                                                        />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <span className="ml-0 sm:ml-2 text-xs sm:text-sm text-gray-500 self-center">
                                                 {ratings[section.category][q.key] > 0
                                                     ? `${ratings[section.category][q.key]} คะแนน`
                                                     : 'ยังไม่ระบุ'}
@@ -214,33 +216,33 @@ export default function EvaluationModal({ isOpen, onClose, loan, onSuccess }: Ev
                     ))}
 
                     {/* Suggestions Section */}
-                    <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-gray-900 border-l-4 border-blue-600 pl-3">
+                    <div className="space-y-3 sm:space-y-4">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 border-l-4 border-blue-600 pl-2 sm:pl-3">
                             ส่วนที่ 5: ข้อเสนอแนะเพิ่มเติม (Suggestions)
                         </h3>
-                        <div className="pl-4">
+                        <div className="sm:pl-4">
                             <textarea
                                 value={suggestions}
                                 onChange={(e) => setSuggestions(e.target.value)}
                                 placeholder="ข้อเสนอแนะเพื่อการปรับปรุง..."
-                                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+                                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] text-sm sm:text-base"
                             />
                         </div>
                     </div>
 
                     {error && (
-                        <div className="p-3 bg-red-50 text-red-600 rounded-lg flex items-center gap-2">
-                            <AlertTriangle className="w-5 h-5" />
+                        <div className="p-3 bg-red-50 text-red-600 rounded-lg flex items-center gap-2 text-sm sm:text-base">
+                            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
                             {error}
                         </div>
                     )}
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-end gap-3 sticky bottom-0">
+                <div className="p-4 sm:p-6 border-t border-gray-100 bg-gray-50 sm:rounded-b-xl flex justify-end gap-3 sticky bottom-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] sm:shadow-none">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors font-medium"
+                        className="px-4 py-2 text-sm sm:text-base text-gray-600 hover:bg-gray-200 rounded-lg transition-colors font-medium"
                         disabled={isSubmitting}
                     >
                         ยกเลิก
@@ -248,7 +250,7 @@ export default function EvaluationModal({ isOpen, onClose, loan, onSuccess }: Ev
                     <button
                         onClick={handleSubmit}
                         disabled={isSubmitting}
-                        className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                     >
                         {isSubmitting ? (
                             <>
