@@ -26,7 +26,7 @@ export interface ActivityLogEntry {
     staffId: string
     staffRole: 'staff' | 'admin'
     actionType: ActionType
-    targetType: 'loan' | 'reservation' | 'notification' | 'special_loan'
+    targetType: 'loan' | 'reservation' | 'notification' | 'special_loan' | 'evaluation'
     targetId: string
     targetUserId?: string
     isSelfAction?: boolean

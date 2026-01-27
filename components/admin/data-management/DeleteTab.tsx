@@ -114,7 +114,7 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
                 staffId: userId,
                 staffRole: 'admin',
                 actionType: dataType === 'notifications' ? 'hard_delete_notifications' : 'soft_delete_data',
-                targetType: dataType === 'notifications' ? 'notification' : 'loan',
+                targetType: dataType === 'notifications' ? 'notification' : (dataType === 'evaluations' ? 'evaluation' : 'loan'),
                 targetId: 'bulk',
                 details: {
                     dataType,
