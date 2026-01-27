@@ -77,16 +77,50 @@ export default function ChatWindow({ ticketId, currentUserId, isStaffView = fals
             if (!text.trim()) return
             await sendMessageAction(ticketId, text)
         },
-        onSuccess: () => {
-            setNewMessage('')
-            // Optimistic update handled by Realtime, but good to invalidate to be sure
+        onMutate: async (text) => {
+            // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+            await queryClient.cancelQueries({ queryKey: ['chat-messages', ticketId] })
+
+            // Snapshot the previous value
+            const previousMessages = queryClient.getQueryData<Message[]>(['chat-messages', ticketId])
+
+            // Optimistically update to the new value
+            if (previousMessages) {
+                const optimisticMessage: Message = {
+                    id: 'optimistic-' + Math.random(),
+                    ticket_id: ticketId,
+                    sender_id: currentUserId,
+                    message: text,
+                    is_staff_reply: isStaffView,
+                    created_at: new Date().toISOString()
+                }
+
+                queryClient.setQueryData<Message[]>(['chat-messages', ticketId], [
+                    ...previousMessages,
+                    optimisticMessage
+                ])
+            }
+
+            return { previousMessages }
+        },
+        onError: (err, newTodo, context) => {
+            // Rollback to the previous value
+            if (context?.previousMessages) {
+                queryClient.setQueryData(['chat-messages', ticketId], context.previousMessages)
+            }
+        },
+        onSettled: () => {
+            // Always refetch after error or success to ensure server state
             queryClient.invalidateQueries({ queryKey: ['chat-messages', ticketId] })
         }
     })
 
     const handleSend = (e: React.FormEvent) => {
         e.preventDefault()
+        if (!newMessage.trim()) return
+
         sendMessageMutation.mutate(newMessage)
+        setNewMessage('') // Clear input immediately
     }
 
     return (

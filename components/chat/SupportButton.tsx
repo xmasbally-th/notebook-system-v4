@@ -40,7 +40,7 @@ export default function SupportButton() {
                 .eq('status', 'open')
                 .order('created_at', { ascending: false })
                 .limit(1)
-                .single()
+                .maybeSingle()
 
             if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
                 console.error('Error fetching ticket:', error)
