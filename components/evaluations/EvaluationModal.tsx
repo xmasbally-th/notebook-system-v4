@@ -152,12 +152,12 @@ export default function EvaluationModal({ isOpen, onClose, loan, onSuccess }: Ev
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
-            <div className="bg-white rounded-none sm:rounded-xl shadow-xl w-full max-w-3xl my-0 sm:my-8 h-full sm:h-auto flex flex-col">
+            <div className="bg-white rounded-none sm:rounded-xl shadow-xl w-full max-w-3xl my-0 sm:my-8 lg:my-12 h-full sm:h-auto flex flex-col transition-all duration-300">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100 sticky top-0 bg-white sm:rounded-t-xl z-20 shadow-sm sm:shadow-none">
+                <div className="flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-gray-100 sticky top-0 bg-white sm:rounded-t-xl z-20 shadow-sm sm:shadow-none">
                     <div>
-                        <h2 className="text-lg sm:text-xl font-bold text-gray-900">แบบประเมินความพึงพอใจ</h2>
-                        <p className="text-xs sm:text-sm text-gray-500 mt-1 line-clamp-1">
+                        <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">แบบประเมินความพึงพอใจ</h2>
+                        <p className="text-xs sm:text-sm lg:text-base text-gray-500 mt-1 line-clamp-1">
                             อุปกรณ์: {loan.equipment?.name} (#{loan.equipment?.equipment_number})
                         </p>
                     </div>
@@ -165,29 +165,29 @@ export default function EvaluationModal({ isOpen, onClose, loan, onSuccess }: Ev
                         onClick={onClose}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
                     >
-                        <X className="w-5 h-5 text-gray-500" />
+                        <X className="w-5 h-5 lg:w-6 lg:h-6 text-gray-500" />
                     </button>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 p-4 sm:p-6 space-y-6 sm:space-y-8 overflow-y-auto">
+                <div className="flex-1 p-4 sm:p-6 lg:p-10 space-y-6 sm:space-y-8 lg:space-y-10 overflow-y-auto">
                     {/* Sections */}
                     {SECTIONS.map((section) => (
-                        <div key={section.category} className="space-y-3 sm:space-y-4">
-                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 border-l-4 border-blue-600 pl-2 sm:pl-3">
+                        <div key={section.category} className="space-y-3 sm:space-y-4 lg:space-y-6">
+                            <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 border-l-4 border-blue-600 pl-2 sm:pl-3 lg:pl-4">
                                 {section.title}
                             </h3>
-                            <div className="space-y-3 sm:space-y-4 sm:pl-4">
+                            <div className="space-y-3 sm:space-y-4 lg:space-y-5 sm:pl-4 lg:pl-6">
                                 {section.questions.map((q) => (
-                                    <div key={q.key} className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                                        <div className="mb-3">
-                                            <p className="font-medium text-gray-900 text-sm sm:text-base">{q.label}</p>
+                                    <div key={q.key} className="bg-gray-50 rounded-lg p-3 sm:p-4 lg:p-6 transition-colors hover:bg-gray-100">
+                                        <div className="mb-3 lg:mb-4">
+                                            <p className="font-medium text-gray-900 text-sm sm:text-base lg:text-lg">{q.label}</p>
                                             {q.description && (
-                                                <p className="text-xs sm:text-sm text-gray-500 mt-1">{q.description}</p>
+                                                <p className="text-xs sm:text-sm lg:text-base text-gray-500 mt-1">{q.description}</p>
                                             )}
                                         </div>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <div className="flex gap-1 sm:gap-2">
+                                        <div className="flex flex-wrap items-center gap-2 lg:gap-4">
+                                            <div className="flex gap-1 sm:gap-2 lg:gap-3">
                                                 {[1, 2, 3, 4, 5].map((star) => (
                                                     <button
                                                         key={star}
@@ -195,7 +195,7 @@ export default function EvaluationModal({ isOpen, onClose, loan, onSuccess }: Ev
                                                         className="p-1 hover:scale-110 transition-transform focus:outline-none"
                                                     >
                                                         <Star
-                                                            className={`w-6 h-6 sm:w-8 sm:h-8 ${ratings[section.category][q.key] >= star
+                                                            className={`w-6 h-6 sm:w-8 sm:h-8 lg:w-9 lg:h-9 ${ratings[section.category][q.key] >= star
                                                                 ? 'fill-yellow-400 text-yellow-400'
                                                                 : 'text-gray-300'
                                                                 }`}
@@ -203,7 +203,7 @@ export default function EvaluationModal({ isOpen, onClose, loan, onSuccess }: Ev
                                                     </button>
                                                 ))}
                                             </div>
-                                            <span className="ml-0 sm:ml-2 text-xs sm:text-sm text-gray-500 self-center">
+                                            <span className="ml-0 sm:ml-2 text-xs sm:text-sm lg:text-base text-gray-500 self-center">
                                                 {ratings[section.category][q.key] > 0
                                                     ? `${ratings[section.category][q.key]} คะแนน`
                                                     : 'ยังไม่ระบุ'}
@@ -216,33 +216,33 @@ export default function EvaluationModal({ isOpen, onClose, loan, onSuccess }: Ev
                     ))}
 
                     {/* Suggestions Section */}
-                    <div className="space-y-3 sm:space-y-4">
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 border-l-4 border-blue-600 pl-2 sm:pl-3">
+                    <div className="space-y-3 sm:space-y-4 lg:space-y-6">
+                        <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 border-l-4 border-blue-600 pl-2 sm:pl-3 lg:pl-4">
                             ส่วนที่ 5: ข้อเสนอแนะเพิ่มเติม (Suggestions)
                         </h3>
-                        <div className="sm:pl-4">
+                        <div className="sm:pl-4 lg:pl-6">
                             <textarea
                                 value={suggestions}
                                 onChange={(e) => setSuggestions(e.target.value)}
                                 placeholder="ข้อเสนอแนะเพื่อการปรับปรุง..."
-                                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] text-sm sm:text-base"
+                                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] lg:min-h-[120px] text-sm sm:text-base lg:text-lg transition-shadow hover:shadow-sm"
                             />
                         </div>
                     </div>
 
                     {error && (
-                        <div className="p-3 bg-red-50 text-red-600 rounded-lg flex items-center gap-2 text-sm sm:text-base">
-                            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                        <div className="p-3 lg:p-4 bg-red-50 text-red-600 rounded-lg flex items-center gap-2 text-sm sm:text-base lg:text-lg">
+                            <AlertTriangle className="w-5 h-5 lg:w-6 lg:h-6 flex-shrink-0" />
                             {error}
                         </div>
                     )}
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 sm:p-6 border-t border-gray-100 bg-gray-50 sm:rounded-b-xl flex justify-end gap-3 sticky bottom-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] sm:shadow-none">
+                <div className="p-4 sm:p-6 lg:p-8 border-t border-gray-100 bg-gray-50 sm:rounded-b-xl flex justify-end gap-3 sticky bottom-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] sm:shadow-none">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 text-sm sm:text-base text-gray-600 hover:bg-gray-200 rounded-lg transition-colors font-medium"
+                        className="px-4 py-2 lg:px-6 lg:py-3 text-sm sm:text-base lg:text-lg text-gray-600 hover:bg-gray-200 rounded-lg transition-colors font-medium"
                         disabled={isSubmitting}
                     >
                         ยกเลิก
@@ -250,16 +250,16 @@ export default function EvaluationModal({ isOpen, onClose, loan, onSuccess }: Ev
                     <button
                         onClick={handleSubmit}
                         disabled={isSubmitting}
-                        className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                        className="flex items-center gap-2 px-6 py-2 lg:px-8 lg:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base lg:text-lg shadow-sm hover:shadow-md"
                     >
                         {isSubmitting ? (
                             <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <Loader2 className="w-4 h-4 lg:w-5 lg:h-5 animate-spin" />
                                 กำลังบันทึก...
                             </>
                         ) : (
                             <>
-                                <Send className="w-4 h-4" />
+                                <Send className="w-4 h-4 lg:w-5 lg:h-5" />
                                 ส่งแบบประเมิน
                             </>
                         )}
