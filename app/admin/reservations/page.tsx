@@ -21,6 +21,7 @@ import {
     MessageSquare, Timer, Ban, Trash2, BarChart3,
     Download, Filter
 } from 'lucide-react'
+import { notifyReservationStatusChange } from '@/app/notifications/actions'
 
 const STATUS_CONFIG: Record<ReservationStatus, { label: string; color: string; icon: any }> = {
     pending: { label: 'รออนุมัติ', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
@@ -88,6 +89,7 @@ export default function AdminReservationsPage() {
         if (result.success) {
             toast.success('อนุมัติการจองเรียบร้อยแล้ว')
             queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
+            notifyReservationStatusChange(id, 'approved')
         } else {
             toast.error(result.error || 'เกิดข้อผิดพลาด')
         }
@@ -108,6 +110,7 @@ export default function AdminReservationsPage() {
         if (result.success) {
             toast.success('ปฏิเสธการจองเรียบร้อยแล้ว')
             queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
+            notifyReservationStatusChange(rejectModal.id, 'rejected')
         } else {
             toast.error(result.error || 'เกิดข้อผิดพลาด')
         }
@@ -121,6 +124,7 @@ export default function AdminReservationsPage() {
         if (result.success) {
             toast.success('เปลี่ยนสถานะเป็น "พร้อมรับ" แล้ว')
             queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
+            notifyReservationStatusChange(id, 'ready')
         } else {
             toast.error(result.error || 'เกิดข้อผิดพลาด')
         }
@@ -136,6 +140,7 @@ export default function AdminReservationsPage() {
         if (result.success) {
             toast.success('แปลงเป็นคำขอยืมเรียบร้อยแล้ว')
             queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
+            notifyReservationStatusChange(reservation.id, 'completed')
         } else {
             toast.error(result.error || 'เกิดข้อผิดพลาด')
         }

@@ -9,6 +9,7 @@ import {
     Calendar, Search, ClipboardCheck
 } from 'lucide-react'
 import { useToast } from '@/components/ui/toast'
+import { notifyReturn } from '@/app/notifications/actions'
 
 type ConditionType = 'good' | 'damaged' | 'missing_parts'
 
@@ -108,7 +109,7 @@ export default function StaffReturnsPage() {
 
             return { condition }
         },
-        onSuccess: ({ condition }) => {
+        onSuccess: ({ condition }, variables) => {
             queryClient.invalidateQueries({ queryKey: ['staff-active-loans'] })
             queryClient.invalidateQueries({ queryKey: ['staff-dashboard-stats'] })
             setShowReturnModal(false)
@@ -121,6 +122,10 @@ export default function StaffReturnsPage() {
             } else {
                 toast.warning('บันทึกการคืนแล้ว - อุปกรณ์ถูกส่งซ่อมบำรุง')
             }
+
+            // Fire and forget notification
+            // variables = { loanId, equipmentId, condition, notes }
+            notifyReturn(variables.loanId, variables.condition, variables.notes)
         },
         onError: () => {
             toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่')

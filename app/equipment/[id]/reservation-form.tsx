@@ -17,6 +17,7 @@ import {
     Info,
     CalendarPlus
 } from 'lucide-react'
+import { notifyReservationCreated } from '@/app/notifications/actions'
 
 interface ReservationFormProps {
     equipmentId: string
@@ -125,8 +126,10 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
                 `${endDate}T${returnTime}:00`
             )
 
-            if (result.success) {
+            if (result.success && result.reservationId) {
                 setSuccess(true)
+                // Fire and forget notification
+                notifyReservationCreated(result.reservationId)
             } else {
                 setError(result.error || 'เกิดข้อผิดพลาด')
             }
