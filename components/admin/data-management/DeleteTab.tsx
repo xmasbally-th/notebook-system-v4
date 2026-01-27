@@ -210,7 +210,13 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
                                 key={option.value}
                                 onClick={() => {
                                     setDataType(option.value)
-                                    setSelectedStatuses(option.value === 'notifications' ? ['read'] : ['returned', 'cancelled'])
+                                    if (option.value === 'evaluations') {
+                                        setSelectedStatuses([])
+                                    } else if (option.value === 'notifications') {
+                                        setSelectedStatuses(['read'])
+                                    } else {
+                                        setSelectedStatuses(['returned', 'cancelled'])
+                                    }
                                     setSelectedNotificationTypes([])
                                     setPreview(null)
                                     setDeleteResult(null)

@@ -48,8 +48,8 @@ export async function fetchExportData(options: ExportOptions): Promise<PreviewDa
         endpoint += `&created_at=gte.${fromDate}&created_at=lte.${toDate}`
     }
 
-    // Add status filter if provided
-    if (options.statusFilter && options.statusFilter.length > 0) {
+    // Add status filter if provided (exclude evaluations as it has no status column)
+    if (options.dataType !== 'evaluations' && options.statusFilter && options.statusFilter.length > 0) {
         const statusList = options.statusFilter.join(',')
         endpoint += `&status=in.(${statusList})`
     }
@@ -196,8 +196,8 @@ export async function exportData(options: ExportOptions): Promise<Blob> {
         endpoint += `&created_at=gte.${fromDate}&created_at=lte.${toDate}`
     }
 
-    // Add status filter
-    if (options.statusFilter && options.statusFilter.length > 0) {
+    // Add status filter (exclude evaluations)
+    if (options.dataType !== 'evaluations' && options.statusFilter && options.statusFilter.length > 0) {
         const statusList = options.statusFilter.join(',')
         endpoint += `&status=in.(${statusList})`
     }
