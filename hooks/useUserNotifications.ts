@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useCallback, useEffect } from 'react'
 import { useSharedNotificationData } from './useSharedNotificationData'
-import { createBrowserClient } from '@supabase/ssr'
+import { supabase } from '@/lib/supabase/client'
 
 /**
  * User Notifications Hook
@@ -43,13 +43,7 @@ interface UserNotificationsResult {
     refetch: () => void
 }
 
-const POLL_INTERVAL = 30000 // 30 seconds
 
-function getSupabaseCredentials() {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    return { url, key }
-}
 
 export function useUserNotifications(userId?: string, accessToken?: string): UserNotificationsResult {
     const queryClient = useQueryClient()
@@ -61,67 +55,35 @@ export function useUserNotifications(userId?: string, accessToken?: string): Use
         queryFn: async () => {
             if (!userId) return { notifications: [] }
 
-            const { url, key } = getSupabaseCredentials()
-            if (!url || !key) return { notifications: [] }
+            const { data, error } = await supabase
+                .from('notifications')
+                .select('*')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false })
+                .limit(20)
 
-            try {
-                const authHeader = accessToken ? `Bearer ${accessToken}` : `Bearer ${key}`
-                const response = await fetch(
-                    `${url}/rest/v1/notifications?user_id=eq.${userId}&select=*&order=created_at.desc&limit=20`,
-                    {
-                        headers: {
-                            'apikey': key,
-                            'Authorization': authHeader,
-                            'Content-Type': 'application/json'
-                        }
-                    }
-                )
-
-                if (!response.ok) {
-                    // Table might not exist yet
-                    if (response.status === 404) {
-                        return { notifications: [] }
-                    }
-                    console.error('[UserNotifications] Fetch error:', response.status)
-                    return { notifications: [] }
-                }
-
-                const notifications = await response.json()
-                return { notifications: notifications || [] }
-            } catch (error) {
-                console.error('[UserNotifications] Exception:', error)
+            if (error) {
+                console.error('[UserNotifications] Fetch error:', error)
                 return { notifications: [] }
             }
+
+            return { notifications: data || [] }
         },
         enabled: !!userId,
-        refetchInterval: POLL_INTERVAL,
-        staleTime: 10000,
+        staleTime: 1000 * 60 * 5, // 5 minutes (invalidated by realtime)
     })
 
     // Mark notification as read mutation
     const markAsReadMutation = useMutation({
         mutationFn: async (notificationId: string) => {
-            const { url, key } = getSupabaseCredentials()
-            if (!url || !key) throw new Error('Missing credentials')
+            const { error } = await (supabase as any)
+                .from('notifications')
+                .update({ is_read: true })
+                .eq('id', notificationId)
 
-            const authHeader = accessToken ? `Bearer ${accessToken}` : `Bearer ${key}`
-            const response = await fetch(
-                `${url}/rest/v1/notifications?id=eq.${notificationId}`,
-                {
-                    method: 'PATCH',
-                    headers: {
-                        'apikey': key,
-                        'Authorization': authHeader,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=minimal'
-                    },
-                    body: JSON.stringify({ is_read: true })
-                }
-            )
-
-            if (!response.ok) {
-                console.error('[markAsRead] Failed:', response.status)
-                throw new Error('Failed to mark as read')
+            if (error) {
+                console.error('[markAsRead] Failed:', error)
+                throw error
             }
         },
         onSuccess: () => {
@@ -133,27 +95,16 @@ export function useUserNotifications(userId?: string, accessToken?: string): Use
     const markAllAsReadMutation = useMutation({
         mutationFn: async () => {
             if (!userId) throw new Error('No user ID')
-            const { url, key } = getSupabaseCredentials()
-            if (!url || !key) throw new Error('Missing credentials')
 
-            const authHeader = accessToken ? `Bearer ${accessToken}` : `Bearer ${key}`
-            const response = await fetch(
-                `${url}/rest/v1/notifications?user_id=eq.${userId}&is_read=eq.false`,
-                {
-                    method: 'PATCH',
-                    headers: {
-                        'apikey': key,
-                        'Authorization': authHeader,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=minimal'
-                    },
-                    body: JSON.stringify({ is_read: true })
-                }
-            )
+            const { error } = await (supabase as any)
+                .from('notifications')
+                .update({ is_read: true })
+                .eq('user_id', userId)
+                .eq('is_read', false)
 
-            if (!response.ok) {
-                console.error('[markAllAsRead] Failed:', response.status)
-                throw new Error('Failed to mark all as read')
+            if (error) {
+                console.error('[markAllAsRead] Failed:', error)
+                throw error
             }
         },
         onSuccess: () => {
@@ -216,12 +167,7 @@ export function useUserNotifications(userId?: string, accessToken?: string): Use
     useEffect(() => {
         if (!userId) return
 
-        const { url, key } = getSupabaseCredentials()
-        if (!url || !key) return
-
-        const client = createBrowserClient(url, key)
-
-        const channel = client
+        const channel = supabase
             .channel(`user-notifications-${userId}`)
             .on(
                 'postgres_changes',
@@ -231,7 +177,7 @@ export function useUserNotifications(userId?: string, accessToken?: string): Use
                     table: 'notifications',
                     filter: `user_id=eq.${userId}`
                 },
-                (payload: any) => {
+                (payload) => {
                     // console.log('Realtime notification received:', payload)
                     // Invalidate query to refetch fresh data
                     queryClient.invalidateQueries({ queryKey: ['user-notifications', userId] })
@@ -240,7 +186,7 @@ export function useUserNotifications(userId?: string, accessToken?: string): Use
             .subscribe()
 
         return () => {
-            client.removeChannel(channel)
+            supabase.removeChannel(channel)
         }
     }, [userId, queryClient])
 

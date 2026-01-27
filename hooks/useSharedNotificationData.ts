@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { supabase } from '@/lib/supabase/client'
 
 /**
  * Shared Notification Data Hook
@@ -51,25 +51,15 @@ interface SharedNotificationData {
     refetch: () => void
 }
 
-const POLL_INTERVAL = 30000 // 30 seconds
 
-function getSupabaseCredentials() {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    return { url, key }
-}
 
 export function useSharedNotificationData(): SharedNotificationData {
     const queryClient = useQueryClient()
 
     // Realtime Subscription for Loans and Reservations
+    // Realtime Subscription for Loans and Reservations
     useEffect(() => {
-        const { url, key } = getSupabaseCredentials()
-        if (!url || !key) return
-
-        const client = createBrowserClient(url, key)
-
-        const channel = client
+        const channel = supabase
             .channel('shared-data-changes')
             .on(
                 'postgres_changes',
@@ -90,7 +80,7 @@ export function useSharedNotificationData(): SharedNotificationData {
             .subscribe()
 
         return () => {
-            client.removeChannel(channel)
+            supabase.removeChannel(channel)
         }
     }, [queryClient])
 
@@ -98,75 +88,39 @@ export function useSharedNotificationData(): SharedNotificationData {
     const { data: loansData, isLoading: loansLoading, refetch: refetchLoans } = useQuery({
         queryKey: ['shared-loans-data'],
         queryFn: async () => {
-            const { url, key } = getSupabaseCredentials()
-            if (!url || !key) return { loans: [] }
+            const { data, error } = await supabase
+                .from('loanRequests')
+                .select('*,equipment(id,name,equipment_number),profiles(first_name,last_name,email)')
+                .order('created_at', { ascending: false })
 
-            try {
-                // Fetch loans with equipment and user info
-                const response = await fetch(
-                    `${url}/rest/v1/loanRequests?select=*,equipment(id,name,equipment_number),profiles(first_name,last_name,email)&order=created_at.desc`,
-                    {
-                        headers: {
-                            'apikey': key,
-                            'Authorization': `Bearer ${key}`,
-                            'Content-Type': 'application/json'
-                        }
-                    }
-                )
-
-                if (!response.ok) {
-                    console.error('[SharedData] Loans fetch error:', response.status)
-                    return { loans: [] }
-                }
-
-                const loans = await response.json()
-                return { loans: loans || [] }
-            } catch (error) {
-                console.error('[SharedData] Loans exception:', error)
+            if (error) {
+                console.error('[SharedData] Loans fetch error:', error)
                 return { loans: [] }
             }
+
+            return { loans: data || [] }
         },
-        refetchInterval: POLL_INTERVAL,
-        staleTime: 10000,
+        staleTime: 1000 * 60 * 5, // 5 minutes (invalidated by realtime)
     })
 
     // Fetch pending reservations
     const { data: reservationsData, isLoading: reservationsLoading, refetch: refetchReservations } = useQuery({
         queryKey: ['shared-reservations-data'],
         queryFn: async () => {
-            const { url, key } = getSupabaseCredentials()
-            if (!url || !key) return { reservations: [] }
+            const { data, error } = await supabase
+                .from('reservations')
+                .select('*')
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false })
 
-            try {
-                const response = await fetch(
-                    `${url}/rest/v1/reservations?status=eq.pending&select=*&order=created_at.desc`,
-                    {
-                        headers: {
-                            'apikey': key,
-                            'Authorization': `Bearer ${key}`,
-                            'Content-Type': 'application/json'
-                        }
-                    }
-                )
-
-                if (!response.ok) {
-                    // Table might not exist yet
-                    if (response.status === 404) {
-                        return { reservations: [] }
-                    }
-                    console.error('[SharedData] Reservations fetch error:', response.status)
-                    return { reservations: [] }
-                }
-
-                const reservations = await response.json()
-                return { reservations: reservations || [] }
-            } catch (error) {
-                console.error('[SharedData] Reservations exception:', error)
+            if (error) {
+                console.error('[SharedData] Reservations fetch error:', error)
                 return { reservations: [] }
             }
+
+            return { reservations: data || [] }
         },
-        refetchInterval: POLL_INTERVAL,
-        staleTime: 10000,
+        staleTime: 1000 * 60 * 5, // 5 minutes (invalidated by realtime)
     })
 
     const allLoans = loansData?.loans || []

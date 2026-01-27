@@ -1,7 +1,8 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
-import { getSupabaseCredentials } from '@/lib/supabase-helpers'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase/client'
+import { useEffect } from 'react'
 import Link from 'next/link'
 import AdminLayout from '@/components/admin/AdminLayout'
 import {
@@ -16,40 +17,48 @@ import {
     Clock,
     AlertCircle
 } from 'lucide-react'
-import { useRealtimeInvalidator } from '@/hooks/useRealtimeInvalidator'
-
 export default function AdminDashboard() {
-    // Enable Realtime Updates
-    useRealtimeInvalidator(['loanRequests', 'profiles'], [['admin-stats']])
-    // Fetch stats using direct API
+    const queryClient = useQueryClient()
+
+    // Enable Realtime Updates for Stats
+    useEffect(() => {
+        const channel = supabase
+            .channel('admin-stats-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'equipment' }, () => queryClient.invalidateQueries({ queryKey: ['admin-stats'] }))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => queryClient.invalidateQueries({ queryKey: ['admin-stats'] }))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'loanRequests' }, () => queryClient.invalidateQueries({ queryKey: ['admin-stats'] }))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, () => queryClient.invalidateQueries({ queryKey: ['admin-stats'] }))
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [queryClient])
+    // Fetch stats using Supabase client
     const { data: stats, isLoading } = useQuery({
         queryKey: ['admin-stats'],
-        staleTime: 30000,
+        // staleTime: Infinity, // Let Realtime handle updates
         queryFn: async () => {
-            const { url, key } = getSupabaseCredentials()
-            if (!url || !key) return { equipment: 0, pendingUsers: 0, pendingLoans: 0, activeLoans: 0, totalUsers: 0 }
-
-            const headers = { 'apikey': key, 'Authorization': `Bearer ${key}`, 'Prefer': 'count=exact' }
-
-            const [equipmentRes, pendingUsersRes, pendingLoansRes, activeLoansRes, totalUsersRes] = await Promise.all([
-                fetch(`${url}/rest/v1/equipment?select=id`, { headers }),
-                fetch(`${url}/rest/v1/profiles?status=eq.pending&select=id`, { headers }),
-                fetch(`${url}/rest/v1/loanRequests?status=eq.pending&select=id`, { headers }),
-                fetch(`${url}/rest/v1/loanRequests?status=eq.approved&select=id`, { headers }),
-                fetch(`${url}/rest/v1/profiles?select=id`, { headers })
+            const [
+                { count: equipment },
+                { count: pendingUsers },
+                { count: pendingLoans },
+                { count: activeLoans },
+                { count: totalUsers }
+            ] = await Promise.all([
+                supabase.from('equipment').select('*', { count: 'exact', head: true }),
+                supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+                supabase.from('loanRequests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+                supabase.from('loanRequests').select('*', { count: 'exact', head: true }).eq('status', 'approved'), // 'approved' means active loan? Or 'active'? Code used 'approved'.
+                supabase.from('profiles').select('*', { count: 'exact', head: true })
             ])
 
-            const getCount = (res: Response) => {
-                const range = res.headers.get('content-range')
-                return range ? parseInt(range.split('/')[1]) || 0 : 0
-            }
-
             return {
-                equipment: getCount(equipmentRes),
-                pendingUsers: getCount(pendingUsersRes),
-                pendingLoans: getCount(pendingLoansRes),
-                activeLoans: getCount(activeLoansRes),
-                totalUsers: getCount(totalUsersRes)
+                equipment: equipment || 0,
+                pendingUsers: pendingUsers || 0,
+                pendingLoans: pendingLoans || 0,
+                activeLoans: activeLoans || 0,
+                totalUsers: totalUsers || 0
             }
         }
     })

@@ -1,76 +1,81 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { createBrowserClient } from '@supabase/ssr'
+import { useEffect } from 'react'
+import { supabase } from '@/lib/supabase/client'
 import { Database } from '@/supabase/types'
 
 type SystemConfig = Database['public']['Tables']['system_config']['Row']
 type SystemConfigUpdate = Database['public']['Tables']['system_config']['Update']
 
-// Create client directly for this hook
-function getSupabaseClient() {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    if (!url || !key) {
-        console.error('[useSystemConfig] Missing Supabase env vars')
-        return null
-    }
-    return createBrowserClient<Database>(url, key)
-}
+
 
 export function useSystemConfig() {
+    const queryClient = useQueryClient()
+
+    useEffect(() => {
+        // Subscribe to realtime changes
+        const channel = supabase
+            .channel('system_config_changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'system_config',
+                    filter: 'id=eq.1'
+                },
+                (payload) => {
+                    // Update cache immediately
+                    if (payload.new) {
+                        queryClient.setQueryData(['system_config'], payload.new as SystemConfig)
+                    }
+                }
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [queryClient])
+
     return useQuery({
         queryKey: ['system_config'],
-        staleTime: 0,   // Always get fresh config for admin page
-        retry: 1,       // Retry once only
+        staleTime: 1000 * 60 * 5, // 5 minutes to reduce load
+        retry: 1,
         retryDelay: 1000,
         queryFn: async (): Promise<SystemConfig> => {
-
-
             try {
-                const client = getSupabaseClient()
-
-
-                if (!client) {
-                    console.error('[useSystemConfig] No client available')
-                    return getDefaultConfig()
-                }
-
-                // Wrap in timeout to prevent hanging
-                const timeoutMs = 15000
-
-
-                const queryPromise = client
-                    .from('system_config')
-                    .select('*')
-                    .limit(1)
+                const timeoutMs = 30000 // 30s timeout
 
                 const timeoutPromise = new Promise<never>((_, reject) => {
                     setTimeout(() => {
-                        console.error('[useSystemConfig] Query timed out after', timeoutMs, 'ms')
+                        console.warn('[useSystemConfig] Query timed out after', timeoutMs, 'ms')
                         reject(new Error('Query timeout'))
                     }, timeoutMs)
                 })
 
-                const { data, error } = await Promise.race([queryPromise, timeoutPromise])
+                const queryPromise = supabase
+                    .from('system_config')
+                    .select('*')
+                    .single()
 
+                // Use Promise.race to handle timeout
+                // We cast the result because single() returns { data, error }
+                const result = await Promise.race([queryPromise, timeoutPromise]) as { data: SystemConfig | null, error: any }
+                const { data, error } = result
 
                 if (error) {
-                    console.error('[useSystemConfig] Supabase error:', error.message, error.code)
+                    console.error('[useSystemConfig] Supabase error:', error.message)
+                    // If error is PGRST116 (0 rows), return default
                     return getDefaultConfig()
                 }
 
-                // Get first row from array
-                const config = Array.isArray(data) && data.length > 0 ? data[0] : null
-
-                if (!config) {
-                    console.warn('[useSystemConfig] No config found, using defaults')
+                if (!data) {
                     return getDefaultConfig()
                 }
 
-
-                return config as SystemConfig
+                return data
             } catch (err: any) {
                 console.error('[useSystemConfig] Exception:', err?.message || err)
-                // Return default config on error so page doesn't stay stuck
                 return getDefaultConfig()
             }
         }
@@ -110,12 +115,7 @@ export function useUpdateSystemConfig() {
 
     return useMutation({
         mutationFn: async (updates: SystemConfigUpdate) => {
-            const client = getSupabaseClient()
-            if (!client) {
-                throw new Error('Supabase client not available')
-            }
-
-            const { data, error } = await (client as any)
+            const { data, error } = await (supabase as any)
                 .from('system_config')
                 .update(updates)
                 .eq('id', 1) // Always update the singleton row
