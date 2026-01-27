@@ -235,6 +235,58 @@ export interface Database {
                     completed_by?: string | null
                 }
             }
+            support_tickets: {
+                Row: {
+                    id: string
+                    user_id: string
+                    status: 'open' | 'closed'
+                    subject: string | null
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    status?: 'open' | 'closed'
+                    subject?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    id?: string
+                    user_id?: string
+                    status?: 'open' | 'closed'
+                    subject?: string | null
+                    created_at?: string
+                    updated_at?: string
+                }
+            }
+            support_messages: {
+                Row: {
+                    id: string
+                    ticket_id: string
+                    sender_id: string | null
+                    message: string
+                    is_staff_reply: boolean
+                    created_at: string
+                }
+                Insert: {
+                    id?: string
+                    ticket_id: string
+                    sender_id?: string | null
+                    message: string
+                    is_staff_reply?: boolean
+                    created_at?: string
+                }
+                Update: {
+                    id?: string
+                    ticket_id?: string
+                    sender_id?: string | null
+                    message?: string
+                    is_staff_reply?: boolean
+                    created_at?: string
+                }
+            }
             staff_activity_log: {
                 Row: {
                     id: string

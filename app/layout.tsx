@@ -12,6 +12,7 @@ export const metadata: Metadata = {
     },
 }
 
+import SupportButton from '@/components/chat/SupportButton'
 import QueryProvider from '@/components/providers/QueryProvider'
 import AuthGuard from '@/components/auth/AuthGuard'
 
@@ -26,6 +27,7 @@ export default function RootLayout({
                 <QueryProvider>
                     <AuthGuard>
                         {children}
+                        <SupportButton />
                     </AuthGuard>
                 </QueryProvider>
             </body>

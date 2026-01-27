@@ -15,6 +15,8 @@ ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK (type IN
   'equipment_overdue',
   'reservation_confirmed',
   'reservation_ready',
+  'reservation_approved',
+  'reservation_rejected',
   'equipment_maintenance', -- NEW: Sent when status -> maintenance
   'equipment_retired',     -- NEW: Sent when status -> retired
   'equipment_ready'        -- NEW: Sent when status -> ready (from maintenance/retired)
