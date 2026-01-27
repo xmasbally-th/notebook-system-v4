@@ -167,7 +167,7 @@ export function useReportData(dateRange: DateRange) {
                 staffActivityRes
             ] = await Promise.all([
                 // Loans in date range
-                fetch(`${url}/rest/v1/loanRequests?select=id,status,created_at,end_date,user_id,equipment_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`, { headers }),
+                fetch(`${url}/rest/v1/loanRequests?select=id,status,created_at,end_date,returned_at,user_id,equipment_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`, { headers }),
                 // Reservations in date range
                 fetch(`${url}/rest/v1/reservations?select=id,status,created_at,user_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`, { headers }),
                 // All equipment
@@ -175,7 +175,7 @@ export function useReportData(dateRange: DateRange) {
                 // Overdue loans (approved but past end_date)
                 fetch(`${url}/rest/v1/loanRequests?select=id,end_date,user_id,equipment_id,profiles:user_id(first_name,last_name,email),equipment:equipment_id(name,equipment_number)&status=eq.approved&end_date=lt.${new Date().toISOString()}`, { headers }),
                 // All profiles for user stats (added avatar_url)
-                fetch(`${url}/rest/v1/profiles?status=eq.approved&select=id,email,first_name,last_name,avatar_url,department,role,status`, { headers }),
+                fetch(`${url}/rest/v1/profiles?status=eq.approved&select=id,email,first_name,last_name,avatar_url,department:departments(name),role,status`, { headers }),
                 // Staff activity log in date range - REMOVED profiles embed to fix FK issue
                 fetch(`${url}/rest/v1/staff_activity_log?select=id,staff_id,staff_role,action_type,target_type,target_id,created_at,details&created_at=gte.${fromDate}&created_at=lte.${toDate}&order=created_at.desc`, { headers })
             ])

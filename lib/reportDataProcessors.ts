@@ -146,6 +146,11 @@ export function calculateUserStats(
     if (Array.isArray(loans)) {
         loans.forEach((loan: any) => {
             userLoanCounts[loan.user_id] = (userLoanCounts[loan.user_id] || 0) + 1
+
+            // Allow checking for late returns in history
+            if (loan.status === 'returned' && loan.returned_at && new Date(loan.returned_at) > new Date(loan.end_date)) {
+                userOverdueCounts[loan.user_id] = (userOverdueCounts[loan.user_id] || 0) + 1
+            }
         })
     }
 
@@ -352,6 +357,29 @@ export function calculateMonthlyStats(loans: any[], reservations: any[]): Monthl
             }
 
             monthlyData[monthKey].reservations++
+        })
+    }
+
+    // Calculate overdue for each month based on loans
+    if (Array.isArray(loans)) {
+        loans.forEach((loan: any) => {
+            const date = new Date(loan.created_at)
+            const monthKey = `${date.getFullYear()}-${date.getMonth()}`
+
+            if (monthlyData[monthKey]) {
+                const endDate = new Date(loan.end_date)
+                const returnedAt = loan.returned_at ? new Date(loan.returned_at) : null
+                const now = new Date()
+
+                // Check if late return or currently overdue
+                if (returnedAt && returnedAt > endDate) {
+                    // Returned late
+                    monthlyData[monthKey].overdue++
+                } else if (!returnedAt && loan.status === 'approved' && now > endDate) {
+                    // Currently overdue
+                    monthlyData[monthKey].overdue++
+                }
+            }
         })
     }
 
