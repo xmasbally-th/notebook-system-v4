@@ -16,8 +16,11 @@ import {
     Clock,
     AlertCircle
 } from 'lucide-react'
+import { useRealtimeInvalidator } from '@/hooks/useRealtimeInvalidator'
 
 export default function AdminDashboard() {
+    // Enable Realtime Updates
+    useRealtimeInvalidator(['loanRequests', 'profiles'], [['admin-stats']])
     // Fetch stats using direct API
     const { data: stats, isLoading } = useQuery({
         queryKey: ['admin-stats'],

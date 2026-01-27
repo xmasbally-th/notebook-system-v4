@@ -1,6 +1,8 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { createBrowserClient } from '@supabase/ssr'
 
 /**
  * Shared Notification Data Hook
@@ -58,6 +60,40 @@ function getSupabaseCredentials() {
 }
 
 export function useSharedNotificationData(): SharedNotificationData {
+    const queryClient = useQueryClient()
+
+    // Realtime Subscription for Loans and Reservations
+    useEffect(() => {
+        const { url, key } = getSupabaseCredentials()
+        if (!url || !key) return
+
+        const client = createBrowserClient(url, key)
+
+        const channel = client
+            .channel('shared-data-changes')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'loanRequests' },
+                (payload: any) => {
+                    // console.log('Loan change:', payload)
+                    queryClient.invalidateQueries({ queryKey: ['shared-loans-data'] })
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'reservations' },
+                (payload: any) => {
+                    // console.log('Reservation change:', payload)
+                    queryClient.invalidateQueries({ queryKey: ['shared-reservations-data'] })
+                }
+            )
+            .subscribe()
+
+        return () => {
+            client.removeChannel(channel)
+        }
+    }, [queryClient])
+
     // Fetch all loan requests with relevant data
     const { data: loansData, isLoading: loansLoading, refetch: refetchLoans } = useQuery({
         queryKey: ['shared-loans-data'],

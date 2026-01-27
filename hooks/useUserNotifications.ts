@@ -1,8 +1,9 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useEffect } from 'react'
 import { useSharedNotificationData } from './useSharedNotificationData'
+import { createBrowserClient } from '@supabase/ssr'
 
 /**
  * User Notifications Hook
@@ -210,6 +211,38 @@ export function useUserNotifications(userId?: string, accessToken?: string): Use
 
         return reminders
     }, [userId, sharedData.activeLoans])
+
+    // Realtime Subscription
+    useEffect(() => {
+        if (!userId) return
+
+        const { url, key } = getSupabaseCredentials()
+        if (!url || !key) return
+
+        const client = createBrowserClient(url, key)
+
+        const channel = client
+            .channel(`user-notifications-${userId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // Listen to INSERT, UPDATE, DELETE
+                    schema: 'public',
+                    table: 'notifications',
+                    filter: `user_id=eq.${userId}`
+                },
+                (payload: any) => {
+                    // console.log('Realtime notification received:', payload)
+                    // Invalidate query to refetch fresh data
+                    queryClient.invalidateQueries({ queryKey: ['user-notifications', userId] })
+                }
+            )
+            .subscribe()
+
+        return () => {
+            client.removeChannel(channel)
+        }
+    }, [userId, queryClient])
 
     // Combine stored + computed notifications
     const allNotifications = useMemo(() => {

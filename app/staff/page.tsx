@@ -8,8 +8,11 @@ import {
     RotateCcw, ArrowRight
 } from 'lucide-react'
 import Link from 'next/link'
+import { useRealtimeInvalidator } from '@/hooks/useRealtimeInvalidator'
 
 export default function StaffDashboard() {
+    // Enable Realtime Updates
+    useRealtimeInvalidator(['loanRequests'], [['staff-dashboard-stats'], ['staff-recent-activity']])
     // Fetch dashboard stats
     const { data: stats, isLoading } = useQuery({
         queryKey: ['staff-dashboard-stats'],

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/components/ui/toast'
 import { approveLoan } from './actions'
+import { useRealtimeInvalidator } from '@/hooks/useRealtimeInvalidator'
 
 const STATUS_CONFIG = {
     pending: { label: 'รออนุมัติ', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
@@ -20,6 +21,8 @@ const STATUS_CONFIG = {
 }
 
 export default function StaffLoansPage() {
+    // Enable Realtime Updates
+    useRealtimeInvalidator(['loanRequests'], [['staff-loan-requests']])
     const queryClient = useQueryClient()
     const toast = useToast()
     const [selectedIds, setSelectedIds] = useState<string[]>([])
