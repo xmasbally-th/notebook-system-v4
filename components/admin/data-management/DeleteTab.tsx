@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Trash2, AlertTriangle, FileSpreadsheet, Calendar, Package, Archive, CheckCircle, Bell } from 'lucide-react'
+import { Trash2, AlertTriangle, FileSpreadsheet, Calendar, Package, Archive, CheckCircle, Bell, Star } from 'lucide-react'
 import ReportDateRangePicker from '@/components/admin/reports/ReportDateRangePicker'
 import {
     DataType,
@@ -47,7 +47,8 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
         { value: 'loans' as DataType, label: 'รายการยืม-คืน', icon: FileSpreadsheet },
         { value: 'reservations' as DataType, label: 'รายการจอง', icon: Calendar },
         { value: 'equipment' as DataType, label: 'ข้อมูลอุปกรณ์', icon: Package },
-        { value: 'notifications' as DataType, label: 'การแจ้งเตือน', icon: Bell }
+        { value: 'notifications' as DataType, label: 'การแจ้งเตือน', icon: Bell },
+        { value: 'evaluations' as DataType, label: 'ข้อมูลการประเมิน', icon: Star }
     ]
 
     const statusOptions = dataType === 'notifications'
@@ -59,7 +60,7 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
     const notificationTypeOptions = getNotificationTypeOptions()
 
     const handlePreview = useCallback(async () => {
-        if (dataType !== 'notifications' && selectedStatuses.length === 0) {
+        if (dataType !== 'notifications' && dataType !== 'evaluations' && selectedStatuses.length === 0) {
             setError('กรุณาเลือกสถานะอย่างน้อย 1 รายการ')
             return
         }
@@ -399,7 +400,7 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
             <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <button
                     onClick={handlePreview}
-                    disabled={isLoading || selectedStatuses.length === 0}
+                    disabled={isLoading || (dataType !== 'notifications' && dataType !== 'evaluations' && selectedStatuses.length === 0)}
                     className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
                 >
                     {isLoading ? (

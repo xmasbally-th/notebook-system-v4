@@ -101,6 +101,63 @@ export async function fetchExportData(options: ExportOptions): Promise<PreviewDa
                 profiles: profilesMap.get(r.user_id) || null,
                 equipment: equipmentMap.get(r.equipment_id) || null
             }))
+        } else if (options.dataType === 'evaluations') {
+            // Fetch Profiles
+            const userIds = Array.from(new Set(records.map((r: any) => r.user_id).filter(Boolean))) as string[]
+            let profilesMap = new Map()
+
+            if (userIds.length > 0) {
+                const profilesRes = await fetch(
+                    `${url}/rest/v1/profiles?id=in.(${userIds.join(',')})&select=id,first_name,last_name,email`,
+                    { headers }
+                )
+                if (profilesRes.ok) {
+                    const profiles = await profilesRes.json()
+                    profiles.forEach((p: any) => profilesMap.set(p.id, p))
+                }
+            }
+
+            // Fetch Loans
+            const loanIds = Array.from(new Set(records.map((r: any) => r.loan_id).filter(Boolean))) as string[]
+            let loanMap = new Map()
+            let equipmentMap = new Map()
+
+            if (loanIds.length > 0) {
+                const loansRes = await fetch(
+                    `${url}/rest/v1/loanRequests?id=in.(${loanIds.join(',')})&select=id,start_date,end_date,equipment_id`,
+                    { headers }
+                )
+                if (loansRes.ok) {
+                    const loans = await loansRes.json()
+                    loans.forEach((l: any) => loanMap.set(l.id, l))
+
+                    // Fetch Equipment from active loans
+                    const equipmentIds = Array.from(new Set(loans.map((l: any) => l.equipment_id).filter(Boolean))) as string[]
+                    if (equipmentIds.length > 0) {
+                        const equipmentRes = await fetch(
+                            `${url}/rest/v1/equipment?id=in.(${equipmentIds.join(',')})&select=id,name,equipment_number`,
+                            { headers }
+                        )
+                        if (equipmentRes.ok) {
+                            const equipment = await equipmentRes.json()
+                            equipment.forEach((e: any) => equipmentMap.set(e.id, e))
+                        }
+                    }
+                }
+            }
+
+            // Merge Data
+            records = records.map((r: any) => {
+                const loan = loanMap.get(r.loan_id)
+                const equipmentId = loan?.equipment_id
+
+                return {
+                    ...r,
+                    profiles: profilesMap.get(r.user_id) || null,
+                    loan: loan || null,
+                    equipment: equipmentId ? equipmentMap.get(equipmentId) : null
+                }
+            })
         }
     }
 
@@ -197,6 +254,63 @@ export async function exportData(options: ExportOptions): Promise<Blob> {
                 profiles: profilesMap.get(r.user_id) || null,
                 equipment: equipmentMap.get(r.equipment_id) || null
             }))
+        } else if (options.dataType === 'evaluations') {
+            // Fetch Profiles
+            const userIds = Array.from(new Set(records.map((r: any) => r.user_id).filter(Boolean))) as string[]
+            let profilesMap = new Map()
+
+            if (userIds.length > 0) {
+                const profilesRes = await fetch(
+                    `${url}/rest/v1/profiles?id=in.(${userIds.join(',')})&select=id,first_name,last_name,email`,
+                    { headers }
+                )
+                if (profilesRes.ok) {
+                    const profiles = await profilesRes.json()
+                    profiles.forEach((p: any) => profilesMap.set(p.id, p))
+                }
+            }
+
+            // Fetch Loans
+            const loanIds = Array.from(new Set(records.map((r: any) => r.loan_id).filter(Boolean))) as string[]
+            let loanMap = new Map()
+            let equipmentMap = new Map()
+
+            if (loanIds.length > 0) {
+                const loansRes = await fetch(
+                    `${url}/rest/v1/loanRequests?id=in.(${loanIds.join(',')})&select=id,start_date,end_date,equipment_id`,
+                    { headers }
+                )
+                if (loansRes.ok) {
+                    const loans = await loansRes.json()
+                    loans.forEach((l: any) => loanMap.set(l.id, l))
+
+                    // Fetch Equipment from active loans
+                    const equipmentIds = Array.from(new Set(loans.map((l: any) => l.equipment_id).filter(Boolean))) as string[]
+                    if (equipmentIds.length > 0) {
+                        const equipmentRes = await fetch(
+                            `${url}/rest/v1/equipment?id=in.(${equipmentIds.join(',')})&select=id,name,equipment_number`,
+                            { headers }
+                        )
+                        if (equipmentRes.ok) {
+                            const equipment = await equipmentRes.json()
+                            equipment.forEach((e: any) => equipmentMap.set(e.id, e))
+                        }
+                    }
+                }
+            }
+
+            // Merge Data
+            records = records.map((r: any) => {
+                const loan = loanMap.get(r.loan_id)
+                const equipmentId = loan?.equipment_id
+
+                return {
+                    ...r,
+                    profiles: profilesMap.get(r.user_id) || null,
+                    loan: loan || null,
+                    equipment: equipmentId ? equipmentMap.get(equipmentId) : null
+                }
+            })
         }
     }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Download, FileSpreadsheet, FileJson, Calendar, Users, Package } from 'lucide-react'
+import { Download, FileSpreadsheet, FileJson, Calendar, Users, Package, Star } from 'lucide-react'
 import ReportDateRangePicker from '@/components/admin/reports/ReportDateRangePicker'
 import {
     DataType,
@@ -42,7 +42,8 @@ export default function ExportTab({ userId }: ExportTabProps) {
     const dataTypeOptions = [
         { value: 'loans' as DataType, label: 'รายการยืม-คืน', icon: FileSpreadsheet },
         { value: 'reservations' as DataType, label: 'รายการจอง', icon: Calendar },
-        { value: 'equipment' as DataType, label: 'ข้อมูลอุปกรณ์', icon: Package }
+        { value: 'equipment' as DataType, label: 'ข้อมูลอุปกรณ์', icon: Package },
+        { value: 'evaluations' as DataType, label: 'ข้อมูลการประเมิน', icon: Star }
     ]
 
     const statusOptions = getStatusOptions(dataType)
