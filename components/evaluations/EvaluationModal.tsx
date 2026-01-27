@@ -152,7 +152,7 @@ export default function EvaluationModal({ isOpen, onClose, loan, onSuccess }: Ev
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
-            <div className="bg-white rounded-none sm:rounded-xl shadow-xl w-full max-w-3xl my-0 sm:my-8 lg:my-12 h-full sm:h-auto flex flex-col transition-all duration-300">
+            <div className="bg-white rounded-none sm:rounded-xl shadow-xl w-full max-w-3xl my-0 sm:my-8 lg:my-12 h-full sm:h-auto sm:max-h-[calc(100vh-4rem)] lg:max-h-[calc(100vh-6rem)] flex flex-col transition-all duration-300">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-gray-100 sticky top-0 bg-white sm:rounded-t-xl z-20 shadow-sm sm:shadow-none">
                     <div>
