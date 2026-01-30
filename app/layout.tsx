@@ -16,6 +16,7 @@ import SupportButton from '@/components/chat/SupportButton'
 import QueryProvider from '@/components/providers/QueryProvider'
 import AuthGuard from '@/components/auth/AuthGuard'
 import DebugConsole from '@/components/debug/DebugConsole'
+import ErrorBoundary from '@/components/error/ErrorBoundary'
 
 export default function RootLayout({
     children,
@@ -25,12 +26,14 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className={`${inter.className} bg-gray-50 text-gray-900 antialiased`}>
-                <QueryProvider>
-                    <AuthGuard>
-                        {children}
-                        <SupportButton />
-                    </AuthGuard>
-                </QueryProvider>
+                <ErrorBoundary>
+                    <QueryProvider>
+                        <AuthGuard>
+                            {children}
+                            <SupportButton />
+                        </AuthGuard>
+                    </QueryProvider>
+                </ErrorBoundary>
                 <DebugConsole />
             </body>
         </html>
