@@ -21,7 +21,7 @@ export default function ChatWindow({ ticketId, currentUserId, isStaffView = fals
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const queryClient = useQueryClient()
 
-    // Realtime Subscription
+    // Realtime Subscription - Use payload directly for instant updates
     useEffect(() => {
         const channel = supabase
             .channel(`ticket-${ticketId}`)
@@ -34,8 +34,33 @@ export default function ChatWindow({ ticketId, currentUserId, isStaffView = fals
                     filter: `ticket_id=eq.${ticketId}`
                 },
                 (payload) => {
-                    // Optimistically add message or invalidate query
-                    queryClient.invalidateQueries({ queryKey: ['chat-messages', ticketId] })
+                    const newMessage = payload.new as Message
+
+                    // Add new message directly to cache (instant, no refetch)
+                    queryClient.setQueryData<Message[]>(['chat-messages', ticketId], (old) => {
+                        if (!old) return [newMessage]
+
+                        // Avoid duplicates (from optimistic update)
+                        const exists = old.some(msg =>
+                            msg.id === newMessage.id ||
+                            (msg.id.startsWith('optimistic-') &&
+                                msg.message === newMessage.message &&
+                                msg.sender_id === newMessage.sender_id)
+                        )
+
+                        if (exists) {
+                            // Replace optimistic message with real one
+                            return old.map(msg =>
+                                msg.id.startsWith('optimistic-') &&
+                                    msg.message === newMessage.message &&
+                                    msg.sender_id === newMessage.sender_id
+                                    ? newMessage
+                                    : msg
+                            )
+                        }
+
+                        return [...old, newMessage]
+                    })
                 }
             )
             .subscribe()
@@ -109,10 +134,7 @@ export default function ChatWindow({ ticketId, currentUserId, isStaffView = fals
                 queryClient.setQueryData(['chat-messages', ticketId], context.previousMessages)
             }
         },
-        onSettled: () => {
-            // Always refetch after error or success to ensure server state
-            queryClient.invalidateQueries({ queryKey: ['chat-messages', ticketId] })
-        }
+        // onSettled removed - Realtime subscription handles message sync automatically
     })
 
     const handleSend = (e: React.FormEvent) => {
