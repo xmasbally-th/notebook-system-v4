@@ -65,9 +65,36 @@ export async function completeRegistrationAction(
     const userType = formData.get('user-type') as string
     const departmentId = formData.get('department') as string
 
-    // 4. Validate Data (Basic)
+    // 4. Validate Data
     if (!firstName || !lastName || !phone || !departmentId) {
         return { error: 'กรุณากรอกข้อมูลให้ครบถ้วน' }
+    }
+
+    // 4.1 Validate Name Format (Thai/English letters only, minimum 2 characters)
+    const namePattern = /^[ก-๙a-zA-Z\s]+$/
+    const trimmedFirstName = firstName.trim()
+    const trimmedLastName = lastName.trim()
+
+    if (trimmedFirstName.length < 2) {
+        return { error: 'ชื่อจริงต้องมีอย่างน้อย 2 ตัวอักษร' }
+    }
+    if (!namePattern.test(trimmedFirstName)) {
+        return { error: 'ชื่อจริงต้องเป็นตัวอักษรภาษาไทยหรืออังกฤษเท่านั้น (ห้ามใส่ตัวเลขหรืออักขระพิเศษ)' }
+    }
+
+    if (trimmedLastName.length < 2) {
+        return { error: 'นามสกุลต้องมีอย่างน้อย 2 ตัวอักษร' }
+    }
+    if (!namePattern.test(trimmedLastName)) {
+        return { error: 'นามสกุลต้องเป็นตัวอักษรภาษาไทยหรืออังกฤษเท่านั้น (ห้ามใส่ตัวเลขหรืออักขระพิเศษ)' }
+    }
+
+    // 4.2 Validate Phone Number (Thai mobile: 10 digits starting with 0)
+    const phoneDigits = phone.replace(/[\s-]/g, '') // Remove spaces and dashes
+    const phonePattern = /^0[0-9]{9}$/
+
+    if (!phonePattern.test(phoneDigits)) {
+        return { error: 'เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก และเริ่มต้นด้วย 0 (เช่น 0812345678)' }
     }
 
     // 5. Update Profile

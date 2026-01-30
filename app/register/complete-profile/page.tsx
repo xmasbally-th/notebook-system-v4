@@ -54,9 +54,22 @@ export default function CompleteProfilePage() {
             const profile = profiles?.[0]
 
             if (profile) {
-                if (profile.first_name) setFirstName(profile.first_name)
-                if (profile.last_name) setLastName(profile.last_name)
-                // Note: We could also set other fields if they exist, but requirement usually is to complete missing info
+                // If first_name contains full name from Google (no last_name), split it
+                if (profile.first_name && !profile.last_name) {
+                    const nameParts = profile.first_name.trim().split(/\s+/)
+                    if (nameParts.length >= 2) {
+                        // First part is first name, rest is last name
+                        setFirstName(nameParts[0])
+                        setLastName(nameParts.slice(1).join(' '))
+                    } else {
+                        // Single name, put in first name only
+                        setFirstName(profile.first_name)
+                    }
+                } else {
+                    // Normal case: both fields exist
+                    if (profile.first_name) setFirstName(profile.first_name)
+                    if (profile.last_name) setLastName(profile.last_name)
+                }
             }
 
             // 3. Load Departments using direct fetch
@@ -81,10 +94,10 @@ export default function CompleteProfilePage() {
         <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
                 <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
-                    Complete Your Profile
+                    กรอกข้อมูลส่วนตัว
                 </h2>
                 <p className="mt-2 text-center text-sm text-gray-600">
-                    Please provide your details to register for the service.
+                    กรุณากรอกข้อมูลของท่านเพื่อลงทะเบียนใช้งานระบบ
                 </p>
             </div>
 
@@ -102,7 +115,7 @@ export default function CompleteProfilePage() {
                         {/* Title & Name */}
                         <div className="grid grid-cols-12 gap-4">
                             <div className="col-span-4">
-                                <label htmlFor="title" className="block text-sm font-medium text-gray-700">Title</label>
+                                <label htmlFor="title" className="block text-sm font-medium text-gray-700">คำนำหน้า</label>
                                 <select
                                     id="title"
                                     name="title"
@@ -117,7 +130,7 @@ export default function CompleteProfilePage() {
                                 </select>
                             </div>
                             <div className="col-span-8">
-                                <label htmlFor="first-name" className="block text-sm font-medium text-gray-700">First Name</label>
+                                <label htmlFor="first-name" className="block text-sm font-medium text-gray-700">ชื่อจริง</label>
                                 <input
                                     type="text"
                                     name="first-name"
@@ -131,7 +144,7 @@ export default function CompleteProfilePage() {
                         </div>
 
                         <div>
-                            <label htmlFor="last-name" className="block text-sm font-medium text-gray-700">Last Name</label>
+                            <label htmlFor="last-name" className="block text-sm font-medium text-gray-700">นามสกุล</label>
                             <input
                                 type="text"
                                 name="last-name"
@@ -144,7 +157,7 @@ export default function CompleteProfilePage() {
                         </div>
 
                         <div>
-                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
+                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">เบอร์โทรศัพท์</label>
                             <input
                                 type="tel"
                                 name="phone"
@@ -158,7 +171,7 @@ export default function CompleteProfilePage() {
 
                         {/* Type & Dept */}
                         <div>
-                            <label htmlFor="user-type" className="block text-sm font-medium text-gray-700">User Type</label>
+                            <label htmlFor="user-type" className="block text-sm font-medium text-gray-700">ประเภทผู้ใช้งาน</label>
                             <select
                                 id="user-type"
                                 name="user-type"
@@ -174,7 +187,7 @@ export default function CompleteProfilePage() {
                         </div>
 
                         <div>
-                            <label htmlFor="department" className="block text-sm font-medium text-gray-700">Department / Faculty</label>
+                            <label htmlFor="department" className="block text-sm font-medium text-gray-700">สาขา / หน่วยงาน</label>
                             <select
                                 id="department"
                                 name="department"
@@ -183,7 +196,7 @@ export default function CompleteProfilePage() {
                                 value={departmentId}
                                 onChange={e => setDepartmentId(e.target.value)}
                             >
-                                <option value="">Select a department...</option>
+                                <option value="">-- เลือกสาขา/หน่วยงาน --</option>
                                 {departments.map(dept => (
                                     <option key={dept.id} value={dept.id}>
                                         {dept.name}
@@ -210,10 +223,10 @@ export default function CompleteProfilePage() {
                                 {isPending ? (
                                     <>
                                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        Saving...
+                                        กำลังบันทึก...
                                     </>
                                 ) : (
-                                    'Complete Registration'
+                                    'ยืนยันลงทะเบียน'
                                 )}
                             </button>
                         </div>
