@@ -45,25 +45,16 @@ export async function sendMessageAction(ticketId: string, message: string) {
 
     if (!user) throw new Error('Unauthorized')
 
-    // 1. Check if user is staff/admin (parallel with checking existing messages)
-    const [profileResult, messagesResult] = await Promise.all([
-        supabase
-            .from('profiles')
-            .select('role, first_name, last_name')
-            .eq('id', user.id)
-            .single(),
-        supabase
-            .from('support_messages')
-            .select('id, is_staff_reply')
-            .eq('ticket_id', ticketId)
-            .limit(50)
-    ])
+    // 1. Quick check if user is staff/admin (needed for is_staff_reply flag)
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, first_name, last_name')
+        .eq('id', user.id)
+        .single()
 
-    const profile = profileResult.data
-    const existingMessages = messagesResult.data || []
     const isStaff = profile?.role === 'admin' || profile?.role === 'staff'
 
-    // 2. Insert Message
+    // 2. Insert Message FIRST for fastest delivery
     const { error } = await supabase
         .from('support_messages')
         .insert({
@@ -75,25 +66,34 @@ export async function sendMessageAction(ticketId: string, message: string) {
 
     if (error) throw error
 
-    // 3. Smart Discord Notification (Only if User sends AND admin hasn't responded yet)
-    // Send notification when:
-    // - User is not staff
-    // - AND (no messages exist yet OR no staff reply exists)
+    // 3. Handle Discord notification in background (non-blocking)
+    // Only for non-staff users
     if (!isStaff) {
-        const hasStaffReply = existingMessages.some(msg => msg.is_staff_reply)
-        const isFirstMessage = existingMessages.length === 0
+        // Fire and forget - don't await
+        (async () => {
+            try {
+                // Check if admin has already responded (do this after insert to not block)
+                const { data: existingMessages } = await supabase
+                    .from('support_messages')
+                    .select('id, is_staff_reply')
+                    .eq('ticket_id', ticketId)
+                    .limit(50)
 
-        if (isFirstMessage || !hasStaffReply) {
-            const userName = profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown User'
+                const hasStaffReply = existingMessages?.some(msg => msg.is_staff_reply)
+                const isFirstMessage = (existingMessages?.length || 0) <= 1  // Only our new message
 
-            // Non-blocking: Fire and forget Discord notification
-            // Don't await - let it run in background so user gets instant response
-            sendDiscordNotification(
-                isFirstMessage
-                    ? `🆕 **New Support Chat Started**\n**User:** ${userName}\n**Message:** ${message.trim()}`
-                    : `💬 **User Waiting for Response**\n**User:** ${userName}\n**Ticket:** \`${ticketId.slice(0, 8)}...\`\n**Message:** ${message.trim()}`
-            ).catch(err => console.error('Discord notification failed:', err))
-        }
+                if (isFirstMessage || !hasStaffReply) {
+                    const userName = profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown User'
+                    await sendDiscordNotification(
+                        isFirstMessage
+                            ? `🆕 **New Support Chat Started**\n**User:** ${userName}\n**Message:** ${message.trim()}`
+                            : `💬 **User Waiting for Response**\n**User:** ${userName}\n**Ticket:** \`${ticketId.slice(0, 8)}...\`\n**Message:** ${message.trim()}`
+                    )
+                }
+            } catch (err) {
+                console.error('Discord notification failed:', err)
+            }
+        })()
     }
 
     return { success: true }

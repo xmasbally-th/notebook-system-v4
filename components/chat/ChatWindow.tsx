@@ -73,7 +73,7 @@ export default function ChatWindow({ ticketId, currentUserId, isStaffView = fals
         }
     }, [ticketId, queryClient])
 
-    // Polling fallback for RLS edge cases (every 3 seconds when window is focused)
+    // Polling fallback for RLS edge cases (every 1.5 seconds when window is focused)
     useEffect(() => {
         let intervalId: NodeJS.Timeout | null = null
 
@@ -82,7 +82,7 @@ export default function ChatWindow({ ticketId, currentUserId, isStaffView = fals
                 if (document.hasFocus()) {
                     queryClient.invalidateQueries({ queryKey: ['chat-messages', ticketId] })
                 }
-            }, 3000)
+            }, 1500)  // Reduced to 1.5s for faster sync
         }
 
         const stopPolling = () => {
@@ -149,12 +149,17 @@ export default function ChatWindow({ ticketId, currentUserId, isStaffView = fals
             })
 
             if (hasUnreadFromOther) {
-                markMessagesAsReadAction(ticketId).catch(err =>
-                    console.error('Failed to mark messages as read:', err)
-                )
+                markMessagesAsReadAction(ticketId)
+                    .then(() => {
+                        // Refetch messages to update read indicators
+                        queryClient.invalidateQueries({ queryKey: ['chat-messages', ticketId] })
+                        // Refetch ticket list to update unread badge
+                        queryClient.invalidateQueries({ queryKey: ['admin-tickets'] })
+                    })
+                    .catch(err => console.error('Failed to mark messages as read:', err))
             }
         }
-    }, [messages, ticketId, isStaffView])
+    }, [messages, ticketId, isStaffView, queryClient])
 
     // Send Message Mutation
     const sendMessageMutation = useMutation({
