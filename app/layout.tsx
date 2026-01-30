@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 import SupportButton from '@/components/chat/SupportButton'
 import QueryProvider from '@/components/providers/QueryProvider'
 import AuthGuard from '@/components/auth/AuthGuard'
+import DebugConsole from '@/components/debug/DebugConsole'
 
 export default function RootLayout({
     children,
@@ -30,6 +31,7 @@ export default function RootLayout({
                         <SupportButton />
                     </AuthGuard>
                 </QueryProvider>
+                <DebugConsole />
             </body>
         </html>
     )
