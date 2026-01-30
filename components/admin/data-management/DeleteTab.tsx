@@ -231,7 +231,7 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
                                     } else if (option.value === 'notifications') {
                                         setSelectedStatuses(['read'])
                                     } else if (option.value === 'support_chats') {
-                                        setSelectedStatuses(['closed'])
+                                        setSelectedStatuses(['open', 'closed'])  // Show all tickets by default
                                     } else {
                                         setSelectedStatuses(['returned', 'cancelled'])
                                     }
