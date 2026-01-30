@@ -56,18 +56,38 @@ export default function AdminSupportPage() {
         }
     }, [queryClient])
 
-    // Fetch Tickets
+    // Fetch Tickets with unread count
     const { data: tickets, isLoading } = useQuery({
         queryKey: ['admin-tickets'],
         queryFn: async () => {
-            // Cast to any to avoid type errors with recent table additions
-            const { data, error } = await (supabase as any)
+            // Fetch tickets with profile info
+            const { data: ticketData, error } = await (supabase as any)
                 .from('support_tickets')
                 .select('*, profiles(first_name, last_name, email, avatar_url)')
                 .order('updated_at', { ascending: false })
 
             if (error) throw error
-            return data
+
+            // Fetch unread counts for each ticket (user messages that admin hasn't read)
+            const ticketIds = ticketData.map((t: any) => t.id)
+            const { data: unreadData } = await (supabase as any)
+                .from('support_messages')
+                .select('ticket_id')
+                .in('ticket_id', ticketIds)
+                .eq('is_staff_reply', false)  // User messages only
+                .is('read_at', null)          // Unread only
+
+            // Count unread per ticket
+            const unreadCounts: Record<string, number> = {}
+            unreadData?.forEach((msg: any) => {
+                unreadCounts[msg.ticket_id] = (unreadCounts[msg.ticket_id] || 0) + 1
+            })
+
+            // Merge unread counts into tickets
+            return ticketData.map((ticket: any) => ({
+                ...ticket,
+                unread_count: unreadCounts[ticket.id] || 0
+            }))
         }
     })
 
@@ -157,8 +177,14 @@ export default function AdminSupportPage() {
                                                     </p>
                                                 </div>
 
-                                                {/* Arrow indicator */}
-                                                <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                                                {/* Unread badge or Arrow indicator */}
+                                                {ticket.unread_count > 0 ? (
+                                                    <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-medium flex items-center justify-center flex-shrink-0">
+                                                        {ticket.unread_count > 99 ? '99+' : ticket.unread_count}
+                                                    </span>
+                                                ) : (
+                                                    <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                                                )}
                                             </div>
                                         )
                                     })}
@@ -281,6 +307,11 @@ export default function AdminSupportPage() {
                                                     <Clock className="w-3 h-3" />
                                                     {timeAgo(ticket.updated_at)}
                                                 </p>
+                                                {ticket.unread_count > 0 && (
+                                                    <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-medium flex items-center justify-center">
+                                                        {ticket.unread_count > 99 ? '99+' : ticket.unread_count}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     )

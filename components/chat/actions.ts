@@ -98,3 +98,38 @@ export async function sendMessageAction(ticketId: string, message: string) {
 
     return { success: true }
 }
+
+/**
+ * Mark messages as read when user opens the chat window
+ * Staff: marks user messages as read
+ * User: marks staff messages as read
+ */
+export async function markMessagesAsReadAction(ticketId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) throw new Error('Unauthorized')
+
+    // Check if current user is staff/admin
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    const isStaff = profile?.role === 'admin' || profile?.role === 'staff'
+
+    // Mark messages from the OTHER side as read
+    // If I'm staff, mark user messages (is_staff_reply = false) as read
+    // If I'm user, mark staff messages (is_staff_reply = true) as read
+    const { error } = await supabase
+        .from('support_messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('ticket_id', ticketId)
+        .eq('is_staff_reply', !isStaff)  // Mark opposite side's messages
+        .is('read_at', null)  // Only update unread messages
+
+    if (error) throw error
+
+    return { success: true }
+}

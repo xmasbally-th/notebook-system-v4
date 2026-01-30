@@ -3,11 +3,14 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { Database } from '@/supabase/types'
-import { Send, X, MessageSquare, Loader2 } from 'lucide-react'
+import { Send, X, MessageSquare, Loader2, Check, CheckCheck } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { sendMessageAction } from './actions'
+import { sendMessageAction, markMessagesAsReadAction } from './actions'
 
-type Message = Database['public']['Tables']['support_messages']['Row']
+// Extended Message type with read_at (may not be in generated types yet)
+type Message = Database['public']['Tables']['support_messages']['Row'] & {
+    read_at?: string | null
+}
 
 interface ChatWindowProps {
     ticketId: string
@@ -21,7 +24,7 @@ export default function ChatWindow({ ticketId, currentUserId, isStaffView = fals
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const queryClient = useQueryClient()
 
-    // Realtime Subscription - Use payload directly for instant updates
+    // Realtime Subscription - Hybrid: use payload + invalidate as fallback
     useEffect(() => {
         const channel = supabase
             .channel(`ticket-${ticketId}`)
@@ -36,11 +39,11 @@ export default function ChatWindow({ ticketId, currentUserId, isStaffView = fals
                 (payload) => {
                     const newMessage = payload.new as Message
 
-                    // Add new message directly to cache (instant, no refetch)
+                    // Try to add message directly to cache (instant)
                     queryClient.setQueryData<Message[]>(['chat-messages', ticketId], (old) => {
                         if (!old) return [newMessage]
 
-                        // Avoid duplicates (from optimistic update)
+                        // Avoid duplicates (from optimistic update or previous events)
                         const exists = old.some(msg =>
                             msg.id === newMessage.id ||
                             (msg.id.startsWith('optimistic-') &&
@@ -70,6 +73,46 @@ export default function ChatWindow({ ticketId, currentUserId, isStaffView = fals
         }
     }, [ticketId, queryClient])
 
+    // Polling fallback for RLS edge cases (every 3 seconds when window is focused)
+    useEffect(() => {
+        let intervalId: NodeJS.Timeout | null = null
+
+        const startPolling = () => {
+            intervalId = setInterval(() => {
+                if (document.hasFocus()) {
+                    queryClient.invalidateQueries({ queryKey: ['chat-messages', ticketId] })
+                }
+            }, 3000)
+        }
+
+        const stopPolling = () => {
+            if (intervalId) {
+                clearInterval(intervalId)
+                intervalId = null
+            }
+        }
+
+        // Only poll when tab is visible
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                startPolling()
+            } else {
+                stopPolling()
+            }
+        }
+
+        if (document.visibilityState === 'visible') {
+            startPolling()
+        }
+
+        document.addEventListener('visibilitychange', handleVisibility)
+
+        return () => {
+            stopPolling()
+            document.removeEventListener('visibilitychange', handleVisibility)
+        }
+    }, [ticketId, queryClient])
+
     // Scroll to bottom on new messages
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -96,6 +139,23 @@ export default function ChatWindow({ ticketId, currentUserId, isStaffView = fals
         }
     }, [messages])
 
+    // Mark messages from other party as read when component mounts or messages change
+    useEffect(() => {
+        if (messages && messages.length > 0) {
+            // Check if there are unread messages from the other side
+            const hasUnreadFromOther = messages.some(msg => {
+                const isFromOther = isStaffView ? !msg.is_staff_reply : msg.is_staff_reply
+                return isFromOther && !msg.read_at
+            })
+
+            if (hasUnreadFromOther) {
+                markMessagesAsReadAction(ticketId).catch(err =>
+                    console.error('Failed to mark messages as read:', err)
+                )
+            }
+        }
+    }, [messages, ticketId, isStaffView])
+
     // Send Message Mutation
     const sendMessageMutation = useMutation({
         mutationFn: async (text: string) => {
@@ -117,7 +177,8 @@ export default function ChatWindow({ ticketId, currentUserId, isStaffView = fals
                     sender_id: currentUserId,
                     message: text,
                     is_staff_reply: isStaffView,
-                    created_at: new Date().toISOString()
+                    created_at: new Date().toISOString(),
+                    read_at: null  // New message is unread
                 }
 
                 queryClient.setQueryData<Message[]>(['chat-messages', ticketId], [
@@ -176,6 +237,7 @@ export default function ChatWindow({ ticketId, currentUserId, isStaffView = fals
                         // If staff view: my messages are right (purple), user messages are left (gray)
                         // If user view: my messages are right (teal), staff messages are left (gray)
                         const alignRight = isMe
+                        const isRead = !!msg.read_at
 
                         return (
                             <div key={msg.id} className={`flex ${alignRight ? 'justify-end' : 'justify-start'}`}>
@@ -189,9 +251,19 @@ export default function ChatWindow({ ticketId, currentUserId, isStaffView = fals
                                     `}
                                 >
                                     <p>{msg.message}</p>
-                                    <p className={`text-[10px] mt-1 ${alignRight ? 'text-white/70' : 'text-gray-400'}`}>
-                                        {new Date(msg.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
-                                    </p>
+                                    <div className={`flex items-center justify-end gap-1 mt-1 ${alignRight ? 'text-white/70' : 'text-gray-400'}`}>
+                                        <span className="text-[10px]">
+                                            {new Date(msg.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                        {/* Show read indicators only for my messages */}
+                                        {isMe && (
+                                            isRead ? (
+                                                <CheckCheck className="w-3.5 h-3.5" />
+                                            ) : (
+                                                <Check className="w-3.5 h-3.5" />
+                                            )
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         )
