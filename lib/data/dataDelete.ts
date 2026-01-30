@@ -213,3 +213,111 @@ export async function hardDeleteNotifications(
 
     return result
 }
+
+export interface SupportChatDeleteResult {
+    deleted: number
+    messagesDeleted: number
+    errors: string[]
+}
+
+export async function fetchSupportChatsPreview(
+    dateRange: DateRange,
+    statusFilter?: string[]
+): Promise<PreviewData> {
+    const { url, key } = getSupabaseCredentials()
+    const token = await getAccessToken()
+
+    if (!url || !key || !token) {
+        throw new Error('Missing credentials')
+    }
+
+    const headers = {
+        'apikey': key,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+    }
+
+    const fromDate = dateRange.from.toISOString()
+    const toDate = dateRange.to.toISOString()
+
+    let endpoint = `${url}/rest/v1/support_tickets?select=id,user_id,status,subject,created_at,updated_at`
+    endpoint += `&created_at=gte.${fromDate}&created_at=lte.${toDate}`
+
+    // Filter by status
+    if (statusFilter && statusFilter.length > 0) {
+        const statusList = statusFilter.join(',')
+        endpoint += `&status=in.(${statusList})`
+    }
+
+    endpoint += '&order=created_at.desc&limit=50'
+
+    const response = await fetch(endpoint, { headers })
+    if (!response.ok) {
+        throw new Error(`Failed to fetch support tickets: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const records = Array.isArray(data) ? data : []
+
+    return {
+        total: records.length,
+        sample: records.slice(0, 10),
+        columns: records.length > 0 ? Object.keys(records[0]) : []
+    }
+}
+
+export async function hardDeleteSupportChats(
+    ticketIds: string[]
+): Promise<SupportChatDeleteResult> {
+    const { url, key } = getSupabaseCredentials()
+    const token = await getAccessToken()
+
+    if (!url || !key || !token) {
+        throw new Error('Missing credentials')
+    }
+
+    // Check rate limit
+    if (ticketIds.length > RATE_LIMITS.delete.maxRecords) {
+        throw new Error(`จำนวนข้อมูลเกิน ${RATE_LIMITS.delete.maxRecords} รายการต่อครั้ง`)
+    }
+
+    const headers = {
+        'apikey': key,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+    }
+
+    const result: SupportChatDeleteResult = { deleted: 0, messagesDeleted: 0, errors: [] }
+
+    for (const ticketId of ticketIds) {
+        try {
+            // First, delete all messages in this ticket
+            const deleteMessagesRes = await fetch(
+                `${url}/rest/v1/support_messages?ticket_id=eq.${ticketId}`,
+                { method: 'DELETE', headers }
+            )
+
+            if (deleteMessagesRes.ok) {
+                // Count isn't returned, but we know messages were deleted
+                result.messagesDeleted++
+            }
+
+            // Then delete the ticket itself
+            const deleteTicketRes = await fetch(
+                `${url}/rest/v1/support_tickets?id=eq.${ticketId}`,
+                { method: 'DELETE', headers }
+            )
+
+            if (deleteTicketRes.ok) {
+                result.deleted++
+            } else {
+                const errorText = await deleteTicketRes.text()
+                result.errors.push(`ไม่สามารถลบ Ticket ID: ${ticketId} - ${errorText}`)
+            }
+        } catch (error) {
+            result.errors.push(`Error deleting ticket ${ticketId}: ${error}`)
+        }
+    }
+
+    return result
+}
