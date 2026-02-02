@@ -88,18 +88,25 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             const { url, key } = getSupabaseCredentials()
             if (!url || !key) return null
 
+            // Add timeout with AbortController
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
+
             const response = await fetch(
                 `${url}/rest/v1/profiles?id=eq.${uid}&select=id,status,role,first_name,last_name,phone_number`,
                 {
                     headers: {
                         'apikey': key,
                         'Authorization': `Bearer ${key}`
-                    }
+                    },
+                    signal: controller.signal
                 }
             )
 
+            clearTimeout(timeoutId)
+
             if (!response.ok) {
-                console.warn('AuthGuard: Failed to fetch profile')
+                console.warn('AuthGuard: Failed to fetch profile, status:', response.status)
                 return null
             }
 
@@ -115,8 +122,13 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             }
 
             return profileData
-        } catch (err) {
-            console.error('AuthGuard: Error fetching profile', err)
+        } catch (err: any) {
+            // Handle abort error silently
+            if (err?.name === 'AbortError') {
+                console.warn('AuthGuard: Profile fetch timed out')
+            } else {
+                console.error('AuthGuard: Error fetching profile', err)
+            }
             return null
         }
     }, [])
@@ -155,7 +167,16 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             }
 
             try {
-                const { data: { user } } = await client.auth.getUser()
+                // Add timeout to auth.getUser() to prevent hanging
+                const timeoutPromise = new Promise<{ data: { user: null }, error: null }>((resolve) => {
+                    setTimeout(() => {
+                        console.warn('AuthGuard: auth.getUser() timed out')
+                        resolve({ data: { user: null }, error: null })
+                    }, 10000) // 10s timeout
+                })
+
+                const authPromise = client.auth.getUser()
+                const { data: { user } } = await Promise.race([authPromise, timeoutPromise])
 
                 if (!isMounted) return
 
