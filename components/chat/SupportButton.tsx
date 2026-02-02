@@ -13,12 +13,7 @@ export default function SupportButton() {
     const queryClient = useQueryClient()
     const pathname = usePathname()
 
-    // Hide on admin/staff pages and login pages
-    if (pathname?.startsWith('/admin') || pathname?.startsWith('/staff') || pathname?.startsWith('/login') || pathname?.startsWith('/register')) {
-        return null
-    }
-
-    // Get Current User
+    // Get Current User - MUST be called before any conditional returns
     const { data: user } = useQuery({
         queryKey: ['current-user'],
         queryFn: async () => {
@@ -28,7 +23,7 @@ export default function SupportButton() {
         staleTime: Infinity
     })
 
-    // Get Active Ticket
+    // Get Active Ticket - MUST be called before any conditional returns
     const { data: activeTicket, isLoading: ticketLoading } = useQuery({
         queryKey: ['active-ticket', user?.id],
         queryFn: async () => {
@@ -50,7 +45,7 @@ export default function SupportButton() {
         enabled: !!user && isOpen // Only fetch when open
     })
 
-    // Create Ticket Mutation
+    // Create Ticket Mutation - MUST be called before any conditional returns
     const createTicketMutation = useMutation({
         mutationFn: async () => {
             const ticket = await createTicketAction()
@@ -61,30 +56,23 @@ export default function SupportButton() {
         }
     })
 
-    const handleOpen = () => {
-        setIsOpen(true)
-        // If we opened and there is NO active ticket (and not loading), create one
-        // We handle this effect inside the render or a useEffect, but click handler is safer
-        // Actually, we can just let specific UI handle "Start Chat" if no ticket?
-        // But for simplicity, let's auto-create on first message? 
-        // ChatWindow requires ticketId. So we must have a ticket.
-
-        // Strategy: 
-        // 1. Fetch active ticket on open. 
-        // 2. If valid ticket -> Show Chat.
-        // 3. If no ticket -> Show "Start Support" button in place of ChatWindow? 
-        //    OR just create one immediately? 
-        //    Let's Create immediately for seamless experience.
-    }
-
-    // Effect to create ticket if none exists when opened
+    // Effect to create ticket if none exists when opened - MUST be before conditional returns
     React.useEffect(() => {
         if (isOpen && user && !ticketLoading && !activeTicket && !createTicketMutation.isPending && !createTicketMutation.isSuccess) {
             createTicketMutation.mutate()
         }
-    }, [isOpen, user, ticketLoading, activeTicket])
+    }, [isOpen, user, ticketLoading, activeTicket, createTicketMutation])
+
+    // Hide on admin/staff pages and login pages - AFTER all hooks
+    if (pathname?.startsWith('/admin') || pathname?.startsWith('/staff') || pathname?.startsWith('/login') || pathname?.startsWith('/register')) {
+        return null
+    }
 
     if (!user) return null
+
+    const handleOpen = () => {
+        setIsOpen(true)
+    }
 
     return (
         <div className="fixed bottom-24 right-6 z-50 flex flex-col items-end gap-4">
