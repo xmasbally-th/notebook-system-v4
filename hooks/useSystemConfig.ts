@@ -44,12 +44,13 @@ export function useSystemConfig() {
         retryDelay: 1000,
         queryFn: async (): Promise<SystemConfig> => {
             try {
-                const timeoutMs = 30000 // 30s timeout
+                const timeoutMs = 10000 // Reduced to 10s timeout for faster fallback
 
-                const timeoutPromise = new Promise<never>((_, reject) => {
+                const timeoutPromise = new Promise<{ data: null, error: Error }>((resolve) => {
                     setTimeout(() => {
-                        console.warn('[useSystemConfig] Query timed out after', timeoutMs, 'ms')
-                        reject(new Error('Query timeout'))
+                        console.warn('[useSystemConfig] Query timed out after', timeoutMs, 'ms, using default config')
+                        // Return error object instead of rejecting - prevents throwing
+                        resolve({ data: null, error: new Error('Query timeout') })
                     }, timeoutMs)
                 })
 
@@ -59,13 +60,12 @@ export function useSystemConfig() {
                     .single()
 
                 // Use Promise.race to handle timeout
-                // We cast the result because single() returns { data, error }
                 const result = await Promise.race([queryPromise, timeoutPromise]) as { data: SystemConfig | null, error: any }
                 const { data, error } = result
 
                 if (error) {
                     console.error('[useSystemConfig] Supabase error:', error.message)
-                    // If error is PGRST116 (0 rows), return default
+                    // Return default config instead of throwing
                     return getDefaultConfig()
                 }
 
@@ -76,6 +76,7 @@ export function useSystemConfig() {
                 return data
             } catch (err: any) {
                 console.error('[useSystemConfig] Exception:', err?.message || err)
+                // Always return default config on any error
                 return getDefaultConfig()
             }
         }

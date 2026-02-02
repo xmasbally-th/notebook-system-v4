@@ -18,7 +18,11 @@ function getSupabaseClient() {
 export default function LoginPage() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const { data: systemConfig } = useSystemConfig()
+    // Make config optional - don't block login if config fails to load
+    const { data: systemConfig, isLoading: configLoading, isError: configError } = useSystemConfig()
+
+    // Use default values if config fails to load
+    const logoUrl = configError ? null : systemConfig?.document_logo_url
 
     const handleLogin = async () => {
         const client = getSupabaseClient()
@@ -54,10 +58,10 @@ export default function LoginPage() {
                 </div>
 
                 <div className="relative z-10 flex flex-col justify-center items-center w-full p-12 text-center">
-                    {systemConfig?.document_logo_url ? (
+                    {logoUrl ? (
                         <div className="w-24 h-24 relative mb-6 bg-white/10 rounded-2xl backdrop-blur-sm p-2">
                             <Image
-                                src={systemConfig.document_logo_url}
+                                src={logoUrl}
                                 alt="Logo"
                                 fill
                                 className="object-contain"
@@ -92,10 +96,10 @@ export default function LoginPage() {
             <div className="flex-1 flex flex-col justify-center items-center p-6 md:p-12 bg-gray-50">
                 {/* Mobile Logo */}
                 <div className="md:hidden flex items-center gap-3 mb-8">
-                    {systemConfig?.document_logo_url ? (
+                    {logoUrl ? (
                         <div className="w-10 h-10 relative">
                             <Image
-                                src={systemConfig.document_logo_url}
+                                src={logoUrl}
                                 alt="Logo"
                                 fill
                                 className="object-contain"
