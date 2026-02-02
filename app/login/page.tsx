@@ -1,11 +1,10 @@
 'use client'
 
 import { createBrowserClient } from '@supabase/ssr'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Laptop, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useSystemConfig } from '@/hooks/useSystemConfig'
 
 // Get Supabase client for auth operations
 function getSupabaseClient() {
@@ -18,11 +17,46 @@ function getSupabaseClient() {
 export default function LoginPage() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    // Make config optional - don't block login if config fails to load
-    const { data: systemConfig, isLoading: configLoading, isError: configError } = useSystemConfig()
+    const [logoUrl, setLogoUrl] = useState<string | null>(null)
 
-    // Use default values if config fails to load
-    const logoUrl = configError ? null : systemConfig?.document_logo_url
+    // Fetch logo URL directly without using react-query to avoid hook issues
+    useEffect(() => {
+        const fetchLogo = async () => {
+            try {
+                const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+                const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+                if (!url || !key) return
+
+                const controller = new AbortController()
+                const timeoutId = setTimeout(() => controller.abort(), 5000) // 5s timeout
+
+                const response = await fetch(
+                    `${url}/rest/v1/system_config?id=eq.1&select=document_logo_url`,
+                    {
+                        headers: {
+                            'apikey': key,
+                            'Authorization': `Bearer ${key}`
+                        },
+                        signal: controller.signal
+                    }
+                )
+
+                clearTimeout(timeoutId)
+
+                if (response.ok) {
+                    const data = await response.json()
+                    if (data?.[0]?.document_logo_url) {
+                        setLogoUrl(data[0].document_logo_url)
+                    }
+                }
+            } catch (err) {
+                // Silently ignore errors - will just show default icon
+                console.log('Login: Could not fetch logo, using default')
+            }
+        }
+
+        fetchLogo()
+    }, [])
 
     const handleLogin = async () => {
         const client = getSupabaseClient()
