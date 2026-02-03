@@ -7,7 +7,7 @@ import StaffLayout from '@/components/staff/StaffLayout'
 import {
     ClipboardList, CheckCircle, XCircle, Clock,
     Search, AlertTriangle, User, Package,
-    Calendar, ArrowUpRight, MessageSquare
+    Calendar, ArrowUpRight, MessageSquare, Tag, Hash
 } from 'lucide-react'
 import { useToast } from '@/components/ui/toast'
 import { approveLoan } from './actions'
@@ -47,7 +47,7 @@ export default function StaffLoansPage() {
             const { data: { session } } = await client.auth.getSession()
 
             const response = await fetch(
-                `${url}/rest/v1/loanRequests?select=*,profiles(first_name,last_name,email,phone_number),equipment(name,equipment_number,images)&order=created_at.desc`,
+                `${url}/rest/v1/loanRequests?select=*,profiles(first_name,last_name,email,phone_number),equipment(name,equipment_number,images,equipment_types(name))&order=created_at.desc`,
                 {
                     headers: {
                         'apikey': key,
@@ -63,10 +63,14 @@ export default function StaffLoansPage() {
     // Approve/Reject Mutation
     const updateStatusMutation = useMutation({
         mutationFn: async ({ id, status, reason }: { id: string, status: 'approved' | 'rejected', reason?: string }) => {
+            console.log('[updateStatusMutation] Starting mutation:', { id, status, reason })
+
             // For approval, use Server Action (handles Discord notification)
             if (status === 'approved') {
+                console.log('[updateStatusMutation] Calling approveLoan server action...')
                 const result = await approveLoan(id)
-                if (!result.success) throw new Error(result.error)
+                console.log('[updateStatusMutation] Server action result:', result)
+                if (!result.success) throw new Error(result.error || 'Unknown error')
                 return { id, status }
             }
 
@@ -100,13 +104,15 @@ export default function StaffLoansPage() {
             return { id, status }
         },
         onSuccess: ({ status }) => {
+            console.log('[updateStatusMutation] Success:', status)
             queryClient.invalidateQueries({ queryKey: ['staff-loan-requests'] })
             queryClient.invalidateQueries({ queryKey: ['staff-dashboard-stats'] })
             setSelectedIds([])
             toast.success(status === 'approved' ? 'อนุมัติคำขอเรียบร้อยแล้ว' : 'ปฏิเสธคำขอเรียบร้อยแล้ว')
         },
-        onError: () => {
-            toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่')
+        onError: (error: any) => {
+            console.error('[updateStatusMutation] Error:', error)
+            toast.error(error?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่')
         }
     })
 
@@ -186,9 +192,13 @@ export default function StaffLoansPage() {
     }
 
     const handleApprove = (id: string) => {
-        if (confirm('ยืนยันการอนุมัติคำขอนี้?')) {
-            updateStatusMutation.mutate({ id, status: 'approved' })
+        const confirmed = window.confirm('ยืนยันการอนุมัติคำขอนี้?')
+        if (!confirmed) {
+            console.log('[handleApprove] User cancelled approval')
+            return
         }
+        console.log('[handleApprove] Approving loan:', id)
+        updateStatusMutation.mutate({ id, status: 'approved' })
     }
 
     const handleRejectClick = (id: string) => {
@@ -483,45 +493,113 @@ export default function StaffLoansPage() {
                                 const statusConfig = STATUS_CONFIG[request.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending
                                 const StatusIcon = statusConfig.icon
 
+                                // Format return time
+                                const formatReturnTime = () => {
+                                    if (request.return_time) {
+                                        return request.return_time.substring(0, 5) // HH:mm
+                                    }
+                                    return formatDate(request.end_date)
+                                }
+
                                 return (
                                     <div
                                         key={request.id}
                                         className={`bg-gray-50 rounded-xl p-4 border ${selectedIds.includes(request.id) ? 'border-teal-300 bg-teal-50' : 'border-gray-100'}`}
                                     >
+                                        {/* Header: Status Badge */}
                                         <div className="flex items-center justify-between mb-3">
-                                            <div className="flex items-center gap-2">
-                                                <User className="w-4 h-4 text-gray-400" />
-                                                <span className="text-sm font-medium">
-                                                    {request.profiles?.first_name} {request.profiles?.last_name}
-                                                </span>
-                                            </div>
-                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${statusConfig.color}`}>
+                                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full ${statusConfig.color}`}>
                                                 <StatusIcon className="w-3 h-3" />
                                                 {statusConfig.label}
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Package className="w-4 h-4 text-gray-400" />
-                                            <span className="text-sm">{request.equipment?.name}</span>
+
+                                        {/* Info Grid - Responsive */}
+                                        <div className="grid grid-cols-1 gap-2 mb-3">
+                                            {/* ชื่อ-นามสกุล */}
+                                            <div className="flex items-start gap-2">
+                                                <User className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                                                <div className="min-w-0">
+                                                    <p className="text-xs text-gray-500">ชื่อ-นามสกุล</p>
+                                                    <p className="text-sm font-medium text-gray-900 break-words">
+                                                        {request.profiles?.first_name} {request.profiles?.last_name}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* ประเภท */}
+                                            <div className="flex items-start gap-2">
+                                                <Tag className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                                                <div className="min-w-0">
+                                                    <p className="text-xs text-gray-500">ประเภท</p>
+                                                    <p className="text-sm text-gray-900 break-words">
+                                                        {request.equipment?.equipment_types?.name || 'ไม่ระบุ'}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* หมายเลขครุภัณฑ์ */}
+                                            <div className="flex items-start gap-2">
+                                                <Hash className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                                                <div className="min-w-0">
+                                                    <p className="text-xs text-gray-500">หมายเลขครุภัณฑ์</p>
+                                                    <p className="text-sm font-mono text-gray-900 break-all">
+                                                        {request.equipment?.equipment_number || '-'}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* วันที่ยืม และ เวลาคืน - 2 columns on larger mobile */}
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {/* วันที่ยืม */}
+                                                <div className="flex items-start gap-2">
+                                                    <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs text-gray-500">วันที่ยืม</p>
+                                                        <p className="text-sm text-gray-900">
+                                                            {formatDate(request.start_date)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {/* เวลาคืน */}
+                                                <div className="flex items-start gap-2">
+                                                    <Clock className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs text-gray-500">กำหนดคืน</p>
+                                                        <p className="text-sm text-gray-900">
+                                                            {formatReturnTime()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
-                                            <Calendar className="w-3 h-3" />
-                                            <span>{formatDate(request.start_date)} - {formatDate(request.end_date)}</span>
-                                        </div>
+
+                                        {/* Action Buttons */}
                                         {request.status === 'pending' && (
-                                            <div className="flex gap-2">
+                                            <div className="flex gap-2 pt-2 border-t border-gray-200">
                                                 <button
                                                     onClick={() => handleApprove(request.id)}
-                                                    className="flex-1 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
+                                                    disabled={updateStatusMutation.isPending}
+                                                    className="flex-1 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
                                                 >
                                                     อนุมัติ
                                                 </button>
                                                 <button
                                                     onClick={() => handleRejectClick(request.id)}
-                                                    className="flex-1 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
+                                                    disabled={updateStatusMutation.isPending}
+                                                    className="flex-1 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
                                                 >
                                                     ปฏิเสธ
                                                 </button>
+                                            </div>
+                                        )}
+
+                                        {/* Rejection reason if rejected */}
+                                        {request.status === 'rejected' && request.rejection_reason && (
+                                            <div className="flex items-start gap-2 pt-2 border-t border-gray-200">
+                                                <MessageSquare className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                                                <p className="text-xs text-red-600">{request.rejection_reason}</p>
                                             </div>
                                         )}
                                     </div>
