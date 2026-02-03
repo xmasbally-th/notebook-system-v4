@@ -125,3 +125,51 @@ export async function updateMultipleUserStatus(
     return { success: true, count: userIds.length }
 }
 
+// Update user profile information
+export async function updateUserProfile(
+    userId: string,
+    data: {
+        first_name?: string
+        last_name?: string
+        title?: string
+        phone_number?: string
+        user_type?: string
+        department_id?: string | null
+    }
+) {
+    const supabase = await createClient()
+
+    // 1. Check Admin Permission
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Unauthorized')
+
+    const { data: adminProfile } = await supabase
+        .from('profiles' as any)
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (adminProfile?.role !== 'admin') {
+        throw new Error('Forbidden: Admin access required')
+    }
+
+    // 2. Update Profile
+    const { error } = await supabase
+        .from('profiles' as any)
+        .update({
+            first_name: data.first_name,
+            last_name: data.last_name,
+            title: data.title,
+            phone_number: data.phone_number,
+            user_type: data.user_type,
+            department_id: data.department_id,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+
+    if (error) throw new Error(error.message)
+
+    revalidatePath('/admin/users')
+    return { success: true }
+}
+

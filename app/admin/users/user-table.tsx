@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
     Check,
     X,
@@ -17,11 +17,17 @@ import {
     ChevronDown,
     RotateCcw,
     CheckCheck,
-    XOctagon
+    XOctagon,
+    Pencil,
+    Save,
+    AlertTriangle
 } from 'lucide-react'
-import { updateUserStatus, updateUserRole, updateMultipleUserStatus } from './actions'
+import { updateUserStatus, updateUserRole, updateMultipleUserStatus, updateUserProfile } from './actions'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/toast'
+import { supabase } from '@/lib/supabase/client'
+import Pagination from '@/components/ui/Pagination'
+
 
 type User = {
     id: string
@@ -36,6 +42,13 @@ type User = {
     avatar_url: string | null
     created_at: string
     departments: { name: string } | null
+    department_id?: string | null
+}
+
+type Department = {
+    id: string
+    name: string
+    is_active: boolean
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -63,6 +76,91 @@ export default function UserTable({ users }: { users: User[] }) {
     const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
     const [showBulkActions, setShowBulkActions] = useState(false)
 
+    // Edit modal state
+    const [editModalOpen, setEditModalOpen] = useState(false)
+    const [editingUser, setEditingUser] = useState<User | null>(null)
+    const [editForm, setEditForm] = useState({
+        title: '',
+        first_name: '',
+        last_name: '',
+        phone_number: '',
+        user_type: '',
+        department_id: '' as string | null
+    })
+    const [departments, setDepartments] = useState<Department[]>([])
+    const [editLoading, setEditLoading] = useState(false)
+
+    // Fetch departments for edit form
+    useEffect(() => {
+        const fetchDepartments = async () => {
+            const { data, error } = await supabase
+                .from('departments')
+                .select('id, name, is_active')
+                .eq('is_active', true)
+                .order('name')
+
+            if (!error && data) {
+                setDepartments(data)
+            }
+        }
+        fetchDepartments()
+    }, [])
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize, setPageSize] = useState(25)
+
+    // Duplicate detection - find users with similar names or same phone numbers
+    const duplicateInfo = useMemo(() => {
+        const nameMap = new Map<string, string[]>() // normalized name -> user ids
+        const phoneMap = new Map<string, string[]>() // phone -> user ids
+        const duplicateUserIds = new Set<string>()
+        const duplicateReasons = new Map<string, string[]>() // userId -> reasons
+
+        users.forEach(user => {
+            // Normalize name (remove spaces, lowercase)
+            const normalizedName = `${user.first_name || ''}${user.last_name || ''}`.toLowerCase().replace(/\s+/g, '')
+            if (normalizedName.length >= 3) {
+                if (!nameMap.has(normalizedName)) {
+                    nameMap.set(normalizedName, [])
+                }
+                nameMap.get(normalizedName)!.push(user.id)
+            }
+
+            // Phone number (normalize by removing non-digits)
+            const normalizedPhone = (user.phone_number || '').replace(/\D/g, '')
+            if (normalizedPhone.length >= 9) {
+                if (!phoneMap.has(normalizedPhone)) {
+                    phoneMap.set(normalizedPhone, [])
+                }
+                phoneMap.get(normalizedPhone)!.push(user.id)
+            }
+        })
+
+        // Mark duplicates
+        nameMap.forEach((ids, name) => {
+            if (ids.length > 1) {
+                ids.forEach(id => {
+                    duplicateUserIds.add(id)
+                    if (!duplicateReasons.has(id)) duplicateReasons.set(id, [])
+                    duplicateReasons.get(id)!.push(`ชื่อซ้ำ (${ids.length} คน)`)
+                })
+            }
+        })
+
+        phoneMap.forEach((ids, phone) => {
+            if (ids.length > 1) {
+                ids.forEach(id => {
+                    duplicateUserIds.add(id)
+                    if (!duplicateReasons.has(id)) duplicateReasons.set(id, [])
+                    duplicateReasons.get(id)!.push(`เบอร์โทรซ้ำ (${ids.length} คน)`)
+                })
+            }
+        })
+
+        return { duplicateUserIds, duplicateReasons }
+    }, [users])
+
     const filteredUsers = users.filter(user => {
         const matchesStatus = filterStatus === 'all' || user.status === filterStatus
         const fullName = `${user.title || ''}${user.first_name} ${user.last_name || ''}`.toLowerCase()
@@ -71,11 +169,25 @@ export default function UserTable({ users }: { users: User[] }) {
         return matchesStatus && matchesSearch
     })
 
+    // Calculate paginated users
+    const paginatedUsers = useMemo(() => {
+        const startIndex = (currentPage - 1) * pageSize
+        return filteredUsers.slice(startIndex, startIndex + pageSize)
+    }, [filteredUsers, currentPage, pageSize])
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [filterStatus, search])
+
     // Get pending users for bulk actions
     const pendingUsers = filteredUsers.filter(u => u.status === 'pending')
     const selectedPendingCount = Array.from(selectedUsers).filter(id =>
         pendingUsers.some(u => u.id === id)
     ).length
+
+    // Count duplicates in filtered results
+    const duplicatesInFiltered = filteredUsers.filter(u => duplicateInfo.duplicateUserIds.has(u.id)).length
 
     const handleStatusUpdate = async (userId: string, status: 'approved' | 'rejected' | 'pending') => {
         const statusLabels: Record<string, string> = {
@@ -170,6 +282,49 @@ export default function UserTable({ users }: { users: User[] }) {
         return (first + last).toUpperCase() || 'U'
     }
 
+    // Edit modal handlers
+    const openEditModal = (user: User) => {
+        setEditingUser(user)
+        setEditForm({
+            title: user.title || '',
+            first_name: user.first_name || '',
+            last_name: user.last_name || '',
+            phone_number: user.phone_number || '',
+            user_type: user.user_type || '',
+            department_id: user.department_id || null
+        })
+        setEditModalOpen(true)
+    }
+
+    const closeEditModal = () => {
+        setEditModalOpen(false)
+        setEditingUser(null)
+    }
+
+    const handleEditSubmit = async () => {
+        if (!editingUser) return
+
+        setEditLoading(true)
+        try {
+            await updateUserProfile(editingUser.id, {
+                title: editForm.title || undefined,
+                first_name: editForm.first_name || undefined,
+                last_name: editForm.last_name || undefined,
+                phone_number: editForm.phone_number || undefined,
+                user_type: editForm.user_type || undefined,
+                department_id: editForm.department_id || null
+            })
+            router.refresh()
+            toast.success('อัปเดตข้อมูลผู้ใช้เรียบร้อยแล้ว')
+            closeEditModal()
+        } catch (error: any) {
+            toast.error(`เกิดข้อผิดพลาด: ${error.message}`)
+        } finally {
+            setEditLoading(false)
+        }
+    }
+
+
     return (
         <div className="space-y-4">
             {/* Filters */}
@@ -263,8 +418,14 @@ export default function UserTable({ users }: { users: User[] }) {
             )}
 
             {/* Results Count */}
-            <div className="text-sm text-gray-500 px-1">
-                แสดง {filteredUsers.length} จาก {users.length} รายการ
+            <div className="flex items-center gap-3 text-sm text-gray-500 px-1">
+                <span>แสดง {paginatedUsers.length} จาก {filteredUsers.length} รายการ</span>
+                {duplicatesInFiltered > 0 && (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-medium">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        พบข้อมูลซ้ำ {duplicatesInFiltered} รายการ
+                    </span>
+                )}
             </div>
 
             {/* Desktop Table */}
@@ -299,10 +460,12 @@ export default function UserTable({ users }: { users: User[] }) {
                                 </td>
                             </tr>
                         ) : (
-                            filteredUsers.map(user => {
+                            paginatedUsers.map(user => {
                                 const status = statusConfig[user.status] || statusConfig.pending
+                                const isDuplicate = duplicateInfo.duplicateUserIds.has(user.id)
+                                const duplicateReasons = duplicateInfo.duplicateReasons.get(user.id)
                                 return (
-                                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                                    <tr key={user.id} className={`transition-colors ${isDuplicate ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-gray-50'}`}>
                                         {filterStatus === 'pending' && (
                                             <td className="px-4 py-4">
                                                 <input
@@ -327,8 +490,16 @@ export default function UserTable({ users }: { users: User[] }) {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <div className="font-medium text-gray-900">
+                                                    <div className="font-medium text-gray-900 flex items-center gap-1.5">
                                                         {user.title} {user.first_name} {user.last_name}
+                                                        {isDuplicate && (
+                                                            <span
+                                                                className="text-amber-600 cursor-help"
+                                                                title={duplicateReasons?.join(', ')}
+                                                            >
+                                                                <AlertTriangle className="w-4 h-4" />
+                                                            </span>
+                                                        )}
                                                     </div>
                                                     <div className="text-gray-500 text-xs">
                                                         {user.user_type ? userTypeLabels[user.user_type] : '-'}
@@ -421,6 +592,15 @@ export default function UserTable({ users }: { users: User[] }) {
                                                         <option value="staff">Staff</option>
                                                         <option value="admin">Admin</option>
                                                     </select>
+
+                                                    {/* Edit button */}
+                                                    <button
+                                                        onClick={() => openEditModal(user)}
+                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        title="แก้ไขข้อมูล"
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
                                                 </div>
                                             )}
                                         </td>
@@ -440,16 +620,18 @@ export default function UserTable({ users }: { users: User[] }) {
                         <p>ไม่พบผู้ใช้ที่ตรงตามเงื่อนไข</p>
                     </div>
                 ) : (
-                    filteredUsers.map(user => {
+                    paginatedUsers.map(user => {
                         const status = statusConfig[user.status] || statusConfig.pending
                         const isExpanded = expandedUser === user.id
                         const isPending = user.status === 'pending'
                         const isRejected = user.status === 'rejected'
+                        const isDuplicate = duplicateInfo.duplicateUserIds.has(user.id)
+                        const duplicateReasons = duplicateInfo.duplicateReasons.get(user.id)
 
                         return (
                             <div
                                 key={user.id}
-                                className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+                                className={`rounded-2xl border shadow-sm overflow-hidden ${isDuplicate ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}
                             >
                                 {/* Card Header */}
                                 <div
@@ -486,6 +668,14 @@ export default function UserTable({ users }: { users: User[] }) {
                                             <span className="font-medium text-gray-900 truncate">
                                                 {user.title} {user.first_name} {user.last_name}
                                             </span>
+                                            {isDuplicate && (
+                                                <span
+                                                    className="text-amber-600 flex-shrink-0"
+                                                    title={duplicateReasons?.join(', ')}
+                                                >
+                                                    <AlertTriangle className="w-4 h-4" />
+                                                </span>
+                                            )}
                                             {user.role === 'admin' && (
                                                 <Shield className="w-4 h-4 text-purple-600 flex-shrink-0" />
                                             )}
@@ -585,6 +775,15 @@ export default function UserTable({ users }: { users: User[] }) {
                                                         {isRejected ? '' : 'ลดเป็น User'}
                                                     </button>
                                                 )}
+
+                                                {/* Edit button for mobile */}
+                                                <button
+                                                    onClick={() => openEditModal(user)}
+                                                    className="flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                    แก้ไข
+                                                </button>
                                             </div>
                                         )}
                                     </div>
@@ -594,6 +793,154 @@ export default function UserTable({ users }: { users: User[] }) {
                     })
                 )}
             </div>
+
+            {/* Pagination */}
+            {filteredUsers.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <Pagination
+                        currentPage={currentPage}
+                        totalItems={filteredUsers.length}
+                        pageSize={pageSize}
+                        pageSizeOptions={[10, 25, 50, 100]}
+                        onPageChange={setCurrentPage}
+                        onPageSizeChange={setPageSize}
+                    />
+                </div>
+            )}
+
+            {/* Edit Modal */}
+            {editModalOpen && editingUser && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                        {/* Modal Header */}
+                        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 rounded-t-2xl">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-semibold text-gray-900">แก้ไขข้อมูลผู้ใช้</h3>
+                                <button
+                                    onClick={closeEditModal}
+                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <p className="text-sm text-gray-500 mt-1">{editingUser.email}</p>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 space-y-4">
+                            {/* คำนำหน้า */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">คำนำหน้า</label>
+                                <select
+                                    value={editForm.title}
+                                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                    <option value="">-- เลือกคำนำหน้า --</option>
+                                    <option value="นาย">นาย</option>
+                                    <option value="นาง">นาง</option>
+                                    <option value="นางสาว">นางสาว</option>
+                                    <option value="ผศ.">ผศ.</option>
+                                    <option value="รศ.">รศ.</option>
+                                    <option value="ศ.">ศ.</option>
+                                    <option value="ดร.">ดร.</option>
+                                    <option value="ผศ.ดร.">ผศ.ดร.</option>
+                                    <option value="รศ.ดร.">รศ.ดร.</option>
+                                    <option value="ศ.ดร.">ศ.ดร.</option>
+                                </select>
+                            </div>
+
+                            {/* ชื่อ-นามสกุล */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อ</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.first_name}
+                                        onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
+                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="ชื่อ"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">นามสกุล</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.last_name}
+                                        onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
+                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="นามสกุล"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* เบอร์โทรศัพท์ */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์</label>
+                                <input
+                                    type="tel"
+                                    value={editForm.phone_number}
+                                    onChange={(e) => setEditForm({ ...editForm, phone_number: e.target.value })}
+                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="0812345678"
+                                />
+                            </div>
+
+                            {/* ประเภทผู้ใช้ */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">ประเภทผู้ใช้</label>
+                                <select
+                                    value={editForm.user_type}
+                                    onChange={(e) => setEditForm({ ...editForm, user_type: e.target.value })}
+                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                    <option value="">-- เลือกประเภท --</option>
+                                    <option value="student">นักศึกษา</option>
+                                    <option value="lecturer">อาจารย์</option>
+                                    <option value="staff">บุคลากร</option>
+                                </select>
+                            </div>
+
+                            {/* หน่วยงาน */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">หน่วยงาน</label>
+                                <select
+                                    value={editForm.department_id || ''}
+                                    onChange={(e) => setEditForm({ ...editForm, department_id: e.target.value || null })}
+                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                    <option value="">-- เลือกหน่วยงาน --</option>
+                                    {departments.map((dept) => (
+                                        <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 rounded-b-2xl flex gap-3">
+                            <button
+                                onClick={closeEditModal}
+                                className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+                            >
+                                ยกเลิก
+                            </button>
+                            <button
+                                onClick={handleEditSubmit}
+                                disabled={editLoading}
+                                className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                            >
+                                {editLoading ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <Save className="w-4 h-4" />
+                                )}
+                                บันทึก
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
