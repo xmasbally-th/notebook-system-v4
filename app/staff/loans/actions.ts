@@ -3,6 +3,46 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendDiscordNotification } from '@/lib/notifications'
+import type { ActionType } from '@/lib/staffActivityLog'
+
+// Server-side function to log staff activity
+async function logStaffActivityServer(
+    supabase: any,
+    entry: {
+        staffId: string
+        staffRole: 'staff' | 'admin'
+        actionType: ActionType
+        targetType: 'loan' | 'reservation' | 'notification' | 'special_loan' | 'evaluation'
+        targetId: string
+        targetUserId?: string
+        isSelfAction?: boolean
+        details?: Record<string, any>
+    }
+): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('staff_activity_log')
+            .insert({
+                staff_id: entry.staffId,
+                staff_role: entry.staffRole,
+                action_type: entry.actionType,
+                target_type: entry.targetType,
+                target_id: entry.targetId,
+                target_user_id: entry.targetUserId || null,
+                is_self_action: entry.isSelfAction || false,
+                details: entry.details || {}
+            })
+
+        if (error) {
+            console.error('[logStaffActivityServer] Error:', error)
+            return false
+        }
+        return true
+    } catch (error) {
+        console.error('[logStaffActivityServer] Exception:', error)
+        return false
+    }
+}
 
 export async function approveLoan(loanId: string) {
     console.log('[approveLoan] Starting approval for loan:', loanId)
@@ -117,7 +157,19 @@ export async function approveLoan(loanId: string) {
             `👮 **อนุมัติโดย:** Staff`
         )
 
-        // 4. Revalidate paths
+        // 4. Log staff activity
+        console.log('[approveLoan] Logging staff activity...')
+        await logStaffActivityServer(supabase, {
+            staffId: user.id,
+            staffRole: profile.role as 'staff' | 'admin',
+            actionType: 'approve_loan',
+            targetType: 'loan',
+            targetId: loanId,
+            targetUserId: loan.user_id,
+            isSelfAction: loan.user_id === user.id
+        })
+
+        // 5. Revalidate paths
         console.log('[approveLoan] Revalidating paths...')
         revalidatePath('/staff/loans')
         revalidatePath('/staff/dashboard')
@@ -200,7 +252,19 @@ export async function rejectLoan(loanId: string, reason: string) {
             throw new Error('Loan not found or already processed')
         }
 
-        // 3. Revalidate paths
+        // 3. Log staff activity
+        await logStaffActivityServer(supabase, {
+            staffId: user.id,
+            staffRole: profile.role as 'staff' | 'admin',
+            actionType: 'reject_loan',
+            targetType: 'loan',
+            targetId: loanId,
+            targetUserId: loan.user_id,
+            isSelfAction: loan.user_id === user.id,
+            details: { reason }
+        })
+
+        // 4. Revalidate paths
         revalidatePath('/staff/loans')
         revalidatePath('/staff/dashboard')
         revalidatePath('/my-loans')

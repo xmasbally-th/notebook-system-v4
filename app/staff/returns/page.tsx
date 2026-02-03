@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/components/ui/toast'
 import { notifyReturn } from '@/app/notifications/actions'
+import { logStaffActivity } from '@/lib/staffActivityLog'
 
 type ConditionType = 'good' | 'damaged' | 'missing_parts'
 
@@ -56,11 +57,12 @@ export default function StaffReturnsPage() {
 
     // Process return mutation
     const processReturnMutation = useMutation({
-        mutationFn: async ({ loanId, equipmentId, condition, notes }: {
+        mutationFn: async ({ loanId, equipmentId, condition, notes, loanUserId }: {
             loanId: string,
             equipmentId: string,
             condition: ConditionType,
-            notes: string
+            notes: string,
+            loanUserId: string
         }) => {
             const { url, key } = getSupabaseCredentials()
 
@@ -68,9 +70,22 @@ export default function StaffReturnsPage() {
             const client = createBrowserClient(url, key)
             const { data: { session } } = await client.auth.getSession()
 
-            if (!session?.access_token) {
+            if (!session?.access_token || !session.user) {
                 throw new Error('กรุณาเข้าสู่ระบบก่อน')
             }
+
+            // Get user's role for staff activity log
+            const profileResponse = await fetch(
+                `${url}/rest/v1/profiles?id=eq.${session.user.id}&select=role`,
+                {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${session.access_token}`
+                    }
+                }
+            )
+            const profiles = profileResponse.ok ? await profileResponse.json() : []
+            const staffRole = profiles[0]?.role || 'staff'
 
             // Update loan request to returned
             // Note: return_condition & return_notes columns need to be added via migration
@@ -106,6 +121,18 @@ export default function StaffReturnsPage() {
             if (!equipmentResponse.ok) {
                 console.warn('Failed to update equipment status')
             }
+
+            // Log staff activity
+            await logStaffActivity({
+                staffId: session.user.id,
+                staffRole: staffRole as 'staff' | 'admin',
+                actionType: 'mark_returned',
+                targetType: 'loan',
+                targetId: loanId,
+                targetUserId: loanUserId,
+                isSelfAction: loanUserId === session.user.id,
+                details: { condition, notes: notes || undefined }
+            })
 
             return { condition }
         },
@@ -158,7 +185,8 @@ export default function StaffReturnsPage() {
                 loanId: selectedLoan.id,
                 equipmentId: selectedLoan.equipment?.id,
                 condition,
-                notes
+                notes,
+                loanUserId: selectedLoan.user_id
             })
         }
     }
