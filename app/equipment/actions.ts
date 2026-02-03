@@ -54,9 +54,29 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
     const loanLimits = config?.loan_limits_by_type as LoanLimitsByType | null
     const limits = loanLimits?.[userType as keyof LoanLimitsByType] || { max_days: 7, max_items: 1 }
 
-    // Check loan duration
+    // Parse dates
     const start = new Date(startDate)
     const end = new Date(endDate)
+
+    // Get today at midnight for comparison
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // Check if start date is in the past
+    const startDateOnly = new Date(start)
+    startDateOnly.setHours(0, 0, 0, 0)
+    if (startDateOnly < today) {
+        return { error: 'วันที่ยืมต้องไม่เป็นวันที่ผ่านมาแล้ว' }
+    }
+
+    // Check if end date is before start date
+    const endDateOnly = new Date(end)
+    endDateOnly.setHours(0, 0, 0, 0)
+    if (endDateOnly < startDateOnly) {
+        return { error: 'วันที่คืนต้องไม่ก่อนวันที่ยืม' }
+    }
+
+    // Check loan duration
     const durationMs = end.getTime() - start.getTime()
     const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24)) + 1
 

@@ -10,7 +10,7 @@ import {
     Calendar, ArrowUpRight, MessageSquare, Tag, Hash
 } from 'lucide-react'
 import { useToast } from '@/components/ui/toast'
-import { approveLoan } from './actions'
+import { approveLoan, rejectLoan, bulkApproveLoans, bulkRejectLoans } from './actions'
 import { useRealtimeInvalidator } from '@/hooks/useRealtimeInvalidator'
 
 const STATUS_CONFIG = {
@@ -65,7 +65,6 @@ export default function StaffLoansPage() {
         mutationFn: async ({ id, status, reason }: { id: string, status: 'approved' | 'rejected', reason?: string }) => {
             console.log('[updateStatusMutation] Starting mutation:', { id, status, reason })
 
-            // For approval, use Server Action (handles Discord notification)
             if (status === 'approved') {
                 console.log('[updateStatusMutation] Calling approveLoan server action...')
                 const result = await approveLoan(id)
@@ -74,33 +73,11 @@ export default function StaffLoansPage() {
                 return { id, status }
             }
 
-            // For rejection, keep existing client-side logic (or move to action later if needed)
-            const { url, key } = getSupabaseCredentials()
-
-            const { createBrowserClient } = await import('@supabase/ssr')
-            const client = createBrowserClient(url, key)
-            const { data: { session } } = await client.auth.getSession()
-
-            if (!session?.access_token) {
-                throw new Error('กรุณาเข้าสู่ระบบก่อน')
-            }
-
-            const body: any = { status }
-            if (reason) {
-                body.rejection_reason = reason
-            }
-
-            const response = await fetch(`${url}/rest/v1/loanRequests?id=eq.${id}`, {
-                method: 'PATCH',
-                headers: {
-                    'apikey': key,
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(body)
-            })
-
-            if (!response.ok) throw new Error('Failed to update')
+            // For rejection, use server action
+            console.log('[updateStatusMutation] Calling rejectLoan server action...')
+            const result = await rejectLoan(id, reason || 'ไม่ระบุเหตุผล')
+            console.log('[updateStatusMutation] Server action result:', result)
+            if (!result.success) throw new Error(result.error || 'Unknown error')
             return { id, status }
         },
         onSuccess: ({ status }) => {
@@ -118,28 +95,20 @@ export default function StaffLoansPage() {
 
     // Bulk Action Mutation
     const bulkUpdateMutation = useMutation({
-        mutationFn: async ({ ids, status }: { ids: string[], status: 'approved' | 'rejected' }) => {
-            const { url, key } = getSupabaseCredentials()
-
-            const { createBrowserClient } = await import('@supabase/ssr')
-            const client = createBrowserClient(url, key)
-            const { data: { session } } = await client.auth.getSession()
-
-            if (!session?.access_token) {
-                throw new Error('กรุณาเข้าสู่ระบบก่อน')
-            }
-
-            for (const id of ids) {
-                const response = await fetch(`${url}/rest/v1/loanRequests?id=eq.${id}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'apikey': key,
-                        'Authorization': `Bearer ${session.access_token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ status })
-                })
-                if (!response.ok) throw new Error('Failed to update')
+        mutationFn: async ({ ids, status, reason }: { ids: string[], status: 'approved' | 'rejected', reason?: string }) => {
+            if (status === 'approved') {
+                const result = await bulkApproveLoans(ids)
+                if (!result.success) {
+                    const failedItems = result.results.filter(r => !r.success)
+                    throw new Error(`ไม่สามารถอนุมัติ ${result.failedCount} รายการ: ${failedItems[0]?.error || 'Unknown error'}`)
+                }
+                return result
+            } else {
+                const result = await bulkRejectLoans(ids, reason || 'ไม่ระบุเหตุผล')
+                if (!result.success) {
+                    throw new Error(`ไม่สามารถปฏิเสธ ${result.failedCount} รายการ`)
+                }
+                return result
             }
         },
         onSuccess: () => {
@@ -147,6 +116,9 @@ export default function StaffLoansPage() {
             queryClient.invalidateQueries({ queryKey: ['staff-dashboard-stats'] })
             setSelectedIds([])
             toast.success('ดำเนินการเรียบร้อยแล้ว')
+        },
+        onError: (error: any) => {
+            toast.error(error?.message || 'เกิดข้อผิดพลาดบางส่วน กรุณาลองใหม่')
         }
     })
 

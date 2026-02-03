@@ -253,6 +253,28 @@ export async function createReservation(
     const accessToken = await getAccessToken()
     if (!accessToken) return { success: false, error: 'กรุณาเข้าสู่ระบบ' }
 
+    // Validate dates
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+
+    // Get today at midnight for comparison
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // Check if start date is in the past
+    const startDateOnly = new Date(start)
+    startDateOnly.setHours(0, 0, 0, 0)
+    if (startDateOnly < today) {
+        return { success: false, error: 'วันที่รับต้องไม่เป็นวันที่ผ่านมาแล้ว' }
+    }
+
+    // Check if end date is before start date
+    const endDateOnly = new Date(end)
+    endDateOnly.setHours(0, 0, 0, 0)
+    if (endDateOnly < startDateOnly) {
+        return { success: false, error: 'วันที่คืนต้องไม่ก่อนวันที่รับ' }
+    }
+
     // Check type conflict (optional - skip if RPC not available)
     try {
         const typeConflict = await checkTypeConflict(user.id, equipmentId)
@@ -388,6 +410,50 @@ export async function approveReservation(
     if (!accessToken) return { success: false, error: 'กรุณาเข้าสู่ระบบ' }
 
     try {
+        // First, fetch the reservation to validate dates
+        const fetchResponse = await fetch(
+            `${url}/rest/v1/reservations?id=eq.${reservationId}&select=start_date,end_date,status`,
+            {
+                headers: {
+                    'apikey': key,
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            }
+        )
+
+        if (!fetchResponse.ok) {
+            return { success: false, error: 'ไม่พบข้อมูลการจอง' }
+        }
+
+        const reservations = await fetchResponse.json()
+        if (!reservations || reservations.length === 0) {
+            return { success: false, error: 'ไม่พบการจองนี้' }
+        }
+
+        const reservation = reservations[0]
+
+        // Check if already processed
+        if (reservation.status !== 'pending') {
+            return { success: false, error: `การจองนี้ไม่อยู่ในสถานะรออนุมัติ (สถานะ: ${reservation.status})` }
+        }
+
+        // Validate date range: end_date must be >= start_date
+        const startDate = new Date(reservation.start_date)
+        const endDate = new Date(reservation.end_date)
+
+        const startDateOnly = new Date(startDate)
+        startDateOnly.setHours(0, 0, 0, 0)
+        const endDateOnly = new Date(endDate)
+        endDateOnly.setHours(0, 0, 0, 0)
+
+        if (endDateOnly < startDateOnly) {
+            return {
+                success: false,
+                error: `ไม่สามารถอนุมัติได้: วันที่คืน (${endDate.toLocaleDateString('th-TH')}) ก่อนวันที่รับ (${startDate.toLocaleDateString('th-TH')})`
+            }
+        }
+
+        // Update status
         const response = await fetch(`${url}/rest/v1/reservations?id=eq.${reservationId}`, {
             method: 'PATCH',
             headers: {
