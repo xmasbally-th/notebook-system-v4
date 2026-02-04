@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { sendApprovalEmail } from '@/lib/email'
 import { revalidatePath } from 'next/cache'
 
@@ -173,11 +173,11 @@ export async function updateUserProfile(
     return { success: true }
 }
 
-// Delete user
+// Delete user - uses admin client to bypass RLS
 export async function deleteUser(userId: string) {
     const supabase = await createClient()
 
-    // 1. Check Admin Permission
+    // 1. Check Admin Permission with regular client
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Unauthorized')
 
@@ -196,39 +196,42 @@ export async function deleteUser(userId: string) {
         throw new Error('ไม่สามารถลบบัญชีของตัวเองได้')
     }
 
-    // 3. Delete related records first (due to foreign key constraints)
+    // 3. Use admin client to bypass RLS for delete operations
+    const adminClient = createAdminClient()
+
+    // 4. Delete related records first (due to foreign key constraints)
     // Delete notifications
-    await supabase.from('notifications' as any).delete().eq('user_id', userId)
+    await adminClient.from('notifications').delete().eq('user_id', userId)
 
     // Delete evaluations
-    await supabase.from('evaluations' as any).delete().eq('user_id', userId)
+    await adminClient.from('evaluations').delete().eq('user_id', userId)
 
     // Delete loan requests
-    await supabase.from('loanRequests' as any).delete().eq('user_id', userId)
+    await adminClient.from('loanRequests').delete().eq('user_id', userId)
 
     // Delete reservations
-    await supabase.from('reservations' as any).delete().eq('user_id', userId)
+    await adminClient.from('reservations').delete().eq('user_id', userId)
 
     // Delete support messages (for tickets owned by user)
-    const { data: userTickets } = await supabase
-        .from('support_tickets' as any)
+    const { data: userTickets } = await adminClient
+        .from('support_tickets')
         .select('id')
         .eq('user_id', userId)
 
     if (userTickets && userTickets.length > 0) {
         const ticketIds = userTickets.map((t: any) => t.id)
-        await supabase.from('support_messages' as any).delete().in('ticket_id', ticketIds)
+        await adminClient.from('support_messages').delete().in('ticket_id', ticketIds)
     }
 
     // Delete support tickets
-    await supabase.from('support_tickets' as any).delete().eq('user_id', userId)
+    await adminClient.from('support_tickets').delete().eq('user_id', userId)
 
     // Delete staff activity logs (if user was staff)
-    await supabase.from('staff_activity_log' as any).delete().eq('staff_id', userId)
+    await adminClient.from('staff_activity_log').delete().eq('staff_id', userId)
 
-    // 4. Finally delete the user profile
-    const { error } = await supabase
-        .from('profiles' as any)
+    // 5. Finally delete the user profile
+    const { error } = await adminClient
+        .from('profiles')
         .delete()
         .eq('id', userId)
 
