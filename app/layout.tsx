@@ -1,8 +1,20 @@
 import './globals.css'
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Kanit, Mali } from 'next/font/google'
 
-const inter = Inter({ subsets: ['latin'] })
+const kanit = Kanit({
+    subsets: ['thai', 'latin'],
+    weight: ['400', '500', '600', '700'],
+    variable: '--font-kanit',
+    display: 'swap'
+})
+
+const mali = Mali({
+    subsets: ['thai', 'latin'],
+    weight: ['400', '500', '600'],
+    variable: '--font-mali',
+    display: 'swap'
+})
 
 export const metadata: Metadata = {
     title: 'ระบบยืม-คืนพัสดุและครุภัณฑ์ คณะวิทยาการจัดการ มรภ.ลำปาง',
@@ -17,6 +29,7 @@ import QueryProvider from '@/components/providers/QueryProvider'
 import AuthGuard from '@/components/auth/AuthGuard'
 import DebugConsole from '@/components/debug/DebugConsole'
 import ErrorBoundary from '@/components/error/ErrorBoundary'
+import { ThemeProvider } from '@/components/providers/ThemeContext'
 
 export default function RootLayout({
     children,
@@ -24,17 +37,19 @@ export default function RootLayout({
     children: React.ReactNode
 }) {
     return (
-        <html lang="th">
-            <body className={`${inter.className} bg-gray-50 text-gray-900 antialiased`}>
-                <ErrorBoundary>
-                    <QueryProvider>
-                        <AuthGuard>
-                            {children}
-                            <SupportButton />
-                        </AuthGuard>
-                    </QueryProvider>
-                </ErrorBoundary>
-                <DebugConsole />
+        <html lang="th" suppressHydrationWarning>
+            <body className={`${kanit.variable} ${mali.variable} font-body antialiased`}>
+                <ThemeProvider>
+                    <ErrorBoundary>
+                        <QueryProvider>
+                            <AuthGuard>
+                                {children}
+                                <SupportButton />
+                            </AuthGuard>
+                        </QueryProvider>
+                    </ErrorBoundary>
+                    <DebugConsole />
+                </ThemeProvider>
             </body>
         </html>
     )

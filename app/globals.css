@@ -2,49 +2,363 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Typography Sizes - Responsive (clamp) */
+    --text-xs: clamp(0.7rem, 0.65rem + 0.25vw, 0.8rem);
+    --text-sm: clamp(0.8rem, 0.75rem + 0.25vw, 0.9rem);
+    --text-base: clamp(0.9rem, 0.85rem + 0.25vw, 1rem);
+    --text-lg: clamp(1.05rem, 1rem + 0.3vw, 1.2rem);
+    --text-xl: clamp(1.2rem, 1.1rem + 0.5vw, 1.5rem);
+    --text-2xl: clamp(1.4rem, 1.25rem + 0.75vw, 1.875rem);
+    --text-3xl: clamp(1.7rem, 1.5rem + 1vw, 2.25rem);
+    --text-4xl: clamp(2rem, 1.75rem + 1.25vw, 3rem);
   }
 
+  /* 🎮 Playful Theme (Default) */
+  :root,
+  [data-theme="playful"] {
+    --primary: #FF6B9D;
+    --secondary: #00D4FF;
+    --accent-yellow: #FFE66D;
+    --accent-lime: #7BF1A8;
+    --accent-purple: #B388FF;
+
+    --background: #FFF5F7;
+    --foreground: #2D1B69;
+    --card-bg: #FFFFFF;
+    --border: #FFB8D1;
+    --muted: #FFF0F5;
+
+    /* Playful Shadows */
+    --shadow-pop: 4px 4px 0 var(--primary);
+    --shadow-soft: 0 8px 32px rgba(255, 107, 157, 0.2);
+
+    /* Theme-specific settings */
+    --heading-gradient: linear-gradient(135deg, var(--primary) 0%, var(--accent-purple) 100%);
+    --scrollbar-track: linear-gradient(180deg, #FFE66D 0%, #FF6B9D 50%, #B388FF 100%);
+    --scrollbar-thumb: linear-gradient(180deg, #00D4FF 0%, #7BF1A8 50%, #B388FF 100%);
+    --btn-rotate: -0.5deg;
+    --input-radius: 12px;
+  }
+
+  /* 📘 Classic Theme */
+  [data-theme="classic"] {
+    --primary: #3B82F6;
+    --secondary: #6366F1;
+    --accent-yellow: #FBBF24;
+    --accent-lime: #22C55E;
+    --accent-purple: #8B5CF6;
+
+    --background: #F9FAFB;
+    --foreground: #111827;
+    --card-bg: #FFFFFF;
+    --border: #E5E7EB;
+    --muted: #F3F4F6;
+
+    /* Classic Shadows */
+    --shadow-pop: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-soft: 0 4px 15px rgba(0, 0, 0, 0.08);
+
+    /* Theme-specific settings */
+    --heading-gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    --scrollbar-track: #F3F4F6;
+    --scrollbar-thumb: #D1D5DB;
+    --btn-rotate: 0deg;
+    --input-radius: 8px;
+  }
+
+  /* Body Text - Mali */
   body {
+    font-family: var(--font-mali), sans-serif;
+    font-size: var(--text-base);
     font-feature-settings: "rlig" 1, "calt" 1;
+    line-height: 1.6;
+    background: var(--background);
+    color: var(--foreground);
+    min-height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Heading Styles - Kanit */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .font-heading {
+    font-family: var(--font-kanit), sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    background: var(--heading-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Responsive Heading Sizes */
+  h1 {
+    font-size: var(--text-4xl);
+  }
+
+  h2 {
+    font-size: var(--text-3xl);
+  }
+
+  h3 {
+    font-size: var(--text-2xl);
+  }
+
+  h4 {
+    font-size: var(--text-xl);
+  }
+
+  h5 {
+    font-size: var(--text-lg);
+  }
+
+  h6 {
+    font-size: var(--text-base);
+  }
+
+  /* Apply Mali to common text elements */
+  p,
+  span,
+  li,
+  td,
+  th,
+  label,
+  input,
+  textarea,
+  select,
+  button {
+    font-family: var(--font-mali), sans-serif;
+  }
+
+  /* Playful Input Styling */
+  input,
+  textarea,
+  select {
+    border: 3px solid var(--border);
+    border-radius: 12px;
+    background: white;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: var(--shadow-pop);
+    transform: translate(-2px, -2px);
+  }
+
+  /* Playful Buttons */
+  button {
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  button:hover {
+    transform: scale(1.02) rotate(-0.5deg);
+  }
+
+  button:active {
+    transform: scale(0.98);
   }
 }
 
-/* Custom Scrollbar for better UI feel */
+/* 16-bit Pixel Art Style */
+.pixel-icon {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.icon-container {
+  background: linear-gradient(135deg, var(--accent-yellow), var(--accent-lime));
+  border: 4px solid var(--foreground);
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 4px 4px 0 var(--foreground);
+}
+
+/* 🌈 Rainbow Scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 14px;
 }
 
 ::-webkit-scrollbar-track {
-  background-color: transparent;
+  background: linear-gradient(180deg, #FFE66D 0%, #FF6B9D 50%, #B388FF 100%);
+  border-radius: 7px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #d1d5db;
-  border-radius: 9999px;
-  border: 4px solid white;
+  background: linear-gradient(180deg, #00D4FF 0%, #7BF1A8 50%, #B388FF 100%);
+  border-radius: 7px;
+  border: 3px solid white;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #9ca3af;
+  background: linear-gradient(180deg, #00A8CC 0%, #5DD988 50%, #9F6BFF 100%);
+}
+
+/* 🎮 Playful Animations */
+@keyframes bounce-in {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes wiggle {
+
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+@keyframes sparkle {
+
+  0%,
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    filter: brightness(1.3);
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes rainbow-shift {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+
+  100% {
+    filter: hue-rotate(360deg);
+  }
 }
 
 /* Toast Animation */
 @keyframes slide-in {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-10px) scale(0.9);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
+/* Animation Classes */
+.animate-bounce-in {
+  animation: bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.animate-wiggle {
+  animation: wiggle 0.3s ease-in-out;
+}
+
+.animate-sparkle {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pop {
+  animation: pop 0.3s ease-in-out;
+}
+
+.animate-rainbow {
+  animation: rainbow-shift 5s linear infinite;
+}
+
 .animate-slide-in {
-  animation: slide-in 0.3s ease-out;
+  animation: slide-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Hover Animation Classes */
+.hover-wiggle:hover {
+  animation: wiggle 0.3s ease-in-out infinite;
+}
+
+.hover-pop:hover {
+  animation: pop 0.3s ease-in-out;
+}
+
+.hover-float:hover {
+  animation: float 1.5s ease-in-out infinite;
+}
+
+/* Playful Card Style */
+.card-playful {
+  background: white;
+  border: 3px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-soft);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.card-playful:hover {
+  transform: translateY(-4px) rotate(-0.5deg);
+  box-shadow: 0 16px 48px rgba(255, 107, 157, 0.25);
+}
+
+/* Playful Badge */
+.badge-playful {
+  background: linear-gradient(135deg, var(--primary), var(--accent-purple));
+  color: white;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
 }
 
 /* Respect user preference for reduced motion */
@@ -54,7 +368,16 @@
   .animate-pulse,
   .animate-spin,
   .animate-bounce,
+  .animate-bounce-in,
+  .animate-wiggle,
+  .animate-float,
+  .animate-pop,
+  .animate-sparkle,
+  .animate-rainbow,
   .animate-in,
+  .hover-wiggle:hover,
+  .hover-pop:hover,
+  .hover-float:hover,
   [class*="transition-"],
   [class*="hover:scale-"] {
     animation: none !important;
