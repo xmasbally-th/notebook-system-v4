@@ -65,7 +65,7 @@ export default function Header() {
                             </div>
                         ) : (
                             <div className="p-2 bg-blue-600 rounded-lg shadow-sm">
-                                <Laptop className="w-6 h-6 text-white" />
+                                <Laptop className="w-6 h-6 text-white" aria-hidden="true" />
                             </div>
                         )}
                         <div className="flex flex-col">
@@ -83,35 +83,35 @@ export default function Header() {
                                     href="/equipment"
                                     className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
                                 >
-                                    <Monitor className="w-4 h-4" />
+                                    <Monitor className="w-4 h-4" aria-hidden="true" />
                                     อุปกรณ์
                                 </Link>
                                 <Link
                                     href="/my-loans"
                                     className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
                                 >
-                                    <Package className="w-4 h-4" />
+                                    <Package className="w-4 h-4" aria-hidden="true" />
                                     การยืมและจอง
                                 </Link>
                                 <Link
                                     href="/user-guide"
                                     className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
                                 >
-                                    <HelpCircle className="w-4 h-4" />
+                                    <HelpCircle className="w-4 h-4" aria-hidden="true" />
                                     คู่มือ
                                 </Link>
                                 <Link
                                     href="/profile"
                                     className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
                                 >
-                                    <User className="w-4 h-4" />
+                                    <User className="w-4 h-4" aria-hidden="true" />
                                     Profile
                                 </Link>
                                 <button
                                     onClick={handleSignOut}
                                     className="flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 px-3 py-2 rounded-lg hover:bg-red-50 transition-colors"
                                 >
-                                    <LogOut className="w-4 h-4" />
+                                    <LogOut className="w-4 h-4" aria-hidden="true" />
                                     <span>Sign Out</span>
                                 </button>
                             </div>
@@ -120,7 +120,7 @@ export default function Header() {
                                 href="/login"
                                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 shadow-sm transition-all hover:shadow hover:-translate-y-0.5"
                             >
-                                <LogIn className="w-4 h-4" />
+                                <LogIn className="w-4 h-4" aria-hidden="true" />
                                 Sign In
                             </Link>
                         )}
@@ -130,8 +130,10 @@ export default function Header() {
                     <button
                         className="md:hidden p-2 text-gray-600 hover:text-gray-900 z-50 relative"
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
+                        aria-label={isMenuOpen ? "ปิดเมนู" : "เปิดเมนู"}
+                        aria-expanded={isMenuOpen}
                     >
-                        {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                        {isMenuOpen ? <X className="w-6 h-6" aria-hidden="true" /> : <Menu className="w-6 h-6" aria-hidden="true" />}
                     </button>
                 </div>
             </div>
@@ -151,7 +153,7 @@ export default function Header() {
                                     onClick={() => setIsMenuOpen(false)}
                                     className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 text-blue-900 font-medium"
                                 >
-                                    <Monitor className="w-5 h-5" />
+                                    <Monitor className="w-5 h-5" aria-hidden="true" />
                                     อุปกรณ์
                                 </Link>
                                 <Link
@@ -159,7 +161,7 @@ export default function Header() {
                                     onClick={() => setIsMenuOpen(false)}
                                     className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 text-gray-900 font-medium"
                                 >
-                                    <Package className="w-5 h-5" />
+                                    <Package className="w-5 h-5" aria-hidden="true" />
                                     การยืมและจอง
                                 </Link>
                                 <Link
@@ -167,7 +169,7 @@ export default function Header() {
                                     onClick={() => setIsMenuOpen(false)}
                                     className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 text-gray-900 font-medium"
                                 >
-                                    <HelpCircle className="w-5 h-5" />
+                                    <HelpCircle className="w-5 h-5" aria-hidden="true" />
                                     คู่มือการใช้งาน
                                 </Link>
                                 <Link
@@ -175,14 +177,14 @@ export default function Header() {
                                     onClick={() => setIsMenuOpen(false)}
                                     className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 text-gray-900 font-medium"
                                 >
-                                    <User className="w-5 h-5" />
+                                    <User className="w-5 h-5" aria-hidden="true" />
                                     โปรไฟล์
                                 </Link>
                                 <button
                                     onClick={handleSignOut}
                                     className="flex items-center gap-3 p-3 rounded-xl bg-red-50 text-red-600 font-medium w-full text-left"
                                 >
-                                    <LogOut className="w-5 h-5" />
+                                    <LogOut className="w-5 h-5" aria-hidden="true" />
                                     Sign Out
                                 </button>
                             </>
@@ -193,7 +195,7 @@ export default function Header() {
                                     onClick={() => setIsMenuOpen(false)}
                                     className="flex items-center justify-center gap-2 w-full p-3 bg-blue-600 text-white rounded-xl font-medium shadow-sm active:scale-95 transition-transform"
                                 >
-                                    <LogIn className="w-5 h-5" />
+                                    <LogIn className="w-5 h-5" aria-hidden="true" />
                                     Sign In with Google
                                 </Link>
                                 <p className="mt-4 text-sm text-gray-500">

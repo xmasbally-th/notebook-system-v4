@@ -103,7 +103,7 @@ export default function LoginPage() {
                         </div>
                     ) : (
                         <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-sm mb-6">
-                            <Laptop className="w-16 h-16 text-white" />
+                            <Laptop className="w-16 h-16 text-white" aria-hidden="true" />
                         </div>
                     )}
                     <h1 className="text-3xl font-bold text-white mb-4">
@@ -141,7 +141,7 @@ export default function LoginPage() {
                         </div>
                     ) : (
                         <div className="p-2 bg-blue-600 rounded-lg">
-                            <Laptop className="w-6 h-6 text-white" />
+                            <Laptop className="w-6 h-6 text-white" aria-hidden="true" />
                         </div>
                     )}
                     <span className="text-lg font-bold text-gray-900">ระบบยืม-คืนพัสดุฯ</span>
@@ -179,7 +179,7 @@ export default function LoginPage() {
                                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                                 </svg>
                             )}
-                            {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบด้วย Google'}
+                            {loading ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบด้วย Google'}
                         </button>
 
                         <div className="mt-6 text-center">

@@ -292,7 +292,7 @@ export default function EquipmentForm({ initialData, isEditing = false, cloneFro
                                     type="text"
                                     required
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="เช่น MacBook Pro 14"
+                                    placeholder="เช่น MacBook Pro 14…"
                                     value={formData.name}
                                     onChange={(e) => handleChange('name', e.target.value)}
                                 />
@@ -314,7 +314,7 @@ export default function EquipmentForm({ initialData, isEditing = false, cloneFro
                                                 ? 'border-green-300'
                                                 : 'border-gray-300'
                                             }`}
-                                        placeholder="เช่น IT-NB-001"
+                                        placeholder="เช่น IT-NB-001…"
                                         value={formData.equipment_number}
                                         onChange={(e) => handleChange('equipment_number', e.target.value)}
                                         onBlur={(e) => checkEquipmentNumber(e.target.value)}
@@ -345,7 +345,7 @@ export default function EquipmentForm({ initialData, isEditing = false, cloneFro
                                 <input
                                     type="text"
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="เช่น Apple, Dell, HP"
+                                    placeholder="เช่น Apple, Dell, HP…"
                                     value={(formData as any).brand || ''}
                                     onChange={(e) => handleChange('brand', e.target.value)}
                                 />
@@ -359,7 +359,7 @@ export default function EquipmentForm({ initialData, isEditing = false, cloneFro
                                 <input
                                     type="text"
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="เช่น MacBook Pro 14-inch M3"
+                                    placeholder="เช่น MacBook Pro 14-inch M3…"
                                     value={(formData as any).model || ''}
                                     onChange={(e) => handleChange('model', e.target.value)}
                                 />
@@ -432,7 +432,7 @@ export default function EquipmentForm({ initialData, isEditing = false, cloneFro
                                 <input
                                     type="text"
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="เช่น อาคาร IT"
+                                    placeholder="เช่น อาคาร IT…"
                                     value={(formData.location as any)?.building || ''}
                                     onChange={(e) => handleLocationChange('building', e.target.value)}
                                 />
@@ -444,7 +444,7 @@ export default function EquipmentForm({ initialData, isEditing = false, cloneFro
                                 <input
                                     type="text"
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="เช่น 301"
+                                    placeholder="เช่น 301…"
                                     value={(formData.location as any)?.room || ''}
                                     onChange={(e) => handleLocationChange('room', e.target.value)}
                                 />

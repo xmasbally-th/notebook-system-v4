@@ -84,7 +84,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             {children}
 
             {/* Toast Container */}
-            <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+            <div
+                className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm"
+                aria-live="polite"
+                role="status"
+            >
                 {toasts.map(toast => (
                     <div
                         key={toast.id}
@@ -94,15 +98,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                             ${colorMap[toast.type]}
                         `}
                     >
-                        <span className={iconColorMap[toast.type]}>
+                        <span className={iconColorMap[toast.type]} aria-hidden="true">
                             {iconMap[toast.type]}
                         </span>
                         <p className="flex-1 text-sm font-medium">{toast.message}</p>
                         <button
                             onClick={() => removeToast(toast.id)}
                             className="p-1 hover:bg-black/5 rounded-lg transition-colors"
+                            aria-label="ปิด"
                         >
-                            <X className="w-4 h-4" />
+                            <X className="w-4 h-4" aria-hidden="true" />
                         </button>
                     </div>
                 ))}

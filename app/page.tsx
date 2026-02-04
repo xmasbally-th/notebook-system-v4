@@ -70,25 +70,25 @@ export default async function Home() {
                             <div className="flex justify-center gap-6 md:gap-10 mb-10">
                                 <div className="flex flex-col items-center text-white/80 hover:text-white hover:scale-110 transition-all">
                                     <div className="p-3 bg-white/10 rounded-xl mb-2">
-                                        <Laptop className="w-8 h-8" />
+                                        <Laptop className="w-8 h-8" aria-hidden="true" />
                                     </div>
                                     <span className="text-xs font-medium">Laptop</span>
                                 </div>
                                 <div className="flex flex-col items-center text-white/80 hover:text-white hover:scale-110 transition-all">
                                     <div className="p-3 bg-white/10 rounded-xl mb-2">
-                                        <Tablet className="w-8 h-8" />
+                                        <Tablet className="w-8 h-8" aria-hidden="true" />
                                     </div>
                                     <span className="text-xs font-medium">Tablet</span>
                                 </div>
                                 <div className="flex flex-col items-center text-white/80 hover:text-white hover:scale-110 transition-all">
                                     <div className="p-3 bg-white/10 rounded-xl mb-2">
-                                        <Monitor className="w-8 h-8" />
+                                        <Monitor className="w-8 h-8" aria-hidden="true" />
                                     </div>
                                     <span className="text-xs font-medium">Monitor</span>
                                 </div>
                                 <div className="flex flex-col items-center text-white/80 hover:text-white hover:scale-110 transition-all">
                                     <div className="p-3 bg-white/10 rounded-xl mb-2">
-                                        <Headphones className="w-8 h-8" />
+                                        <Headphones className="w-8 h-8" aria-hidden="true" />
                                     </div>
                                     <span className="text-xs font-medium">Accessories</span>
                                 </div>
@@ -101,16 +101,16 @@ export default async function Home() {
                                         href="/equipment"
                                         className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
                                     >
-                                        <Package className="w-5 h-5" />
+                                        <Package className="w-5 h-5" aria-hidden="true" />
                                         ดูรายการอุปกรณ์
-                                        <ArrowRight className="w-5 h-5" />
+                                        <ArrowRight className="w-5 h-5" aria-hidden="true" />
                                     </Link>
                                 ) : (
                                     <Link
                                         href="/login"
                                         className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
                                     >
-                                        <LogIn className="w-5 h-5" />
+                                        <LogIn className="w-5 h-5" aria-hidden="true" />
                                         เข้าสู่ระบบเพื่อดูอุปกรณ์
                                     </Link>
                                 )}
@@ -134,7 +134,7 @@ export default async function Home() {
                         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 md:p-12">
                             <div className="mb-6">
                                 <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-2xl mb-4">
-                                    <Package className="w-8 h-8 text-blue-600" />
+                                    <Package className="w-8 h-8 text-blue-600" aria-hidden="true" />
                                 </div>
                                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
                                     พร้อมยืมอุปกรณ์แล้วหรือยัง?
@@ -152,9 +152,9 @@ export default async function Home() {
                                     href="/equipment"
                                     className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all"
                                 >
-                                    <Package className="w-5 h-5" />
+                                    <Package className="w-5 h-5" aria-hidden="true" />
                                     ดูรายการอุปกรณ์ทั้งหมด
-                                    <ArrowRight className="w-5 h-5" />
+                                    <ArrowRight className="w-5 h-5" aria-hidden="true" />
                                 </Link>
                             ) : (
                                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -162,7 +162,7 @@ export default async function Home() {
                                         href="/login"
                                         className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all"
                                     >
-                                        <LogIn className="w-5 h-5" />
+                                        <LogIn className="w-5 h-5" aria-hidden="true" />
                                         เข้าสู่ระบบ
                                     </Link>
                                 </div>

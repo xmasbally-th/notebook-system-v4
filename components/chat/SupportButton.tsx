@@ -96,9 +96,10 @@ export default function SupportButton() {
             {!isOpen && (
                 <button
                     onClick={handleOpen}
+                    aria-label="เปิดแชทสนับสนุน"
                     className="bg-teal-600 hover:bg-teal-700 text-white p-4 rounded-full shadow-lg transition-transform hover:scale-110 flex items-center justify-center"
                 >
-                    <MessageCircle className="w-6 h-6" />
+                    <MessageCircle className="w-6 h-6" aria-hidden="true" />
                 </button>
             )}
         </div>

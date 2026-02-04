@@ -46,3 +46,19 @@
 .animate-slide-in {
   animation: slide-in 0.3s ease-out;
 }
+
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+
+  .animate-slide-in,
+  .animate-pulse,
+  .animate-spin,
+  .animate-bounce,
+  .animate-in,
+  [class*="transition-"],
+  [class*="hover:scale-"] {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
