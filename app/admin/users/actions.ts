@@ -173,3 +173,38 @@ export async function updateUserProfile(
     return { success: true }
 }
 
+// Delete user
+export async function deleteUser(userId: string) {
+    const supabase = await createClient()
+
+    // 1. Check Admin Permission
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Unauthorized')
+
+    const { data: adminProfile } = await supabase
+        .from('profiles' as any)
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (adminProfile?.role !== 'admin') {
+        throw new Error('Forbidden: Admin access required')
+    }
+
+    // 2. Prevent self-deletion
+    if (userId === user.id) {
+        throw new Error('ไม่สามารถลบบัญชีของตัวเองได้')
+    }
+
+    // 3. Delete the user profile
+    const { error } = await supabase
+        .from('profiles' as any)
+        .delete()
+        .eq('id', userId)
+
+    if (error) throw new Error(error.message)
+
+    revalidatePath('/admin/users')
+    return { success: true }
+}
+

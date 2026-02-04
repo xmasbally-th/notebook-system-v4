@@ -20,9 +20,10 @@ import {
     XOctagon,
     Pencil,
     Save,
-    AlertTriangle
+    AlertTriangle,
+    Trash2
 } from 'lucide-react'
-import { updateUserStatus, updateUserRole, updateMultipleUserStatus, updateUserProfile } from './actions'
+import { updateUserStatus, updateUserRole, updateMultipleUserStatus, updateUserProfile, deleteUser } from './actions'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/toast'
 import { supabase } from '@/lib/supabase/client'
@@ -324,6 +325,23 @@ export default function UserTable({ users }: { users: User[] }) {
         }
     }
 
+    // Delete user handler
+    const handleDeleteUser = async (user: User) => {
+        const fullName = `${user.title || ''}${user.first_name} ${user.last_name || ''}`.trim()
+        if (!confirm(`⚠️ คุณแน่ใจหรือไม่ที่จะลบผู้ใช้ "${fullName}"?\n\nการดำเนินการนี้ไม่สามารถย้อนกลับได้`)) return
+
+        setLoading(user.id)
+        try {
+            await deleteUser(user.id)
+            router.refresh()
+            toast.success(`ลบผู้ใช้ "${fullName}" เรียบร้อยแล้ว`)
+        } catch (error: any) {
+            toast.error(`เกิดข้อผิดพลาด: ${error.message}`)
+        } finally {
+            setLoading(null)
+        }
+    }
+
 
     return (
         <div className="space-y-4">
@@ -601,6 +619,15 @@ export default function UserTable({ users }: { users: User[] }) {
                                                     >
                                                         <Pencil className="w-4 h-4" />
                                                     </button>
+
+                                                    {/* Delete button */}
+                                                    <button
+                                                        onClick={() => handleDeleteUser(user)}
+                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="ลบผู้ใช้"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
                                                 </div>
                                             )}
                                         </td>
@@ -783,6 +810,15 @@ export default function UserTable({ users }: { users: User[] }) {
                                                 >
                                                     <Pencil className="w-4 h-4" />
                                                     แก้ไข
+                                                </button>
+
+                                                {/* Delete button for mobile */}
+                                                <button
+                                                    onClick={() => handleDeleteUser(user)}
+                                                    className="flex items-center justify-center gap-2 py-2.5 px-4 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                    ลบ
                                                 </button>
                                             </div>
                                         )}
