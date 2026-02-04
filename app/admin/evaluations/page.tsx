@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getSupabaseCredentials } from '@/lib/supabase-helpers'
 import AdminLayout from '@/components/admin/AdminLayout'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, Fragment } from 'react'
 import {
     Star, MessageSquare, ChevronDown, ChevronUp,
     Search, Filter, Calendar
@@ -23,20 +23,25 @@ export default function EvaluationsPage() {
             const { createBrowserClient } = await import('@supabase/ssr')
             const client = createBrowserClient(url, key)
 
-            // Need admin access
-            const { data: { session } } = await client.auth.getSession()
+            // Get evaluations with related data using Supabase client
+            const { data, error } = await client
+                .from('evaluations')
+                .select(`
+                    *,
+                    profiles!evaluations_user_id_fkey(first_name, last_name, email, avatar_url),
+                    loanRequests:loan_id(
+                        id,
+                        equipment:equipment_id(name, equipment_number)
+                    )
+                `)
+                .order('created_at', { ascending: false })
 
-            const response = await fetch(
-                `${url}/rest/v1/evaluations?select=*,profiles(first_name,last_name,email,avatar_url),loanRequests(equipment(name,equipment_number))&order=created_at.desc`,
-                {
-                    headers: {
-                        'apikey': key,
-                        'Authorization': `Bearer ${session?.access_token || key}`
-                    }
-                }
-            )
-            if (!response.ok) return []
-            return response.json()
+            if (error) {
+                console.error('Error fetching evaluations:', error)
+                return []
+            }
+
+            return data || []
         }
     })
 
@@ -191,8 +196,8 @@ export default function EvaluationsPage() {
                                 </tr>
                             ) : (
                                 filteredEvaluations.map((item: any) => (
-                                    <>
-                                        <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                                    <Fragment key={item.id}>
+                                        <tr className="hover:bg-gray-50 transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 {formatDate(item.created_at)}
                                             </td>
@@ -273,7 +278,7 @@ export default function EvaluationsPage() {
                                                 </td>
                                             </tr>
                                         )}
-                                    </>
+                                    </Fragment>
                                 ))
                             )}
                         </tbody>
