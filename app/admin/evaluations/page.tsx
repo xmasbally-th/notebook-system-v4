@@ -52,7 +52,7 @@ export default function EvaluationsPage() {
         const total = evaluations.length
         const sum = evaluations.reduce((acc: number, curr: any) => acc + curr.rating, 0)
         const avg = sum / total
-        const comments = evaluations.filter((e: any) => e.suggestions).length
+        const comments = evaluations.filter((e: any) => e.suggestions && e.suggestions.trim().length > 0).length
 
         // Section Averages
         const sectionAvgs = evaluations.reduce((acc: any, curr: any) => {
