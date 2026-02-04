@@ -43,13 +43,13 @@ export default function ActivityTab({ data, isLoading }: ActivityTabProps) {
                 </div>
                 <div className="bg-green-50 rounded-xl p-4 text-center">
                     <p className="text-2xl font-bold text-green-600">
-                        {data?.staffActivity?.byActionType?.find(a => a.name.includes('อนุมัติ'))?.count ?? 0}
+                        {data?.staffActivity?.byActionType?.filter(a => a.name.includes('อนุมัติ')).reduce((sum, a) => sum + a.count, 0) ?? 0}
                     </p>
                     <p className="text-sm text-green-700">อนุมัติ</p>
                 </div>
                 <div className="bg-red-50 rounded-xl p-4 text-center">
                     <p className="text-2xl font-bold text-red-600">
-                        {data?.staffActivity?.byActionType?.find(a => a.name.includes('ปฏิเสธ'))?.count ?? 0}
+                        {data?.staffActivity?.byActionType?.filter(a => a.name.includes('ปฏิเสธ')).reduce((sum, a) => sum + a.count, 0) ?? 0}
                     </p>
                     <p className="text-sm text-red-700">ปฏิเสธ</p>
                 </div>

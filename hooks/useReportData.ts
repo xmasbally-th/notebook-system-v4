@@ -168,8 +168,8 @@ export function useReportData(dateRange: DateRange) {
             ] = await Promise.all([
                 // Loans in date range
                 fetch(`${url}/rest/v1/loanRequests?select=id,status,created_at,end_date,returned_at,user_id,equipment_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`, { headers }),
-                // Reservations in date range
-                fetch(`${url}/rest/v1/reservations?select=id,status,created_at,user_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`, { headers }),
+                // Reservations in date range (with equipment_id for usage stats - Issue #6 fix)
+                fetch(`${url}/rest/v1/reservations?select=id,status,created_at,user_id,equipment_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`, { headers }),
                 // All equipment
                 fetch(`${url}/rest/v1/equipment?select=id,name,equipment_number,status`, { headers }),
                 // Overdue loans (approved but past end_date)
@@ -193,7 +193,7 @@ export function useReportData(dateRange: DateRange) {
             const loanStats = calculateLoanStats(loans, overdueLoans)
             const reservationStats = calculateReservationStats(reservations)
             const equipmentStats = calculateEquipmentStats(equipment)
-            const popularEquipment = calculatePopularEquipment(loans, equipment)
+            const popularEquipment = calculatePopularEquipment(loans, reservations, equipment)
             const overdueItems = formatOverdueItems(overdueLoans)
             const { userStats, departments } = calculateUserStats(profiles, loans, reservations, overdueLoans)
             const staffActivity = processStaffActivityLog(staffActivityLog, profiles)

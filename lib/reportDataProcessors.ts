@@ -78,18 +78,31 @@ export function calculateEquipmentStats(equipment: any[]): EquipmentStats {
 }
 
 /**
- * Calculate popular equipment from loan data
+ * Calculate popular equipment from loan and reservation data
  */
-export function calculatePopularEquipment(loans: any[], equipment: any[]): PopularEquipment[] {
+export function calculatePopularEquipment(loans: any[], reservations: any[], equipment: any[]): PopularEquipment[] {
     const equipmentUsage: Record<string, { equipment: any, loans: number, reservations: number }> = {}
 
     if (Array.isArray(loans)) {
         loans.forEach((loan: any) => {
+            if (!loan.equipment_id) return
             if (!equipmentUsage[loan.equipment_id]) {
                 const eq = Array.isArray(equipment) ? equipment.find((e: any) => e.id === loan.equipment_id) : null
                 equipmentUsage[loan.equipment_id] = { equipment: eq, loans: 0, reservations: 0 }
             }
             equipmentUsage[loan.equipment_id].loans++
+        })
+    }
+
+    // Count reservations as well (Issue #2 fix)
+    if (Array.isArray(reservations)) {
+        reservations.forEach((res: any) => {
+            if (!res.equipment_id) return
+            if (!equipmentUsage[res.equipment_id]) {
+                const eq = Array.isArray(equipment) ? equipment.find((e: any) => e.id === res.equipment_id) : null
+                equipmentUsage[res.equipment_id] = { equipment: eq, loans: 0, reservations: 0 }
+            }
+            equipmentUsage[res.equipment_id].reservations++
         })
     }
 
@@ -160,9 +173,14 @@ export function calculateUserStats(
         })
     }
 
+    // Count currently overdue loans (approved but past end_date)
+    // Note: Only count if not already counted as late return (avoid double-counting - Issue #1 fix)
     if (Array.isArray(overdueLoans)) {
         overdueLoans.forEach((loan: any) => {
-            userOverdueCounts[loan.user_id] = (userOverdueCounts[loan.user_id] || 0) + 1
+            // Only count if not returned yet (returned loans are counted above)
+            if (!loan.returned_at) {
+                userOverdueCounts[loan.user_id] = (userOverdueCounts[loan.user_id] || 0) + 1
+            }
         })
     }
 
@@ -263,15 +281,21 @@ export function processStaffActivityLog(activityLog: any[], profiles: any[] = []
     const byStaff = Object.values(staffCounts)
         .sort((a, b) => (b.approve + b.reject + b.return) - (a.approve + a.reject + a.return))
 
-    // Daily activity count
-    const dailyCounts: Record<string, number> = {}
+    // Daily activity count with proper date-based ordering (Issue #3 fix)
+    const dailyCounts: Record<string, { date: string, timestamp: number, count: number }> = {}
     activities.forEach((activity: any) => {
-        const date = new Date(activity.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
-        dailyCounts[date] = (dailyCounts[date] || 0) + 1
+        const activityDate = new Date(activity.created_at)
+        const dateKey = activityDate.toISOString().split('T')[0] // Use ISO date for proper sorting
+        const displayDate = activityDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
+        if (!dailyCounts[dateKey]) {
+            dailyCounts[dateKey] = { date: displayDate, timestamp: activityDate.getTime(), count: 0 }
+        }
+        dailyCounts[dateKey].count++
     })
     const dailyActivity = Object.entries(dailyCounts)
-        .map(([date, count]) => ({ date, count }))
-        .slice(-14)
+        .sort((a, b) => a[1].timestamp - b[1].timestamp) // Sort by date ascending
+        .slice(-14) // Get last 14 days
+        .map(([_, data]) => ({ date: data.date, count: data.count }))
 
     // Recent activities
     const recentActivities: StaffActivityItem[] = activities.slice(0, 20).map((activity: any) => {
