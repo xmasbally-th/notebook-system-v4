@@ -175,69 +175,96 @@ export async function updateUserProfile(
 
 // Delete user - uses admin client to bypass RLS
 export async function deleteUser(userId: string) {
-    const supabase = await createClient()
+    try {
+        const supabase = await createClient()
 
-    // 1. Check Admin Permission with regular client
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Unauthorized')
+        // 1. Check Admin Permission with regular client
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) throw new Error('Unauthorized')
 
-    const { data: adminProfile } = await supabase
-        .from('profiles' as any)
-        .select('role')
-        .eq('id', user.id)
-        .single()
+        const { data: adminProfile } = await supabase
+            .from('profiles' as any)
+            .select('role')
+            .eq('id', user.id)
+            .single()
 
-    if (adminProfile?.role !== 'admin') {
-        throw new Error('Forbidden: Admin access required')
+        if (adminProfile?.role !== 'admin') {
+            throw new Error('Forbidden: Admin access required')
+        }
+
+        // 2. Prevent self-deletion
+        if (userId === user.id) {
+            throw new Error('ไม่สามารถลบบัญชีของตัวเองได้')
+        }
+
+        // 3. Use admin client to bypass RLS for delete operations
+        const adminClient = createAdminClient()
+
+        // 4. Delete/Update related records first (due to foreign key constraints)
+
+        // Clear approved_by references in loanRequests
+        await adminClient.from('loanRequests').update({ approved_by: null }).eq('approved_by', userId)
+
+        // Clear approved_by references in reservations
+        await adminClient.from('reservations').update({ approved_by: null }).eq('approved_by', userId)
+
+        // Delete notifications
+        await adminClient.from('notifications').delete().eq('user_id', userId)
+
+        // Delete evaluations
+        await adminClient.from('evaluations').delete().eq('user_id', userId)
+
+        // Delete loan requests owned by user
+        await adminClient.from('loanRequests').delete().eq('user_id', userId)
+
+        // Delete reservations owned by user
+        await adminClient.from('reservations').delete().eq('user_id', userId)
+
+        // Clear sender_id in support_messages (don't delete, keep message history)
+        await adminClient.from('support_messages').update({ sender_id: null }).eq('sender_id', userId)
+
+        // Delete support messages (for tickets owned by user)
+        const { data: userTickets } = await adminClient
+            .from('support_tickets')
+            .select('id')
+            .eq('user_id', userId)
+
+        if (userTickets && userTickets.length > 0) {
+            const ticketIds = userTickets.map((t: any) => t.id)
+            await adminClient.from('support_messages').delete().in('ticket_id', ticketIds)
+        }
+
+        // Delete support tickets
+        await adminClient.from('support_tickets').delete().eq('user_id', userId)
+
+        // Clear created_by in special_loan_requests
+        await adminClient.from('special_loan_requests').update({ created_by: null }).eq('created_by', userId)
+
+        // Clear approved_by in special_loan_requests
+        await adminClient.from('special_loan_requests').update({ approved_by: null }).eq('approved_by', userId)
+
+        // Delete staff activity logs (if user was staff)
+        await adminClient.from('staff_activity_log').delete().eq('staff_id', userId)
+
+        // Clear target_user_id in staff activity logs
+        await adminClient.from('staff_activity_log').update({ target_user_id: null }).eq('target_user_id', userId)
+
+        // 5. Finally delete the user profile
+        const { error } = await adminClient
+            .from('profiles')
+            .delete()
+            .eq('id', userId)
+
+        if (error) {
+            console.error('Delete profile error:', error)
+            throw new Error(`ไม่สามารถลบผู้ใช้ได้: ${error.message}`)
+        }
+
+        revalidatePath('/admin/users')
+        return { success: true }
+    } catch (error: any) {
+        console.error('deleteUser error:', error)
+        throw new Error(error.message || 'เกิดข้อผิดพลาดในการลบผู้ใช้')
     }
-
-    // 2. Prevent self-deletion
-    if (userId === user.id) {
-        throw new Error('ไม่สามารถลบบัญชีของตัวเองได้')
-    }
-
-    // 3. Use admin client to bypass RLS for delete operations
-    const adminClient = createAdminClient()
-
-    // 4. Delete related records first (due to foreign key constraints)
-    // Delete notifications
-    await adminClient.from('notifications').delete().eq('user_id', userId)
-
-    // Delete evaluations
-    await adminClient.from('evaluations').delete().eq('user_id', userId)
-
-    // Delete loan requests
-    await adminClient.from('loanRequests').delete().eq('user_id', userId)
-
-    // Delete reservations
-    await adminClient.from('reservations').delete().eq('user_id', userId)
-
-    // Delete support messages (for tickets owned by user)
-    const { data: userTickets } = await adminClient
-        .from('support_tickets')
-        .select('id')
-        .eq('user_id', userId)
-
-    if (userTickets && userTickets.length > 0) {
-        const ticketIds = userTickets.map((t: any) => t.id)
-        await adminClient.from('support_messages').delete().in('ticket_id', ticketIds)
-    }
-
-    // Delete support tickets
-    await adminClient.from('support_tickets').delete().eq('user_id', userId)
-
-    // Delete staff activity logs (if user was staff)
-    await adminClient.from('staff_activity_log').delete().eq('staff_id', userId)
-
-    // 5. Finally delete the user profile
-    const { error } = await adminClient
-        .from('profiles')
-        .delete()
-        .eq('id', userId)
-
-    if (error) throw new Error(error.message)
-
-    revalidatePath('/admin/users')
-    return { success: true }
 }
 
