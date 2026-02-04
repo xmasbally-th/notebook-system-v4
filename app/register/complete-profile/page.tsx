@@ -38,17 +38,21 @@ export default function CompleteProfilePage() {
                 return
             }
 
-            // 1. Get User
+            // 1. Get User and Session
             const { data: { user } } = await client.auth.getUser()
-            if (!user) {
+            const { data: { session } } = await client.auth.getSession()
+            if (!user || !session) {
                 router.replace('/login')
                 return
             }
 
+            // Use access token for RLS
+            const authToken = session.access_token
+
             // 2. Load current profile using direct fetch
             const profileRes = await fetch(
                 `${url}/rest/v1/profiles?id=eq.${user.id}&select=first_name,last_name,title,phone_number,user_type,department_id`,
-                { headers: { 'apikey': key, 'Authorization': `Bearer ${key}` } }
+                { headers: { 'apikey': key, 'Authorization': `Bearer ${authToken}` } }
             )
             const profiles = await profileRes.json()
             const profile = profiles?.[0]
@@ -75,7 +79,7 @@ export default function CompleteProfilePage() {
             // 3. Load Departments using direct fetch
             const deptRes = await fetch(
                 `${url}/rest/v1/departments?is_active=eq.true&select=id,name&order=name.asc`,
-                { headers: { 'apikey': key, 'Authorization': `Bearer ${key}` } }
+                { headers: { 'apikey': key, 'Authorization': `Bearer ${authToken}` } }
             )
             const depts = await deptRes.json()
             if (depts) setDepartments(depts)

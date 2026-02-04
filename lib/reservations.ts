@@ -247,10 +247,14 @@ export async function createReservation(
     const { url, key } = getSupabaseCredentials()
     if (!url || !key) return { success: false, error: 'Missing credentials' }
 
-    const user = await getCurrentUser()
+    // Start both fetch operations immediately (parallel)
+    const userPromise = getCurrentUser()
+    const accessTokenPromise = getAccessToken()
+
+    const user = await userPromise
     if (!user) return { success: false, error: 'กรุณาเข้าสู่ระบบ' }
 
-    const accessToken = await getAccessToken()
+    const accessToken = await accessTokenPromise
     if (!accessToken) return { success: false, error: 'กรุณาเข้าสู่ระบบ' }
 
     // Validate dates
@@ -401,12 +405,16 @@ export async function approveReservation(
     const { url, key } = getSupabaseCredentials()
     if (!url || !key) return { success: false, error: 'Missing credentials' }
 
-    const user = await getCurrentUser()
+    // Start both fetch operations immediately (parallel)
+    const userPromise = getCurrentUser()
+    const accessTokenPromise = getAccessToken()
+
+    const user = await userPromise
     if (!user || (user.role !== 'staff' && user.role !== 'admin')) {
         return { success: false, error: 'ไม่มีสิทธิ์ดำเนินการ' }
     }
 
-    const accessToken = await getAccessToken()
+    const accessToken = await accessTokenPromise
     if (!accessToken) return { success: false, error: 'กรุณาเข้าสู่ระบบ' }
 
     try {
@@ -502,12 +510,16 @@ export async function rejectReservation(
     const { url, key } = getSupabaseCredentials()
     if (!url || !key) return { success: false, error: 'Missing credentials' }
 
-    const user = await getCurrentUser()
+    // Start both fetch operations immediately (parallel)
+    const userPromise = getCurrentUser()
+    const accessTokenPromise = getAccessToken()
+
+    const user = await userPromise
     if (!user || (user.role !== 'staff' && user.role !== 'admin')) {
         return { success: false, error: 'ไม่มีสิทธิ์ดำเนินการ' }
     }
 
-    const accessToken = await getAccessToken()
+    const accessToken = await accessTokenPromise
     if (!accessToken) return { success: false, error: 'กรุณาเข้าสู่ระบบ' }
 
     try {
@@ -557,12 +569,16 @@ export async function markReservationReady(
     const { url, key } = getSupabaseCredentials()
     if (!url || !key) return { success: false, error: 'Missing credentials' }
 
-    const user = await getCurrentUser()
+    // Start both fetch operations immediately (parallel)
+    const userPromise = getCurrentUser()
+    const accessTokenPromise = getAccessToken()
+
+    const user = await userPromise
     if (!user || (user.role !== 'staff' && user.role !== 'admin')) {
         return { success: false, error: 'ไม่มีสิทธิ์ดำเนินการ' }
     }
 
-    const accessToken = await getAccessToken()
+    const accessToken = await accessTokenPromise
     if (!accessToken) return { success: false, error: 'กรุณาเข้าสู่ระบบ' }
 
     try {
@@ -612,12 +628,16 @@ export async function convertReservationToLoan(
     const { url, key } = getSupabaseCredentials()
     if (!url || !key) return { success: false, error: 'Missing credentials' }
 
-    const user = await getCurrentUser()
+    // Start both fetch operations immediately (parallel)
+    const userPromise = getCurrentUser()
+    const accessTokenPromise = getAccessToken()
+
+    const user = await userPromise
     if (!user || (user.role !== 'staff' && user.role !== 'admin')) {
         return { success: false, error: 'ไม่มีสิทธิ์ดำเนินการ' }
     }
 
-    const accessToken = await getAccessToken()
+    const accessToken = await accessTokenPromise
     if (!accessToken) return { success: false, error: 'กรุณาเข้าสู่ระบบ' }
 
     try {

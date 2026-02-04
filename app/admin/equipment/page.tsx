@@ -44,12 +44,17 @@ export default function AdminEquipmentList() {
             const { url, key } = getSupabaseCredentials()
             if (!url || !key) return []
 
+            // Get user's access token for RLS
+            const { createBrowserClient } = await import('@supabase/ssr')
+            const client = createBrowserClient(url, key)
+            const { data: { session } } = await client.auth.getSession()
+
             const response = await fetch(
                 `${url}/rest/v1/equipment?select=*,equipment_types(id,name,icon)&order=created_at.desc`,
                 {
                     headers: {
                         'apikey': key,
-                        'Authorization': `Bearer ${key}`
+                        'Authorization': `Bearer ${session?.access_token || key}`
                     }
                 }
             )
@@ -66,12 +71,17 @@ export default function AdminEquipmentList() {
             const { url, key } = getSupabaseCredentials()
             if (!url || !key) return []
 
+            // Get user's access token for RLS
+            const { createBrowserClient } = await import('@supabase/ssr')
+            const client = createBrowserClient(url, key)
+            const { data: { session } } = await client.auth.getSession()
+
             const response = await fetch(
                 `${url}/rest/v1/equipment_types?select=*&order=name.asc`,
                 {
                     headers: {
                         'apikey': key,
-                        'Authorization': `Bearer ${key}`
+                        'Authorization': `Bearer ${session?.access_token || key}`
                     }
                 }
             )

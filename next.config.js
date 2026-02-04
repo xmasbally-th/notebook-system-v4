@@ -11,6 +11,8 @@ const nextConfig = {
         serverActions: {
             allowedOrigins: ['localhost:3000'],
         },
+        // Optimize barrel imports to reduce bundle size
+        optimizePackageImports: ['lucide-react'],
     },
     images: {
         remotePatterns: [
