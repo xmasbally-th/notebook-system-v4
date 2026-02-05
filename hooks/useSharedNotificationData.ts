@@ -56,27 +56,75 @@ interface SharedNotificationData {
 export function useSharedNotificationData(): SharedNotificationData {
     const queryClient = useQueryClient()
 
-    // Realtime Subscription for Loans and Reservations
-    // Realtime Subscription for Loans and Reservations
+    // Realtime Subscription
     useEffect(() => {
+        const handleLoanChange = async (payload: any) => {
+            if (payload.eventType === 'INSERT') {
+                const { data, error } = await supabase
+                    .from('loanRequests')
+                    .select('*,equipment(id,name,equipment_number),profiles(first_name,last_name,email)')
+                    .eq('id', payload.new.id)
+                    .single()
+
+                if (!error && data) {
+                    queryClient.setQueryData(['shared-loans-data'], (old: { loans: LoanRequest[] } | undefined) => {
+                        if (!old) return { loans: [data] }
+                        return { loans: [data, ...old.loans] }
+                    })
+                }
+            } else if (payload.eventType === 'UPDATE') {
+                queryClient.setQueryData(['shared-loans-data'], (old: { loans: LoanRequest[] } | undefined) => {
+                    if (!old) return old
+                    return {
+                        loans: old.loans.map(loan =>
+                            loan.id === payload.new.id ? { ...loan, ...payload.new } : loan
+                        )
+                    }
+                })
+            } else if (payload.eventType === 'DELETE') {
+                queryClient.setQueryData(['shared-loans-data'], (old: { loans: LoanRequest[] } | undefined) => {
+                    if (!old) return old
+                    return {
+                        loans: old.loans.filter(loan => loan.id !== payload.old.id)
+                    }
+                })
+            }
+        }
+
+        const handleReservationChange = async (payload: any) => {
+            if (payload.eventType === 'INSERT') {
+                if (payload.new.status === 'pending') {
+                    queryClient.setQueryData(['shared-reservations-data'], (old: { reservations: Reservation[] } | undefined) => {
+                        if (!old) return { reservations: [payload.new] }
+                        return { reservations: [payload.new, ...old.reservations] }
+                    })
+                }
+            } else if (payload.eventType === 'UPDATE') {
+                if (payload.new.status !== 'pending') {
+                    queryClient.setQueryData(['shared-reservations-data'], (old: { reservations: Reservation[] } | undefined) => {
+                        if (!old) return old
+                        return { reservations: old.reservations.filter(r => r.id !== payload.new.id) }
+                    })
+                } else {
+                    queryClient.setQueryData(['shared-reservations-data'], (old: { reservations: Reservation[] } | undefined) => {
+                        if (!old) return old
+                        return {
+                            reservations: old.reservations.map(r => r.id === payload.new.id ? { ...r, ...payload.new } : r)
+                        }
+                    })
+                }
+            } else if (payload.eventType === 'DELETE') {
+                queryClient.setQueryData(['shared-reservations-data'], (old: { reservations: Reservation[] } | undefined) => {
+                    if (!old) return old
+                    return { reservations: old.reservations.filter(r => r.id !== payload.old.id) }
+                })
+            }
+        }
+
         const channel = supabase
             .channel('shared-data-changes')
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'loanRequests' },
-                (payload: any) => {
-                    // console.log('Loan change:', payload)
-                    queryClient.invalidateQueries({ queryKey: ['shared-loans-data'] })
-                }
-            )
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'reservations' },
-                (payload: any) => {
-                    // console.log('Reservation change:', payload)
-                    queryClient.invalidateQueries({ queryKey: ['shared-reservations-data'] })
-                }
-            )
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'loanRequests' }, handleLoanChange)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, handleReservationChange)
             .subscribe()
 
         return () => {
@@ -93,6 +141,8 @@ export function useSharedNotificationData(): SharedNotificationData {
                 .select('*,equipment(id,name,equipment_number),profiles(first_name,last_name,email)')
                 .order('created_at', { ascending: false })
 
+                .limit(100) // Optimization: Limit initial fetch
+
             if (error) {
                 console.error('[SharedData] Loans fetch error:', error)
                 return { loans: [] }
@@ -100,7 +150,7 @@ export function useSharedNotificationData(): SharedNotificationData {
 
             return { loans: data || [] }
         },
-        staleTime: 1000 * 60 * 5, // 5 minutes (invalidated by realtime)
+        staleTime: Infinity, // Keep data fresh essentially forever, only update via realtime
     })
 
     // Fetch pending reservations
@@ -120,7 +170,7 @@ export function useSharedNotificationData(): SharedNotificationData {
 
             return { reservations: data || [] }
         },
-        staleTime: 1000 * 60 * 5, // 5 minutes (invalidated by realtime)
+        staleTime: Infinity,
     })
 
     const allLoans = loansData?.loans || []

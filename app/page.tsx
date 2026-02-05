@@ -1,89 +1,15 @@
+
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import RulesSection from '@/components/home/RulesSection'
 import HoursSection from '@/components/home/HoursSection'
 import { createClient } from '@/lib/supabase/server'
-import { redirect, useRouter } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Laptop, Tablet, Headphones, Monitor, ArrowRight, LogIn, Package, Search, Clock, AlertCircle } from 'lucide-react'
+import { Laptop, Tablet, Headphones, Monitor, ArrowRight, LogIn, Package } from 'lucide-react'
 import ActiveEvaluationPrompt from '@/components/evaluations/ActiveEvaluationPrompt'
-import { useSystemConfig } from '@/hooks/useSystemConfig'
-
-// Client component for System Status
-function SystemStatusBadge() {
-    'use client'
-    const { data: config, isLoading } = useSystemConfig()
-
-    if (isLoading) return (
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white text-sm font-medium mb-4 animate-pulse">
-            <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
-            กำลังตรวจสอบสถานะ...
-        </div>
-    )
-
-    const now = new Date()
-    const currentTime = now.toTimeString().slice(0, 5)
-    const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
-
-    const isClosedDay = (config?.closed_days as string[])?.includes(currentDay)
-    const isBeforeOpen = currentTime < (config?.opening_time || '08:30')
-    const isAfterClose = currentTime > (config?.closing_time || '16:30')
-    const isLunchBreak = currentTime >= (config?.break_start_time || '12:00') && currentTime < (config?.break_end_time || '13:00')
-
-    let status = { text: 'ระบบพร้อมให้บริการ', color: 'bg-green-400', subText: '' }
-
-    if (isClosedDay) {
-        status = { text: 'ระบบปิดทำการ (วันหยุด)', color: 'bg-red-400', subText: 'เปิดทำการวันจันทร์' }
-    } else if (isBeforeOpen || isAfterClose) {
-        status = { text: 'ระบบปิดทำการ (นอกเวลา)', color: 'bg-red-400', subText: `เปิดเวลา ${config?.opening_time?.slice(0, 5)} น.` }
-    } else if (isLunchBreak) {
-        status = { text: 'พักกลางวัน', color: 'bg-orange-400', subText: `เปิดเวลา ${config?.break_end_time?.slice(0, 5)} น.` }
-    }
-
-    return (
-        <div className="flex flex-col items-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white text-sm font-medium mb-2">
-                <span className={`w-2 h-2 rounded-full animate-pulse ${status.color}`}></span>
-                {status.text}
-            </div>
-            {status.subText && (
-                <span className="text-xs text-blue-200 mb-4 font-light">{status.subText}</span>
-            )}
-        </div>
-    )
-}
-
-// Client component for Quick Search
-function QuickSearch() {
-    'use client'
-    const router = useRouter() // Works bc it's inside 'use client' wrapper actually... wait, page.tsx is a server component. 
-    // We need to make this a separate file or handle the 'use client' directive properly.
-    // Since page.tsx is async/server component, we can't embed 'use client' function components directly ONLY if we use them.
-    // Actually, we can define them in separate files.
-    // BUT defined here they are just functions. If I use <QuickSearch /> it needs to be a client component.
-    // Let's make a tiny helper file for these interactive parts or just use standard form action.
-    // Actually for search, a simple form with action to /equipment is enough using native HTML behavior?
-    // No, standard form submission refreshes the page. We want SPA nav if possible, but form method="get" action="/equipment" works perfectly fine for this simple case.
-
-    return (
-        <form action="/equipment" method="GET" className="w-full max-w-md mx-auto mb-8 relative group">
-            <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-blue-300 group-focus-within:text-blue-500 transition-colors" />
-                </div>
-                <input
-                    type="text"
-                    name="search"
-                    className="block w-full pl-11 pr-4 py-3 bg-white/10 border border-blue-400/30 rounded-full text-white placeholder-blue-200 focus:outline-none focus:bg-white focus:text-gray-900 focus:ring-2 focus:ring-white transition-all shadow-lg backdrop-blur-sm"
-                    placeholder="ค้นหาอุปกรณ์ เช่น MacBook, iPad..."
-                />
-                <button type="submit" className="absolute inset-y-1 right-1 px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-full transition-colors">
-                    ค้นหา
-                </button>
-            </div>
-        </form>
-    )
-}
+import SystemStatusBadge from '@/components/home/SystemStatusBadge'
+import QuickSearch from '@/components/home/QuickSearch'
 
 export default async function Home() {
     const supabase = await createClient()

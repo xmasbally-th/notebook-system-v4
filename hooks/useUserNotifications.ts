@@ -172,15 +172,38 @@ export function useUserNotifications(userId?: string, accessToken?: string): Use
             .on(
                 'postgres_changes',
                 {
-                    event: '*', // Listen to INSERT, UPDATE, DELETE
+                    event: '*',
                     schema: 'public',
                     table: 'notifications',
                     filter: `user_id=eq.${userId}`
                 },
-                (payload) => {
+                (payload: any) => {
                     // console.log('Realtime notification received:', payload)
-                    // Invalidate query to refetch fresh data
-                    queryClient.invalidateQueries({ queryKey: ['user-notifications', userId] })
+
+                    if (payload.eventType === 'INSERT') {
+                        queryClient.setQueryData(['user-notifications', userId], (old: { notifications: UserNotification[] } | undefined) => {
+                            if (!old) return { notifications: [payload.new] }
+                            return { notifications: [payload.new, ...old.notifications] }
+                        })
+                    }
+                    else if (payload.eventType === 'UPDATE') {
+                        queryClient.setQueryData(['user-notifications', userId], (old: { notifications: UserNotification[] } | undefined) => {
+                            if (!old) return old
+                            return {
+                                notifications: old.notifications.map(n =>
+                                    n.id === payload.new.id ? { ...n, ...payload.new } : n
+                                )
+                            }
+                        })
+                    }
+                    else if (payload.eventType === 'DELETE') {
+                        queryClient.setQueryData(['user-notifications', userId], (old: { notifications: UserNotification[] } | undefined) => {
+                            if (!old) return old
+                            return {
+                                notifications: old.notifications.filter(n => n.id !== payload.old.id)
+                            }
+                        })
+                    }
                 }
             )
             .subscribe()
