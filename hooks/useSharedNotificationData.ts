@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 
 /**
@@ -49,12 +49,18 @@ interface SharedNotificationData {
     pendingReservations: Reservation[]
     isLoading: boolean
     refetch: () => void
+    newLoan: LoanRequest | null
+    newReservation: Reservation | null
+    clearNewLoan: () => void
+    clearNewReservation: () => void
 }
 
 
 
 export function useSharedNotificationData(): SharedNotificationData {
     const queryClient = useQueryClient()
+    const [newLoan, setNewLoan] = useState<LoanRequest | null>(null)
+    const [newReservation, setNewReservation] = useState<Reservation | null>(null)
 
     // Realtime Subscription
     useEffect(() => {
@@ -64,13 +70,17 @@ export function useSharedNotificationData(): SharedNotificationData {
                     .from('loanRequests')
                     .select('*,equipment(id,name,equipment_number),profiles(first_name,last_name,email)')
                     .eq('id', payload.new.id)
-                    .single()
+                    .single() as { data: LoanRequest | null, error: any }
 
                 if (!error && data) {
                     queryClient.setQueryData(['shared-loans-data'], (old: { loans: LoanRequest[] } | undefined) => {
                         if (!old) return { loans: [data] }
                         return { loans: [data, ...old.loans] }
                     })
+
+                    if (data.status === 'pending') {
+                        setNewLoan(data)
+                    }
                 }
             } else if (payload.eventType === 'UPDATE') {
                 queryClient.setQueryData(['shared-loans-data'], (old: { loans: LoanRequest[] } | undefined) => {
@@ -89,6 +99,12 @@ export function useSharedNotificationData(): SharedNotificationData {
                     }
                 })
             }
+
+            // Invalidate other views that depend on this data
+            queryClient.invalidateQueries({ queryKey: ['staff-dashboard-stats'] })
+            queryClient.invalidateQueries({ queryKey: ['staff-recent-activity'] })
+            queryClient.invalidateQueries({ queryKey: ['loan-requests'] })
+            queryClient.invalidateQueries({ queryKey: ['admin-dashboard-stats'] })
         }
 
         const handleReservationChange = async (payload: any) => {
@@ -98,6 +114,8 @@ export function useSharedNotificationData(): SharedNotificationData {
                         if (!old) return { reservations: [payload.new] }
                         return { reservations: [payload.new, ...old.reservations] }
                     })
+
+                    setNewReservation(payload.new)
                 }
             } else if (payload.eventType === 'UPDATE') {
                 if (payload.new.status !== 'pending') {
@@ -210,5 +228,9 @@ export function useSharedNotificationData(): SharedNotificationData {
         pendingReservations: reservationsData?.reservations || [],
         isLoading: loansLoading || reservationsLoading,
         refetch,
+        newLoan,
+        newReservation,
+        clearNewLoan: () => setNewLoan(null),
+        clearNewReservation: () => setNewReservation(null),
     }
 }

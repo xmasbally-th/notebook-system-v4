@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react'
 import { Bell, UserPlus, Package, X, Users, ClipboardList, Bookmark } from 'lucide-react'
 import Link from 'next/link'
 import { useRealtimeUsers } from '@/hooks/useRealtimeUsers'
-import { useRealtimeLoans } from '@/hooks/useRealtimeLoans'
-import { useRealtimeReservations } from '@/hooks/useRealtimeReservations'
+import { useSharedNotificationData } from '@/hooks/useSharedNotificationData'
 
 interface AdminNotificationBellProps {
     isAdmin: boolean
@@ -13,8 +12,17 @@ interface AdminNotificationBellProps {
 
 export default function AdminNotificationBell({ isAdmin }: AdminNotificationBellProps) {
     const { pendingCount: pendingUsersCount, newUser, clearNewUser } = useRealtimeUsers(isAdmin)
-    const { pendingCount: pendingLoansCount, newLoan, clearNewLoan } = useRealtimeLoans(isAdmin)
-    const { pendingCount: pendingReservationsCount, newReservation, clearNewReservation } = useRealtimeReservations(isAdmin)
+    const {
+        pendingLoans,
+        pendingReservations,
+        newLoan,
+        newReservation,
+        clearNewLoan,
+        clearNewReservation
+    } = useSharedNotificationData()
+
+    const pendingLoansCount = pendingLoans.length
+    const pendingReservationsCount = pendingReservations.length
 
     const [showDropdown, setShowDropdown] = useState(false)
 

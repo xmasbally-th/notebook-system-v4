@@ -12,7 +12,8 @@ import { useRealtimeInvalidator } from '@/hooks/useRealtimeInvalidator'
 
 export default function StaffDashboard() {
     // Enable Realtime Updates
-    useRealtimeInvalidator(['loanRequests'], [['staff-dashboard-stats'], ['staff-recent-activity']])
+    // Realtime Updates handled by QueryClient invalidation in Global Listener (to be implemented)
+    // useRealtimeInvalidator(['loanRequests'], [['staff-dashboard-stats'], ['staff-recent-activity']])
     // Fetch dashboard stats
     const { data: stats, isLoading } = useQuery({
         queryKey: ['staff-dashboard-stats'],

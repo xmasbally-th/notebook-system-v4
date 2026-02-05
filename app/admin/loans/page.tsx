@@ -21,7 +21,8 @@ const STATUS_CONFIG = {
 
 export default function LoanRequestsPage() {
     // Enable Realtime Updates
-    useRealtimeInvalidator(['loanRequests'], [['loan-requests']])
+    // Enable Realtime Updates
+    // useRealtimeInvalidator(['loanRequests'], [['loan-requests']])
     const queryClient = useQueryClient()
     const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [searchTerm, setSearchTerm] = useState('')
