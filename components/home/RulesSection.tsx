@@ -74,40 +74,40 @@ export default function RulesSection() {
     ]
 
     return (
-        <section className="py-16 bg-white">
+        <section className="py-10 bg-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-12">
-                    <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">กฎระเบียบการยืม</h2>
-                    <p className="mt-4 text-lg text-gray-500 max-w-2xl mx-auto">
+                <div className="text-center mb-8">
+                    <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">กฎระเบียบการยืม</h2>
+                    <p className="mt-2 text-base text-gray-500 max-w-2xl mx-auto">
                         กรุณาปฏิบัติตามกฎระเบียบเพื่อให้บริการยืม-คืนเป็นไปอย่างราบรื่น
                     </p>
                 </div>
 
                 {/* Special Loan Notice */}
                 {activeSpecialLoans.length > 0 && (
-                    <div className="mb-8 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 md:p-6">
+                    <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4">
                         <div className="flex items-start gap-3">
-                            <div className="p-2 bg-amber-100 rounded-lg">
-                                <AlertTriangle className="w-5 h-5 text-amber-600" />
+                            <div className="p-1.5 bg-amber-100 rounded-lg">
+                                <AlertTriangle className="w-4 h-4 text-amber-600" />
                             </div>
                             <div className="flex-1">
-                                <h3 className="font-semibold text-amber-900 mb-2">
+                                <h3 className="font-semibold text-amber-900 mb-1 text-sm">
                                     ⚠️ แจ้งเตือนการยืมพิเศษ
                                 </h3>
                                 {activeSpecialLoans.map((loan) => (
-                                    <div key={loan.id} className="mb-3 last:mb-0">
-                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-amber-800">
+                                    <div key={loan.id} className="mb-2 last:mb-0">
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-amber-800">
                                             <span className="flex items-center gap-1">
-                                                <Calendar className="w-4 h-4" />
+                                                <Calendar className="w-3 h-3" />
                                                 {formatDate(loan.loan_date)} - {formatDate(loan.return_date)}
                                             </span>
                                             <span className="flex items-center gap-1">
-                                                <Package className="w-4 h-4" />
+                                                <Package className="w-3 h-3" />
                                                 {loan.equipment_type_name} × {loan.quantity}
                                             </span>
                                         </div>
                                         {loan.equipment_numbers && loan.equipment_numbers.length > 0 && (
-                                            <div className="mt-2">
+                                            <div className="mt-1">
                                                 <button
                                                     onClick={() => setShowEquipmentList(!showEquipmentList)}
                                                     className="text-xs text-amber-700 hover:text-amber-900 flex items-center gap-1"
@@ -116,11 +116,11 @@ export default function RulesSection() {
                                                     {showEquipmentList ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                                 </button>
                                                 {showEquipmentList && (
-                                                    <div className="mt-2 flex flex-wrap gap-1">
+                                                    <div className="mt-1 flex flex-wrap gap-1">
                                                         {loan.equipment_numbers.map((num, idx) => (
                                                             <span
                                                                 key={idx}
-                                                                className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs"
+                                                                className="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px]"
                                                             >
                                                                 {num}
                                                             </span>
@@ -136,16 +136,16 @@ export default function RulesSection() {
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {rules.map((rule, index) => (
                         <div
                             key={index}
-                            className="p-6 bg-gray-50 rounded-xl border border-gray-100 hover:shadow-md transition-shadow"
+                            className="p-5 bg-gray-50 rounded-xl border border-gray-100 hover:shadow-md transition-shadow"
                         >
-                            <div className="mb-4 p-3 bg-white rounded-lg w-fit shadow-sm border border-gray-100">
+                            <div className="mb-3 p-2.5 bg-white rounded-lg w-fit shadow-sm border border-gray-100">
                                 {rule.icon}
                             </div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">{rule.title}</h3>
+                            <h3 className="text-base font-semibold text-gray-900 mb-1.5">{rule.title}</h3>
                             <p className="text-gray-600 text-sm leading-relaxed">
                                 {rule.description}
                             </p>
@@ -155,9 +155,9 @@ export default function RulesSection() {
 
                 {/* Loan Limits Table */}
                 {loanLimits && (
-                    <div className="mt-12 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 md:p-8 border border-blue-100">
-                        <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">ขีดจำกัดการยืมตามประเภทผู้ใช้</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="mt-8 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4 text-center">ขีดจำกัดการยืมตามประเภทผู้ใช้</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             {(['student', 'lecturer', 'staff'] as const).map((userType) => {
                                 const limits = loanLimits[userType]
                                 if (!limits) return null
@@ -165,10 +165,10 @@ export default function RulesSection() {
                                 return (
                                     <div
                                         key={userType}
-                                        className="bg-white rounded-xl p-5 shadow-sm border border-blue-100"
+                                        className="bg-white rounded-lg p-4 shadow-sm border border-blue-100"
                                     >
-                                        <h4 className="font-semibold text-blue-900 mb-3">{userTypeLabels[userType]}</h4>
-                                        <div className="space-y-2 text-sm">
+                                        <h4 className="font-semibold text-blue-900 mb-2 text-sm">{userTypeLabels[userType]}</h4>
+                                        <div className="space-y-1.5 text-xs">
                                             <div className="flex justify-between">
                                                 <span className="text-gray-500">ยืมได้สูงสุด</span>
                                                 <span className="font-medium text-gray-900">{limits.max_days} วัน</span>

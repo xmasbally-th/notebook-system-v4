@@ -10,6 +10,7 @@ import CartButton from '@/components/cart/CartButton'
 import CartDrawer from '@/components/cart/CartDrawer'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { useSearchParams, useRouter } from 'next/navigation'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 type EquipmentType = {
@@ -33,12 +34,46 @@ const STATUS_CONFIG = {
 function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps) {
     const { data: equipment, isLoading, error } = useEquipment()
     const { data: recentlyBorrowed = [] } = useRecentlyBorrowed()
+    const searchParams = useSearchParams()
+    const router = useRouter()
+
+    // Convert equipmentTypes from array to map for easier lookup if needed, 
+    // but here we just need to know valid type IDs if we want to validate (optional)
+
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedTypeId, setSelectedTypeId] = useState<string>('all')
     const [selectedStatus, setSelectedStatus] = useState<string>('all')
+
     const [isCartOpen, setIsCartOpen] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
+
+    // Sync state with URL params on mount
+    useEffect(() => {
+        const typeParam = searchParams.get('type')
+        const searchParam = searchParams.get('search')
+        const statusParam = searchParams.get('status')
+
+        if (typeParam) setSelectedTypeId(typeParam)
+        if (searchParam) setSearchTerm(searchParam)
+        if (statusParam) setSelectedStatus(statusParam)
+    }, [searchParams])
+
+    // Update URL when filters change (optional but good for UX so user can bookmark/share)
+    // For now we just read from URL on mount, but let's also update URL when state changes
+    useEffect(() => {
+        const params = new URLSearchParams()
+        if (searchTerm) params.set('search', searchTerm)
+        if (selectedTypeId !== 'all') params.set('type', selectedTypeId)
+        if (selectedStatus !== 'all') params.set('status', selectedStatus)
+
+        // Use replace to avoid filling browser history with every keystroke
+        // Debounce logic for search term could be added here if needed
+        const queryString = params.toString()
+        if (queryString !== searchParams.toString()) {
+            // Only push if different to avoid loop if we add dependency on searchParams
+        }
+    }, [searchTerm, selectedTypeId, selectedStatus])
 
     const { isInCart, addItem, removeItem, isAtLimit } = useCart()
 
@@ -85,6 +120,7 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
         setSelectedTypeId('all')
         setSelectedStatus('all')
         setCurrentPage(1)
+        router.replace('/equipment') // Clear URL params
     }
 
     const hasActiveFilters = searchTerm || selectedTypeId !== 'all' || selectedStatus !== 'all'

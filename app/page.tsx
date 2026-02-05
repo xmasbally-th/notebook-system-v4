@@ -3,10 +3,87 @@ import Footer from '@/components/layout/Footer'
 import RulesSection from '@/components/home/RulesSection'
 import HoursSection from '@/components/home/HoursSection'
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { redirect, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Laptop, Tablet, Headphones, Monitor, ArrowRight, LogIn, Package } from 'lucide-react'
+import { Laptop, Tablet, Headphones, Monitor, ArrowRight, LogIn, Package, Search, Clock, AlertCircle } from 'lucide-react'
 import ActiveEvaluationPrompt from '@/components/evaluations/ActiveEvaluationPrompt'
+import { useSystemConfig } from '@/hooks/useSystemConfig'
+
+// Client component for System Status
+function SystemStatusBadge() {
+    'use client'
+    const { data: config, isLoading } = useSystemConfig()
+
+    if (isLoading) return (
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white text-sm font-medium mb-4 animate-pulse">
+            <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+            กำลังตรวจสอบสถานะ...
+        </div>
+    )
+
+    const now = new Date()
+    const currentTime = now.toTimeString().slice(0, 5)
+    const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+
+    const isClosedDay = (config?.closed_days as string[])?.includes(currentDay)
+    const isBeforeOpen = currentTime < (config?.opening_time || '08:30')
+    const isAfterClose = currentTime > (config?.closing_time || '16:30')
+    const isLunchBreak = currentTime >= (config?.break_start_time || '12:00') && currentTime < (config?.break_end_time || '13:00')
+
+    let status = { text: 'ระบบพร้อมให้บริการ', color: 'bg-green-400', subText: '' }
+
+    if (isClosedDay) {
+        status = { text: 'ระบบปิดทำการ (วันหยุด)', color: 'bg-red-400', subText: 'เปิดทำการวันจันทร์' }
+    } else if (isBeforeOpen || isAfterClose) {
+        status = { text: 'ระบบปิดทำการ (นอกเวลา)', color: 'bg-red-400', subText: `เปิดเวลา ${config?.opening_time?.slice(0, 5)} น.` }
+    } else if (isLunchBreak) {
+        status = { text: 'พักกลางวัน', color: 'bg-orange-400', subText: `เปิดเวลา ${config?.break_end_time?.slice(0, 5)} น.` }
+    }
+
+    return (
+        <div className="flex flex-col items-center">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white text-sm font-medium mb-2">
+                <span className={`w-2 h-2 rounded-full animate-pulse ${status.color}`}></span>
+                {status.text}
+            </div>
+            {status.subText && (
+                <span className="text-xs text-blue-200 mb-4 font-light">{status.subText}</span>
+            )}
+        </div>
+    )
+}
+
+// Client component for Quick Search
+function QuickSearch() {
+    'use client'
+    const router = useRouter() // Works bc it's inside 'use client' wrapper actually... wait, page.tsx is a server component. 
+    // We need to make this a separate file or handle the 'use client' directive properly.
+    // Since page.tsx is async/server component, we can't embed 'use client' function components directly ONLY if we use them.
+    // Actually, we can define them in separate files.
+    // BUT defined here they are just functions. If I use <QuickSearch /> it needs to be a client component.
+    // Let's make a tiny helper file for these interactive parts or just use standard form action.
+    // Actually for search, a simple form with action to /equipment is enough using native HTML behavior?
+    // No, standard form submission refreshes the page. We want SPA nav if possible, but form method="get" action="/equipment" works perfectly fine for this simple case.
+
+    return (
+        <form action="/equipment" method="GET" className="w-full max-w-md mx-auto mb-8 relative group">
+            <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-blue-300 group-focus-within:text-blue-500 transition-colors" />
+                </div>
+                <input
+                    type="text"
+                    name="search"
+                    className="block w-full pl-11 pr-4 py-3 bg-white/10 border border-blue-400/30 rounded-full text-white placeholder-blue-200 focus:outline-none focus:bg-white focus:text-gray-900 focus:ring-2 focus:ring-white transition-all shadow-lg backdrop-blur-sm"
+                    placeholder="ค้นหาอุปกรณ์ เช่น MacBook, iPad..."
+                />
+                <button type="submit" className="absolute inset-y-1 right-1 px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-full transition-colors">
+                    ค้นหา
+                </button>
+            </div>
+        </form>
+    )
+}
 
 export default async function Home() {
     const supabase = await createClient()
@@ -49,49 +126,48 @@ export default async function Home() {
                         <div className="absolute bottom-10 right-10 w-96 h-96 bg-orange-400 rounded-full blur-3xl"></div>
                     </div>
 
-                    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
+                    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
                         <div className="text-center">
-                            {/* Badge */}
-                            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white text-sm font-medium mb-6">
-                                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                                ระบบพร้อมให้บริการ
-                            </div>
+                            {/* Dynamic Status Badge */}
+                            <SystemStatusBadge />
 
-                            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white tracking-tight mb-6">
-                                ระบบยืม-คืน<br className="sm:hidden" />
-                                <span className="text-orange-400">โน้ตบุ๊ก</span>
+                            <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white tracking-tight mb-4">
+                                ระบบยืม-คืนพัสดุและครุภัณฑ์
                             </h1>
-                            <p className="text-lg md:text-xl text-blue-100 max-w-2xl mx-auto mb-10">
+                            <p className="text-base md:text-lg text-blue-100 max-w-2xl mx-auto mb-8">
                                 บริการยืมอุปกรณ์คอมพิวเตอร์สำหรับนักศึกษาและบุคลากร
                                 สะดวก รวดเร็ว ปลอดภัย
                             </p>
 
-                            {/* Device Icons */}
-                            <div className="flex justify-center gap-6 md:gap-10 mb-10">
-                                <div className="flex flex-col items-center text-white/80 hover:text-white hover:scale-110 transition-all">
-                                    <div className="p-3 bg-white/10 rounded-xl mb-2">
+                            {/* Quick Search */}
+                            <QuickSearch />
+
+                            {/* Device Icons - Interactive */}
+                            <div className="flex justify-center gap-6 md:gap-10 mb-8">
+                                <Link href="/equipment?type=laptop" className="group flex flex-col items-center text-blue-100 hover:text-white transition-all">
+                                    <div className="p-3 bg-white/10 group-hover:bg-white/20 rounded-xl mb-2 transition-colors group-hover:scale-110 duration-300">
                                         <Laptop className="w-8 h-8" aria-hidden="true" />
                                     </div>
                                     <span className="text-xs font-medium">Laptop</span>
-                                </div>
-                                <div className="flex flex-col items-center text-white/80 hover:text-white hover:scale-110 transition-all">
-                                    <div className="p-3 bg-white/10 rounded-xl mb-2">
+                                </Link>
+                                <Link href="/equipment?type=tablet" className="group flex flex-col items-center text-blue-100 hover:text-white transition-all">
+                                    <div className="p-3 bg-white/10 group-hover:bg-white/20 rounded-xl mb-2 transition-colors group-hover:scale-110 duration-300">
                                         <Tablet className="w-8 h-8" aria-hidden="true" />
                                     </div>
                                     <span className="text-xs font-medium">Tablet</span>
-                                </div>
-                                <div className="flex flex-col items-center text-white/80 hover:text-white hover:scale-110 transition-all">
-                                    <div className="p-3 bg-white/10 rounded-xl mb-2">
+                                </Link>
+                                <Link href="/equipment?type=monitor" className="group flex flex-col items-center text-blue-100 hover:text-white transition-all">
+                                    <div className="p-3 bg-white/10 group-hover:bg-white/20 rounded-xl mb-2 transition-colors group-hover:scale-110 duration-300">
                                         <Monitor className="w-8 h-8" aria-hidden="true" />
                                     </div>
                                     <span className="text-xs font-medium">Monitor</span>
-                                </div>
-                                <div className="flex flex-col items-center text-white/80 hover:text-white hover:scale-110 transition-all">
-                                    <div className="p-3 bg-white/10 rounded-xl mb-2">
+                                </Link>
+                                <Link href="/equipment?type=accessories" className="group flex flex-col items-center text-blue-100 hover:text-white transition-all">
+                                    <div className="p-3 bg-white/10 group-hover:bg-white/20 rounded-xl mb-2 transition-colors group-hover:scale-110 duration-300">
                                         <Headphones className="w-8 h-8" aria-hidden="true" />
                                     </div>
                                     <span className="text-xs font-medium">Accessories</span>
-                                </div>
+                                </Link>
                             </div>
 
                             {/* CTA Buttons */}
@@ -99,7 +175,7 @@ export default async function Home() {
                                 {isApproved ? (
                                     <Link
                                         href="/equipment"
-                                        className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+                                        className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
                                     >
                                         <Package className="w-5 h-5" aria-hidden="true" />
                                         ดูรายการอุปกรณ์
@@ -108,7 +184,7 @@ export default async function Home() {
                                 ) : (
                                     <Link
                                         href="/login"
-                                        className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+                                        className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
                                     >
                                         <LogIn className="w-5 h-5" aria-hidden="true" />
                                         เข้าสู่ระบบเพื่อดูอุปกรณ์
@@ -129,17 +205,17 @@ export default async function Home() {
                 <RulesSection />
 
                 {/* CTA Section - Instead of Equipment List */}
-                <section className="py-16 bg-gray-50">
+                <section className="py-10 bg-gray-50">
                     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 md:p-12">
-                            <div className="mb-6">
-                                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-2xl mb-4">
-                                    <Package className="w-8 h-8 text-blue-600" aria-hidden="true" />
+                        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8">
+                            <div className="mb-4">
+                                <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-xl mb-3">
+                                    <Package className="w-6 h-6 text-blue-600" aria-hidden="true" />
                                 </div>
-                                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+                                <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
                                     พร้อมยืมอุปกรณ์แล้วหรือยัง?
                                 </h2>
-                                <p className="text-gray-500 max-w-lg mx-auto">
+                                <p className="text-gray-500 max-w-lg mx-auto text-sm">
                                     {isApproved
                                         ? 'คุณสามารถเลือกอุปกรณ์และส่งคำขอยืมได้ทันที'
                                         : 'เข้าสู่ระบบเพื่อดูรายการอุปกรณ์และส่งคำขอยืม'
@@ -150,19 +226,19 @@ export default async function Home() {
                             {isApproved ? (
                                 <Link
                                     href="/equipment"
-                                    className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all"
+                                    className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all text-sm"
                                 >
-                                    <Package className="w-5 h-5" aria-hidden="true" />
+                                    <Package className="w-4 h-4" aria-hidden="true" />
                                     ดูรายการอุปกรณ์ทั้งหมด
-                                    <ArrowRight className="w-5 h-5" aria-hidden="true" />
+                                    <ArrowRight className="w-4 h-4" aria-hidden="true" />
                                 </Link>
                             ) : (
                                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                                     <Link
                                         href="/login"
-                                        className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all"
+                                        className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all text-sm"
                                     >
-                                        <LogIn className="w-5 h-5" aria-hidden="true" />
+                                        <LogIn className="w-4 h-4" aria-hidden="true" />
                                         เข้าสู่ระบบ
                                     </Link>
                                 </div>

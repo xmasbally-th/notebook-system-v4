@@ -7,8 +7,10 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import {
     Package, CalendarPlus, Clock, CheckCircle2, XCircle,
     Send, ArrowRight, Bookmark, AlertTriangle, Timer,
-    Monitor, ClipboardList, ArrowLeft, HelpCircle
+    Monitor, ClipboardList, ArrowLeft, HelpCircle, Search,
+    User
 } from 'lucide-react'
+import React from 'react'
 
 export default function UserGuidePage() {
     return (
@@ -40,6 +42,9 @@ export default function UserGuidePage() {
                         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-8">
                             <h2 className="text-sm font-medium text-gray-500 mb-3">ลิงก์ลัด</h2>
                             <div className="flex flex-wrap gap-2">
+                                <a href="#find" className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-full text-sm hover:bg-indigo-100 transition-colors">
+                                    ค้นหาอุปกรณ์
+                                </a>
                                 <a href="#borrow" className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm hover:bg-blue-100 transition-colors">
                                     ยืมทันที
                                 </a>
@@ -52,6 +57,9 @@ export default function UserGuidePage() {
                                 <a href="#return" className="px-3 py-1.5 bg-orange-50 text-orange-700 rounded-full text-sm hover:bg-orange-100 transition-colors">
                                     การคืนอุปกรณ์
                                 </a>
+                                <a href="#profile" className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors">
+                                    จัดการโปรไฟล์
+                                </a>
                             </div>
                         </div>
 
@@ -63,6 +71,39 @@ export default function UserGuidePage() {
                                     ระบบยืม-คืนอุปกรณ์ช่วยให้คุณสามารถ<strong>ยืมอุปกรณ์ทันที</strong>หรือ<strong>จองล่วงหน้า</strong>ได้อย่างสะดวก
                                     เพียงเลือกอุปกรณ์ที่ต้องการ กรอกข้อมูล และรอการอนุมัติจากเจ้าหน้าที่
                                 </p>
+                            </div>
+                        </section>
+
+                        {/* Find Equipment Section */}
+                        <section id="find" className="mb-10 scroll-mt-24">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                                    <Search className="w-5 h-5 text-indigo-600" />
+                                </div>
+                                <h2 className="text-xl font-bold text-gray-900">การค้นหาอุปกรณ์</h2>
+                            </div>
+
+                            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <h3 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-bold text-blue-600">1</div>
+                                            Quick Search (ค้นหาด่วน)
+                                        </h3>
+                                        <p className="text-sm text-gray-600 ml-8 mb-4">
+                                            พิมพ์ชื่ออุปกรณ์ที่ต้องการในช่องค้นหาหน้าแรก เช่น "iPad", "MacBook" ระบบจะพาไปยังหน้ารายการอุปกรณ์ที่เกี่ยวข้องทันที
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-bold text-blue-600">2</div>
+                                            หมวดหมู่อุปกรณ์
+                                        </h3>
+                                        <p className="text-sm text-gray-600 ml-8">
+                                            คลิกที่ไอคอนหมวดหมู่ในหน้าแรก (Laptop, Tablet, Monitor, Accessories) เพื่อดูรายการอุปกรณ์ทั้งหมดในหมวดนั้นๆ
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </section>
 
@@ -179,6 +220,7 @@ export default function UserGuidePage() {
                                     <Link href="/my-loans" className="text-blue-600 hover:underline font-medium">
                                         การยืมและจอง
                                     </Link>
+                                    {' '}โดยสถานะจะ<strong>อัปเดตทันที (Realtime)</strong> เมื่อเจ้าหน้าที่ดำเนินการ
                                 </p>
 
                                 <h3 className="font-semibold text-gray-800 mb-3">ความหมายของสถานะ:</h3>
@@ -293,6 +335,39 @@ export default function UserGuidePage() {
                                         ⚠️ <strong>ข้อควรระวัง:</strong> กรุณาคืนอุปกรณ์ตามกำหนด หากคืนล่าช้าอาจมีผลต่อสิทธิ์การยืมในอนาคต
                                     </p>
                                 </div>
+                            </div>
+                        </section>
+
+                        {/* Profile Management Section */}
+                        <section id="profile" className="mb-10 scroll-mt-24">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
+                                    <User className="w-5 h-5 text-gray-600" />
+                                </div>
+                                <h2 className="text-xl font-bold text-gray-900">การจัดการโปรไฟล์</h2>
+                            </div>
+
+                            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                                <p className="text-gray-600 mb-4">
+                                    คุณสามารถตรวจสอบและแก้ไขข้อมูลส่วนตัวได้ที่หน้า{' '}
+                                    <Link href="/profile" className="text-blue-600 hover:underline font-medium">
+                                        โปรไฟล์ของฉัน
+                                    </Link>
+                                </p>
+                                <ul className="space-y-3">
+                                    <li className="flex items-start gap-3">
+                                        <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
+                                        <span className="text-sm text-gray-600">
+                                            <strong>แก้ไขข้อมูล:</strong> สามารถแก้ไข ชื่อ-นามสกุล, เบอร์โทรศัพท์ และหน่วยงาน/สังกัด ได้ด้วยตนเอง
+                                        </span>
+                                    </li>
+                                    <li className="flex items-start gap-3">
+                                        <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />
+                                        <span className="text-sm text-gray-600">
+                                            <strong>ตรวจสอบสถานะบัญชี:</strong> ดูสถานะการอนุมัติบัญชี (รออนุมัติ/อนุมัติแล้ว) และประเภทผู้ใช้งาน
+                                        </span>
+                                    </li>
+                                </ul>
                             </div>
                         </section>
 
