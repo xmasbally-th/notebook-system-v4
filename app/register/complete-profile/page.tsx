@@ -90,7 +90,8 @@ export default function CompleteProfilePage() {
     // Handle Success Redirect
     useEffect(() => {
         if (state.success) {
-            router.replace('/')
+            // Force hard reload to clear AuthGuard cache
+            window.location.href = '/'
         }
     }, [state.success, router])
 
