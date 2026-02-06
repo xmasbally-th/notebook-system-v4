@@ -99,6 +99,8 @@ export async function completeRegistrationAction(
 
     // 5. Update Profile
     const updates = {
+        id: user.id,
+        email: user.email,
         title,
         first_name: firstName,
         last_name: lastName,
@@ -110,7 +112,7 @@ export async function completeRegistrationAction(
 
     const { error: updateError } = await (supabase as any)
         .from('profiles')
-        .update(updates)
+        .upsert(updates)
         .eq('id', user.id)
 
     if (updateError) {

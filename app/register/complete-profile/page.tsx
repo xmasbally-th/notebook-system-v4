@@ -90,7 +90,7 @@ export default function CompleteProfilePage() {
     // Handle Success Redirect
     useEffect(() => {
         if (state.success) {
-            router.replace('/pending-approval')
+            router.replace('/')
         }
     }, [state.success, router])
 
