@@ -265,7 +265,8 @@ export async function deleteUser(userId: string) {
 
         if (authError) {
             console.error('Delete auth user error:', authError)
-            // Note: We continue even if auth delete fails (rare), blocking by profile missing is secondary safety
+            // THROW specific error so user can see it
+            throw new Error(`ลบข้อมูลใน Database สำเร็จ แต่ลบใน Auth ไม่สำเร็จ: ${authError.message}`)
         }
 
         revalidatePath('/admin/users')
