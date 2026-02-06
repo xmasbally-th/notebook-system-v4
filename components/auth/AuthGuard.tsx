@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import { useQueryClient } from '@tanstack/react-query'
+import Loading from '@/components/ui/Loading'
 
 type Profile = {
     id: string
@@ -320,10 +321,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     if (authState === 'loading') {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-center">
-                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-500">กำลังโหลด...</p>
-                </div>
+                <Loading text="กำลังตรวจสอบสิทธิ์…" />
             </div>
         )
     }

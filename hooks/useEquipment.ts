@@ -7,7 +7,7 @@ type Equipment = Database['public']['Tables']['equipment']['Row']
 
 
 
-export function useEquipment(id?: string) {
+export function useEquipment(id?: string | null, filters?: { typeId?: string | null, search?: string | null, enabled?: boolean }) {
     const queryClient = useQueryClient()
 
     useEffect(() => {
@@ -34,19 +34,12 @@ export function useEquipment(id?: string) {
     }, [queryClient])
 
     return useQuery({
-        queryKey: ['equipment', id],
+        queryKey: ['equipment', id, filters?.typeId, filters?.search],
+        enabled: filters?.enabled !== false, // Default to true if not specified
         staleTime: 1000 * 60 * 5, // 5 minutes (invalidated by realtime)
         retry: 1,
         queryFn: async () => {
-
-
             try {
-                // Use direct fetch API
-                // Note: We use supabase.auth.getSession() to get headers if needed, 
-                // but here we are using the shared client which is properly configured.
-                // Actually, for consistency with previous refactor, we can use the shared client directly!
-                // But the original code used fetch. Let's switch to shared client to be clean.
-
                 let query = supabase
                     .from('equipment')
                     .select('*')
@@ -54,6 +47,17 @@ export function useEquipment(id?: string) {
                 if (id) {
                     query = query.eq('id', id) as any
                 } else {
+                    // Apply filters
+                    if (filters?.typeId && filters.typeId !== 'all') {
+                        query = query.eq('equipment_type_id', filters.typeId)
+                    }
+
+                    if (filters?.search) {
+                        const s = filters.search
+                        // Search in name, equipment_number, brand, model
+                        query = query.or(`name.ilike.%${s}%,equipment_number.ilike.%${s}%,brand.ilike.%${s}%,model.ilike.%${s}%`)
+                    }
+
                     query = query.order('created_at', { ascending: false })
                 }
 
@@ -63,9 +67,6 @@ export function useEquipment(id?: string) {
                     console.error('[useEquipment] Supabase Error:', error.message)
                     return id ? null : []
                 }
-
-
-
 
                 // Process data to ensure arrays are correct
                 const processItem = (item: any) => ({
