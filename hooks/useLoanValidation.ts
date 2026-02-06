@@ -5,9 +5,11 @@ import { createBrowserClient } from '@supabase/ssr'
 import { useMemo } from 'react'
 
 type LoanLimitsByType = {
-    student: { max_days: number; max_items: number }
-    lecturer: { max_days: number; max_items: number }
-    staff: { max_days: number; max_items: number }
+    [key: string]: {
+        max_days: number
+        max_items: number
+        type_limits?: Record<string, number>
+    }
 }
 
 type UserType = 'student' | 'lecturer' | 'staff'
@@ -24,12 +26,14 @@ interface LoanValidationResult {
     config: {
         maxDays: number
         maxItems: number
+        typeLimits: Record<string, number>
         openingTime: string
         closingTime: string
         closedDates: string[]
         isLoanSystemActive: boolean
     } | null
     currentLoanCount: number
+    activeLoans: any[]
 }
 
 // Get credentials for direct fetch API
@@ -77,31 +81,30 @@ export function useLoanValidation(userType: UserType = 'student'): LoanValidatio
         }
     })
 
-    // Fetch current user's active loans count
+    // Fetch current user's active loans count and details
     const { data: activeLoanData, isLoading: loansLoading } = useQuery({
         queryKey: ['my-active-loans-count'],
         staleTime: 30000,
         queryFn: async () => {
             const client = getSupabaseClient()
-            if (!client) return { count: 0 }
+            if (!client) return { count: 0, loans: [] }
 
             const { data: { user } } = await client.auth.getUser()
-            if (!user) return { count: 0 }
+            if (!user) return { count: 0, loans: [] }
 
             const { url, key } = getSupabaseCredentials()
             const response = await fetch(
-                `${url}/rest/v1/loanRequests?user_id=eq.${user.id}&status=in.(pending,approved)&select=id`,
+                `${url}/rest/v1/loanRequests?user_id=eq.${user.id}&status=in.(pending,approved)&select=id,equipment_id,equipment(equipment_type_id)`,
                 {
                     headers: {
                         'apikey': key,
-                        'Authorization': `Bearer ${key}`,
-                        'Prefer': 'count=exact'
+                        'Authorization': `Bearer ${key}`
                     }
                 }
             )
-            if (!response.ok) return { count: 0 }
+            if (!response.ok) return { count: 0, loans: [] }
             const data = await response.json()
-            return { count: data?.length || 0 }
+            return { count: data?.length || 0, loans: data || [] }
         }
     })
 
@@ -110,11 +113,12 @@ export function useLoanValidation(userType: UserType = 'student'): LoanValidatio
         if (!systemConfig) return null
 
         const loanLimits = systemConfig.loan_limits_by_type as LoanLimitsByType | null
-        const limits = loanLimits?.[userType] || { max_days: 7, max_items: 1 }
+        const limits = loanLimits?.[userType] || { max_days: 7, max_items: 1, type_limits: {} }
 
         return {
             maxDays: limits.max_days,
             maxItems: limits.max_items,
+            typeLimits: limits.type_limits || {},
             openingTime: systemConfig.opening_time || '08:30',
             closingTime: systemConfig.closing_time || '16:30',
             closedDates: (systemConfig.closed_dates as string[]) || [],
@@ -123,9 +127,10 @@ export function useLoanValidation(userType: UserType = 'student'): LoanValidatio
     }, [systemConfig, userType])
 
     const currentLoanCount = activeLoanData?.count || 0
+    const activeLoans = activeLoanData?.loans || []
 
     // Validation function
-    const validateDates = (startDate: string, endDate: string, returnTime?: string): ValidationResult => {
+    const validateDates = (startDate: string, endDate: string, returnTime?: string, equipmentTypeId?: string): ValidationResult => {
         const errors: string[] = []
         const warnings: string[] = []
 
@@ -172,6 +177,19 @@ export function useLoanValidation(userType: UserType = 'student'): LoanValidatio
         // Check max items
         if (currentLoanCount >= config.maxItems) {
             errors.push(`คุณมีรายการยืมถึงขีดจำกัดแล้ว (สูงสุด ${config.maxItems} รายการ)`)
+        }
+
+        // Check type limits
+        if (equipmentTypeId && config.typeLimits[equipmentTypeId]) {
+            const typeLimit = config.typeLimits[equipmentTypeId]
+            // Count active loans for this type
+            const activeTypeLoans = activeLoans.filter((loan: any) =>
+                loan.equipment?.equipment_type_id === equipmentTypeId
+            ).length
+
+            if (activeTypeLoans >= typeLimit) {
+                errors.push(`คุณยืมอุปกรณ์ประเภทนี้ครบจำนวนที่กำหนดแล้ว (สูงสุด ${typeLimit} รายการ)`)
+            }
         }
 
         // Check if start date is on closed date
@@ -221,6 +239,7 @@ export function useLoanValidation(userType: UserType = 'student'): LoanValidatio
         validateDates,
         isLoading: configLoading || loansLoading,
         config,
-        currentLoanCount
+        currentLoanCount,
+        activeLoans
     }
 }

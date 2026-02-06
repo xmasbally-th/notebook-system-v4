@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { useSystemConfig, useUpdateSystemConfig } from '@/hooks/useSystemConfig'
+import { useEquipmentTypes } from '@/hooks/useEquipmentTypes'
 import Link from 'next/link'
 import AdminLayout from '@/components/admin/AdminLayout'
 import {
@@ -34,15 +35,17 @@ import { useTheme, themeInfo, type Theme } from '@/components/providers/ThemeCon
 type SystemConfigUpdate = Database['public']['Tables']['system_config']['Update']
 
 type LoanLimitsByType = {
-    student: { max_days: number; max_items: number }
-    lecturer: { max_days: number; max_items: number }
-    staff: { max_days: number; max_items: number }
+    [key: string]: {
+        max_days: number
+        max_items: number
+        type_limits?: Record<string, number> // key: equipment_type_id, value: limit
+    }
 }
 
 const defaultLoanLimits: LoanLimitsByType = {
-    student: { max_days: 3, max_items: 1 },
-    lecturer: { max_days: 7, max_items: 3 },
-    staff: { max_days: 5, max_items: 2 }
+    student: { max_days: 3, max_items: 1, type_limits: {} },
+    lecturer: { max_days: 7, max_items: 3, type_limits: {} },
+    staff: { max_days: 5, max_items: 2, type_limits: {} }
 }
 
 const userTypeLabels: Record<string, string> = {
@@ -65,6 +68,7 @@ const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
 export default function AdminSettingsPage() {
     const { data: config, isLoading, error, refetch } = useSystemConfig()
     const updateMutation = useUpdateSystemConfig()
+    const { data: equipmentTypes = [] } = useEquipmentTypes()
     const { theme, setTheme } = useTheme()
 
     const [activeTab, setActiveTab] = useState<TabType>('limits')
@@ -441,43 +445,76 @@ export default function AdminSettingsPage() {
                                 </div>
 
                                 {/* Desktop Table */}
-                                <div className="hidden sm:block overflow-x-auto">
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="border-b border-gray-100">
-                                                <th className="text-left py-3 px-4 font-medium text-gray-500">ประเภทผู้ใช้</th>
-                                                <th className="text-center py-3 px-4 font-medium text-gray-500">จำนวนวันสูงสุด</th>
-                                                <th className="text-center py-3 px-4 font-medium text-gray-500">จำนวนอุปกรณ์สูงสุด</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-50">
-                                            {(['student', 'lecturer', 'staff'] as const).map(userType => (
-                                                <tr key={userType} className="hover:bg-gray-50">
-                                                    <td className="py-3 px-4">
-                                                        <span className="font-medium text-gray-900">{userTypeLabels[userType]}</span>
-                                                    </td>
-                                                    <td className="py-3 px-4">
+                                <div className="space-y-6">
+                                    {(['student', 'lecturer', 'staff'] as const).map(userType => (
+                                        <div key={userType} className="border border-gray-100 rounded-xl overflow-hidden">
+                                            <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                                                <h3 className="font-semibold text-gray-900">{userTypeLabels[userType]}</h3>
+                                                <div className="flex items-center gap-4 text-sm">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-gray-500">จำนวนวันสูงสุด:</span>
                                                         <input
                                                             type="number"
                                                             min="1"
-                                                            className="w-20 mx-auto block text-center px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                            value={loanLimits[userType].max_days}
+                                                            className="w-16 text-center px-2 py-1 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                            value={loanLimits[userType]?.max_days || 1}
                                                             onChange={e => handleLoanLimitChange(userType, 'max_days', parseInt(e.target.value) || 1)}
                                                         />
-                                                    </td>
-                                                    <td className="py-3 px-4">
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-gray-500">จำนวนอุปกรณ์รวมสูงสุด:</span>
                                                         <input
                                                             type="number"
                                                             min="1"
-                                                            className="w-20 mx-auto block text-center px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                            value={loanLimits[userType].max_items}
+                                                            className="w-16 text-center px-2 py-1 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                            value={loanLimits[userType]?.max_items || 1}
                                                             onChange={e => handleLoanLimitChange(userType, 'max_items', parseInt(e.target.value) || 1)}
                                                         />
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="p-4 bg-white">
+                                                <p className="text-sm font-medium text-gray-700 mb-3">ขีดจำกัดแยกตามประเภทอุปกรณ์ (ระบุ 0 เพื่อใช้ตามค่าปกติ)</p>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                                    {(Array.isArray(equipmentTypes) ? equipmentTypes : []).map((type: Database['public']['Tables']['equipment_types']['Row']) => (
+                                                        <div key={type.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg bg-gray-50/50">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-xl">{type.icon}</span>
+                                                                <span className="text-sm text-gray-600">{type.name}</span>
+                                                            </div>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                placeholder="-"
+                                                                className="w-16 text-center px-2 py-1 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                                                                value={loanLimits[userType]?.type_limits?.[type.id] || ''}
+                                                                onChange={e => {
+                                                                    const val = parseInt(e.target.value);
+                                                                    const newLimits = { ...(loanLimits[userType]?.type_limits || {}) };
+                                                                    if (isNaN(val) || val <= 0) {
+                                                                        delete newLimits[type.id];
+                                                                    } else {
+                                                                        newLimits[type.id] = val;
+                                                                    }
+                                                                    setLoanLimits(prev => ({
+                                                                        ...prev,
+                                                                        [userType]: { ...prev[userType], type_limits: newLimits }
+                                                                    }));
+                                                                    setIsDirty(true);
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                    {(Array.isArray(equipmentTypes) ? equipmentTypes : []).length === 0 && (
+                                                        <div className="col-span-full text-center py-4 text-gray-400 text-sm">
+                                                            ไม่พบข้อมูลประเภทอุปกรณ์
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </section>
 

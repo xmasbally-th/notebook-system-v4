@@ -6,9 +6,11 @@ import { revalidatePath } from 'next/cache'
 import { formatThaiDate, formatThaiTime, formatThaiDateTime } from '@/lib/formatThaiDate'
 
 type LoanLimitsByType = {
-    student: { max_days: number; max_items: number }
-    lecturer: { max_days: number; max_items: number }
-    staff: { max_days: number; max_items: number }
+    [key: string]: {
+        max_days: number
+        max_items: number
+        type_limits?: Record<string, number>
+    }
 }
 
 export async function submitLoanRequest(prevState: any, formData: FormData) {
@@ -52,7 +54,7 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
     // 4. Server-side Validation
     const userType = profile.user_type || 'student'
     const loanLimits = config?.loan_limits_by_type as LoanLimitsByType | null
-    const limits = loanLimits?.[userType as keyof LoanLimitsByType] || { max_days: 7, max_items: 1 }
+    const limits = loanLimits?.[userType as keyof LoanLimitsByType] || { max_days: 7, max_items: 1, type_limits: {} }
 
     // Parse dates
     const start = new Date(startDate)
@@ -85,13 +87,19 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
     }
 
     // Check active loans count
-    const { count: activeLoansCount } = await (supabase as any)
+    const { data: activeLoans, error: activeLoansError } = await (supabase as any)
         .from('loanRequests')
-        .select('*', { count: 'exact', head: true })
+        .select('id, equipment_id, equipment(equipment_type_id)')
         .eq('user_id', user.id)
         .in('status', ['pending', 'approved'])
 
-    if ((activeLoansCount || 0) >= limits.max_items) {
+    if (activeLoansError) {
+        return { error: 'ไม่สามารถตรวจสอบข้อมูลการยืมได้' }
+    }
+
+    const activeLoansCount = activeLoans?.length || 0
+
+    if (activeLoansCount >= limits.max_items) {
         return { error: `คุณมีรายการยืมถึงขีดจำกัดแล้ว (สูงสุด ${limits.max_items} รายการ)` }
     }
 
@@ -110,9 +118,23 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
     // 5. Get Equipment Details
     const { data: equipment } = await (supabase as any)
         .from('equipment')
-        .select('name, equipment_number')
+        .select('name, equipment_number, equipment_type_id')
         .eq('id', equipmentId)
         .single()
+
+    // Check specific type limit
+    if (equipment?.equipment_type_id && limits.type_limits?.[equipment.equipment_type_id]) {
+        const typeLimit = limits.type_limits[equipment.equipment_type_id]
+
+        // Count active loans for this specific type
+        const activeTypeLoans = activeLoans?.filter((loan: any) =>
+            loan.equipment?.equipment_type_id === equipment.equipment_type_id
+        ).length || 0
+
+        if (activeTypeLoans >= typeLimit) {
+            return { error: `คุณยืมอุปกรณ์ประเภทนี้ครบจำนวนที่กำหนดแล้ว (สูงสุด ${typeLimit} รายการ)` }
+        }
+    }
 
     // 6. Create Loan Request
     const { data: insertedLoan, error } = await (supabase as any)
