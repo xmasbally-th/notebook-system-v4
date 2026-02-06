@@ -265,15 +265,14 @@ export async function deleteUser(userId: string) {
 
         if (authError) {
             console.error('Delete auth user error:', authError)
-            // THROW specific error so user can see it
-            throw new Error(`ลบข้อมูลใน Database สำเร็จ แต่ลบใน Auth ไม่สำเร็จ: ${authError.message}`)
+            return { success: false, error: `ลบข้อมูลใน Database สำเร็จ แต่ลบใน Auth ไม่สำเร็จ: ${authError.message}` }
         }
 
         revalidatePath('/admin/users')
         return { success: true }
     } catch (error: any) {
         console.error('deleteUser error:', error)
-        throw new Error(error.message || 'เกิดข้อผิดพลาดในการลบผู้ใช้')
+        return { success: false, error: error.message || 'เกิดข้อผิดพลาดในการลบผู้ใช้' }
     }
 }
 

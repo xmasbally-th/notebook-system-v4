@@ -332,11 +332,15 @@ export default function UserTable({ users }: { users: User[] }) {
 
         setLoading(user.id)
         try {
-            await deleteUser(user.id)
+            const result = await deleteUser(user.id)
+            if (result.error) {
+                toast.error(`เกิดข้อผิดพลาด: ${result.error}`)
+                return
+            }
             router.refresh()
             toast.success(`ลบผู้ใช้ "${fullName}" เรียบร้อยแล้ว`)
         } catch (error: any) {
-            toast.error(`เกิดข้อผิดพลาด: ${error.message}`)
+            toast.error(`เกิดข้อผิดพลาดที่ไม่คาดคิด: ${error.message}`)
         } finally {
             setLoading(null)
         }
