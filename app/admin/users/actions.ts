@@ -200,54 +200,64 @@ export async function deleteUser(userId: string) {
         // 3. Use admin client to bypass RLS for delete operations
         const adminClient = createAdminClient()
 
-        // 4. Delete/Update related records first (due to foreign key constraints)
-
-        // Clear approved_by references in loanRequests
-        await adminClient.from('loanRequests').update({ approved_by: null }).eq('approved_by', userId)
-
-        // Clear approved_by references in reservations
-        await adminClient.from('reservations').update({ approved_by: null }).eq('approved_by', userId)
-
-        // Delete notifications
-        await adminClient.from('notifications').delete().eq('user_id', userId)
-
-        // Delete evaluations
-        await adminClient.from('evaluations').delete().eq('user_id', userId)
-
-        // Delete loan requests owned by user
-        await adminClient.from('loanRequests').delete().eq('user_id', userId)
-
-        // Delete reservations owned by user
-        await adminClient.from('reservations').delete().eq('user_id', userId)
-
-        // Clear sender_id in support_messages (don't delete, keep message history)
-        await adminClient.from('support_messages').update({ sender_id: null }).eq('sender_id', userId)
-
-        // Delete support messages (for tickets owned by user)
-        const { data: userTickets } = await adminClient
-            .from('support_tickets')
-            .select('id')
+        // 4. Check for blocking conditions (Active Loans/Reservations)
+        const { count: activeLoanCount, error: loanError } = await adminClient
+            .from('loanRequests')
+            .select('*', { count: 'exact', head: true })
             .eq('user_id', userId)
+            .eq('status', 'approved')
 
-        if (userTickets && userTickets.length > 0) {
-            const ticketIds = userTickets.map((t: any) => t.id)
-            await adminClient.from('support_messages').delete().in('ticket_id', ticketIds)
+        if (loanError) throw new Error(`ไม่สามารถตรวจสอบการยืมได้: ${loanError.message}`)
+        if (activeLoanCount && activeLoanCount > 0) {
+            throw new Error(`ไม่สามารถลบผู้ใช้ได้ เนื่องจากยังมีรายการยืมที่ "กำลังยืม" อยู่ (กรุณาทำรายการคืนก่อน)`)
         }
 
-        // Delete support tickets
-        await adminClient.from('support_tickets').delete().eq('user_id', userId)
+        const { count: activeResCount, error: resError } = await adminClient
+            .from('reservations')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .in('status', ['approved', 'ready'])
 
-        // Clear created_by in special_loan_requests
-        await adminClient.from('special_loan_requests').update({ created_by: null }).eq('created_by', userId)
+        if (resError) throw new Error(`ไม่สามารถตรวจสอบการจองได้: ${resError.message}`)
+        if (activeResCount && activeResCount > 0) {
+            throw new Error(`ไม่สามารถลบผู้ใช้ได้ เนื่องจากยังมีรายการจองที่ "อนุมัติแล้ว/รอรับของ" (กรุณาทำรายการหรือยกเลิกก่อน)`)
+        }
 
-        // Clear approved_by in special_loan_requests
-        await adminClient.from('special_loan_requests').update({ approved_by: null }).eq('approved_by', userId)
+        // 5. Delete/Update related records (Cleanup logic)
 
-        // Delete staff activity logs (if user was staff)
-        await adminClient.from('staff_activity_log').delete().eq('staff_id', userId)
+        // Clear approved_by/created_by references in related tables
+        await Promise.all([
+            adminClient.from('loanRequests').update({ approved_by: null }).eq('approved_by', userId),
+            adminClient.from('reservations').update({ approved_by: null }).eq('approved_by', userId),
+            adminClient.from('reservations').update({ ready_by: null }).eq('ready_by', userId),
+            adminClient.from('reservations').update({ completed_by: null }).eq('completed_by', userId),
+            adminClient.from('special_loan_requests').update({ created_by: null }).eq('created_by', userId),
+            adminClient.from('special_loan_requests').update({ approved_by: null }).eq('approved_by', userId),
+            adminClient.from('support_messages').update({ sender_id: null }).eq('sender_id', userId),
+            adminClient.from('data_backups').update({ deleted_by: null }).eq('deleted_by', userId),
+            adminClient.from('data_backups').update({ restored_by: null }).eq('restored_by', userId)
+        ])
 
-        // Clear target_user_id in staff activity logs
+        // Delete user's data (Loans, Reservations, Notifications, Evaluations)
+        // Note: Active loans/reservations are already blocked above, so these are safe to delete (history)
+        await Promise.all([
+            adminClient.from('loanRequests').delete().eq('user_id', userId),
+            adminClient.from('reservations').delete().eq('user_id', userId),
+            adminClient.from('notifications').delete().eq('user_id', userId),
+            adminClient.from('evaluations').delete().eq('user_id', userId),
+            adminClient.from('support_tickets').delete().eq('user_id', userId)
+        ])
+
+        // Handle support_messages linked to deleted tickets 
+        // (Supabase CASCADE might handle this, but explicit cleanup is safer if not set)
+
+        // Log Anonymization (instead of delete)
+        // If user was staff, anonymize their actions
+        await adminClient.from('staff_activity_log').update({ staff_id: null }).eq('staff_id', userId)
+        // If user was a target of an action, anonymize target
         await adminClient.from('staff_activity_log').update({ target_user_id: null }).eq('target_user_id', userId)
+
+
 
         // 5. Finally delete the user profile
         const { error } = await adminClient
