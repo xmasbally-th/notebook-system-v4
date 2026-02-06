@@ -172,7 +172,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
                     setTimeout(() => {
                         console.warn('AuthGuard: auth.getUser() timed out')
                         resolve({ data: { user: null }, error: null })
-                    }, 10000) // 10s timeout
+                    }, 30000) // 30s timeout
                 })
 
                 const authPromise = client.auth.getUser()

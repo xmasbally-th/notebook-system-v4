@@ -260,6 +260,14 @@ export async function deleteUser(userId: string) {
             throw new Error(`ไม่สามารถลบผู้ใช้ได้: ${error.message}`)
         }
 
+        // 6. Delete from Auth (Supabase Authentication)
+        const { error: authError } = await adminClient.auth.admin.deleteUser(userId)
+
+        if (authError) {
+            console.error('Delete auth user error:', authError)
+            // Note: We continue even if auth delete fails (rare), blocking by profile missing is secondary safety
+        }
+
         revalidatePath('/admin/users')
         return { success: true }
     } catch (error: any) {
