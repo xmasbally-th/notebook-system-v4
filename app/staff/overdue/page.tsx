@@ -265,6 +265,7 @@ export default function StaffOverduePage() {
                                                     <span className="text-gray-500">
                                                         <Calendar className="w-4 h-4 inline mr-1" />
                                                         กำหนดคืน: {formatDate(loan.end_date)}
+                                                        {loan.return_time && ` ${loan.return_time.slice(0, 5)} น.`}
                                                     </span>
                                                     <span className={`font-medium ${severity.text}`}>
                                                         เกินกำหนด {daysOverdue} วัน

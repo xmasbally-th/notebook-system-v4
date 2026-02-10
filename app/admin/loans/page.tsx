@@ -358,7 +358,10 @@ export default function LoanRequestsPage() {
                                                         <Calendar className="w-4 h-4 text-gray-400" />
                                                         <span>{formatDate(request.start_date)}</span>
                                                         <ArrowUpRight className="w-3 h-3 text-gray-400" />
-                                                        <span>{formatDate(request.end_date)}</span>
+                                                        <span>
+                                                            {formatDate(request.end_date)}
+                                                            {request.return_time && <span className="text-gray-500 ml-1">{request.return_time.slice(0, 5)} น.</span>}
+                                                        </span>
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-4">
@@ -441,7 +444,10 @@ export default function LoanRequestsPage() {
                                         <div className="space-y-2 text-sm">
                                             <div className="flex items-center gap-2 text-gray-600">
                                                 <Calendar className="w-4 h-4 text-gray-400" />
-                                                <span>{formatDate(request.start_date)} - {formatDate(request.end_date)}</span>
+                                                <span>
+                                                    {formatDate(request.start_date)} - {formatDate(request.end_date)}
+                                                    {request.return_time && ` ${request.return_time.slice(0, 5)} น.`}
+                                                </span>
                                             </div>
                                             {request.reason && (
                                                 <p className="text-gray-500 text-xs line-clamp-2">{request.reason}</p>

@@ -331,6 +331,7 @@ export default function MyLoansPage() {
                                                                 <CalendarDays className="w-4 h-4" />
                                                                 <span>
                                                                     {new Date(item.start_date).toLocaleDateString('th-TH')} - {new Date(item.end_date).toLocaleDateString('th-TH')}
+                                                                    {(item as any).return_time && ` ${(item as any).return_time.slice(0, 5)} น.`}
                                                                 </span>
                                                             </div>
                                                             <div className="flex items-center gap-1.5 text-gray-400">

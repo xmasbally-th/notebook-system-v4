@@ -80,11 +80,14 @@ export default function AdminSpecialLoansPage() {
 
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr)
+        const hasTime = date.getHours() !== 0 || date.getMinutes() !== 0
         return date.toLocaleDateString('th-TH', {
             day: 'numeric',
             month: 'short',
-            year: 'numeric'
-        })
+            year: 'numeric',
+            hour: hasTime ? '2-digit' : undefined,
+            minute: hasTime ? '2-digit' : undefined,
+        }) + (hasTime ? ' น.' : '')
     }
 
     const getStatusBadge = (status: string) => {
