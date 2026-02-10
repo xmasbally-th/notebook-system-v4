@@ -63,6 +63,22 @@ export async function submitReservationRequest(formData: FormData) {
 
         const timeConflict = await checkTimeConflict(equipmentId, start, end)
         if (timeConflict) {
+            // Anomaly Detection Notification
+            const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+            const dept = profile.departments?.name || '-'
+
+            const alertMessage = `
+⚠️ **แจ้งเตือนการจองซ้ำซ้อน (Anomaly Detected)**
+
+มีการพยายามจองอุปกรณ์ในช่วงเวลาที่ไม่ว่าง
+👤 **ผู้ทำรายการ:** ${fullName} (${dept})
+📦 **รหัสอุปกรณ์ที่ขอ:** ${equipmentId}
+📅 **ช่วงเวลาที่ขอ:** ${formatThaiDateTime(startDate)} - ${formatThaiDateTime(endDate)}
+
+ระบบได้ทำการระงับการจองนี้แล้ว
+`.trim()
+            await sendDiscordNotification(alertMessage)
+
             return { error: 'ช่วงเวลาที่เลือกมีการจองหรือยืมอยู่แล้ว' }
         }
     } catch (e) {

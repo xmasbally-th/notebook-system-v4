@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { sendDiscordNotification } from '@/lib/notifications'
 import { revalidatePath } from 'next/cache'
 import { formatThaiDate, formatThaiTime, formatThaiDateTime } from '@/lib/formatThaiDate'
+import { checkTimeConflict } from '@/lib/reservations'
 
 type LoanLimitsByType = {
     [key: string]: {
@@ -134,6 +135,31 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
         if (activeTypeLoans >= typeLimit) {
             return { error: `คุณยืมอุปกรณ์ประเภทนี้ครบจำนวนที่กำหนดแล้ว (สูงสุด ${typeLimit} รายการ)` }
         }
+    }
+
+    // 5.5 Check Time Conflict (Double Booking Prevention)
+    const hasConflict = await checkTimeConflict(equipmentId, start, end)
+    if (hasConflict) {
+        // Send Admin Alert (Anomaly Detection)
+        const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+        const dept = profile.departments?.name || '-'
+        const equipmentName = equipment?.name || 'ไม่ทราบชื่อ'
+        const equipmentNumber = equipment?.equipment_number || '-'
+
+        const alertMessage = `
+⚠️ **แจ้งเตือนระวังการยืมซ้ำซ้อน (Anomaly Detected)**
+
+มีการพยายามยืมอุปกรณ์ที่ถูกจองหรือใช้งานอยู่แล้วในช่วงเวลาดังกล่าว
+👤 **ผู้ทำรายการ:** ${fullName} (${dept})
+📦 **อุปกรณ์:** ${equipmentName} (#${equipmentNumber})
+📅 **ช่วงเวลาที่ขอ:** ${formatThaiDateTime(startDate)} - ${formatThaiDateTime(endDate)}
+
+ระบบได้ทำการระงับการยืมนี้แล้ว กรุณาตรวจสอบหากมีความผิดปกติเพิ่มเติม
+`.trim()
+
+        await sendDiscordNotification(alertMessage)
+
+        return { error: 'อุปกรณ์นี้ถูกใช้งานหรือจองแล้วในช่วงเวลาดังกล่าว' }
     }
 
     // 6. Create Loan Request
