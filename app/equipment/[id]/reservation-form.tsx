@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createReservation } from '@/lib/reservations'
+
 import { useReservationValidation } from '@/hooks/useReservationValidation'
 import { useProfile } from '@/hooks/useProfile'
 import { useEquipmentAvailability } from '@/hooks/useReservations'
@@ -17,7 +17,7 @@ import {
     Info,
     CalendarPlus
 } from 'lucide-react'
-import { notifyReservationCreated } from '@/app/notifications/actions'
+
 
 interface ReservationFormProps {
     equipmentId: string
@@ -120,20 +120,22 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
         setError(null)
 
         try {
-            const result = await createReservation(
-                equipmentId,
-                `${startDate}T${pickupTime}:00`,
-                `${endDate}T${returnTime}:00`
-            )
+            const formData = new FormData()
+            formData.append('equipmentId', equipmentId)
+            formData.append('startDate', `${startDate}T${pickupTime}:00`)
+            formData.append('endDate', `${endDate}T${returnTime}:00`)
+
+            // Import dynamically to avoid server-on-client issues if any
+            const { submitReservationRequest } = await import('@/app/reservations/actions')
+            const result = await submitReservationRequest(formData)
 
             if (result.success && result.reservationId) {
                 setSuccess(true)
-                // Fire and forget notification
-                notifyReservationCreated(result.reservationId)
             } else {
                 setError(result.error || 'เกิดข้อผิดพลาด')
             }
         } catch (e: any) {
+            console.error(e)
             setError('เกิดข้อผิดพลาด กรุณาลองใหม่')
         } finally {
             setLoading(false)

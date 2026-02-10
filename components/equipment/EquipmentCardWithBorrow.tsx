@@ -3,7 +3,7 @@
 import { Database } from '@/supabase/types'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
-import { Package, ArrowRight, Plus, Check, Clock } from 'lucide-react'
+import { Package, Plus, Check, Clock } from 'lucide-react'
 import { useCart } from '@/components/cart/CartContext'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
@@ -131,13 +131,7 @@ export default function EquipmentCardWithBorrow({ item, isRecentlyBorrowed = fal
                             ไม่สามารถยืมได้
                         </button>
                     )}
-                    <Link
-                        href={`/equipment/${item.id}`}
-                        className="flex items-center justify-center px-2.5 py-2 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
-                        title="ดูรายละเอียด"
-                    >
-                        <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
+
                 </div>
             </div>
         </div>

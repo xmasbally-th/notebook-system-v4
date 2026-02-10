@@ -4,7 +4,7 @@ import { useEquipment } from '@/hooks/useEquipment'
 import { useRecentlyBorrowed, isRecentlyBorrowed, sortByRecentlyBorrowed } from '@/hooks/useRecentlyBorrowed'
 import { useState, useMemo, useEffect } from 'react'
 import { Database } from '@/supabase/types'
-import { Search, X, Package, Plus, Check, Clock, CheckCircle, Users, Wrench, ArrowRight } from 'lucide-react'
+import { Search, X, Package, Plus, Check, Clock, CheckCircle, Users, Wrench } from 'lucide-react'
 import { CartProvider, useCart } from '@/components/cart/CartContext'
 import CartButton from '@/components/cart/CartButton'
 import CartDrawer from '@/components/cart/CartDrawer'
@@ -403,13 +403,7 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                                                     ) : (
                                                         <span className="text-sm text-gray-400">ไม่พร้อมยืม</span>
                                                     )}
-                                                    <Link
-                                                        href={`/equipment/${item.id}`}
-                                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                        title="ดูรายละเอียด"
-                                                    >
-                                                        <ArrowRight className="w-4 h-4" />
-                                                    </Link>
+
                                                 </div>
                                             </td>
                                         </tr>
@@ -495,12 +489,7 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                                                         ไม่พร้อมยืม
                                                     </span>
                                                 )}
-                                                <Link
-                                                    href={`/equipment/${item.id}`}
-                                                    className="flex items-center justify-center px-3 py-2 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-                                                >
-                                                    <ArrowRight className="w-4 h-4" />
-                                                </Link>
+
                                             </div>
                                         </div>
                                     </div>
