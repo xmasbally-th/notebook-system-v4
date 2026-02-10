@@ -107,7 +107,10 @@ function getDefaultConfig(): SystemConfig {
             staff: { max_days: 5, max_items: 2 }
         },
         document_logo_url: null,
-        document_template_url: null
+        document_template_url: null,
+        discord_webhook_auth: null,
+        discord_webhook_reservations: null,
+        discord_webhook_maintenance: null,
     } as SystemConfig
 }
 
