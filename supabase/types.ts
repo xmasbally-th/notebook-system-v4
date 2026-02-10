@@ -340,6 +340,9 @@ export interface Database {
                     is_loan_system_active: boolean
                     is_reservation_active: boolean
                     discord_webhook_url: string | null
+                    discord_webhook_auth: string | null
+                    discord_webhook_reservations: string | null
+                    discord_webhook_maintenance: string | null
                     announcement_message: string | null
                     announcement_active: boolean
                     document_logo_url: string | null
@@ -360,6 +363,9 @@ export interface Database {
                     is_loan_system_active?: boolean
                     is_reservation_active?: boolean
                     discord_webhook_url?: string | null
+                    discord_webhook_auth?: string | null
+                    discord_webhook_reservations?: string | null
+                    discord_webhook_maintenance?: string | null
                     announcement_message?: string | null
                     announcement_active?: boolean
                     document_logo_url?: string | null
@@ -380,6 +386,9 @@ export interface Database {
                     is_loan_system_active?: boolean
                     is_reservation_active?: boolean
                     discord_webhook_url?: string | null
+                    discord_webhook_auth?: string | null
+                    discord_webhook_reservations?: string | null
+                    discord_webhook_maintenance?: string | null
                     announcement_message?: string | null
                     announcement_active?: boolean
                     document_logo_url?: string | null

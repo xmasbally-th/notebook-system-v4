@@ -157,7 +157,7 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
 ระบบได้ทำการระงับการยืมนี้แล้ว กรุณาตรวจสอบหากมีความผิดปกติเพิ่มเติม
 `.trim()
 
-        await sendDiscordNotification(alertMessage)
+        await sendDiscordNotification(alertMessage, 'maintenance')
 
         return { error: 'อุปกรณ์นี้ถูกใช้งานหรือจองแล้วในช่วงเวลาดังกล่าว' }
     }
@@ -185,6 +185,8 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
     const equipmentName = equipment?.name || 'ไม่ทราบชื่อ'
     const equipmentNumber = equipment?.equipment_number || '-'
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
     const message = `
 **📋 คำขอยืมอุปกรณ์ใหม่**
 
@@ -199,10 +201,10 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
 📅 **วันที่คืน:** ${formatThaiDateTime(endDate)}
 ⏱️ **ระยะเวลา:** ${durationDays} วัน
 
-🔗 [ตรวจสอบคำขอ](${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/loans)
+🔗 [ตรวจสอบคำขอ](${appUrl}/admin/loans)
     `.trim()
 
-    await sendDiscordNotification(message)
+    await sendDiscordNotification(message, 'loan')
 
     revalidatePath('/')
     revalidatePath('/my-loans')

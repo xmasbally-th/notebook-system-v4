@@ -154,7 +154,8 @@ export async function approveLoan(loanId: string) {
             `📦 **อุปกรณ์:** ${equipmentName} (${equipmentNumber})\n` +
             `👤 **ผู้ยืม:** ${borrowerName}\n` +
             `📅 **วันที่:** ${new Date(loan.start_date).toLocaleDateString('th-TH')} - ${new Date(loan.end_date).toLocaleDateString('th-TH')}\n` +
-            `👮 **อนุมัติโดย:** Staff`
+            `👮 **อนุมัติโดย:** Staff`,
+            'loan'
         )
 
         // 4. Log staff activity
@@ -251,6 +252,20 @@ export async function rejectLoan(loanId: string, reason: string) {
         if (!loan) {
             throw new Error('Loan not found or already processed')
         }
+
+        // 2.5 Send Discord Notification (Added)
+        const equipmentName = loan.equipment?.name || 'Unknown Equipment'
+        const equipmentNumber = loan.equipment?.equipment_number || 'No Number'
+        const borrowerName = `${loan.profiles?.first_name || ''} ${loan.profiles?.last_name || ''}`.trim() || 'Unknown User'
+
+        await sendDiscordNotification(
+            `❌ **คำขอยืมถูกปฏิเสธ (Rejected)**\n\n` +
+            `📦 **อุปกรณ์:** ${equipmentName} (${equipmentNumber})\n` +
+            `👤 **ผู้ยืม:** ${borrowerName}\n` +
+            `💬 **เหตุผล:** ${reason}\n` +
+            `👮 **ดำเนินการโดย:** Staff`,
+            'loan'
+        )
 
         // 3. Log staff activity
         await logStaffActivityServer(supabase, {

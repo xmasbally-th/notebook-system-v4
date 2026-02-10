@@ -23,6 +23,8 @@ export async function notifyReservationCreated(reservationId: string) {
         const dept = profile?.departments?.name || '-'
         // Assuming time is stored in start_date/end_dateISO strings
 
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
         const message = `
 **📅 การจองอุปกรณ์ใหม่ (New Reservation)**
 
@@ -36,10 +38,10 @@ export async function notifyReservationCreated(reservationId: string) {
 📅 **วันที่รับ:** ${formatThaiDate(reservation.start_date)}
 📅 **วันที่คืน:** ${formatThaiDate(reservation.end_date)}
 
-🔗 [ตรวจสอบการจอง](${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/reservations)
+🔗 [ตรวจสอบการจอง](${appUrl}/admin/reservations)
         `.trim()
 
-        await sendDiscordNotification(message)
+        await sendDiscordNotification(message, 'reservation')
     } catch (error) {
         console.error('Error notifying reservation created:', error)
     }
@@ -91,7 +93,7 @@ ${header}
 ${reservation.rejection_reason ? `💬 **เหตุผล:** ${reservation.rejection_reason}` : ''}
         `.trim()
 
-        await sendDiscordNotification(message)
+        await sendDiscordNotification(message, 'reservation')
     } catch (error) {
         console.error('Error notifying reservation status:', error)
     }
@@ -102,6 +104,8 @@ export async function notifyReturn(loanId: string, condition: string, notes?: st
     try {
         const supabase = await createClient()
 
+        // Use service role if available to ensure we can fetch borrower info even if RLS is strict
+        // But for now relying on the updated RLS policy from migration
         const { data: loan } = await (supabase as any)
             .from('loanRequests')
             .select('*, profiles(first_name, last_name, email), equipment(name, equipment_number)')
@@ -117,6 +121,8 @@ export async function notifyReturn(loanId: string, condition: string, notes?: st
         const isDamaged = condition !== 'good'
         const header = isDamaged ? '**⚠️ คืนอุปกรณ์ (มีปัญหา/ชำรุด) (Returned with Issues)**' : '**✅ คืนอุปกรณ์สำเร็จ (Returned)**'
 
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
         const message = `
 ${header}
 
@@ -127,10 +133,12 @@ ${header}
 🛠 **สภาพ:** ${condition === 'good' ? 'ปกติ' : condition === 'damaged' ? 'ชำรุด' : 'อุปกรณ์ไม่ครบ'}
 ${notes ? `📝 **หมายเหตุ:** ${notes}` : ''}
 
-🔗 [ตรวจสอบรายการคืน](${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/staff/returns)
+🔗 [ตรวจสอบรายการคืน](${appUrl}/staff/returns)
         `.trim()
 
-        await sendDiscordNotification(message)
+        // Use 'maintenance' webhook if damaged, otherwise 'loan' (which falls back to general)
+        const type = isDamaged ? 'maintenance' : 'loan'
+        await sendDiscordNotification(message, type)
     } catch (error) {
         console.error('Error notifying return:', error)
     }

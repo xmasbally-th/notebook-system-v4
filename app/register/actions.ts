@@ -148,6 +148,6 @@ export async function notifyNewRegistration(userId: string) {
 **Status:** Pending Approval
         `.trim()
 
-        await sendDiscordNotification(message)
+        await sendDiscordNotification(message, 'auth')
     }
 }

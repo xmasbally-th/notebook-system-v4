@@ -1,9 +1,27 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
-export async function sendDiscordNotification(message: string) {
+export type NotificationType = 'general' | 'auth' | 'loan' | 'reservation' | 'maintenance'
+
+export async function sendDiscordNotification(message: string, type: NotificationType = 'general') {
     try {
         let discordWebhookUrl: string | null = null
+
+        // Helper to select the correct webhook URL based on type
+        const getWebhookUrl = (config: any) => {
+            switch (type) {
+                case 'auth':
+                    return config.discord_webhook_auth || config.discord_webhook_url
+                case 'reservation':
+                    return config.discord_webhook_reservations || config.discord_webhook_url
+                case 'maintenance':
+                    return config.discord_webhook_maintenance || config.discord_webhook_url
+                case 'loan':
+                case 'general':
+                default:
+                    return config.discord_webhook_url
+            }
+        }
 
         // 1. Try to get config using Service Role (Bypass RLS)
         // This is robust against RLS policies that might block regular users
@@ -15,12 +33,12 @@ export async function sendDiscordNotification(message: string) {
                 )
                 const { data: config } = await supabaseAdmin
                     .from('system_config')
-                    .select('discord_webhook_url')
+                    .select('*') // Select all columns to get new webhook fields
                     .eq('id', 1)
                     .single()
 
-                if (config?.discord_webhook_url) {
-                    discordWebhookUrl = config.discord_webhook_url
+                if (config) {
+                    discordWebhookUrl = getWebhookUrl(config)
                 }
             } catch (e) {
                 console.error('Failed to fetch config with Service Role:', e)
@@ -32,15 +50,17 @@ export async function sendDiscordNotification(message: string) {
             const supabase = await createClient()
             const { data: config } = await (supabase as any)
                 .from('system_config')
-                .select('discord_webhook_url')
+                .select('*')
                 .eq('id', 1)
                 .single()
 
-            discordWebhookUrl = config?.discord_webhook_url
+            if (config) {
+                discordWebhookUrl = getWebhookUrl(config)
+            }
         }
 
         if (!discordWebhookUrl) {
-            console.warn('Discord Webhook URL not configured (Checked both Service Role and User Session)')
+            console.warn(`Discord Webhook URL not configured for type: ${type} (Checked both Service Role and User Session)`)
             return
         }
 

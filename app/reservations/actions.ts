@@ -77,7 +77,7 @@ export async function submitReservationRequest(formData: FormData) {
 
 ระบบได้ทำการระงับการจองนี้แล้ว
 `.trim()
-            await sendDiscordNotification(alertMessage)
+            await sendDiscordNotification(alertMessage, 'maintenance')
 
             return { error: 'ช่วงเวลาที่เลือกมีการจองหรือยืมอยู่แล้ว' }
         }
@@ -122,6 +122,8 @@ export async function submitReservationRequest(formData: FormData) {
         const durationMs = end.getTime() - start.getTime()
         const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24)) + 1
 
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
         const message = `
 **📅 คำขอจองอุปกรณ์ใหม่**
 
@@ -136,10 +138,10 @@ export async function submitReservationRequest(formData: FormData) {
 📅 **วันที่คืน:** ${formatThaiDate(endDate)}
 ⏱️ **ระยะเวลา:** ${durationDays} วัน
 
-🔗 [ตรวจสอบคำขอ](${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/reservations)
+🔗 [ตรวจสอบคำขอ](${appUrl}/admin/reservations)
         `.trim()
 
-        await sendDiscordNotification(message)
+        await sendDiscordNotification(message, 'reservation')
     } catch (notifyError) {
         console.error('Notification failed:', notifyError)
         // Don't fail the request if notification fails

@@ -94,6 +94,9 @@ export default function AdminSettingsPage() {
                 is_loan_system_active: config.is_loan_system_active,
                 is_reservation_active: config.is_reservation_active,
                 discord_webhook_url: config.discord_webhook_url,
+                discord_webhook_auth: config.discord_webhook_auth,
+                discord_webhook_reservations: config.discord_webhook_reservations,
+                discord_webhook_maintenance: config.discord_webhook_maintenance,
                 announcement_message: config.announcement_message,
                 announcement_active: config.announcement_active,
             })
@@ -729,7 +732,46 @@ export default function AdminSettingsPage() {
                                         value={formData.discord_webhook_url || ''}
                                         onChange={(e) => handleChange('discord_webhook_url', e.target.value)}
                                     />
-                                    <p className="text-xs text-gray-400 mt-1.5">การแจ้งเตือนคำขอยืมใหม่จะถูกส่งไปยัง webhook นี้</p>
+                                    <p className="text-xs text-gray-400 mt-1.5">การแจ้งเตือนทั่วไปและการยืมคืน (General & Loans)</p>
+                                </div>
+
+                                <div className="mt-4 pt-4 border-t border-gray-100">
+                                    <h3 className="text-sm font-medium text-gray-900 mb-3">แยกรายการแจ้งเตือน (Optional)</h3>
+
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1.5">ระบบสมัครสมาชิก (Authentication)</label>
+                                            <input
+                                                type="url"
+                                                placeholder="https://discord.com/api/webhooks/..."
+                                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 font-mono text-sm"
+                                                value={formData.discord_webhook_auth || ''}
+                                                onChange={(e) => handleChange('discord_webhook_auth', e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1.5">ระบบจอง (Reservations)</label>
+                                            <input
+                                                type="url"
+                                                placeholder="https://discord.com/api/webhooks/..."
+                                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 font-mono text-sm"
+                                                value={formData.discord_webhook_reservations || ''}
+                                                onChange={(e) => handleChange('discord_webhook_reservations', e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1.5">แจ้งเตือนข้อผิดพลาด/บำรุงรักษา (Maintenance/Errors)</label>
+                                            <input
+                                                type="url"
+                                                placeholder="https://discord.com/api/webhooks/..."
+                                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 font-mono text-sm"
+                                                value={formData.discord_webhook_maintenance || ''}
+                                                onChange={(e) => handleChange('discord_webhook_maintenance', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             </section>
 
