@@ -14,7 +14,8 @@ import {
     Menu,
     X,
     User,
-    CalendarPlus
+    CalendarPlus,
+    BookOpen
 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
@@ -34,6 +35,7 @@ const menuItems = [
     { href: '/staff/reservations', label: 'จัดการการจอง', icon: CalendarPlus },
     { href: '/staff/returns', label: 'รับคืนอุปกรณ์', icon: RotateCcw },
     { href: '/staff/overdue', label: 'รายการค้างคืน', icon: AlertTriangle },
+    { href: '/staff/manual', label: 'คู่มือการใช้งาน', icon: BookOpen },
 ]
 
 export default function StaffSidebar() {
