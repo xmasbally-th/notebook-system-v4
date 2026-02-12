@@ -6,7 +6,6 @@ import EvaluationModal from './EvaluationModal'
 import { AlertTriangle } from 'lucide-react'
 
 export default function ActiveEvaluationPrompt() {
-    const [userId, setUserId] = useState<string | null>(null)
     const [pendingLoans, setPendingLoans] = useState<any[]>([])
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [currentLoan, setCurrentLoan] = useState<any>(null)
@@ -21,15 +20,24 @@ export default function ActiveEvaluationPrompt() {
             const { data: { session } } = await supabase.auth.getSession()
             if (!session) return
 
-            setUserId(session.user.id)
+            // Get cutoff date from system_config
+            const { data: config } = await supabase
+                .from('system_config')
+                .select('evaluation_cutoff_date')
+                .single()
+
+            const cutoffDate = (config as any)?.evaluation_cutoff_date || new Date().toISOString().split('T')[0]
 
             // Fetch returned loans that might not be evaluated
-            const { data: loans, error } = await supabase
+            let query = supabase
                 .from('loanRequests')
                 .select('*, equipment(name, equipment_number), evaluations(id)')
                 .eq('user_id', session.user.id)
                 .eq('status', 'returned')
+                .gte('updated_at', cutoffDate) // Only loans returned after cutoff
                 .order('updated_at', { ascending: false })
+
+            const { data: loans, error } = await query
 
             if (error || !loans) return
 
@@ -49,16 +57,12 @@ export default function ActiveEvaluationPrompt() {
     }, [])
 
     const handleEvaluationSuccess = () => {
-        // Remove the evaluated loan from the pending list
         const remaining = pendingLoans.filter(l => l.id !== currentLoan.id)
         setPendingLoans(remaining)
 
         if (remaining.length > 0) {
-            // Auto-advance to next pending evaluation
             setCurrentLoan(remaining[0])
-            // Keep modal open — mandatory flow continues
         } else {
-            // All done — close modal
             setIsModalOpen(false)
             setCurrentLoan(null)
         }
@@ -68,7 +72,6 @@ export default function ActiveEvaluationPrompt() {
 
     return (
         <>
-            {/* Mandatory evaluation banner behind the modal */}
             <div className="fixed inset-0 z-40 flex items-end justify-center pb-4 pointer-events-none">
                 <div className="bg-orange-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 pointer-events-auto">
                     <AlertTriangle className="w-5 h-5 flex-shrink-0" />
@@ -80,7 +83,7 @@ export default function ActiveEvaluationPrompt() {
 
             <EvaluationModal
                 isOpen={isModalOpen}
-                onClose={() => { }} // No-op: mandatory mode prevents closing
+                onClose={() => { }}
                 loan={currentLoan}
                 onSuccess={handleEvaluationSuccess}
                 mandatory={true}

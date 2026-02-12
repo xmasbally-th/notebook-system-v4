@@ -6,16 +6,39 @@ import AdminLayout from '@/components/admin/AdminLayout'
 import { useState, useMemo, Fragment } from 'react'
 import {
     Star, MessageSquare, ChevronDown, ChevronUp,
-    Search, AlertTriangle, Clock, CheckCircle, Info, Users
+    Search, AlertTriangle, Clock, CheckCircle, Info, Archive
 } from 'lucide-react'
 
 type TabType = 'completed' | 'pending'
+type PendingFilter = 'mandatory' | 'all'
 
 export default function EvaluationsPage() {
     const [searchTerm, setSearchTerm] = useState('')
     const [expandedRows, setExpandedRows] = useState<string[]>([])
     const [activeTab, setActiveTab] = useState<TabType>('completed')
     const [showScoringInfo, setShowScoringInfo] = useState(false)
+    const [pendingFilter, setPendingFilter] = useState<PendingFilter>('mandatory')
+
+    // Fetch system config for cutoff date
+    const { data: systemConfig } = useQuery({
+        queryKey: ['admin-eval-config'],
+        queryFn: async () => {
+            const { url, key } = getSupabaseCredentials()
+            if (!url || !key) return null
+
+            const { createBrowserClient } = await import('@supabase/ssr')
+            const client = createBrowserClient(url, key)
+
+            const { data } = await client
+                .from('system_config')
+                .select('evaluation_cutoff_date')
+                .single()
+
+            return data
+        }
+    })
+
+    const cutoffDate = (systemConfig as any)?.evaluation_cutoff_date || new Date().toISOString().split('T')[0]
 
     // Fetch completed evaluations
     const { data: evaluations, isLoading } = useQuery({
@@ -58,7 +81,6 @@ export default function EvaluationsPage() {
             const { createBrowserClient } = await import('@supabase/ssr')
             const client = createBrowserClient(url, key)
 
-            // Get returned loans with evaluations to check
             const { data, error } = await client
                 .from('loanRequests')
                 .select(`
@@ -80,7 +102,6 @@ export default function EvaluationsPage() {
                 return []
             }
 
-            // Filter only those WITHOUT evaluations
             return (data || []).filter(
                 (loan: any) => !loan.evaluations || loan.evaluations.length === 0
             )
@@ -115,6 +136,22 @@ export default function EvaluationsPage() {
         return { avg, total, comments, sectionAvgs }
     }, [evaluations])
 
+    // Split pending into mandatory (after cutoff) and old (before cutoff)
+    const { mandatoryPending, oldPending } = useMemo(() => {
+        if (!pendingEvaluations) return { mandatoryPending: [], oldPending: [] }
+        const mandatory: any[] = []
+        const old: any[] = []
+        pendingEvaluations.forEach((loan: any) => {
+            const returnedDate = loan.updated_at?.split('T')[0] || ''
+            if (returnedDate >= cutoffDate) {
+                mandatory.push(loan)
+            } else {
+                old.push(loan)
+            }
+        })
+        return { mandatoryPending: mandatory, oldPending: old }
+    }, [pendingEvaluations, cutoffDate])
+
     const toggleExpand = (id: string) => {
         setExpandedRows(prev =>
             prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]
@@ -134,17 +171,17 @@ export default function EvaluationsPage() {
         })
     }, [evaluations, searchTerm])
 
-    const filteredPending = useMemo(() => {
-        if (!pendingEvaluations) return []
-        if (!searchTerm) return pendingEvaluations
+    const displayedPending = useMemo(() => {
+        const source = pendingFilter === 'mandatory' ? mandatoryPending : (pendingEvaluations || [])
+        if (!searchTerm) return source
         const searchLower = searchTerm.toLowerCase()
-        return pendingEvaluations.filter((loan: any) =>
+        return source.filter((loan: any) =>
             loan.profiles?.first_name?.toLowerCase().includes(searchLower) ||
             loan.profiles?.last_name?.toLowerCase().includes(searchLower) ||
             loan.equipment?.name?.toLowerCase().includes(searchLower) ||
             loan.equipment?.equipment_number?.toLowerCase().includes(searchLower)
         )
-    }, [pendingEvaluations, searchTerm])
+    }, [pendingEvaluations, mandatoryPending, pendingFilter, searchTerm])
 
     const formatDate = (date: string) => {
         return new Date(date).toLocaleDateString('th-TH', {
@@ -159,12 +196,12 @@ export default function EvaluationsPage() {
         })
     }
 
-    const pendingCount = pendingEvaluations?.length || 0
+    const totalPending = pendingEvaluations?.length || 0
 
     return (
         <AdminLayout title="ผลการประเมินการใช้งาน" subtitle="ดูคะแนนความพึงพอใจและข้อเสนอแนะจากผู้ใช้">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
                     <div className="flex items-center gap-3">
                         <div className="p-2.5 bg-yellow-100 rounded-lg">
@@ -172,7 +209,7 @@ export default function EvaluationsPage() {
                         </div>
                         <div>
                             <p className="text-xs text-gray-500">คะแนนเฉลี่ยรวม</p>
-                            <h3 className="text-xl font-bold text-gray-900">{stats.avg.toFixed(2)}/5.00</h3>
+                            <h3 className="text-xl font-bold text-gray-900">{stats.avg.toFixed(2)}/5</h3>
                         </div>
                     </div>
                 </div>
@@ -182,7 +219,7 @@ export default function EvaluationsPage() {
                             <MessageSquare className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500">การประเมินทั้งหมด</p>
+                            <p className="text-xs text-gray-500">ประเมินแล้ว</p>
                             <h3 className="text-xl font-bold text-gray-900">{stats.total}</h3>
                             <p className="text-xs text-gray-400">{stats.comments} มีคอมเมนต์</p>
                         </div>
@@ -194,100 +231,85 @@ export default function EvaluationsPage() {
                             <AlertTriangle className="w-5 h-5 text-orange-600" />
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500">รอการประเมิน</p>
-                            <h3 className="text-xl font-bold text-orange-600">{pendingCount}</h3>
-                            <p className="text-xs text-gray-400">คืนแล้ว ยังไม่ประเมิน</p>
+                            <p className="text-xs text-gray-500">รอประเมิน (บังคับ)</p>
+                            <h3 className="text-xl font-bold text-orange-600">{mandatoryPending.length}</h3>
+                            <p className="text-xs text-gray-400">หลัง {formatDateShort(cutoffDate)}</p>
                         </div>
                     </div>
                 </div>
-                {/* Breakdown Stats */}
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-sm">
-                    <h4 className="font-semibold text-gray-700 mb-2 text-xs">คะแนนแยกตามด้าน</h4>
-                    <div className="space-y-1.5">
-                        <div className="flex justify-between">
-                            <span className="text-gray-500 text-xs">ระบบ (System)</span>
-                            <span className="font-medium text-xs">
-                                {stats.sectionAvgs?.system ? (stats.sectionAvgs.system.sum / stats.sectionAvgs.system.count).toFixed(1) : '-'}
-                            </span>
+                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-gray-100 rounded-lg">
+                            <Archive className="w-5 h-5 text-gray-500" />
                         </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-500 text-xs">บริการ (Service)</span>
-                            <span className="font-medium text-xs">
-                                {stats.sectionAvgs?.service ? (stats.sectionAvgs.service.sum / stats.sectionAvgs.service.count).toFixed(1) : '-'}
-                            </span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-500 text-xs">อุปกรณ์ (Equipment)</span>
-                            <span className="font-medium text-xs">
-                                {stats.sectionAvgs?.equipment ? (stats.sectionAvgs.equipment.sum / stats.sectionAvgs.equipment.count).toFixed(1) : '-'}
-                            </span>
+                        <div>
+                            <p className="text-xs text-gray-500">ข้อมูลเก่า (ไม่บังคับ)</p>
+                            <h3 className="text-xl font-bold text-gray-500">{oldPending.length}</h3>
+                            <p className="text-xs text-gray-400">ก่อน {formatDateShort(cutoffDate)}</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Scoring Info Toggle */}
-            <div className="mb-4">
-                <button
-                    onClick={() => setShowScoringInfo(!showScoringInfo)}
-                    className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
-                >
-                    <Info className="w-4 h-4" />
-                    {showScoringInfo ? 'ซ่อน' : 'ดู'}หลักการคำนวณคะแนน
-                    {showScoringInfo ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </button>
-                {showScoringInfo && (
-                    <div className="mt-3 bg-blue-50 border border-blue-200 rounded-xl p-5 text-sm">
-                        <h4 className="font-bold text-blue-900 mb-3">หลักการคำนวณคะแนนประเมิน</h4>
-                        <div className="space-y-3 text-blue-800">
-                            <div>
-                                <p className="font-semibold mb-1">แบบประเมินแบ่งเป็น 3 ด้าน รวม 10 ข้อ:</p>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
-                                    <div className="bg-white rounded-lg p-3 border border-blue-100">
-                                        <p className="font-semibold text-blue-900 mb-1">🖥 ด้านระบบ (System) — 3 ข้อ</p>
-                                        <ul className="text-xs space-y-0.5 text-blue-700">
-                                            <li>1. การออกแบบและใช้งาน (Usability)</li>
-                                            <li>2. ข้อมูล (Information)</li>
-                                            <li>3. เสถียรภาพ (Performance)</li>
-                                        </ul>
-                                    </div>
-                                    <div className="bg-white rounded-lg p-3 border border-blue-100">
-                                        <p className="font-semibold text-blue-900 mb-1">🤝 ด้านบริการ (Service) — 4 ข้อ</p>
-                                        <ul className="text-xs space-y-0.5 text-blue-700">
-                                            <li>1. ความรวดเร็ว (Speed)</li>
-                                            <li>2. กฎระเบียบ (Rules)</li>
-                                            <li>3. เจ้าหน้าที่ (Staff)</li>
-                                            <li>4. การสื่อสาร (Communication)</li>
-                                        </ul>
-                                    </div>
-                                    <div className="bg-white rounded-lg p-3 border border-blue-100">
-                                        <p className="font-semibold text-blue-900 mb-1">📦 ด้านอุปกรณ์ (Equipment) — 3 ข้อ</p>
-                                        <ul className="text-xs space-y-0.5 text-blue-700">
-                                            <li>1. กายภาพ (Physical)</li>
-                                            <li>2. ประสิทธิภาพ (Performance)</li>
-                                            <li>3. ปริมาณ (Quantity)</li>
-                                        </ul>
+            {/* Section Averages + Scoring Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-sm">
+                    <h4 className="font-semibold text-gray-700 mb-2 text-xs">คะแนนแยกตามด้าน</h4>
+                    <div className="space-y-1.5">
+                        {[
+                            { key: 'system', label: 'ระบบ (System)' },
+                            { key: 'service', label: 'บริการ (Service)' },
+                            { key: 'equipment', label: 'อุปกรณ์ (Equipment)' },
+                        ].map(({ key, label }) => {
+                            const avg = stats.sectionAvgs?.[key]
+                                ? (stats.sectionAvgs[key].sum / stats.sectionAvgs[key].count)
+                                : 0
+                            return (
+                                <div key={key} className="flex justify-between items-center">
+                                    <span className="text-gray-500 text-xs">{label}</span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-yellow-400 rounded-full transition-all"
+                                                style={{ width: `${(avg / 5) * 100}%` }}
+                                            />
+                                        </div>
+                                        <span className="font-medium text-xs w-6 text-right">
+                                            {avg ? avg.toFixed(1) : '-'}
+                                        </span>
                                     </div>
                                 </div>
-                            </div>
-                            <div className="bg-white rounded-lg p-3 border border-blue-100">
-                                <p className="font-semibold text-blue-900 mb-1">📊 สูตรคำนวณ</p>
-                                <p className="text-xs">
-                                    แต่ละข้อให้คะแนน <strong>1-5 ดาว</strong> → คะแนนรวม = <strong>ค่าเฉลี่ยของ 10 ข้อ</strong> (ปัดเศษเป็นจำนวนเต็ม)
-                                </p>
-                                <p className="text-xs mt-1 text-blue-600">
-                                    ตัวอย่าง: ถ้าให้ 5,4,4,3,5,4,4,5,3,4 → เฉลี่ย = 4.1 → คะแนน = <strong>4</strong>
-                                </p>
-                            </div>
-                            <div className="bg-white rounded-lg p-3 border border-blue-100">
-                                <p className="font-semibold text-blue-900 mb-1">📈 คะแนนเฉลี่ยรายด้าน (แสดงในสถิติ)</p>
-                                <p className="text-xs">
-                                    คำนวณจากค่าเฉลี่ยของทุกคะแนนในแต่ละด้าน รวมทุกการประเมิน เช่น ด้านระบบ = (ผลรวมคะแนน 3 ข้อ × จำนวนผู้ประเมิน) ÷ (3 × จำนวนผู้ประเมิน)
-                                </p>
-                            </div>
-                        </div>
+                            )
+                        })}
                     </div>
-                )}
+                </div>
+
+                {/* Scoring Info */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                    <button
+                        onClick={() => setShowScoringInfo(!showScoringInfo)}
+                        className="w-full p-4 flex items-center justify-between text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                    >
+                        <div className="flex items-center gap-1.5">
+                            <Info className="w-4 h-4" />
+                            หลักการคำนวณคะแนน
+                        </div>
+                        {showScoringInfo ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                    {showScoringInfo && (
+                        <div className="px-4 pb-4 text-xs text-blue-800 space-y-2 border-t border-blue-50 pt-3">
+                            <p><strong>3 ด้าน รวม 10 ข้อ</strong> (แต่ละข้อ 1-5 ⭐):</p>
+                            <ul className="space-y-0.5 ml-3">
+                                <li>🖥 ระบบ (3 ข้อ): Usability, Information, Performance</li>
+                                <li>🤝 บริการ (4 ข้อ): Speed, Rules, Staff, Communication</li>
+                                <li>📦 อุปกรณ์ (3 ข้อ): Physical, Performance, Quantity</li>
+                            </ul>
+                            <p className="bg-blue-50 p-2 rounded-lg">
+                                <strong>สูตร:</strong> คะแนนรวม = ค่าเฉลี่ยของ 10 ข้อ (ปัดเศษ) → 1-5
+                            </p>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Tabs */}
@@ -315,16 +337,16 @@ export default function EvaluationsPage() {
                 >
                     <Clock className="w-4 h-4" />
                     รอการประเมิน
-                    <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'pending' ? 'bg-white/20' : pendingCount > 0 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100'
+                    <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === 'pending' ? 'bg-white/20' : totalPending > 0 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100'
                         }`}>
-                        {pendingCount}
+                        {totalPending}
                     </span>
                 </button>
             </div>
 
             {/* Content */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-4 justify-between items-center">
+                <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-3 justify-between items-center">
                     <div className="relative w-full sm:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
@@ -335,10 +357,27 @@ export default function EvaluationsPage() {
                             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         />
                     </div>
-                    {activeTab === 'pending' && pendingCount > 0 && (
-                        <span className="text-xs text-orange-600 font-medium">
-                            ⚠️ ผู้ใช้เหล่านี้คืนอุปกรณ์แล้วแต่ยังไม่ได้ประเมิน
-                        </span>
+                    {activeTab === 'pending' && (
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setPendingFilter('mandatory')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${pendingFilter === 'mandatory'
+                                        ? 'bg-orange-100 text-orange-700 border border-orange-200'
+                                        : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+                                    }`}
+                            >
+                                บังคับ ({mandatoryPending.length})
+                            </button>
+                            <button
+                                onClick={() => setPendingFilter('all')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${pendingFilter === 'all'
+                                        ? 'bg-gray-200 text-gray-700 border border-gray-300'
+                                        : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+                                    }`}
+                            >
+                                ทั้งหมด ({totalPending})
+                            </button>
+                        </div>
                     )}
                 </div>
 
@@ -470,7 +509,7 @@ export default function EvaluationsPage() {
                                     <th className="px-6 py-3 text-left text-xs font-medium text-orange-700 uppercase tracking-wider">วันที่ยืม</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-orange-700 uppercase tracking-wider">วันที่คืน</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-orange-700 uppercase tracking-wider">ผ่านมาแล้ว</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-orange-700 uppercase tracking-wider">สถานะ</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-orange-700 uppercase tracking-wider">ประเภท</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -480,25 +519,33 @@ export default function EvaluationsPage() {
                                             กำลังโหลดข้อมูล...
                                         </td>
                                     </tr>
-                                ) : filteredPending.length === 0 ? (
+                                ) : displayedPending.length === 0 ? (
                                     <tr>
                                         <td colSpan={6} className="px-6 py-12 text-center">
                                             <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
-                                            <p className="text-gray-500">ทุกคนประเมินเรียบร้อยแล้ว 🎉</p>
+                                            <p className="text-gray-500">
+                                                {pendingFilter === 'mandatory'
+                                                    ? 'ไม่มีรายการบังคับประเมินที่ค้างอยู่ 🎉'
+                                                    : 'ทุกคนประเมินเรียบร้อยแล้ว 🎉'
+                                                }
+                                            </p>
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredPending.map((loan: any) => {
+                                    displayedPending.map((loan: any) => {
                                         const daysSinceReturn = Math.floor(
                                             (Date.now() - new Date(loan.updated_at).getTime()) / (1000 * 60 * 60 * 24)
                                         )
-                                        const isOverdue = daysSinceReturn > 3
+                                        const returnedDate = loan.updated_at?.split('T')[0] || ''
+                                        const isMandatory = returnedDate >= cutoffDate
+                                        const isOverdue = isMandatory && daysSinceReturn > 3
 
                                         return (
-                                            <tr key={loan.id} className={`hover:bg-gray-50 transition-colors ${isOverdue ? 'bg-red-50/50' : ''}`}>
+                                            <tr key={loan.id} className={`hover:bg-gray-50 transition-colors ${isOverdue ? 'bg-red-50/50' : !isMandatory ? 'bg-gray-50/50' : ''}`}>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="flex items-center">
-                                                        <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-xs mr-3">
+                                                        <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs mr-3 ${isMandatory ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500'
+                                                            }`}>
                                                             {loan.profiles?.first_name?.[0] || 'U'}
                                                         </div>
                                                         <div>
@@ -531,10 +578,17 @@ export default function EvaluationsPage() {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-orange-100 text-orange-700 animate-pulse">
-                                                        <AlertTriangle className="w-3 h-3" />
-                                                        รอประเมิน
-                                                    </span>
+                                                    {isMandatory ? (
+                                                        <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-orange-100 text-orange-700">
+                                                            <AlertTriangle className="w-3 h-3" />
+                                                            บังคับ
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">
+                                                            <Archive className="w-3 h-3" />
+                                                            ข้อมูลเก่า
+                                                        </span>
+                                                    )}
                                                 </td>
                                             </tr>
                                         )

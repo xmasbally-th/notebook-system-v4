@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getSupabaseBrowserClient, getSupabaseCredentials } from '@/lib/supabase-helpers'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Clock, CheckCircle2, XCircle, Package, CalendarDays, Loader2, Bookmark, Send, AlertTriangle, Timer, Star } from 'lucide-react'
+import { Star, Loader2, CalendarDays, Clock, Package, CheckCircle, CheckCircle2, XCircle, AlertTriangle, ArrowRight, Send, Bookmark, Timer } from 'lucide-react'
 import Header from '@/components/layout/Header'
 import Pagination from '@/components/ui/Pagination'
 import EvaluationModal from '@/components/evaluations/EvaluationModal'
@@ -61,6 +61,22 @@ export default function MyLoansPage() {
     // Evaluation state
     const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false)
     const [selectedLoan, setSelectedLoan] = useState<any>(null)
+    const [showThankYou, setShowThankYou] = useState(false)
+
+    // Fetch cutoff date
+    const { data: systemConfig } = useQuery({
+        queryKey: ['eval-cutoff'],
+        queryFn: async () => {
+            const { url, key } = getSupabaseCredentials()
+            if (!url || !key) return null
+            const { createBrowserClient } = await import('@supabase/ssr')
+            const client = createBrowserClient(url, key)
+            const { data } = await client.from('system_config').select('evaluation_cutoff_date').single()
+            return data
+        }
+    })
+
+    const cutoffDate = (systemConfig as any)?.evaluation_cutoff_date || new Date().toISOString().split('T')[0]
 
     useEffect(() => {
         const client = getSupabaseBrowserClient()
@@ -163,6 +179,8 @@ export default function MyLoansPage() {
 
     const handleEvaluationSuccess = () => {
         queryClient.invalidateQueries({ queryKey: ['my-loans'] })
+        setShowThankYou(true)
+        setTimeout(() => setShowThankYou(false), 3000)
     }
 
     if (!userId) {
@@ -275,6 +293,8 @@ export default function MyLoansPage() {
                                     const evaluations = item.evaluations || []
                                     const isEvaluated = evaluations.length > 0
                                     const rating = isEvaluated ? evaluations[0].rating : 0
+                                    const returnedDate = (item as any).updated_at?.split('T')[0] || ''
+                                    const isMandatoryEval = returnedDate >= cutoffDate
 
                                     return (
                                         <div
@@ -308,8 +328,11 @@ export default function MyLoansPage() {
                                                                 </h3>
                                                                 {/* Pending Evaluation Badge */}
                                                                 {isReturned && !isEvaluated && (
-                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 animate-pulse">
-                                                                        รอการประเมิน
+                                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${isMandatoryEval
+                                                                        ? 'bg-orange-100 text-orange-800 animate-pulse'
+                                                                        : 'bg-gray-100 text-gray-600'
+                                                                        }`}>
+                                                                        {isMandatoryEval ? 'รอการประเมิน' : 'ประเมินได้'}
                                                                     </span>
                                                                 )}
                                                             </div>
@@ -360,10 +383,13 @@ export default function MyLoansPage() {
                                                                 ) : (
                                                                     <button
                                                                         onClick={() => handleEvaluate(item)}
-                                                                        className="flex items-center gap-1 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-medium rounded-lg transition-colors shadow-sm"
+                                                                        className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors shadow-sm ${isMandatoryEval
+                                                                            ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                                                                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'
+                                                                            }`}
                                                                     >
                                                                         <Star className="w-3 h-3" />
-                                                                        ประเมินความพึงพอใจ
+                                                                        {isMandatoryEval ? 'ประเมินความพึงพอใจ' : 'ประเมินย้อนหลัง'}
                                                                     </button>
                                                                 )}
                                                             </div>
@@ -408,6 +434,16 @@ export default function MyLoansPage() {
                 loan={selectedLoan}
                 onSuccess={handleEvaluationSuccess}
             />
+
+            {/* Thank you toast */}
+            {showThankYou && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <div className="bg-green-600 text-white px-6 py-3 rounded-xl shadow-xl flex items-center gap-3">
+                        <CheckCircle className="w-5 h-5" />
+                        <span className="font-medium text-sm">ขอบคุณที่ช่วยพัฒนาระบบ! 🙏</span>
+                    </div>
+                </div>
+            )}
         </>
     )
 }

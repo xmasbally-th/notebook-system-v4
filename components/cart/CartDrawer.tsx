@@ -194,11 +194,20 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 const { data: { session } } = await supabase.auth.getSession()
                 if (!session) return
 
+                // Get cutoff date
+                const { data: config } = await supabase
+                    .from('system_config')
+                    .select('evaluation_cutoff_date')
+                    .single()
+
+                const cutoffDate = (config as any)?.evaluation_cutoff_date || new Date().toISOString().split('T')[0]
+
                 const { data: returnedLoans } = await supabase
                     .from('loanRequests')
                     .select('id, evaluations(id)')
                     .eq('user_id', session.user.id)
                     .eq('status', 'returned')
+                    .gte('updated_at', cutoffDate)
 
                 const pending = (returnedLoans || []).filter(
                     (loan: any) => !loan.evaluations || loan.evaluations.length === 0

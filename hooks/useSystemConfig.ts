@@ -111,6 +111,7 @@ function getDefaultConfig(): SystemConfig {
         discord_webhook_auth: null,
         discord_webhook_reservations: null,
         discord_webhook_maintenance: null,
+        evaluation_cutoff_date: null,
     } as SystemConfig
 }
 
