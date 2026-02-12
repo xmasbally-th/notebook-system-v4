@@ -122,8 +122,7 @@ src/
 │   ├── notificationScheduler.js            # Notification scheduling
 │   ├── notificationService.js              # Notifications
 │   ├── permissionService.js                # Permissions
-│   ├── qrCodeService.js                    # QR code generation
-│   ├── qrScannerService.js                 # QR scanning
+
 │   ├── reportService.js                    # Reports
 │   ├── reservationService.js               # Reservations
 │   ├── savedSearchService.js               # Saved searches

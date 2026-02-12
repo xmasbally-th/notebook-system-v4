@@ -37,6 +37,7 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
     const equipmentId = formData.get('equipmentId') as string
     const startDate = formData.get('startDate') as string
     const endDate = formData.get('endDate') as string
+    const returnTime = formData.get('returnTime') as string | null
 
     if (!equipmentId || !startDate || !endDate) {
         return { error: 'กรุณากรอกข้อมูลให้ครบทุกช่อง' }
@@ -163,15 +164,19 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
     }
 
     // 6. Create Loan Request
+    const insertData: any = {
+        user_id: user.id,
+        equipment_id: equipmentId,
+        start_date: new Date(startDate).toISOString(),
+        end_date: new Date(endDate).toISOString(),
+        status: 'pending'
+    }
+    if (returnTime) {
+        insertData.return_time = returnTime
+    }
     const { data: insertedLoan, error } = await (supabase as any)
         .from('loanRequests')
-        .insert({
-            user_id: user.id,
-            equipment_id: equipmentId,
-            start_date: new Date(startDate).toISOString(),
-            end_date: new Date(endDate).toISOString(),
-            status: 'pending'
-        })
+        .insert(insertData)
         .select('id')
         .single()
 

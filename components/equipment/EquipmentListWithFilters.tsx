@@ -3,14 +3,16 @@
 import { useEquipment } from '@/hooks/useEquipment'
 import { useRecentlyBorrowed, isRecentlyBorrowed, sortByRecentlyBorrowed } from '@/hooks/useRecentlyBorrowed'
 import { useState, useMemo, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Database } from '@/supabase/types'
-import { Search, X, Package, Plus, Check, Clock, CheckCircle, Users, Wrench } from 'lucide-react'
+import { Search, X, Package, Plus, Check, Clock, CheckCircle, Users, Wrench, AlertTriangle } from 'lucide-react'
 import { CartProvider, useCart } from '@/components/cart/CartContext'
 import CartButton from '@/components/cart/CartButton'
 import CartDrawer from '@/components/cart/CartDrawer'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase/client'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 type EquipmentType = {
@@ -78,6 +80,25 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
 
     const { data: recentlyBorrowed = [] } = useRecentlyBorrowed()
     const { isInCart, addItem, removeItem, isAtLimit } = useCart()
+
+    // Query equipment IDs that have active loans (pending/approved)
+    const { data: activeLoanEquipmentIds = [] } = useQuery({
+        queryKey: ['active-loan-equipment-ids'],
+        staleTime: 1000 * 30, // 30 seconds
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('loanRequests')
+                .select('equipment_id')
+                .in('status', ['pending', 'approved'])
+            if (error) {
+                console.error('[EquipmentList] Failed to fetch active loans:', error)
+                return []
+            }
+            return (data || []).map((d: any) => d.equipment_id as string)
+        },
+    })
+
+    const hasActiveLoan = (equipmentId: string) => activeLoanEquipmentIds.includes(equipmentId)
 
     // Update URL when filters change
     useEffect(() => {
@@ -331,6 +352,7 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                                     const statusConfig = STATUS_CONFIG[item.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.ready
                                     const StatusIcon = statusConfig.icon
                                     const inCart = isInCart(item.id)
+                                    const isUnavailable = !statusConfig.canBorrow || hasActiveLoan(item.id)
                                     const isRecent = isRecentlyBorrowed(item.id, recentlyBorrowed)
 
                                     return (
@@ -375,7 +397,7 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-center gap-2">
-                                                    {statusConfig.canBorrow ? (
+                                                    {!isUnavailable ? (
                                                         <button
                                                             onClick={() => handleCartToggle(item, imageUrl)}
                                                             disabled={!inCart && isAtLimit}
@@ -401,7 +423,10 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                                                             )}
                                                         </button>
                                                     ) : (
-                                                        <span className="text-sm text-gray-400">ไม่พร้อมยืม</span>
+                                                        <span className="inline-flex items-center gap-1 text-sm text-orange-500">
+                                                            <AlertTriangle className="w-3.5 h-3.5" />
+                                                            ไม่พร้อมยืม
+                                                        </span>
                                                     )}
 
                                                 </div>
@@ -421,6 +446,7 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                             const statusConfig = STATUS_CONFIG[item.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.ready
                             const StatusIcon = statusConfig.icon
                             const inCart = isInCart(item.id)
+                            const isUnavailable = !statusConfig.canBorrow || hasActiveLoan(item.id)
                             const isRecent = isRecentlyBorrowed(item.id, recentlyBorrowed)
 
                             return (
@@ -459,7 +485,7 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                                                 )}
                                             </div>
                                             <div className="mt-3 flex gap-2">
-                                                {statusConfig.canBorrow ? (
+                                                {!isUnavailable ? (
                                                     <button
                                                         onClick={() => handleCartToggle(item, imageUrl)}
                                                         disabled={!inCart && isAtLimit}
@@ -485,7 +511,8 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                                                         )}
                                                     </button>
                                                 ) : (
-                                                    <span className="flex-1 flex items-center justify-center px-3 py-2 bg-gray-100 text-gray-400 rounded-lg text-sm">
+                                                    <span className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-orange-50 text-orange-500 rounded-lg text-sm">
+                                                        <AlertTriangle className="w-3.5 h-3.5" />
                                                         ไม่พร้อมยืม
                                                     </span>
                                                 )}

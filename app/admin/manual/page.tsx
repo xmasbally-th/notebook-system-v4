@@ -106,12 +106,6 @@ export default function AdminManualPage() {
                                         (เครื่องที่ส่งซ่อมจะไม่แสดงให้ผู้ใช้กดจอง/ยืม)
                                     </p>
                                 </div>
-                                <div className="flex-1 bg-white border border-gray-200 rounded-lg p-4">
-                                    <h5 className="font-semibold text-gray-800 mb-2">QR Code</h5>
-                                    <p className="text-sm text-gray-600">
-                                        ระบบสามารถสร้าง QR Code สำหรับติดที่ตัวอุปกรณ์ เพื่อให้ง่ายต่อการสแกนตรวจสอบ
-                                    </p>
-                                </div>
                             </div>
                         </div>
                     </Section>
@@ -123,7 +117,7 @@ export default function AdminManualPage() {
                         </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FeatureItem
-                                title="คิวอาร์โค้ด & การค้นหา"
+                                title="การค้นหา"
                                 desc="ค้นหารายการยืมได้ง่ายๆ ผ่านชื่อผู้ใช้, รหัสอุปกรณ์ หรือเลขที่คำขอ"
                             />
                             <FeatureItem

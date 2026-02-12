@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import EvaluationModal from './EvaluationModal'
-import { RocketIcon } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 
 export default function ActiveEvaluationPrompt() {
     const [userId, setUserId] = useState<string | null>(null)
@@ -24,7 +24,6 @@ export default function ActiveEvaluationPrompt() {
             setUserId(session.user.id)
 
             // Fetch returned loans that might not be evaluated
-            // We fetch evaluations(id) to check existence
             const { data: loans, error } = await supabase
                 .from('loanRequests')
                 .select('*, equipment(name, equipment_number), evaluations(id)')
@@ -41,7 +40,7 @@ export default function ActiveEvaluationPrompt() {
 
             if (pending.length > 0) {
                 setPendingLoans(pending)
-                setCurrentLoan(pending[0]) // Prompt the most recent one first
+                setCurrentLoan(pending[0])
                 setIsModalOpen(true)
             }
         }
@@ -55,27 +54,37 @@ export default function ActiveEvaluationPrompt() {
         setPendingLoans(remaining)
 
         if (remaining.length > 0) {
+            // Auto-advance to next pending evaluation
             setCurrentLoan(remaining[0])
-            // Keep modal open for next item? Or close it?
-            // "Active Prompt" usually implies "do this now". 
-            // Let's keep it open for the next one for efficiency, or close it to be less annoying.
-            // Soft Block strategy: Notify but don't force. 
-            // Let's close it and if they refresh they get prompted again, or maybe just prompt once per session?
-            // For now, let's close it. The user can go to My Loans for the rest.
-            setIsModalOpen(false)
+            // Keep modal open — mandatory flow continues
         } else {
+            // All done — close modal
             setIsModalOpen(false)
+            setCurrentLoan(null)
         }
     }
 
     if (!isModalOpen || !currentLoan) return null
 
     return (
-        <EvaluationModal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            loan={currentLoan}
-            onSuccess={handleEvaluationSuccess}
-        />
+        <>
+            {/* Mandatory evaluation banner behind the modal */}
+            <div className="fixed inset-0 z-40 flex items-end justify-center pb-4 pointer-events-none">
+                <div className="bg-orange-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 pointer-events-auto">
+                    <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                    <span className="text-sm font-medium">
+                        กรุณาประเมินอุปกรณ์ที่คืนแล้ว ({pendingLoans.length} รายการ) ก่อนใช้งานระบบต่อ
+                    </span>
+                </div>
+            </div>
+
+            <EvaluationModal
+                isOpen={isModalOpen}
+                onClose={() => { }} // No-op: mandatory mode prevents closing
+                loan={currentLoan}
+                onSuccess={handleEvaluationSuccess}
+                mandatory={true}
+            />
+        </>
     )
 }

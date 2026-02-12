@@ -3,7 +3,7 @@
 import { Database } from '@/supabase/types'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
-import { Package, Plus, Check, Clock } from 'lucide-react'
+import { Package, Plus, Check, Clock, AlertTriangle } from 'lucide-react'
 import { useCart } from '@/components/cart/CartContext'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
@@ -11,6 +11,7 @@ type Equipment = Database['public']['Tables']['equipment']['Row']
 interface EquipmentCardWithBorrowProps {
     item: Equipment
     isRecentlyBorrowed?: boolean
+    hasActiveLoan?: boolean
 }
 
 const statusConfig: Record<string, { label: string; color: string; canBorrow: boolean }> = {
@@ -21,13 +22,14 @@ const statusConfig: Record<string, { label: string; color: string; canBorrow: bo
     retired: { label: 'ปลดระวาง', color: 'bg-gray-100 text-gray-600 border-gray-200', canBorrow: false },
 }
 
-export default function EquipmentCardWithBorrow({ item, isRecentlyBorrowed = false }: EquipmentCardWithBorrowProps) {
+export default function EquipmentCardWithBorrow({ item, isRecentlyBorrowed = false, hasActiveLoan = false }: EquipmentCardWithBorrowProps) {
     // Defensive: ensure images is an array
     const images = Array.isArray(item.images) ? item.images : []
     const imageUrl = images.length > 0 ? (images[0] as string) : 'https://placehold.co/600x400?text=No+Image'
 
     // Status config
     const status = statusConfig[item.status] || statusConfig.ready
+    const canSelect = status.canBorrow && !hasActiveLoan
 
     // Cart context
     const { isInCart, addItem, removeItem, isAtLimit } = useCart()
@@ -94,7 +96,7 @@ export default function EquipmentCardWithBorrow({ item, isRecentlyBorrowed = fal
 
                 {/* Action Area */}
                 <div className="mt-auto pt-3 flex gap-1.5">
-                    {status.canBorrow ? (
+                    {canSelect ? (
                         <>
                             {/* Add to Cart / Remove from Cart Button */}
                             <button
@@ -125,9 +127,9 @@ export default function EquipmentCardWithBorrow({ item, isRecentlyBorrowed = fal
                     ) : (
                         <button
                             disabled
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-400 font-medium rounded-lg cursor-not-allowed text-sm"
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-50 text-orange-500 font-medium rounded-lg cursor-not-allowed text-sm"
                         >
-                            <Package className="w-4 h-4" />
+                            <AlertTriangle className="w-4 h-4" />
                             ไม่สามารถยืมได้
                         </button>
                     )}

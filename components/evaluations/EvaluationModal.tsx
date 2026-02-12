@@ -9,6 +9,7 @@ interface EvaluationModalProps {
     onClose: () => void
     loan: any
     onSuccess: () => void
+    mandatory?: boolean
 }
 
 interface RatingSection {
@@ -52,7 +53,7 @@ const SECTIONS: RatingSection[] = [
     }
 ]
 
-export default function EvaluationModal({ isOpen, onClose, loan, onSuccess }: EvaluationModalProps) {
+export default function EvaluationModal({ isOpen, onClose, loan, onSuccess, mandatory = false }: EvaluationModalProps) {
     const [ratings, setRatings] = useState<Record<string, Record<string, number>>>({
         system: { usability: 0, information: 0, performance: 0 },
         service: { speed: 0, rules: 0, staff: 0, communication: 0 },
@@ -151,8 +152,11 @@ export default function EvaluationModal({ isOpen, onClose, loan, onSuccess }: Ev
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
-            <div className="bg-white rounded-none sm:rounded-xl shadow-xl w-full max-w-3xl my-0 sm:my-8 lg:my-12 h-full sm:h-auto sm:max-h-[calc(100vh-4rem)] lg:max-h-[calc(100vh-6rem)] flex flex-col transition-all duration-300">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm overflow-y-auto"
+            onClick={mandatory ? undefined : onClose}
+        >
+            <div className="bg-white rounded-none sm:rounded-xl shadow-xl w-full max-w-3xl my-0 sm:my-8 lg:my-12 h-full sm:h-auto sm:max-h-[calc(100vh-4rem)] lg:max-h-[calc(100vh-6rem)] flex flex-col transition-all duration-300" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 sm:p-6 lg:p-8 border-b border-gray-100 sticky top-0 bg-white sm:rounded-t-xl z-20 shadow-sm sm:shadow-none">
                     <div>
@@ -161,12 +165,14 @@ export default function EvaluationModal({ isOpen, onClose, loan, onSuccess }: Ev
                             อุปกรณ์: {loan.equipment?.name} (#{loan.equipment?.equipment_number})
                         </p>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
-                    >
-                        <X className="w-5 h-5 lg:w-6 lg:h-6 text-gray-500" />
-                    </button>
+                    {!mandatory && (
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+                        >
+                            <X className="w-5 h-5 lg:w-6 lg:h-6 text-gray-500" />
+                        </button>
+                    )}
                 </div>
 
                 {/* Content */}
@@ -240,13 +246,15 @@ export default function EvaluationModal({ isOpen, onClose, loan, onSuccess }: Ev
 
                 {/* Footer */}
                 <div className="p-4 sm:p-6 lg:p-8 border-t border-gray-100 bg-gray-50 sm:rounded-b-xl flex justify-end gap-3 sticky bottom-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] sm:shadow-none">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 lg:px-6 lg:py-3 text-sm sm:text-base lg:text-lg text-gray-600 hover:bg-gray-200 rounded-lg transition-colors font-medium"
-                        disabled={isSubmitting}
-                    >
-                        ยกเลิก
-                    </button>
+                    {!mandatory && (
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 lg:px-6 lg:py-3 text-sm sm:text-base lg:text-lg text-gray-600 hover:bg-gray-200 rounded-lg transition-colors font-medium"
+                            disabled={isSubmitting}
+                        >
+                            ยกเลิก
+                        </button>
+                    )}
                     <button
                         onClick={handleSubmit}
                         disabled={isSubmitting}

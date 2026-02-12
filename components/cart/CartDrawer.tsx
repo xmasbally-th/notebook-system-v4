@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCart } from './CartContext'
 import { useProfile } from '@/hooks/useProfile'
 import { useSystemConfig } from '@/hooks/useSystemConfig'
-import { X, Trash2, ShoppingCart, Send, Calendar, Clock, Loader2, AlertCircle, CheckCircle, Bookmark } from 'lucide-react'
+import { X, Trash2, ShoppingCart, Send, Calendar, Clock, Loader2, AlertCircle, CheckCircle, Bookmark, AlertTriangle, RefreshCw, Star } from 'lucide-react'
 import { createReservation } from '@/lib/reservations'
+import { submitLoanRequest } from '@/app/equipment/actions'
+import { supabase } from '@/lib/supabase/client'
 
 interface CartDrawerProps {
     isOpen: boolean
@@ -43,6 +45,16 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState(false)
+
+    // Bug 2: Track unavailable equipment in cart
+    const [unavailableIds, setUnavailableIds] = useState<Set<string>>(new Set())
+    const [isCheckingAvailability, setIsCheckingAvailability] = useState(false)
+
+    // Bug 3: Confirmation dialog state
+    const [showConfirmation, setShowConfirmation] = useState(false)
+
+    // Pending evaluations check
+    const [pendingEvaluationCount, setPendingEvaluationCount] = useState(0)
 
     // Get max loan days based on user type
     const getMaxDays = () => {
@@ -121,6 +133,89 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         return null
     }
 
+    // Bug 2: Check availability of all cart items when drawer opens
+    const checkCartAvailability = useCallback(async () => {
+        if (items.length === 0) {
+            setUnavailableIds(new Set())
+            return
+        }
+
+        setIsCheckingAvailability(true)
+        try {
+            const equipmentIds = items.map(item => item.id)
+
+            // Check equipment status
+            const { data: equipmentData } = await supabase
+                .from('equipment')
+                .select('id, status')
+                .in('id', equipmentIds)
+
+            // Check active loans
+            const { data: activeLoanData } = await supabase
+                .from('loanRequests')
+                .select('equipment_id')
+                .in('equipment_id', equipmentIds)
+                .in('status', ['pending', 'approved'])
+
+            const unavailable = new Set<string>()
+
+            // Mark equipment that is not in 'ready'/'active' status
+            equipmentData?.forEach((eq: any) => {
+                if (eq.status !== 'ready' && eq.status !== 'active') {
+                    unavailable.add(eq.id)
+                }
+            })
+
+            // Mark equipment that has active loans
+            activeLoanData?.forEach((loan: any) => {
+                unavailable.add(loan.equipment_id)
+            })
+
+            setUnavailableIds(unavailable)
+        } catch (err) {
+            console.error('[CartDrawer] Availability check error:', err)
+        } finally {
+            setIsCheckingAvailability(false)
+        }
+    }, [items])
+
+    // Check availability when drawer opens or items change
+    useEffect(() => {
+        if (isOpen) {
+            checkCartAvailability()
+        }
+    }, [isOpen, items.length, checkCartAvailability])
+
+    // Check for pending evaluations when drawer opens
+    useEffect(() => {
+        if (!isOpen) return
+        const checkPendingEvaluations = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession()
+                if (!session) return
+
+                const { data: returnedLoans } = await supabase
+                    .from('loanRequests')
+                    .select('id, evaluations(id)')
+                    .eq('user_id', session.user.id)
+                    .eq('status', 'returned')
+
+                const pending = (returnedLoans || []).filter(
+                    (loan: any) => !loan.evaluations || loan.evaluations.length === 0
+                )
+                setPendingEvaluationCount(pending.length)
+            } catch (err) {
+                console.error('[CartDrawer] Evaluation check error:', err)
+            }
+        }
+        checkPendingEvaluations()
+    }, [isOpen])
+
+    const hasPendingEvaluations = pendingEvaluationCount > 0
+
+    const hasUnavailableItems = unavailableIds.size > 0
+    const availableItems = items.filter(item => !unavailableIds.has(item.id))
+
     // Validation errors for display
     const validationErrors = useMemo(() => {
         const errors: string[] = []
@@ -149,12 +244,18 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         return errors
     }, [mode, endDate, returnTime, reserveStartDate, reservePickupTime, reserveReturnTime, today])
 
-    const handleSubmit = async () => {
-        // Clear previous errors
+    // Bug 3: Show confirmation dialog instead of submitting immediately
+    const handleShowConfirmation = () => {
         setError(null)
 
         if (items.length === 0) {
             setError('กรุณาเลือกอุปกรณ์')
+            return
+        }
+
+        // Check for unavailable items
+        if (hasUnavailableItems) {
+            setError('กรุณานำอุปกรณ์ที่ไม่พร้อมให้ยืมออกจากรายการก่อน')
             return
         }
 
@@ -195,57 +296,56 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             }
         }
 
+        // All validated — show confirmation dialog
+        setShowConfirmation(true)
+    }
+
+    const handleSubmit = async () => {
+        setShowConfirmation(false)
         setIsSubmitting(true)
+        setError(null)
 
         try {
-            const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-            const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+            // Re-check availability before submitting
+            await checkCartAvailability()
 
-            // Get access token
-            const { createBrowserClient } = await import('@supabase/ssr')
-            const supabase = createBrowserClient(url!, key!)
-            const { data: { session } } = await supabase.auth.getSession()
+            // Check again after re-check
+            const currentUnavailable = new Set<string>()
+            const equipmentIds = items.map(item => item.id)
+            const { data: activeLoanData } = await supabase
+                .from('loanRequests')
+                .select('equipment_id')
+                .in('equipment_id', equipmentIds)
+                .in('status', ['pending', 'approved'])
 
-            if (!session?.user) {
-                setError('กรุณาเข้าสู่ระบบก่อนส่งคำขอ')
+            activeLoanData?.forEach((loan: any) => {
+                currentUnavailable.add(loan.equipment_id)
+            })
+
+            if (currentUnavailable.size > 0) {
+                setUnavailableIds(currentUnavailable)
+                setError('มีอุปกรณ์ที่ถูกยืมไปแล้วในรายการ กรุณานำออกก่อนส่งคำขอ')
                 setIsSubmitting(false)
                 return
             }
 
-            const accessToken = session.access_token
-
             if (mode === 'borrow') {
-                // Submit loan requests
+                // Use server action for each item
                 const startDate = today
 
-                await Promise.all(
-                    items.map(async (item) => {
-                        const response = await fetch(`${url}/rest/v1/loanRequests`, {
-                            method: 'POST',
-                            headers: {
-                                'apikey': key || '',
-                                'Authorization': `Bearer ${accessToken}`,
-                                'Content-Type': 'application/json',
-                                'Prefer': 'return=representation',
-                            },
-                            body: JSON.stringify({
-                                user_id: session.user.id,
-                                equipment_id: item.id,
-                                start_date: startDate,
-                                end_date: endDate,
-                                return_time: returnTime,
-                                status: 'pending',
-                            }),
-                        })
+                for (const item of items) {
+                    const formData = new FormData()
+                    formData.set('equipmentId', item.id)
+                    formData.set('startDate', startDate)
+                    formData.set('endDate', endDate)
+                    formData.set('returnTime', returnTime)
 
-                        if (!response.ok) {
-                            const errorData = await response.json().catch(() => ({}))
-                            throw new Error(errorData.message || `ส่งคำขอยืม ${item.name} ไม่สำเร็จ`)
-                        }
+                    const result = await submitLoanRequest(null, formData)
 
-                        return response.json()
-                    })
-                )
+                    if (result?.error) {
+                        throw new Error(result.error)
+                    }
+                }
             } else {
                 // Submit reservations
                 for (const item of items) {
@@ -280,15 +380,25 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     if (!isOpen) return null
 
     const isFormValid = mode === 'borrow'
-        ? (endDate && returnTime && validationErrors.length === 0)
-        : (reserveStartDate && reserveEndDate && reservePickupTime && reserveReturnTime && validationErrors.length === 0)
+        ? (endDate && returnTime && validationErrors.length === 0 && !hasUnavailableItems && !hasPendingEvaluations)
+        : (reserveStartDate && reserveEndDate && reservePickupTime && reserveReturnTime && validationErrors.length === 0 && !hasUnavailableItems && !hasPendingEvaluations)
+
+    // Format date for Thai display
+    const formatThaiDateShort = (dateStr: string) => {
+        if (!dateStr) return '-'
+        return new Date(dateStr).toLocaleDateString('th-TH', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        })
+    }
 
     return (
         <>
             {/* Backdrop */}
             <div
                 className="fixed inset-0 bg-black/50 z-50 transition-opacity"
-                onClick={onClose}
+                onClick={() => { setShowConfirmation(false); onClose(); }}
             />
 
             {/* Drawer */}
@@ -301,7 +411,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                         <span className="text-sm text-gray-500">({items.length}/{maxItems})</span>
                     </div>
                     <button
-                        onClick={onClose}
+                        onClick={() => { setShowConfirmation(false); onClose(); }}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                     >
                         <X className="w-5 h-5" />
@@ -310,6 +420,30 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-4">
+                    {/* Pending evaluations warning */}
+                    {hasPendingEvaluations && (
+                        <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                            <div className="flex items-start gap-2">
+                                <Star className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="text-sm font-medium text-orange-800">
+                                        กรุณาประเมินอุปกรณ์ก่อนยืม/จองใหม่
+                                    </p>
+                                    <p className="text-xs text-orange-600 mt-1">
+                                        คุณมีอุปกรณ์ที่คืนแล้วแต่ยังไม่ได้ประเมิน {pendingEvaluationCount} รายการ
+                                    </p>
+                                    <a
+                                        href="/my-loans"
+                                        className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-orange-700 hover:text-orange-900 underline"
+                                    >
+                                        <Star className="w-3 h-3" />
+                                        ไปประเมินเลย
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {success ? (
                         <div className="flex flex-col items-center justify-center h-full text-center">
                             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
@@ -319,6 +453,109 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                 {mode === 'borrow' ? 'ส่งคำขอยืมสำเร็จ!' : 'ส่งคำขอจองสำเร็จ!'}
                             </h3>
                             <p className="text-gray-500">กำลังนำท่านไปยังหน้าประวัติ...</p>
+                        </div>
+                    ) : showConfirmation ? (
+                        /* Bug 3: Confirmation Dialog */
+                        <div className="space-y-4 animate-in fade-in duration-200">
+                            <div className="text-center mb-2">
+                                <h3 className="text-lg font-bold text-gray-900">
+                                    ยืนยันการ{mode === 'borrow' ? 'ยืม' : 'จอง'}อุปกรณ์
+                                </h3>
+                                <p className="text-sm text-gray-500 mt-1">กรุณาตรวจสอบข้อมูลก่อนส่งคำขอ</p>
+                            </div>
+
+                            {/* Summary: Equipment List */}
+                            <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                                <h4 className="text-sm font-semibold text-gray-700">📦 รายการอุปกรณ์</h4>
+                                {items.map((item) => (
+                                    <div key={item.id} className="flex items-center gap-2 text-sm">
+                                        <img src={item.imageUrl} alt={item.name} className="w-8 h-8 object-contain bg-white rounded" />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="font-medium text-gray-900 truncate">{item.name}</p>
+                                            <p className="text-xs text-gray-500 font-mono">{item.equipment_number}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Summary: Date & Time */}
+                            <div className="bg-blue-50 rounded-xl p-4 space-y-2">
+                                <h4 className="text-sm font-semibold text-blue-800">📅 กำหนดการ</h4>
+                                {mode === 'borrow' ? (
+                                    <>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-blue-700">วันที่รับ:</span>
+                                            <span className="font-medium text-blue-900">{formatThaiDateShort(today)} (วันนี้)</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-blue-700">วันที่คืน:</span>
+                                            <span className="font-medium text-blue-900">{formatThaiDateShort(endDate)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-blue-700">⏰ เวลาคืน:</span>
+                                            <span className="font-bold text-lg text-blue-900">{returnTime} น.</span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-blue-700">วันที่รับ:</span>
+                                            <span className="font-medium text-blue-900">{formatThaiDateShort(reserveStartDate)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-blue-700">เวลารับ:</span>
+                                            <span className="font-medium text-blue-900">{reservePickupTime} น.</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-blue-700">วันที่คืน:</span>
+                                            <span className="font-medium text-blue-900">{formatThaiDateShort(reserveEndDate)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-blue-700">⏰ เวลาคืน:</span>
+                                            <span className="font-bold text-lg text-blue-900">{reserveReturnTime} น.</span>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Confirm / Cancel Buttons */}
+                            <div className="space-y-2 pt-2">
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={isSubmitting}
+                                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 font-medium rounded-lg transition-colors ${mode === 'borrow'
+                                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                        : 'bg-purple-600 text-white hover:bg-purple-700'
+                                        } disabled:opacity-60`}
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            กำลังส่งคำขอ...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CheckCircle className="w-5 h-5" />
+                                            ยืนยัน {mode === 'borrow' ? 'ส่งคำขอยืม' : 'ส่งคำขอจอง'}
+                                        </>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => setShowConfirmation(false)}
+                                    disabled={isSubmitting}
+                                    className="w-full px-4 py-2 text-gray-600 font-medium hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                    ย้อนกลับแก้ไข
+                                </button>
+                            </div>
+
+                            {/* Error in confirmation */}
+                            {error && (
+                                <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm flex items-start gap-2">
+                                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                    <span>{error}</span>
+                                </div>
+                            )}
                         </div>
                     ) : items.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-center">
@@ -352,28 +589,67 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                 </button>
                             </div>
 
+                            {/* Bug 2: Unavailable Items Warning */}
+                            {hasUnavailableItems && (
+                                <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg text-sm">
+                                    <div className="flex items-start gap-2">
+                                        <AlertTriangle className="w-4 h-4 mt-0.5 text-orange-500 flex-shrink-0" />
+                                        <div>
+                                            <p className="font-medium text-orange-800">มีอุปกรณ์ที่ไม่พร้อมให้ยืม</p>
+                                            <p className="text-orange-600 mt-0.5">กรุณานำออกจากรายการก่อนส่งคำขอ</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Item List */}
                             <div className="space-y-3">
-                                {items.map((item) => (
-                                    <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                        <img
-                                            src={item.imageUrl}
-                                            alt={item.name}
-                                            className="w-16 h-16 object-contain bg-white rounded-lg"
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                            <h4 className="font-medium text-gray-900 truncate">{item.name}</h4>
-                                            <p className="text-xs text-gray-500 font-mono">{item.equipment_number}</p>
-                                        </div>
-                                        <button
-                                            onClick={() => removeItem(item.id)}
-                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                {items.map((item) => {
+                                    const isUnavailable = unavailableIds.has(item.id)
+                                    return (
+                                        <div
+                                            key={item.id}
+                                            className={`flex items-center gap-3 p-3 rounded-lg ${isUnavailable
+                                                ? 'bg-red-50 border border-red-200'
+                                                : 'bg-gray-50'
+                                                }`}
                                         >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                ))}
+                                            <img
+                                                src={item.imageUrl}
+                                                alt={item.name}
+                                                className={`w-16 h-16 object-contain bg-white rounded-lg ${isUnavailable ? 'opacity-50' : ''}`}
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className={`font-medium truncate ${isUnavailable ? 'text-red-700' : 'text-gray-900'}`}>{item.name}</h4>
+                                                <p className="text-xs text-gray-500 font-mono">{item.equipment_number}</p>
+                                                {isUnavailable && (
+                                                    <span className="inline-flex items-center gap-1 text-xs text-red-600 mt-1">
+                                                        <AlertTriangle className="w-3 h-3" />
+                                                        ไม่พร้อมให้ยืม / ถูกยืมแล้ว
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <button
+                                                onClick={() => removeItem(item.id)}
+                                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="นำออกจากรายการ"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    )
+                                })}
                             </div>
+
+                            {/* Refresh Availability Button */}
+                            <button
+                                onClick={checkCartAvailability}
+                                disabled={isCheckingAvailability}
+                                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <RefreshCw className={`w-4 h-4 ${isCheckingAvailability ? 'animate-spin' : ''}`} />
+                                {isCheckingAvailability ? 'กำลังตรวจสอบ...' : 'ตรวจสอบความพร้อมอุปกรณ์'}
+                            </button>
 
                             {/* User Limits Info */}
                             <div className="p-3 bg-blue-50 rounded-lg text-sm space-y-1">
@@ -426,7 +702,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                             <Clock className="w-4 h-4 inline mr-1" />
-                                            เวลาคืนอุปกรณ์
+                                            เวลาคืนอุปกรณ์ <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="time"
@@ -434,8 +710,16 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                             onChange={(e) => setReturnTime(e.target.value)}
                                             min={openingTime}
                                             max={closingTime}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!returnTime ? 'border-amber-400 bg-amber-50' : 'border-gray-300'
+                                                }`}
+                                            placeholder="กรุณาเลือกเวลาคืน"
                                         />
+                                        {!returnTime && (
+                                            <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3" />
+                                                กรุณาระบุเวลาที่จะนำอุปกรณ์มาคืน
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             ) : (
@@ -501,7 +785,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                             <Clock className="w-4 h-4 inline mr-1" />
-                                            เวลาคืนอุปกรณ์
+                                            เวลาคืนอุปกรณ์ <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="time"
@@ -509,8 +793,16 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                             onChange={(e) => setReserveReturnTime(e.target.value)}
                                             min={openingTime}
                                             max={closingTime}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${!reserveReturnTime ? 'border-amber-400 bg-amber-50' : 'border-gray-300'
+                                                }`}
+                                            placeholder="กรุณาเลือกเวลาคืน"
                                         />
+                                        {!reserveReturnTime && (
+                                            <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3" />
+                                                กรุณาระบุเวลาที่จะนำอุปกรณ์มาคืน
+                                            </p>
+                                        )}
                                     </div>
 
                                     {/* Reserve Mode Info */}
@@ -546,10 +838,10 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 </div>
 
                 {/* Footer */}
-                {!success && items.length > 0 && (
+                {!success && !showConfirmation && items.length > 0 && (
                     <div className="p-4 border-t border-gray-200 space-y-3">
                         <button
-                            onClick={handleSubmit}
+                            onClick={handleShowConfirmation}
                             disabled={isSubmitting || !isFormValid}
                             className={`w-full flex items-center justify-center gap-2 px-4 py-3 font-medium rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors ${mode === 'borrow'
                                 ? 'bg-blue-600 text-white hover:bg-blue-700'
@@ -564,12 +856,12 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                             ) : mode === 'borrow' ? (
                                 <>
                                     <Send className="w-5 h-5" />
-                                    ส่งคำขอยืม ({items.length} รายการ)
+                                    ตรวจสอบและส่งคำขอยืม ({items.length} รายการ)
                                 </>
                             ) : (
                                 <>
                                     <Bookmark className="w-5 h-5" />
-                                    ส่งคำขอจอง ({items.length} รายการ)
+                                    ตรวจสอบและส่งคำขอจอง ({items.length} รายการ)
                                 </>
                             )}
                         </button>

@@ -35,7 +35,7 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
     // Form values
     const [startDate, setStartDate] = useState('')
     const [endDate, setEndDate] = useState('')
-    const [returnTime, setReturnTime] = useState('16:00')
+    const [returnTime, setReturnTime] = useState('')
 
     // Validation state
     const [validationErrors, setValidationErrors] = useState<string[]>([])

@@ -40,7 +40,7 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
     const [startDate, setStartDate] = useState('')
     const [endDate, setEndDate] = useState('')
     const [pickupTime, setPickupTime] = useState('09:00')
-    const [returnTime, setReturnTime] = useState('16:00')
+    const [returnTime, setReturnTime] = useState('')
 
     // Validation
     const [validationErrors, setValidationErrors] = useState<string[]>([])
