@@ -29,6 +29,8 @@ export async function submitReservationRequest(formData: FormData) {
     const equipmentId = formData.get('equipmentId') as string
     const startDate = formData.get('startDate') as string
     const endDate = formData.get('endDate') as string
+    const pickupTime = formData.get('pickupTime') as string | null
+    const returnTime = formData.get('returnTime') as string | null
 
     if (!equipmentId || !startDate || !endDate) {
         return { error: 'กรุณากรอกข้อมูลให้ครบทุกช่อง' }
@@ -99,6 +101,8 @@ export async function submitReservationRequest(formData: FormData) {
             start_date: startDate,
             end_date: endDate,
             status,
+            pickup_time: pickupTime || null,
+            return_time: returnTime || null,
             approved_at: isSelfAction ? new Date().toISOString() : null,
             approved_by: isSelfAction ? user.id : null
         })
@@ -245,7 +249,8 @@ export async function convertReservationToLoanAction(
                 equipment_id: reservation.equipment_id,
                 start_date: reservation.start_date,
                 end_date: reservation.end_date,
-                status: 'approved'
+                status: 'approved',
+                return_time: reservation.return_time || null
             })
             .select('id')
             .single()

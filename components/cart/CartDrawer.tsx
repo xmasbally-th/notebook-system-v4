@@ -384,7 +384,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     const result = await createReservation(
                         item.id,
                         reserveStartDate,
-                        reserveEndDate
+                        reserveEndDate,
+                        reservePickupTime || undefined,
+                        reserveReturnTime || undefined
                     )
                     if (!result.success) {
                         throw new Error(result.error || `จองอุปกรณ์ ${item.name} ไม่สำเร็จ`)

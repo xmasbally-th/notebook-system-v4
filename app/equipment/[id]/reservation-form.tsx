@@ -124,6 +124,8 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
             formData.append('equipmentId', equipmentId)
             formData.append('startDate', `${startDate}T${pickupTime}:00`)
             formData.append('endDate', `${endDate}T${returnTime}:00`)
+            formData.append('pickupTime', pickupTime)
+            formData.append('returnTime', returnTime)
 
             // Import dynamically to avoid server-on-client issues if any
             const { submitReservationRequest } = await import('@/app/reservations/actions')

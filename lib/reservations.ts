@@ -242,7 +242,9 @@ async function checkTimeConflictFallback(
 export async function createReservation(
     equipmentId: string,
     startDate: string,
-    endDate: string
+    endDate: string,
+    pickupTime?: string,
+    returnTime?: string
 ): Promise<{ success: boolean; error?: string; reservationId?: string }> {
     const { url, key } = getSupabaseCredentials()
     if (!url || !key) return { success: false, error: 'Missing credentials' }
@@ -314,6 +316,8 @@ export async function createReservation(
                 start_date: startDate,
                 end_date: endDate,
                 status,
+                pickup_time: pickupTime || null,
+                return_time: returnTime || null,
                 approved_at: isSelfAction ? new Date().toISOString() : null,
                 approved_by: isSelfAction ? user.id : null
             })
