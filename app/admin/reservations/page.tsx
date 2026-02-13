@@ -5,10 +5,10 @@ import {
     approveReservation,
     rejectReservation,
     markReservationReady,
-    convertReservationToLoan,
     cancelReservation,
     ReservationStatus
 } from '@/lib/reservations'
+import { convertReservationToLoanAction } from '@/app/reservations/actions'
 import { useState, useMemo } from 'react'
 import AdminLayout from '@/components/admin/AdminLayout'
 import { formatThaiDate } from '@/lib/formatThaiDate'
@@ -134,12 +134,13 @@ export default function AdminReservationsPage() {
         if (!confirm('ยืนยันการแปลงการจองเป็นคำขอยืม?')) return
 
         setProcessing(reservation.id)
-        const result = await convertReservationToLoan(reservation.id, reservation)
+        const result = await convertReservationToLoanAction(reservation.id)
         setProcessing(null)
 
         if (result.success) {
             toast.success('แปลงเป็นคำขอยืมเรียบร้อยแล้ว')
             queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
+            queryClient.invalidateQueries({ queryKey: ['staff-loan-requests'] })
             notifyReservationStatusChange(reservation.id, 'completed')
         } else {
             toast.error(result.error || 'เกิดข้อผิดพลาด')

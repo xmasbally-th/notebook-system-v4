@@ -5,10 +5,10 @@ import {
     approveReservation,
     rejectReservation,
     markReservationReady,
-    convertReservationToLoan,
     ReservationStatus,
     Reservation
 } from '@/lib/reservations'
+import { convertReservationToLoanAction } from '@/app/reservations/actions'
 import { useState, useMemo } from 'react'
 import StaffLayout from '@/components/staff/StaffLayout'
 import { formatThaiDate } from '@/lib/formatThaiDate'
@@ -117,7 +117,7 @@ export default function StaffReservationsPage() {
         if (!confirm('ยืนยันการแปลงการจองเป็นคำขอยืม?')) return
 
         setProcessing(reservation.id)
-        const result = await convertReservationToLoan(reservation.id, reservation)
+        const result = await convertReservationToLoanAction(reservation.id)
         setProcessing(null)
 
         if (result.success) {

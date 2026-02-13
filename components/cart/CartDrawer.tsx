@@ -157,6 +157,13 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 .in('equipment_id', equipmentIds)
                 .in('status', ['pending', 'approved'])
 
+            // Check active reservations (pending/approved/ready)
+            const { data: activeReservationData } = await supabase
+                .from('reservations')
+                .select('equipment_id')
+                .in('equipment_id', equipmentIds)
+                .in('status', ['pending', 'approved', 'ready'])
+
             const unavailable = new Set<string>()
 
             // Mark equipment that is not in 'ready'/'active' status
@@ -169,6 +176,11 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             // Mark equipment that has active loans
             activeLoanData?.forEach((loan: any) => {
                 unavailable.add(loan.equipment_id)
+            })
+
+            // Mark equipment that has active reservations
+            activeReservationData?.forEach((res: any) => {
+                unavailable.add(res.equipment_id)
             })
 
             setUnavailableIds(unavailable)
@@ -327,8 +339,19 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 .in('equipment_id', equipmentIds)
                 .in('status', ['pending', 'approved'])
 
+            // Also check active reservations
+            const { data: activeReservationData } = await supabase
+                .from('reservations')
+                .select('equipment_id')
+                .in('equipment_id', equipmentIds)
+                .in('status', ['pending', 'approved', 'ready'])
+
             activeLoanData?.forEach((loan: any) => {
                 currentUnavailable.add(loan.equipment_id)
+            })
+
+            activeReservationData?.forEach((res: any) => {
+                currentUnavailable.add(res.equipment_id)
             })
 
             if (currentUnavailable.size > 0) {

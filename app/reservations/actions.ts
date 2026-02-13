@@ -152,3 +152,208 @@ export async function submitReservationRequest(formData: FormData) {
 
     return { success: true, reservationId: insertedReservation.id }
 }
+
+// Server-side function to log staff activity
+async function logStaffActivityServer(
+    supabase: any,
+    entry: {
+        staffId: string
+        staffRole: 'staff' | 'admin'
+        actionType: string
+        targetType: string
+        targetId: string
+        targetUserId?: string
+        isSelfAction?: boolean
+        details?: Record<string, any>
+    }
+): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('staff_activity_log')
+            .insert({
+                staff_id: entry.staffId,
+                staff_role: entry.staffRole,
+                action_type: entry.actionType,
+                target_type: entry.targetType,
+                target_id: entry.targetId,
+                target_user_id: entry.targetUserId || null,
+                is_self_action: entry.isSelfAction || false,
+                details: entry.details || {}
+            })
+
+        if (error) {
+            console.error('[logStaffActivityServer] Error:', error)
+            return false
+        }
+        return true
+    } catch (error) {
+        console.error('[logStaffActivityServer] Exception:', error)
+        return false
+    }
+}
+
+/**
+ * Server Action: Convert reservation to loan
+ * Fixes:
+ * 🔴 1. Error handling for all steps (reservation + equipment update)
+ * 🔴 2. Discord notification on conversion
+ * 🟡 3. Validates reservation status before converting
+ * 🟡 4. Uses server-side Supabase client (not client-side REST API)
+ */
+export async function convertReservationToLoanAction(
+    reservationId: string
+): Promise<{ success: boolean; error?: string; loanId?: string }> {
+    const supabase = await createClient()
+
+    // 1. Authenticate user & check role
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+        return { success: false, error: 'กรุณาเข้าสู่ระบบ' }
+    }
+
+    const { data: profile } = await (supabase as any)
+        .from('profiles')
+        .select('role, first_name, last_name')
+        .eq('id', user.id)
+        .single()
+
+    if (!profile || (profile.role !== 'staff' && profile.role !== 'admin')) {
+        return { success: false, error: 'ไม่มีสิทธิ์ดำเนินการ' }
+    }
+
+    // 2. Fetch reservation with equipment info — validate status (🟡 Fix #3)
+    const { data: reservation, error: fetchError } = await (supabase as any)
+        .from('reservations')
+        .select('*, equipment(name, equipment_number)')
+        .eq('id', reservationId)
+        .single()
+
+    if (fetchError || !reservation) {
+        return { success: false, error: 'ไม่พบข้อมูลการจอง' }
+    }
+
+    if (reservation.status !== 'ready' && reservation.status !== 'approved') {
+        return { success: false, error: `ไม่สามารถแปลงการจองได้ สถานะปัจจุบัน: ${reservation.status}` }
+    }
+
+    try {
+        // 3. Create loan request (auto-approved)
+        const { data: loanData, error: loanError } = await (supabase as any)
+            .from('loanRequests')
+            .insert({
+                user_id: reservation.user_id,
+                equipment_id: reservation.equipment_id,
+                start_date: reservation.start_date,
+                end_date: reservation.end_date,
+                status: 'approved'
+            })
+            .select('id')
+            .single()
+
+        if (loanError || !loanData) {
+            console.error('[convertReservationToLoan] Loan creation error:', loanError)
+            return { success: false, error: 'ไม่สามารถสร้างคำขอยืมได้' }
+        }
+
+        const loanId = loanData.id
+
+        // 4. Update reservation status to completed (🔴 Fix #1 — check error)
+        const { error: reservationUpdateError } = await (supabase as any)
+            .from('reservations')
+            .update({
+                status: 'completed',
+                loan_id: loanId,
+                completed_at: new Date().toISOString(),
+                completed_by: user.id,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', reservationId)
+
+        if (reservationUpdateError) {
+            console.error('[convertReservationToLoan] Reservation update error:', reservationUpdateError)
+            // Rollback: delete the created loan
+            await (supabase as any).from('loanRequests').delete().eq('id', loanId)
+            return { success: false, error: 'ไม่สามารถอัปเดตสถานะการจองได้' }
+        }
+
+        // 5. Update equipment status to borrowed (🔴 Fix #1 — check error)
+        const { error: equipmentUpdateError } = await (supabase as any)
+            .from('equipment')
+            .update({ status: 'borrowed' })
+            .eq('id', reservation.equipment_id)
+
+        if (equipmentUpdateError) {
+            console.error('[convertReservationToLoan] Equipment update error:', equipmentUpdateError)
+            // Rollback: revert reservation and delete loan
+            await (supabase as any)
+                .from('reservations')
+                .update({ status: reservation.status, loan_id: null, completed_at: null, completed_by: null })
+                .eq('id', reservationId)
+            await (supabase as any).from('loanRequests').delete().eq('id', loanId)
+            return { success: false, error: 'ไม่สามารถอัปเดตสถานะอุปกรณ์ได้' }
+        }
+
+        // 6. Log staff activity
+        await logStaffActivityServer(supabase, {
+            staffId: user.id,
+            staffRole: profile.role as 'staff' | 'admin',
+            actionType: 'convert_to_loan',
+            targetType: 'reservation',
+            targetId: reservationId,
+            targetUserId: reservation.user_id,
+            isSelfAction: reservation.user_id === user.id,
+            details: { loan_id: loanId }
+        })
+
+        // 7. Send Discord notification (🔴 Fix #2)
+        try {
+            // Fetch borrower profile for notification
+            const { data: borrowerProfile } = await (supabase as any)
+                .from('profiles')
+                .select('first_name, last_name, email, departments(name)')
+                .eq('id', reservation.user_id)
+                .single()
+
+            const borrowerName = borrowerProfile
+                ? `${borrowerProfile.first_name || ''} ${borrowerProfile.last_name || ''}`.trim()
+                : 'ไม่ทราบ'
+            const dept = borrowerProfile?.departments?.name || '-'
+            const staffName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+            const equipmentName = reservation.equipment?.name || 'ไม่ทราบ'
+            const equipmentNumber = reservation.equipment?.equipment_number || '-'
+
+            const message = `
+**🔄 แปลงการจองเป็นการยืม**
+
+👤 **ผู้ยืม:** ${borrowerName}
+🏢 **หน่วยงาน:** ${dept}
+
+📦 **อุปกรณ์:** ${equipmentName}
+🔖 **รหัส:** #${equipmentNumber}
+
+📅 **วันที่รับ:** ${formatThaiDate(reservation.start_date)}
+📅 **วันที่คืน:** ${formatThaiDate(reservation.end_date)}
+
+👨‍💼 **ดำเนินการโดย:** ${staffName}
+✅ **สถานะ:** อนุมัติอัตโนมัติ (จากการจอง)
+            `.trim()
+
+            await sendDiscordNotification(message, 'loan')
+        } catch (notifyError) {
+            console.error('[convertReservationToLoan] Notification failed:', notifyError)
+            // Don't fail the action if notification fails
+        }
+
+        // 8. Revalidate paths
+        revalidatePath('/my-reservations')
+        revalidatePath('/my-loans')
+        revalidatePath('/staff/reservations')
+        revalidatePath('/admin/reservations')
+        revalidatePath('/staff/loans')
+
+        return { success: true, loanId }
+    } catch (error) {
+        console.error('[convertReservationToLoan] Error:', error)
+        return { success: false, error: 'เกิดข้อผิดพลาดที่ไม่คาดคิด' }
+    }
+}
