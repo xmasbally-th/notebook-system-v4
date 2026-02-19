@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { FileDown, Printer, Loader2 } from 'lucide-react'
+import { FileDown, Loader2 } from 'lucide-react'
 import { formatThaiDate, formatThaiDateTime } from '@/lib/formatThaiDate'
 import type { ReportData } from '@/hooks/useReportData'
 
@@ -16,263 +16,108 @@ const REPORT_HEADER = 'รายงานสถิติการใช้งา
 const ORGANIZATION = 'คณะวิทยาการจัดการ มหาวิทยาลัยราชภัฏลำปาง'
 
 export default function ReportPDFExport({ data, dateRange, isLoading }: ReportPDFExportProps) {
-    const [isPrinting, setIsPrinting] = useState(false)
-    const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+    const [isGenerating, setIsGenerating] = useState(false)
 
-    // Print report using browser print dialog
-    const handlePrint = () => {
-        setIsPrinting(true)
+    const handleExportPDF = () => {
+        if (!data) return
+        setIsGenerating(true)
 
-        // Create printable content
         const printContent = generatePrintableHTML(data, dateRange)
-
-        // Open new window with print content
         const printWindow = window.open('', '_blank')
+
         if (printWindow) {
             printWindow.document.write(printContent)
             printWindow.document.close()
+
+            // Wait for fonts to load before printing
             printWindow.onload = () => {
-                printWindow.print()
-                printWindow.onafterprint = () => {
-                    printWindow.close()
-                    setIsPrinting(false)
-                }
+                setTimeout(() => {
+                    printWindow.print()
+                    setIsGenerating(false)
+                }, 500)
             }
+
+            // Fallback timeout
+            setTimeout(() => setIsGenerating(false), 5000)
         } else {
-            setIsPrinting(false)
-            alert('กรุณาอนุญาตให้เปิด popup เพื่อพิมพ์รายงาน')
-        }
-    }
-
-    // Generate PDF using @react-pdf/renderer (if available)
-    const handleGeneratePDF = async () => {
-        setIsGeneratingPDF(true)
-
-        try {
-            // Dynamically import @react-pdf/renderer
-            const { pdf, Document, Page, Text, View, StyleSheet, Font } = await import('@react-pdf/renderer')
-
-            // Register Thai font (optional - fallback to default if not available)
-            try {
-                Font.register({
-                    family: 'Sarabun',
-                    src: '/fonts/Sarabun-Regular.ttf'
-                })
-            } catch {
-                // Using default font
-            }
-
-            // Create PDF document
-            const styles = StyleSheet.create({
-                page: {
-                    padding: 40,
-                    fontSize: 10,
-                    fontFamily: 'Helvetica'
-                },
-                header: {
-                    textAlign: 'center',
-                    marginBottom: 20
-                },
-                title: {
-                    fontSize: 16,
-                    fontWeight: 'bold',
-                    marginBottom: 5
-                },
-                subtitle: {
-                    fontSize: 12,
-                    color: '#666',
-                    marginBottom: 5
-                },
-                dateRange: {
-                    fontSize: 10,
-                    color: '#888'
-                },
-                section: {
-                    marginBottom: 20
-                },
-                sectionTitle: {
-                    fontSize: 12,
-                    fontWeight: 'bold',
-                    marginBottom: 10,
-                    borderBottomWidth: 1,
-                    borderBottomColor: '#ddd',
-                    paddingBottom: 5
-                },
-                row: {
-                    flexDirection: 'row',
-                    marginBottom: 5
-                },
-                label: {
-                    width: '40%',
-                    color: '#666'
-                },
-                value: {
-                    width: '60%',
-                    fontWeight: 'bold'
-                },
-                table: {
-                    marginTop: 10
-                },
-                tableHeader: {
-                    flexDirection: 'row',
-                    backgroundColor: '#f5f5f5',
-                    padding: 5,
-                    fontWeight: 'bold'
-                },
-                tableRow: {
-                    flexDirection: 'row',
-                    padding: 5,
-                    borderBottomWidth: 1,
-                    borderBottomColor: '#eee'
-                },
-                tableCell: {
-                    flex: 1
-                },
-                footer: {
-                    position: 'absolute',
-                    bottom: 30,
-                    left: 40,
-                    right: 40,
-                    textAlign: 'center',
-                    fontSize: 8,
-                    color: '#999'
-                }
-            })
-
-            const MyDocument = () => (
-                <Document>
-                    <Page size="A4" style={styles.page}>
-                        {/* Header */}
-                        <View style={styles.header}>
-                            <Text style={styles.title}>{REPORT_HEADER}</Text>
-                            <Text style={styles.subtitle}>{ORGANIZATION}</Text>
-                            <Text style={styles.dateRange}>
-                                ช่วงเวลา: {formatThaiDate(dateRange.from)} - {formatThaiDate(dateRange.to)}
-                            </Text>
-                        </View>
-
-                        {/* Loan Stats Section */}
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>สถิติการยืม-คืน</Text>
-                            <View style={styles.row}>
-                                <Text style={styles.label}>รวมทั้งหมด:</Text>
-                                <Text style={styles.value}>{data?.loanStats.total ?? 0} รายการ</Text>
-                            </View>
-                            <View style={styles.row}>
-                                <Text style={styles.label}>รอดำเนินการ:</Text>
-                                <Text style={styles.value}>{data?.loanStats.pending ?? 0} รายการ</Text>
-                            </View>
-                            <View style={styles.row}>
-                                <Text style={styles.label}>อนุมัติแล้ว:</Text>
-                                <Text style={styles.value}>{data?.loanStats.approved ?? 0} รายการ</Text>
-                            </View>
-                            <View style={styles.row}>
-                                <Text style={styles.label}>คืนแล้ว:</Text>
-                                <Text style={styles.value}>{data?.loanStats.returned ?? 0} รายการ</Text>
-                            </View>
-                            <View style={styles.row}>
-                                <Text style={styles.label}>เกินกำหนด:</Text>
-                                <Text style={styles.value}>{data?.loanStats.overdue ?? 0} รายการ</Text>
-                            </View>
-                        </View>
-
-                        {/* Reservation Stats Section */}
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>สถิติการจอง</Text>
-                            <View style={styles.row}>
-                                <Text style={styles.label}>รวมทั้งหมด:</Text>
-                                <Text style={styles.value}>{data?.reservationStats.total ?? 0} รายการ</Text>
-                            </View>
-                            <View style={styles.row}>
-                                <Text style={styles.label}>รอดำเนินการ:</Text>
-                                <Text style={styles.value}>{data?.reservationStats.pending ?? 0} รายการ</Text>
-                            </View>
-                            <View style={styles.row}>
-                                <Text style={styles.label}>เสร็จสิ้น:</Text>
-                                <Text style={styles.value}>{data?.reservationStats.completed ?? 0} รายการ</Text>
-                            </View>
-                        </View>
-
-                        {/* Equipment Stats Section */}
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>สถิติอุปกรณ์</Text>
-                            <View style={styles.row}>
-                                <Text style={styles.label}>รวมทั้งหมด:</Text>
-                                <Text style={styles.value}>{data?.equipmentStats.total ?? 0} ชิ้น</Text>
-                            </View>
-                            <View style={styles.row}>
-                                <Text style={styles.label}>พร้อมใช้งาน:</Text>
-                                <Text style={styles.value}>{data?.equipmentStats.ready ?? 0} ชิ้น</Text>
-                            </View>
-                            <View style={styles.row}>
-                                <Text style={styles.label}>ถูกยืม:</Text>
-                                <Text style={styles.value}>{data?.equipmentStats.borrowed ?? 0} ชิ้น</Text>
-                            </View>
-                            <View style={styles.row}>
-                                <Text style={styles.label}>ซ่อมบำรุง:</Text>
-                                <Text style={styles.value}>{data?.equipmentStats.maintenance ?? 0} ชิ้น</Text>
-                            </View>
-                        </View>
-
-                        {/* Footer */}
-                        <Text style={styles.footer}>
-                            พิมพ์เมื่อ: {formatThaiDateTime(new Date())} | {ORGANIZATION}
-                        </Text>
-                    </Page>
-                </Document>
-            )
-
-            // Generate and download PDF
-            const blob = await pdf(<MyDocument />).toBlob()
-            const url = URL.createObjectURL(blob)
-            const link = document.createElement('a')
-            link.href = url
-            link.download = `รายงานสถิติ_${formatThaiDate(new Date()).replace(/\//g, '-')}.pdf`
-            link.click()
-            URL.revokeObjectURL(url)
-
-        } catch (error) {
-            console.error('PDF generation error:', error)
-            // Fallback to print
-            alert('ไม่สามารถสร้าง PDF ได้ กรุณาติดตั้ง @react-pdf/renderer หรือใช้ปุ่มพิมพ์แทน')
-        } finally {
-            setIsGeneratingPDF(false)
+            setIsGenerating(false)
+            alert('กรุณาอนุญาตให้เปิด popup เพื่อส่งออก PDF (เลือก "Save as PDF" ในหน้าต่างพิมพ์)')
         }
     }
 
     return (
-        <div className="flex gap-2">
-            <button
-                onClick={handlePrint}
-                disabled={isPrinting || isLoading || !data}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                {isPrinting ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                    <Printer className="w-4 h-4" />
-                )}
-                พิมพ์รายงาน
-            </button>
-
-            <button
-                onClick={handleGeneratePDF}
-                disabled={isGeneratingPDF || isLoading || !data}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                {isGeneratingPDF ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                    <FileDown className="w-4 h-4" />
-                )}
-                ส่งออก PDF
-            </button>
-        </div>
+        <button
+            onClick={handleExportPDF}
+            disabled={isGenerating || isLoading || !data}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+            {isGenerating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+                <FileDown className="w-4 h-4" />
+            )}
+            ส่งออก PDF
+        </button>
     )
 }
 
-// Generate printable HTML
-function generatePrintableHTML(data: ReportData | undefined, dateRange: { from: Date; to: Date }): string {
+// Build category breakdown from data
+function buildCategoryBreakdown(data: ReportData) {
+    if (!data.allEquipment || !data.equipmentTypes) return []
+
+    return data.equipmentTypes.map(type => {
+        const items = data.allEquipment.filter(eq => eq.equipment_type_id === type.id)
+        const total = items.length
+        const ready = items.filter(e => e.status === 'ready' || e.status === 'active').length
+        const borrowed = items.filter(e => e.status === 'borrowed').length
+        const maintenance = items.filter(e => e.status === 'maintenance').length
+        const usageRate = total > 0 ? Math.round((borrowed / total) * 100) : 0
+
+        return { name: type.name, icon: type.icon, total, ready, borrowed, maintenance, usageRate }
+    }).sort((a, b) => b.total - a.total)
+}
+
+// Build least-borrowed equipment list
+function buildLeastBorrowed(data: ReportData) {
+    if (!data.allEquipment || !data.popularEquipment) return []
+
+    const usageMap: Record<string, number> = {}
+    data.popularEquipment.forEach(item => {
+        usageMap[item.id] = item.total_usage
+    })
+
+    return data.allEquipment
+        .map(eq => {
+            const type = data.equipmentTypes?.find(t => t.id === eq.equipment_type_id)
+            return {
+                name: eq.name,
+                equipment_number: eq.equipment_number,
+                type_name: type ? `${type.icon} ${type.name}` : '-',
+                total_usage: usageMap[eq.id] || 0,
+                status: eq.status,
+            }
+        })
+        .sort((a, b) => a.total_usage - b.total_usage)
+        .slice(0, 10)
+}
+
+// Status label helper
+function getStatusThaiLabel(status: string): string {
+    const map: Record<string, string> = {
+        ready: 'พร้อมใช้งาน',
+        active: 'พร้อมใช้งาน',
+        borrowed: 'ถูกใช้งาน',
+        maintenance: 'ซ่อมบำรุง',
+        retired: 'เลิกใช้งาน',
+    }
+    return map[status] || status
+}
+
+// Generate printable HTML with full report data
+function generatePrintableHTML(data: ReportData, dateRange: { from: Date; to: Date }): string {
+    const categoryBreakdown = buildCategoryBreakdown(data)
+    const leastBorrowed = buildLeastBorrowed(data)
+
     return `
 <!DOCTYPE html>
 <html lang="th">
@@ -280,103 +125,102 @@ function generatePrintableHTML(data: ReportData | undefined, dateRange: { from: 
     <meta charset="UTF-8">
     <title>${REPORT_HEADER}</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
         
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
-            font-family: 'Sarabun', sans-serif;
-            font-size: 12pt;
+            font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
+            font-size: 11pt;
             line-height: 1.6;
-            color: #333;
-            padding: 20mm;
+            color: #1f2937;
+            padding: 15mm 20mm;
+            background: #fff;
         }
         
         .header {
             text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #2563eb;
-            padding-bottom: 20px;
-        }
-        
-        .logo-placeholder {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 15px;
-            background: #f3f4f6;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #9ca3af;
-            font-size: 10pt;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #1e40af;
         }
         
         .title {
-            font-size: 18pt;
-            font-weight: bold;
-            color: #1e40af;
-            margin-bottom: 5px;
+            font-size: 17pt;
+            font-weight: 700;
+            color: #1e3a5f;
+            margin-bottom: 3px;
         }
         
         .subtitle {
-            font-size: 14pt;
+            font-size: 13pt;
             color: #4b5563;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         
         .date-range {
-            font-size: 11pt;
+            font-size: 10pt;
             color: #6b7280;
+            margin-top: 5px;
         }
         
         .section {
-            margin-bottom: 25px;
+            margin-bottom: 22px;
+            page-break-inside: avoid;
         }
         
         .section-title {
-            font-size: 14pt;
-            font-weight: bold;
-            color: #1f2937;
-            border-bottom: 1px solid #e5e7eb;
-            padding-bottom: 8px;
-            margin-bottom: 15px;
+            font-size: 13pt;
+            font-weight: 700;
+            color: #1e3a5f;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
         }
         
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 12px;
+            margin-bottom: 15px;
         }
         
         .stat-card {
-            background: #f9fafb;
             border: 1px solid #e5e7eb;
             border-radius: 8px;
-            padding: 15px;
+            padding: 12px;
             text-align: center;
+            background: #f9fafb;
         }
         
         .stat-value {
-            font-size: 24pt;
-            font-weight: bold;
+            font-size: 22pt;
+            font-weight: 700;
             color: #2563eb;
+            line-height: 1.2;
         }
         
         .stat-label {
-            font-size: 10pt;
+            font-size: 9pt;
             color: #6b7280;
+            margin-top: 2px;
+        }
+        
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
+            margin-top: 8px;
+            font-size: 10pt;
         }
         
         th, td {
-            padding: 10px;
+            padding: 7px 10px;
             text-align: left;
             border-bottom: 1px solid #e5e7eb;
         }
@@ -384,13 +228,97 @@ function generatePrintableHTML(data: ReportData | undefined, dateRange: { from: 
         th {
             background: #f3f4f6;
             font-weight: 600;
+            color: #374151;
+            font-size: 9pt;
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .text-bold { font-weight: 600; }
+        .text-red { color: #dc2626; }
+        .text-green { color: #16a34a; }
+        .text-blue { color: #2563eb; }
+        .text-orange { color: #ea580c; }
+        .text-purple { color: #7c3aed; }
+        .text-gray { color: #6b7280; }
+        
+        .category-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .category-row:last-child {
+            border-bottom: none;
+        }
+        
+        .cat-icon {
+            font-size: 16pt;
+            width: 30px;
+            text-align: center;
+        }
+        
+        .cat-name {
+            flex: 1;
+            font-weight: 600;
+        }
+        
+        .cat-stats {
+            display: flex;
+            gap: 12px;
+            font-size: 9pt;
+        }
+        
+        .cat-stats span {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+        
+        .dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .dot-green { background: #16a34a; }
+        .dot-blue { background: #2563eb; }
+        .dot-orange { background: #ea580c; }
+        
+        .bar-container {
+            width: 80px;
+            height: 10px;
+            background: #e5e7eb;
+            border-radius: 5px;
+            overflow: hidden;
+            display: inline-flex;
+        }
+        
+        .bar-green { background: #16a34a; }
+        .bar-blue { background: #2563eb; }
+        .bar-orange { background: #ea580c; }
+        
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #f3f4f6;
+            font-size: 9pt;
+            font-weight: 600;
         }
         
         .footer {
-            position: fixed;
-            bottom: 20mm;
-            left: 20mm;
-            right: 20mm;
+            margin-top: 30px;
             text-align: center;
             font-size: 9pt;
             color: #9ca3af;
@@ -399,93 +327,200 @@ function generatePrintableHTML(data: ReportData | undefined, dateRange: { from: 
         }
         
         @media print {
-            body { padding: 0; }
-            .no-print { display: none; }
+            body { padding: 10mm 15mm; }
+            .section { page-break-inside: avoid; }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <div class="logo-placeholder">โลโก้</div>
         <div class="title">${REPORT_HEADER}</div>
         <div class="subtitle">${ORGANIZATION}</div>
         <div class="date-range">ช่วงเวลา: ${formatThaiDate(dateRange.from)} - ${formatThaiDate(dateRange.to)}</div>
     </div>
     
+    <!-- Overview Stats -->
     <div class="section">
         <div class="section-title">📊 สรุปภาพรวม</div>
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-value">${data?.loanStats.total ?? 0}</div>
+                <div class="stat-value text-blue">${data.loanStats.total ?? 0}</div>
                 <div class="stat-label">การยืมทั้งหมด</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">${data?.reservationStats.total ?? 0}</div>
+                <div class="stat-value text-purple">${data.reservationStats.total ?? 0}</div>
                 <div class="stat-label">การจองทั้งหมด</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">${data?.equipmentStats.total ?? 0}</div>
+                <div class="stat-value">${data.equipmentStats.total ?? 0}</div>
                 <div class="stat-label">อุปกรณ์ทั้งหมด</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" style="color: #dc2626;">${data?.loanStats.overdue ?? 0}</div>
+                <div class="stat-value text-red">${data.loanStats.overdue ?? 0}</div>
                 <div class="stat-label">เกินกำหนด</div>
             </div>
         </div>
     </div>
     
-    <div class="section">
-        <div class="section-title">📋 สถิติการยืม-คืน</div>
-        <table>
-            <tr><td>รวมทั้งหมด</td><td><strong>${data?.loanStats.total ?? 0}</strong> รายการ</td></tr>
-            <tr><td>รอดำเนินการ</td><td><strong>${data?.loanStats.pending ?? 0}</strong> รายการ</td></tr>
-            <tr><td>อนุมัติแล้ว</td><td><strong>${data?.loanStats.approved ?? 0}</strong> รายการ</td></tr>
-            <tr><td>คืนแล้ว</td><td><strong>${data?.loanStats.returned ?? 0}</strong> รายการ</td></tr>
-            <tr><td>ปฏิเสธ</td><td><strong>${data?.loanStats.rejected ?? 0}</strong> รายการ</td></tr>
-            <tr><td>เกินกำหนด</td><td><strong style="color: #dc2626;">${data?.loanStats.overdue ?? 0}</strong> รายการ</td></tr>
-        </table>
+    <!-- Loan & Reservation Stats (side by side) -->
+    <div class="section two-col">
+        <div>
+            <div class="section-title">📋 สถิติการยืม-คืน</div>
+            <table>
+                <tr><td>รวมทั้งหมด</td><td class="text-right text-bold">${data.loanStats.total ?? 0} รายการ</td></tr>
+                <tr><td>รอดำเนินการ</td><td class="text-right text-bold">${data.loanStats.pending ?? 0} รายการ</td></tr>
+                <tr><td>อนุมัติแล้ว</td><td class="text-right text-bold">${data.loanStats.approved ?? 0} รายการ</td></tr>
+                <tr><td>คืนแล้ว</td><td class="text-right text-bold text-green">${data.loanStats.returned ?? 0} รายการ</td></tr>
+                <tr><td>ปฏิเสธ</td><td class="text-right text-bold">${data.loanStats.rejected ?? 0} รายการ</td></tr>
+                <tr><td>เกินกำหนด</td><td class="text-right text-bold text-red">${data.loanStats.overdue ?? 0} รายการ</td></tr>
+            </table>
+        </div>
+        <div>
+            <div class="section-title">📅 สถิติการจอง</div>
+            <table>
+                <tr><td>รวมทั้งหมด</td><td class="text-right text-bold">${data.reservationStats.total ?? 0} รายการ</td></tr>
+                <tr><td>รอดำเนินการ</td><td class="text-right text-bold">${data.reservationStats.pending ?? 0} รายการ</td></tr>
+                <tr><td>อนุมัติแล้ว</td><td class="text-right text-bold">${data.reservationStats.approved ?? 0} รายการ</td></tr>
+                <tr><td>เสร็จสิ้น</td><td class="text-right text-bold text-green">${data.reservationStats.completed ?? 0} รายการ</td></tr>
+                <tr><td>ยกเลิก</td><td class="text-right text-bold">${data.reservationStats.cancelled ?? 0} รายการ</td></tr>
+            </table>
+        </div>
     </div>
     
-    <div class="section">
-        <div class="section-title">📅 สถิติการจอง</div>
-        <table>
-            <tr><td>รวมทั้งหมด</td><td><strong>${data?.reservationStats.total ?? 0}</strong> รายการ</td></tr>
-            <tr><td>รอดำเนินการ</td><td><strong>${data?.reservationStats.pending ?? 0}</strong> รายการ</td></tr>
-            <tr><td>อนุมัติแล้ว</td><td><strong>${data?.reservationStats.approved ?? 0}</strong> รายการ</td></tr>
-            <tr><td>เสร็จสิ้น</td><td><strong>${data?.reservationStats.completed ?? 0}</strong> รายการ</td></tr>
-            <tr><td>ยกเลิก</td><td><strong>${data?.reservationStats.cancelled ?? 0}</strong> รายการ</td></tr>
-        </table>
-    </div>
-    
+    <!-- Equipment Stats -->
     <div class="section">
         <div class="section-title">📦 สถิติอุปกรณ์</div>
-        <table>
-            <tr><td>รวมทั้งหมด</td><td><strong>${data?.equipmentStats.total ?? 0}</strong> ชิ้น</td></tr>
-            <tr><td>พร้อมใช้งาน</td><td><strong style="color: #16a34a;">${data?.equipmentStats.ready ?? 0}</strong> ชิ้น</td></tr>
-            <tr><td>ถูกยืม</td><td><strong style="color: #8b5cf6;">${data?.equipmentStats.borrowed ?? 0}</strong> ชิ้น</td></tr>
-            <tr><td>ซ่อมบำรุง</td><td><strong style="color: #f97316;">${data?.equipmentStats.maintenance ?? 0}</strong> ชิ้น</td></tr>
-        </table>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">${data.equipmentStats.total ?? 0}</div>
+                <div class="stat-label">ทั้งหมด</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value text-green">${data.equipmentStats.ready ?? 0}</div>
+                <div class="stat-label">พร้อมใช้งาน</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value text-purple">${data.equipmentStats.borrowed ?? 0}</div>
+                <div class="stat-label">ถูกยืม</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value text-orange">${data.equipmentStats.maintenance ?? 0}</div>
+                <div class="stat-label">ซ่อมบำรุง</div>
+            </div>
+        </div>
     </div>
     
-    ${data?.popularEquipment && data.popularEquipment.length > 0 ? `
+    <!-- Category Breakdown -->
+    ${categoryBreakdown.length > 0 ? `
     <div class="section">
-        <div class="section-title">🏆 อุปกรณ์ยอดนิยม (Top 5)</div>
+        <div class="section-title">📂 สรุปอุปกรณ์ตามประเภท</div>
         <table>
             <thead>
                 <tr>
-                    <th>อันดับ</th>
-                    <th>ชื่ออุปกรณ์</th>
-                    <th>รหัส</th>
-                    <th>จำนวนครั้งที่ใช้</th>
+                    <th>ประเภท</th>
+                    <th class="text-center">ทั้งหมด</th>
+                    <th class="text-center">พร้อมใช้</th>
+                    <th class="text-center">ถูกยืม</th>
+                    <th class="text-center">ซ่อมบำรุง</th>
+                    <th class="text-center">อัตราใช้งาน</th>
                 </tr>
             </thead>
             <tbody>
-                ${data.popularEquipment.slice(0, 5).map((item, index) => `
+                ${categoryBreakdown.map(cat => `
                     <tr>
-                        <td>${index + 1}</td>
-                        <td>${item.name}</td>
-                        <td>${item.equipment_number}</td>
-                        <td><strong>${item.total_usage}</strong></td>
+                        <td>${cat.icon} ${cat.name}</td>
+                        <td class="text-center text-bold">${cat.total}</td>
+                        <td class="text-center text-green">${cat.ready}</td>
+                        <td class="text-center text-blue">${cat.borrowed}</td>
+                        <td class="text-center text-orange">${cat.maintenance}</td>
+                        <td class="text-center text-bold">${cat.usageRate}%</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </div>
+    ` : ''}
+    
+    <!-- Popular Equipment -->
+    ${data.popularEquipment && data.popularEquipment.length > 0 ? `
+    <div class="section">
+        <div class="section-title">🏆 อุปกรณ์ที่ถูกยืมมากที่สุด (Top 10)</div>
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-center">อันดับ</th>
+                    <th>ชื่ออุปกรณ์</th>
+                    <th>รหัส</th>
+                    <th class="text-right">จำนวนครั้งที่ยืม</th>
+                    <th class="text-right">รวมการใช้งาน</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.popularEquipment.slice(0, 10).map((item, index) => `
+                    <tr>
+                        <td class="text-center"><span class="rank-badge">${index + 1}</span></td>
+                        <td class="text-bold">${item.name}</td>
+                        <td class="text-gray">${item.equipment_number}</td>
+                        <td class="text-right">${item.loan_count.toLocaleString()}</td>
+                        <td class="text-right text-bold">${item.total_usage.toLocaleString()}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </div>
+    ` : ''}
+    
+    <!-- Least Borrowed Equipment -->
+    ${leastBorrowed.length > 0 ? `
+    <div class="section">
+        <div class="section-title">📉 อุปกรณ์ที่ถูกยืมน้อยที่สุด (10 อันดับ)</div>
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-center">อันดับ</th>
+                    <th>ชื่ออุปกรณ์</th>
+                    <th>รหัส</th>
+                    <th>ประเภท</th>
+                    <th class="text-right">จำนวนครั้งที่ยืม</th>
+                    <th>สถานะ</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${leastBorrowed.map((item, index) => `
+                    <tr>
+                        <td class="text-center"><span class="rank-badge">${index + 1}</span></td>
+                        <td class="text-bold">${item.name}</td>
+                        <td class="text-gray">${item.equipment_number}</td>
+                        <td>${item.type_name}</td>
+                        <td class="text-right ${item.total_usage === 0 ? 'text-red text-bold' : 'text-orange'}">${item.total_usage} ครั้ง</td>
+                        <td>${getStatusThaiLabel(item.status)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </div>
+    ` : ''}
+    
+    <!-- Overdue Items -->
+    ${data.overdueItems && data.overdueItems.length > 0 ? `
+    <div class="section">
+        <div class="section-title">⚠️ รายการเกินกำหนดคืน (${data.overdueItems.length} รายการ)</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>ผู้ยืม</th>
+                    <th>อุปกรณ์</th>
+                    <th class="text-center">กำหนดคืน</th>
+                    <th class="text-center">เกินกำหนด</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.overdueItems.slice(0, 10).map(item => `
+                    <tr>
+                        <td>${item.user_name}</td>
+                        <td>${item.equipment_name}</td>
+                        <td class="text-center">${formatThaiDate(new Date(item.end_date))}</td>
+                        <td class="text-center text-red text-bold">${item.days_overdue} วัน</td>
                     </tr>
                 `).join('')}
             </tbody>
@@ -494,7 +529,8 @@ function generatePrintableHTML(data: ReportData | undefined, dateRange: { from: 
     ` : ''}
     
     <div class="footer">
-        พิมพ์เมื่อ: ${formatThaiDateTime(new Date())} | ${ORGANIZATION}
+        พิมพ์เมื่อ: ${formatThaiDateTime(new Date())} | ${ORGANIZATION}<br>
+        <span style="font-size: 8pt; color: #d1d5db;">* เลือก "Save as PDF" หรือ "บันทึกเป็น PDF" ในหน้าต่างพิมพ์ เพื่อบันทึกเป็นไฟล์ PDF</span>
     </div>
 </body>
 </html>
