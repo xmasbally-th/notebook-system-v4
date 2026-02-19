@@ -6,8 +6,12 @@ import AdminLayout from '@/components/admin/AdminLayout'
 import { useState, useMemo, Fragment } from 'react'
 import {
     Star, MessageSquare, ChevronDown, ChevronUp,
-    Search, AlertTriangle, Clock, CheckCircle, Info, Archive
+    Search, AlertTriangle, Clock, CheckCircle, Info, Archive,
+    Calendar, Download
 } from 'lucide-react'
+import { format, subDays, startOfMonth, endOfDay, startOfDay, parseISO, isWithinInterval } from 'date-fns'
+import { th } from 'date-fns/locale'
+import EvaluationCharts from '@/components/admin/EvaluationCharts'
 
 type TabType = 'completed' | 'pending'
 type PendingFilter = 'mandatory' | 'all'
@@ -18,6 +22,10 @@ export default function EvaluationsPage() {
     const [activeTab, setActiveTab] = useState<TabType>('completed')
     const [showScoringInfo, setShowScoringInfo] = useState(false)
     const [pendingFilter, setPendingFilter] = useState<PendingFilter>('mandatory')
+    const [dateRange, setDateRange] = useState({
+        start: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
+        end: format(new Date(), 'yyyy-MM-dd')
+    })
 
     // Fetch system config for cutoff date
     const { data: systemConfig } = useQuery({
@@ -160,7 +168,18 @@ export default function EvaluationsPage() {
 
     const filteredEvaluations = useMemo(() => {
         if (!evaluations) return []
-        return evaluations.filter((e: any) => {
+
+        // 1. Filter by Date Range
+        const startDate = startOfDay(parseISO(dateRange.start))
+        const endDate = endOfDay(parseISO(dateRange.end))
+
+        const dateFiltered = evaluations.filter((e: any) => {
+            const created = parseISO(e.created_at)
+            return isWithinInterval(created, { start: startDate, end: endDate })
+        })
+
+        // 2. Filter by Search Term
+        return dateFiltered.filter((e: any) => {
             const searchLower = searchTerm.toLowerCase()
             return (
                 e.profiles?.first_name?.toLowerCase().includes(searchLower) ||
@@ -169,7 +188,34 @@ export default function EvaluationsPage() {
                 e.loanRequests?.equipment?.equipment_number?.toLowerCase().includes(searchLower)
             )
         })
-    }, [evaluations, searchTerm])
+    }, [evaluations, searchTerm, dateRange])
+
+    const handleExportCSV = () => {
+        if (!filteredEvaluations.length) return
+
+        const headers = ['วันที่', 'ผู้ประเมิน', 'อีเมล', 'อุปกรณ์', 'รหัสครุภัณฑ์', 'คะแนนรวม', 'ข้อเสนอแนะ']
+        const csvContent = [
+            headers.join(','),
+            ...filteredEvaluations.map((item: any) => [
+                `"${format(parseISO(item.created_at), 'dd/MM/yyyy HH:mm')}"`,
+                `"${item.profiles?.first_name} ${item.profiles?.last_name}"`,
+                `"${item.profiles?.email}"`,
+                `"${item.loanRequests?.equipment?.name}"`,
+                `"${item.loanRequests?.equipment?.equipment_number}"`,
+                item.rating,
+                `"${(item.suggestions || '').replace(/"/g, '""')}"`
+            ].join(','))
+        ].join('\n')
+
+        const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', `evaluations_export_${format(new Date(), 'yyyyMMdd_HHmm')}.csv`)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+    }
 
     const displayedPending = useMemo(() => {
         const source = pendingFilter === 'mandatory' ? mandatoryPending : (pendingEvaluations || [])
@@ -251,6 +297,47 @@ export default function EvaluationsPage() {
                 </div>
             </div>
 
+            {/* Controls (Date Filter & Export) */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6 flex flex-wrap gap-4 items-center justify-between">
+                <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-700">ช่วงเวลา:</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="date"
+                            value={dateRange.start}
+                            onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="text-gray-400">-</span>
+                        <input
+                            type="date"
+                            value={dateRange.end}
+                            onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                </div>
+                <button
+                    onClick={handleExportCSV}
+                    disabled={filteredEvaluations.length === 0}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                >
+                    <Download className="w-4 h-4" />
+                    ส่งออก CSV
+                </button>
+            </div>
+
+            {/* Charts Section */}
+            {activeTab === 'completed' && filteredEvaluations.length > 0 && (
+                <EvaluationCharts
+                    evaluations={filteredEvaluations}
+                    dateRange={dateRange}
+                />
+            )}
+
             {/* Section Averages + Scoring Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-sm">
@@ -317,8 +404,8 @@ export default function EvaluationsPage() {
                 <button
                     onClick={() => { setActiveTab('completed'); setSearchTerm('') }}
                     className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all ${activeTab === 'completed'
-                            ? 'bg-blue-600 text-white'
-                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                         }`}
                 >
                     <CheckCircle className="w-4 h-4" />
@@ -331,8 +418,8 @@ export default function EvaluationsPage() {
                 <button
                     onClick={() => { setActiveTab('pending'); setSearchTerm('') }}
                     className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all ${activeTab === 'pending'
-                            ? 'bg-orange-500 text-white'
-                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        ? 'bg-orange-500 text-white'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                         }`}
                 >
                     <Clock className="w-4 h-4" />
@@ -362,8 +449,8 @@ export default function EvaluationsPage() {
                             <button
                                 onClick={() => setPendingFilter('mandatory')}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${pendingFilter === 'mandatory'
-                                        ? 'bg-orange-100 text-orange-700 border border-orange-200'
-                                        : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+                                    ? 'bg-orange-100 text-orange-700 border border-orange-200'
+                                    : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
                                     }`}
                             >
                                 บังคับ ({mandatoryPending.length})
@@ -371,8 +458,8 @@ export default function EvaluationsPage() {
                             <button
                                 onClick={() => setPendingFilter('all')}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${pendingFilter === 'all'
-                                        ? 'bg-gray-200 text-gray-700 border border-gray-300'
-                                        : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+                                    ? 'bg-gray-200 text-gray-700 border border-gray-300'
+                                    : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
                                     }`}
                             >
                                 ทั้งหมด ({totalPending})
@@ -568,10 +655,10 @@ export default function EvaluationsPage() {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${isOverdue
-                                                            ? 'bg-red-100 text-red-700'
-                                                            : daysSinceReturn >= 1
-                                                                ? 'bg-yellow-100 text-yellow-700'
-                                                                : 'bg-gray-100 text-gray-600'
+                                                        ? 'bg-red-100 text-red-700'
+                                                        : daysSinceReturn >= 1
+                                                            ? 'bg-yellow-100 text-yellow-700'
+                                                            : 'bg-gray-100 text-gray-600'
                                                         }`}>
                                                         <Clock className="w-3 h-3" />
                                                         {daysSinceReturn === 0 ? 'วันนี้' : `${daysSinceReturn} วัน`}
