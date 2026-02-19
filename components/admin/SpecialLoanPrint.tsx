@@ -282,7 +282,7 @@ export default function SpecialLoanPrint({ loan, onClose, logoUrl, organizationN
                                     {' '}เบอร์โทร <span className="field-value" style={{ minWidth: '120px' }}>{loan.borrower_phone || ''}</span>
                                 </div>
                                 <div className="form-row">
-                                    สังกัด/สาขาวิชา <span className="field-value" style={{ minWidth: '200px' }}></span>
+                                    สังกัด/สาขาวิชา <span className="field-value" style={{ minWidth: '200px' }}>{loan.borrower_department || ''}</span>
                                     {' '}มีความประสงค์ขอยืม <span className="field-value" style={{ minWidth: '180px' }}>{loan.equipment_type_name}</span>
                                 </div>
                                 <div className="form-row">

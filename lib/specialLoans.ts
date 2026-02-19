@@ -4,11 +4,13 @@ import { logStaffActivity, ActionType } from './staffActivityLog'
 
 export interface SpecialLoan {
     id: string
-    borrower_id: string
+    borrower_id: string | null
     borrower_name: string
     borrower_phone: string | null
     borrower_title: string | null
     borrower_department: string | null
+    external_borrower_name: string | null
+    external_borrower_org: string | null
     equipment_type_id: string | null
     equipment_type_name: string
     quantity: number
@@ -39,8 +41,10 @@ export interface SpecialLoan {
 }
 
 export interface CreateSpecialLoanInput {
-    borrowerId: string
-    borrowerName: string
+    borrowerId?: string
+    borrowerName?: string
+    externalBorrowerName?: string
+    externalBorrowerOrg?: string
     borrowerPhone?: string
     equipmentTypeId?: string
     equipmentTypeName: string
@@ -119,9 +123,11 @@ export async function createSpecialLoan(
                 'Prefer': 'return=representation'
             },
             body: JSON.stringify({
-                borrower_id: input.borrowerId,
-                borrower_name: input.borrowerName,
+                borrower_id: input.borrowerId || null,
+                borrower_name: input.borrowerName || input.externalBorrowerName,
                 borrower_phone: input.borrowerPhone || null,
+                external_borrower_name: input.externalBorrowerName || null,
+                external_borrower_org: input.externalBorrowerOrg || null,
                 equipment_type_id: input.equipmentTypeId || null,
                 equipment_type_name: input.equipmentTypeName,
                 quantity: input.quantity,
@@ -247,7 +253,7 @@ export async function getSpecialLoans(
             return {
                 ...loan,
                 borrower_title: profile?.title || null,
-                borrower_department: deptName || null,
+                borrower_department: deptName || loan.external_borrower_org || null,
                 borrower: profile || {
                     first_name: null,
                     last_name: null,

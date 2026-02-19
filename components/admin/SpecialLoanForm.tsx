@@ -11,7 +11,11 @@ import {
     Calendar,
     FileText,
     AlertTriangle,
-    Check
+    Check,
+    Building2,
+    Users,
+    Hash,
+    MousePointer2
 } from 'lucide-react'
 import { createSpecialLoan, checkSpecialLoanConflict } from '@/lib/specialLoans'
 import { getSupabaseCredentials } from '@/lib/supabase-helpers'
@@ -57,6 +61,15 @@ export default function SpecialLoanForm({ onClose, onSuccess }: Props) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState('')
     const [conflictIds, setConflictIds] = useState<string[]>([])
+
+    // New state for external borrower and selection mode
+    const [borrowerType, setBorrowerType] = useState<'lecturer' | 'external'>('lecturer')
+    const [externalBorrowerName, setExternalBorrowerName] = useState('')
+    const [externalBorrowerOrg, setExternalBorrowerOrg] = useState('')
+    const [externalBorrowerPhone, setExternalBorrowerPhone] = useState('')
+
+    const [selectionMode, setSelectionMode] = useState<'manual' | 'bulk'>('manual')
+    const [bulkQuantity, setBulkQuantity] = useState<number | ''>('')
 
     // Fetch lecturers
     const { data: lecturers = [] } = useQuery<Profile[]>({
@@ -155,9 +168,21 @@ export default function SpecialLoanForm({ onClose, onSuccess }: Props) {
         setSelectedEquipmentIds(equipment.map(e => e.id))
     }
 
-    // Deselect all
     const deselectAll = () => {
         setSelectedEquipmentIds([])
+        setBulkQuantity('')
+    }
+
+    // Handle bulk select
+    const handleBulkSelect = () => {
+        if (!bulkQuantity || bulkQuantity <= 0) return
+
+        // Simple selection: pick first N items
+        // In a real app, you might want to pick items with no conflicts first
+        // But conflict checking is async and per-item, so we'll just pick and let validation handle it
+        const numToSelect = Math.min(Number(bulkQuantity), equipment.length)
+        const toSelect = equipment.slice(0, numToSelect).map(e => e.id)
+        setSelectedEquipmentIds(toSelect)
     }
 
     // Handle submit
@@ -165,8 +190,19 @@ export default function SpecialLoanForm({ onClose, onSuccess }: Props) {
         e.preventDefault()
         setError('')
 
-        if (!selectedBorrowerId || !selectedTypeId || selectedEquipmentIds.length === 0 || !loanDate || !returnDate || !purpose) {
+        if (!selectedTypeId || selectedEquipmentIds.length === 0 || !loanDate || !returnDate || !purpose) {
+            console.log(selectedTypeId, selectedEquipmentIds.length, loanDate, returnDate, purpose)
             setError('กรุณากรอกข้อมูลให้ครบถ้วน')
+            return
+        }
+
+        if (borrowerType === 'lecturer' && !selectedBorrowerId) {
+            setError('กรุณาเลือกผู้อาจารย์ที่ยืม')
+            return
+        }
+
+        if (borrowerType === 'external' && (!externalBorrowerName || !externalBorrowerOrg)) {
+            setError('กรุณาระบุชื่อและหน่วยงานผู้ยืม')
             return
         }
 
@@ -187,9 +223,15 @@ export default function SpecialLoanForm({ onClose, onSuccess }: Props) {
         try {
             const selectedEquipment = equipment.filter(e => selectedEquipmentIds.includes(e.id))
             const result = await createSpecialLoan({
-                borrowerId: selectedBorrowerId,
-                borrowerName: `${selectedBorrower?.first_name || ''} ${selectedBorrower?.last_name || ''}`.trim(),
-                borrowerPhone: selectedBorrower?.phone_number || undefined,
+                borrowerId: borrowerType === 'lecturer' ? selectedBorrowerId : undefined,
+                borrowerName: borrowerType === 'lecturer'
+                    ? `${selectedBorrower?.first_name || ''} ${selectedBorrower?.last_name || ''}`.trim()
+                    : externalBorrowerName,
+                borrowerPhone: borrowerType === 'lecturer'
+                    ? (selectedBorrower?.phone_number || undefined)
+                    : (externalBorrowerPhone || undefined),
+                externalBorrowerName: borrowerType === 'external' ? externalBorrowerName : undefined,
+                externalBorrowerOrg: borrowerType === 'external' ? externalBorrowerOrg : undefined,
                 equipmentTypeId: selectedTypeId,
                 equipmentTypeName: selectedType?.name || '',
                 quantity: selectedEquipmentIds.length,
@@ -234,57 +276,121 @@ export default function SpecialLoanForm({ onClose, onSuccess }: Props) {
                     )}
 
                     {/* Borrower Selection */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div className="space-y-3">
+                        <label className="block text-sm font-medium text-gray-700">
                             <User className="w-4 h-4 inline mr-1" />
-                            ผู้ยืม (อาจารย์)
+                            ข้อมูลผู้ยืม
                         </label>
-                        {selectedBorrower ? (
-                            <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                <div>
-                                    <p className="font-medium text-blue-900">
-                                        {selectedBorrower.first_name} {selectedBorrower.last_name}
-                                    </p>
-                                    <p className="text-sm text-blue-600">{selectedBorrower.email}</p>
+
+                        {/* Borrower Type Toggles */}
+                        <div className="flex p-1 bg-gray-100 rounded-lg">
+                            <button
+                                type="button"
+                                onClick={() => setBorrowerType('lecturer')}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-md transition-all ${borrowerType === 'lecturer'
+                                        ? 'bg-white text-gray-900 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                            >
+                                <User className="w-4 h-4" />
+                                อาจารย์
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setBorrowerType('external')}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-md transition-all ${borrowerType === 'external'
+                                        ? 'bg-white text-gray-900 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                            >
+                                <Building2 className="w-4 h-4" />
+                                หน่วยงานอื่น
+                            </button>
+                        </div>
+
+                        {borrowerType === 'lecturer' ? (
+                            selectedBorrower ? (
+                                <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <div>
+                                        <p className="font-medium text-blue-900">
+                                            {selectedBorrower.first_name} {selectedBorrower.last_name}
+                                        </p>
+                                        <p className="text-sm text-blue-600">{selectedBorrower.email}</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedBorrowerId('')}
+                                        className="text-blue-600 hover:text-blue-800"
+                                    >
+                                        เปลี่ยน
+                                    </button>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedBorrowerId('')}
-                                    className="text-blue-600 hover:text-blue-800"
-                                >
-                                    เปลี่ยน
-                                </button>
-                            </div>
+                            ) : (
+                                <div>
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="ค้นหาอาจารย์..."
+                                            value={borrowerSearch}
+                                            onChange={(e) => setBorrowerSearch(e.target.value)}
+                                            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                        />
+                                    </div>
+                                    <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg">
+                                        {filteredLecturers.map(lecturer => (
+                                            <button
+                                                key={lecturer.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedBorrowerId(lecturer.id)
+                                                    setBorrowerSearch('')
+                                                }}
+                                                className="w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                                            >
+                                                <p className="font-medium">{lecturer.first_name} {lecturer.last_name}</p>
+                                                <p className="text-sm text-gray-500">{lecturer.email}</p>
+                                            </button>
+                                        ))}
+                                        {filteredLecturers.length === 0 && (
+                                            <p className="p-3 text-center text-gray-500 text-sm">ไม่พบอาจารย์</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )
                         ) : (
-                            <div>
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs text-gray-500 mb-1">ชื่อผู้ยืม / ผู้ติดต่อ</label>
+                                        <input
+                                            type="text"
+                                            value={externalBorrowerName}
+                                            onChange={(e) => setExternalBorrowerName(e.target.value)}
+                                            placeholder="ชื่อ-นามสกุล"
+                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-gray-500 mb-1">เบอร์โทรศัพท์</label>
+                                        <input
+                                            type="text"
+                                            value={externalBorrowerPhone}
+                                            onChange={(e) => setExternalBorrowerPhone(e.target.value)}
+                                            placeholder="0xx-xxx-xxxx"
+                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-500 mb-1">หน่วยงาน / คณะ / สาขา</label>
                                     <input
                                         type="text"
-                                        placeholder="ค้นหาอาจารย์..."
-                                        value={borrowerSearch}
-                                        onChange={(e) => setBorrowerSearch(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg"
+                                        value={externalBorrowerOrg}
+                                        onChange={(e) => setExternalBorrowerOrg(e.target.value)}
+                                        placeholder="ระบุหน่วยงาน"
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                                     />
-                                </div>
-                                <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg">
-                                    {filteredLecturers.map(lecturer => (
-                                        <button
-                                            key={lecturer.id}
-                                            type="button"
-                                            onClick={() => {
-                                                setSelectedBorrowerId(lecturer.id)
-                                                setBorrowerSearch('')
-                                            }}
-                                            className="w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-0"
-                                        >
-                                            <p className="font-medium">{lecturer.first_name} {lecturer.last_name}</p>
-                                            <p className="text-sm text-gray-500">{lecturer.email}</p>
-                                        </button>
-                                    ))}
-                                    {filteredLecturers.length === 0 && (
-                                        <p className="p-3 text-center text-gray-500 text-sm">ไม่พบอาจารย์</p>
-                                    )}
                                 </div>
                             </div>
                         )}
@@ -316,31 +422,84 @@ export default function SpecialLoanForm({ onClose, onSuccess }: Props) {
                     {/* Equipment Selection */}
                     {selectedTypeId && (
                         <div className="space-y-3">
-                            {/* Header with count and actions */}
-                            <div className="flex items-center justify-between">
-                                <label className="text-sm font-medium text-gray-700">
-                                    <Package className="w-4 h-4 inline mr-1" />
-                                    เลือกอุปกรณ์
-                                    <span className="ml-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                                        {selectedEquipmentIds.length} / {equipment.length}
-                                    </span>
-                                </label>
-                                <div className="flex gap-2">
+                            <div className="flex flex-col gap-3">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm font-medium text-gray-700">
+                                        <Package className="w-4 h-4 inline mr-1" />
+                                        เลือกอุปกรณ์
+                                        <span className="ml-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                                            {selectedEquipmentIds.length} / {equipment.length}
+                                        </span>
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={selectAll}
+                                            className="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
+                                        >
+                                            เลือกทั้งหมด
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={deselectAll}
+                                            className="px-2 py-1 text-xs bg-gray-50 text-gray-600 rounded hover:bg-gray-100 transition-colors"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Selection Mode Toggles */}
+                                <div className="flex p-1 bg-gray-100 rounded-lg">
                                     <button
                                         type="button"
-                                        onClick={selectAll}
-                                        className="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
+                                        onClick={() => setSelectionMode('manual')}
+                                        className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-md transition-all ${selectionMode === 'manual'
+                                                ? 'bg-white text-gray-900 shadow-sm'
+                                                : 'text-gray-500 hover:text-gray-700'
+                                            }`}
                                     >
-                                        เลือกทั้งหมด
+                                        <MousePointer2 className="w-3.5 h-3.5" />
+                                        เลือกเอง ({selectedEquipmentIds.length})
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={deselectAll}
-                                        className="px-2 py-1 text-xs bg-gray-50 text-gray-600 rounded hover:bg-gray-100 transition-colors"
+                                        onClick={() => setSelectionMode('bulk')}
+                                        className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-md transition-all ${selectionMode === 'bulk'
+                                                ? 'bg-white text-gray-900 shadow-sm'
+                                                : 'text-gray-500 hover:text-gray-700'
+                                            }`}
                                     >
-                                        ยกเลิก
+                                        <Hash className="w-3.5 h-3.5" />
+                                        ระบุจำนวน
                                     </button>
                                 </div>
+
+                                {selectionMode === 'bulk' && (
+                                    <div className="flex gap-2 p-3 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                                        <div className="flex-1">
+                                            <label className="block text-xs text-gray-500 mb-1">จำนวนที่ต้องการ</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max={equipment.length}
+                                                value={bulkQuantity}
+                                                onChange={(e) => setBulkQuantity(e.target.value === '' ? '' : parseInt(e.target.value))}
+                                                placeholder={`สูงสุด ${equipment.length}`}
+                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                            />
+                                        </div>
+                                        <div className="flex items-end">
+                                            <button
+                                                type="button"
+                                                onClick={handleBulkSelect}
+                                                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
+                                            >
+                                                เลือกอัตโนมัติ
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Selected items display (compact chips) */}
@@ -389,17 +548,17 @@ export default function SpecialLoanForm({ onClose, onSuccess }: Props) {
                                                     type="button"
                                                     onClick={() => toggleEquipment(eq.id)}
                                                     className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${hasConflict
-                                                            ? 'bg-red-50 hover:bg-red-100'
-                                                            : isSelected
-                                                                ? 'bg-blue-50 hover:bg-blue-100'
-                                                                : 'bg-white hover:bg-gray-50'
+                                                        ? 'bg-red-50 hover:bg-red-100'
+                                                        : isSelected
+                                                            ? 'bg-blue-50 hover:bg-blue-100'
+                                                            : 'bg-white hover:bg-gray-50'
                                                         }`}
                                                 >
                                                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${isSelected
-                                                            ? 'bg-blue-600 border-blue-600'
-                                                            : hasConflict
-                                                                ? 'border-red-300'
-                                                                : 'border-gray-300'
+                                                        ? 'bg-blue-600 border-blue-600'
+                                                        : hasConflict
+                                                            ? 'border-red-300'
+                                                            : 'border-gray-300'
                                                         }`}>
                                                         {isSelected && <Check className="w-3 h-3 text-white" />}
                                                     </div>
