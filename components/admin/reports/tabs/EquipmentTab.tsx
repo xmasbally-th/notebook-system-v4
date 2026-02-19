@@ -282,9 +282,9 @@ export default function EquipmentTab({ data, isLoading }: EquipmentTabProps) {
                                                     )}
                                                     <div className="absolute top-2 right-2">
                                                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium shadow-sm backdrop-blur-sm bg-white/90 ${config.color.replace('bg-', 'text-')}`}>
-                                                            <div className={`w-1.5 h-1.5 rounded-full ${config.color.replace('bg-', 'bg-').split(' ')[0].replace('100', '500')}`}></div>
+                                                            <span className={`w-1.5 h-1.5 rounded-full ${config.color.replace('bg-', 'bg-').split(' ')[0].replace('100', '500')}`}></span>
                                                             {config.label}
-                                                        </div>
+                                                        </span>
                                                     </div>
                                                 </div>
                                                 <div className="p-4">
@@ -302,14 +302,14 @@ export default function EquipmentTab({ data, isLoading }: EquipmentTabProps) {
                                                     )}
                                                 </div>
                                             </div>
-                            )
-                            })}
-                        </div>
+                                        )
+                                    })}
+                                </div>
                             )}
-                </>
+                        </>
                     )}
+                </div>
             </div>
-        </div>
         </div >
     )
 }
