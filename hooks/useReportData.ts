@@ -59,6 +59,23 @@ export interface EquipmentStats {
     maintenance: number
 }
 
+export interface EquipmentType {
+    id: string
+    name: string
+    icon: string
+}
+
+export interface Equipment {
+    id: string
+    name: string
+    equipment_number: string
+    status: string
+    equipment_type_id: string
+    images: string[]
+    brand?: string
+    model?: string
+}
+
 export interface PopularEquipment {
     id: string
     name: string
@@ -132,6 +149,8 @@ export interface ReportData {
     departments: string[]
     staffActivity: StaffActivityStats
     monthlyStats: MonthlyStats[]
+    equipmentTypes: EquipmentType[]
+    allEquipment: Equipment[]
 }
 
 export function useReportData(dateRange: DateRange) {
@@ -158,35 +177,33 @@ export function useReportData(dateRange: DateRange) {
             today.setHours(0, 0, 0, 0)
 
             // Parallel fetch all data
-            const [
-                loansRes,
-                reservationsRes,
-                equipmentRes,
-                overdueRes,
-                profilesRes,
-                staffActivityRes
-            ] = await Promise.all([
+            const results = await Promise.all([
                 // Loans in date range
                 fetch(`${url}/rest/v1/loanRequests?select=id,status,created_at,end_date,returned_at,user_id,equipment_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`, { headers }),
                 // Reservations in date range (with equipment_id for usage stats - Issue #6 fix)
                 fetch(`${url}/rest/v1/reservations?select=id,status,created_at,user_id,equipment_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`, { headers }),
                 // All equipment
-                fetch(`${url}/rest/v1/equipment?select=id,name,equipment_number,status`, { headers }),
+                fetch(`${url}/rest/v1/equipment?select=id,name,equipment_number,status,equipment_type_id,images,brand,model`, { headers }),
                 // Overdue loans (approved but past end_date)
                 fetch(`${url}/rest/v1/loanRequests?select=id,end_date,user_id,equipment_id,profiles:user_id(first_name,last_name,email),equipment:equipment_id(name,equipment_number)&status=eq.approved&end_date=lt.${new Date().toISOString()}`, { headers }),
                 // All profiles for user stats (added avatar_url)
                 fetch(`${url}/rest/v1/profiles?status=eq.approved&select=id,email,first_name,last_name,avatar_url,department:departments(name),role,status`, { headers }),
                 // Staff activity log in date range - REMOVED profiles embed to fix FK issue
-                fetch(`${url}/rest/v1/staff_activity_log?select=id,staff_id,staff_role,action_type,target_type,target_id,created_at,details&created_at=gte.${fromDate}&created_at=lte.${toDate}&order=created_at.desc`, { headers })
+                fetch(`${url}/rest/v1/staff_activity_log?select=id,staff_id,staff_role,action_type,target_type,target_id,created_at,details&created_at=gte.${fromDate}&created_at=lte.${toDate}&order=created_at.desc`, { headers }),
+                // All equipment types
+                fetch(`${url}/rest/v1/equipment_types?select=id,name,icon&order=name.asc`, { headers })
             ])
 
-            const [loans, reservations, equipment, overdueLoans, profiles, staffActivityLog] = await Promise.all([
+            const [loansRes, reservationsRes, equipmentRes, overdueRes, profilesRes, staffActivityRes, equipmentTypesRes] = results
+
+            const [loans, reservations, equipment, overdueLoans, profiles, staffActivityLog, equipmentTypes] = await Promise.all([
                 loansRes.json(),
                 reservationsRes.json(),
                 equipmentRes.json(),
                 overdueRes.json(),
                 profilesRes.json(),
-                staffActivityRes.json()
+                staffActivityRes.json(),
+                equipmentTypesRes.json()
             ])
 
             // Use processor functions
@@ -214,7 +231,9 @@ export function useReportData(dateRange: DateRange) {
                 userStats,
                 departments,
                 staffActivity,
-                monthlyStats
+                monthlyStats,
+                equipmentTypes: Array.isArray(equipmentTypes) ? equipmentTypes : [],
+                allEquipment: Array.isArray(equipment) ? equipment : []
             }
         }
     })
