@@ -92,12 +92,13 @@ export function exportOverdueReportCSV(overdueItems: any[]): void {
 export function exportPopularEquipmentCSV(equipment: any[]): void {
     exportToCSV({
         filename: 'รายงานอุปกรณ์ยอดนิยม',
-        headers: ['อันดับ', 'ชื่ออุปกรณ์', 'รหัสอุปกรณ์', 'จำนวนครั้งที่ยืม', 'จำนวนครั้งที่จอง', 'รวม'],
+        headers: ['อันดับ', 'ชื่ออุปกรณ์', 'รหัสอุปกรณ์', 'จำนวนครั้งที่ยืม', 'จำนวนครั้งที่คืน', 'จำนวนครั้งที่จอง', 'รวม'],
         rows: equipment.map((item, index) => [
             index + 1,
             item.name,
             item.equipment_number,
             item.loan_count,
+            item.returned_count ?? 0,
             item.reservation_count,
             item.total_usage
         ])

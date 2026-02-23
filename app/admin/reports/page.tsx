@@ -85,7 +85,7 @@ export default function AdminReportsPage() {
                 <div className="p-6">
                     {activeTab === 'overview' && <OverviewTab data={data} isLoading={isLoading} />}
                     {activeTab === 'loans' && <LoansTab data={data} isLoading={isLoading} />}
-                    {activeTab === 'equipment' && <EquipmentTab data={data} isLoading={isLoading} />}
+                    {activeTab === 'equipment' && <EquipmentTab data={data} isLoading={isLoading} dateRange={dateRange} />}
                     {activeTab === 'reservations' && <ReservationsTab data={data} isLoading={isLoading} />}
                     {activeTab === 'users' && <UsersTab data={data} isLoading={isLoading} />}
                     {activeTab === 'activity' && <ActivityTab data={data} isLoading={isLoading} />}

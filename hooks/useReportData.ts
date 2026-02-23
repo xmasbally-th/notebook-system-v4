@@ -81,6 +81,7 @@ export interface PopularEquipment {
     name: string
     equipment_number: string
     loan_count: number
+    returned_count: number
     reservation_count: number
     total_usage: number
 }

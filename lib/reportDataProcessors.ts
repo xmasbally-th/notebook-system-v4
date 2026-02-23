@@ -81,16 +81,21 @@ export function calculateEquipmentStats(equipment: any[]): EquipmentStats {
  * Calculate popular equipment from loan and reservation data
  */
 export function calculatePopularEquipment(loans: any[], reservations: any[], equipment: any[]): PopularEquipment[] {
-    const equipmentUsage: Record<string, { equipment: any, loans: number, reservations: number }> = {}
+    const equipmentUsage: Record<string, { equipment: any, loans: number, returned: number, reservations: number }> = {}
 
     if (Array.isArray(loans)) {
         loans.forEach((loan: any) => {
             if (!loan.equipment_id) return
+            // Only count loans that were actually approved or returned (meaningful borrows)
+            if (loan.status !== 'approved' && loan.status !== 'returned') return
             if (!equipmentUsage[loan.equipment_id]) {
                 const eq = Array.isArray(equipment) ? equipment.find((e: any) => e.id === loan.equipment_id) : null
-                equipmentUsage[loan.equipment_id] = { equipment: eq, loans: 0, reservations: 0 }
+                equipmentUsage[loan.equipment_id] = { equipment: eq, loans: 0, returned: 0, reservations: 0 }
             }
             equipmentUsage[loan.equipment_id].loans++
+            if (loan.status === 'returned') {
+                equipmentUsage[loan.equipment_id].returned++
+            }
         })
     }
 
@@ -98,9 +103,11 @@ export function calculatePopularEquipment(loans: any[], reservations: any[], equ
     if (Array.isArray(reservations)) {
         reservations.forEach((res: any) => {
             if (!res.equipment_id) return
+            // Only count reservations that were approved or completed
+            if (res.status !== 'approved' && res.status !== 'completed') return
             if (!equipmentUsage[res.equipment_id]) {
                 const eq = Array.isArray(equipment) ? equipment.find((e: any) => e.id === res.equipment_id) : null
-                equipmentUsage[res.equipment_id] = { equipment: eq, loans: 0, reservations: 0 }
+                equipmentUsage[res.equipment_id] = { equipment: eq, loans: 0, returned: 0, reservations: 0 }
             }
             equipmentUsage[res.equipment_id].reservations++
         })
@@ -112,6 +119,7 @@ export function calculatePopularEquipment(loans: any[], reservations: any[], equ
             name: data.equipment?.name || 'Unknown',
             equipment_number: data.equipment?.equipment_number || '-',
             loan_count: data.loans,
+            returned_count: data.returned,
             reservation_count: data.reservations,
             total_usage: data.loans + data.reservations
         }))
