@@ -402,15 +402,16 @@ export interface Database {
                     updated_at?: string
                 }
             }
-            Functions: {
-                check_reservation_conflict: {
-                    Args: {
-                        target_equipment_id: string
-                        new_start_date: string
-                        new_end_date: string
-                    }
-                    Returns: boolean
+        }
+        Functions: {
+            check_reservation_conflict: {
+                Args: {
+                    target_equipment_id: string
+                    new_start_date: string
+                    new_end_date: string
                 }
+                Returns: boolean
             }
         }
     }
+}
