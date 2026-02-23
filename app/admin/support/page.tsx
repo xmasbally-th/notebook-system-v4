@@ -5,7 +5,8 @@ import AdminLayout from '@/components/admin/AdminLayout'
 import { supabase } from '@/lib/supabase/client'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import ChatWindow from '@/components/chat/ChatWindow'
-import { MessageSquare, User, Clock, CheckCircle, ArrowLeft, ChevronRight, Settings, Bot, Save, Eye, ChevronDown, ChevronUp } from 'lucide-react'
+import { createTicketForUserAction } from '@/components/chat/actions'
+import { MessageSquare, User, Clock, CheckCircle, ArrowLeft, ChevronRight, Settings, Bot, Save, Eye, ChevronDown, ChevronUp, Plus, Search, X, Loader2 } from 'lucide-react'
 
 // Helper for time ago
 function timeAgo(dateString: string) {
@@ -40,10 +41,53 @@ export default function AdminSupportPage() {
     const [autoReplyMessage, setAutoReplyMessage] = useState('')
     const [showPreview, setShowPreview] = useState(false)
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+    const [showNewChatModal, setShowNewChatModal] = useState(false)
+    const [userSearch, setUserSearch] = useState('')
+    const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+    const [initialMessage, setInitialMessage] = useState('')
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id || null))
     }, [])
+
+    // Search users for new chat modal
+    const { data: searchUsers, isLoading: searchLoading } = useQuery({
+        queryKey: ['search-users', userSearch],
+        queryFn: async () => {
+            let query = (supabase as any)
+                .from('profiles')
+                .select('id, first_name, last_name, email, avatar_url, role')
+                .eq('status', 'approved')
+                .not('role', 'in', '(admin,staff)')
+                .order('first_name')
+                .limit(20)
+
+            if (userSearch.trim()) {
+                query = query.or(`first_name.ilike.%${userSearch}%,last_name.ilike.%${userSearch}%,email.ilike.%${userSearch}%`)
+            }
+
+            const { data, error } = await query
+            if (error) throw error
+            return data as { id: string, first_name: string, last_name: string, email: string, avatar_url: string | null, role: string }[]
+        },
+        enabled: showNewChatModal,
+    })
+
+    // Create ticket for user mutation
+    const createChatMutation = useMutation({
+        mutationFn: async () => {
+            if (!selectedUserId) throw new Error('No user selected')
+            return await createTicketForUserAction(selectedUserId, initialMessage || undefined)
+        },
+        onSuccess: (ticket) => {
+            queryClient.invalidateQueries({ queryKey: ['admin-tickets'] })
+            setSelectedTicketId(ticket.id)
+            setShowNewChatModal(false)
+            setUserSearch('')
+            setSelectedUserId(null)
+            setInitialMessage('')
+        },
+    })
 
     // Fetch auto-reply settings
     const { data: autoReplyConfig } = useQuery({
@@ -262,10 +306,10 @@ export default function AdminSupportPage() {
                                 onClick={() => saveAutoReplyMutation.mutate()}
                                 disabled={!hasChanges || saveAutoReplyMutation.isPending}
                                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${saveStatus === 'saved'
-                                        ? 'bg-green-100 text-green-700 border border-green-200'
-                                        : hasChanges
-                                            ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    ? 'bg-green-100 text-green-700 border border-green-200'
+                                    : hasChanges
+                                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                     }`}
                             >
                                 {saveStatus === 'saving' ? (
@@ -300,9 +344,18 @@ export default function AdminSupportPage() {
                                 <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
                                 รายการแชท
                             </h2>
-                            <span className="text-xs font-medium text-gray-500 bg-gray-200 px-2 py-1 rounded-full">
-                                {tickets?.filter((t: any) => t.status === 'open').length || 0} Open
-                            </span>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setShowNewChatModal(true)}
+                                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors"
+                                >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    เปิดแชทใหม่
+                                </button>
+                                <span className="text-xs font-medium text-gray-500 bg-gray-200 px-2 py-1 rounded-full">
+                                    {tickets?.filter((t: any) => t.status === 'open').length || 0} Open
+                                </span>
+                            </div>
                         </div>
 
                         <div className="flex-1 overflow-y-auto">
@@ -427,9 +480,18 @@ export default function AdminSupportPage() {
                             <MessageSquare className="w-5 h-5 text-purple-600" />
                             รายการแชท
                         </h2>
-                        <span className="text-xs font-medium text-gray-500 bg-gray-200 px-2 py-1 rounded-full">
-                            {tickets?.filter((t: any) => t.status === 'open').length || 0} Open
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setShowNewChatModal(true)}
+                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                                เปิดแชทใหม่
+                            </button>
+                            <span className="text-xs font-medium text-gray-500 bg-gray-200 px-2 py-1 rounded-full">
+                                {tickets?.filter((t: any) => t.status === 'open').length || 0} Open
+                            </span>
+                        </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto">
@@ -522,6 +584,128 @@ export default function AdminSupportPage() {
                     )}
                 </div>
             </div>
+
+            {/* New Chat Modal */}
+            {showNewChatModal && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowNewChatModal(false)}>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                        {/* Modal Header */}
+                        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                            <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                                <Plus className="w-5 h-5 text-purple-600" />
+                                เปิดแชทใหม่
+                            </h3>
+                            <button
+                                onClick={() => { setShowNewChatModal(false); setSelectedUserId(null); setUserSearch(''); setInitialMessage(''); }}
+                                className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                            >
+                                <X className="w-5 h-5 text-gray-400" />
+                            </button>
+                        </div>
+
+                        {/* Search */}
+                        <div className="p-3 border-b border-gray-100">
+                            <div className="relative">
+                                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input
+                                    type="text"
+                                    value={userSearch}
+                                    onChange={(e) => setUserSearch(e.target.value)}
+                                    placeholder="ค้นหาผู้ใช้ (ชื่อ / อีเมล)..."
+                                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+
+                        {/* User List */}
+                        <div className="flex-1 overflow-y-auto min-h-0 max-h-[300px]">
+                            {searchLoading ? (
+                                <div className="p-6 text-center text-gray-400">
+                                    <Loader2 className="w-6 h-6 animate-spin mx-auto" />
+                                </div>
+                            ) : !searchUsers?.length ? (
+                                <div className="p-6 text-center text-gray-400 text-sm">
+                                    {userSearch ? 'ไม่พบผู้ใช้' : 'พิมพ์เพื่อค้นหาผู้ใช้'}
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-gray-50">
+                                    {searchUsers.map((u) => (
+                                        <div
+                                            key={u.id}
+                                            onClick={() => setSelectedUserId(u.id === selectedUserId ? null : u.id)}
+                                            className={`p-3 cursor-pointer flex items-center gap-3 transition-colors ${selectedUserId === u.id
+                                                    ? 'bg-purple-50 border-l-4 border-purple-600'
+                                                    : 'hover:bg-gray-50 border-l-4 border-transparent'
+                                                }`}
+                                        >
+                                            <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                                {u.avatar_url ? (
+                                                    <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <User className="w-4 h-4 text-gray-500" />
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-gray-900 truncate">
+                                                    {u.first_name} {u.last_name}
+                                                </p>
+                                                <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                                            </div>
+                                            {selectedUserId === u.id && (
+                                                <CheckCircle className="w-5 h-5 text-purple-600 flex-shrink-0" />
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Initial Message (optional) */}
+                        {selectedUserId && (
+                            <div className="p-3 border-t border-gray-100">
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                    ข้อความแรก (ไม่จำเป็นต้องใส่)
+                                </label>
+                                <textarea
+                                    value={initialMessage}
+                                    onChange={(e) => setInitialMessage(e.target.value)}
+                                    rows={2}
+                                    placeholder="พิมพ์ข้อความแรกที่จะส่งให้ผู้ใช้..."
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
+                                />
+                            </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="p-3 border-t border-gray-200 flex justify-end gap-2">
+                            <button
+                                onClick={() => { setShowNewChatModal(false); setSelectedUserId(null); setUserSearch(''); setInitialMessage(''); }}
+                                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                ยกเลิก
+                            </button>
+                            <button
+                                onClick={() => createChatMutation.mutate()}
+                                disabled={!selectedUserId || createChatMutation.isPending}
+                                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {createChatMutation.isPending ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        กำลังเปิด...
+                                    </>
+                                ) : (
+                                    <>
+                                        <MessageSquare className="w-4 h-4" />
+                                        เปิดแชท
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AdminLayout>
     )
 }

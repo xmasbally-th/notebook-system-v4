@@ -67,6 +67,68 @@ export async function createTicketAction() {
     return ticket
 }
 
+export async function createTicketForUserAction(targetUserId: string, initialMessage?: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) throw new Error('Unauthorized')
+
+    // 1. Verify caller is admin/staff
+    const { data: callerProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (!callerProfile || !['admin', 'staff'].includes(callerProfile.role)) {
+        throw new Error('Only admin/staff can initiate chats')
+    }
+
+    // 2. Check if target user already has an open ticket
+    const { data: existingTicket } = await supabase
+        .from('support_tickets')
+        .select('*')
+        .eq('user_id', targetUserId)
+        .eq('status', 'open')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+    let ticket = existingTicket
+
+    // 3. Create new ticket if none exists
+    if (!ticket) {
+        const { data: newTicket, error } = await supabase
+            .from('support_tickets')
+            .insert({
+                user_id: targetUserId,
+                status: 'open',
+                subject: 'Admin Initiated'
+            })
+            .select()
+            .single()
+
+        if (error) throw error
+        ticket = newTicket
+    }
+
+    // 4. Send initial message if provided
+    if (initialMessage?.trim() && ticket) {
+        const { error: msgError } = await supabase
+            .from('support_messages')
+            .insert({
+                ticket_id: ticket.id,
+                sender_id: user.id,
+                message: initialMessage.trim(),
+                is_staff_reply: true,
+            })
+
+        if (msgError) throw msgError
+    }
+
+    return ticket
+}
+
 export async function sendMessageAction(ticketId: string, message: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()

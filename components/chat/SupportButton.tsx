@@ -45,6 +45,34 @@ export default function SupportButton() {
         enabled: !!user && isOpen // Only fetch when open
     })
 
+    // Check for unread messages (staff replies not yet read)
+    const { data: unreadCount } = useQuery({
+        queryKey: ['support-unread', user?.id],
+        queryFn: async () => {
+            if (!user) return 0
+            // Find open tickets for the user
+            const { data: tickets } = await (supabase as any)
+                .from('support_tickets')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('status', 'open')
+
+            if (!tickets?.length) return 0
+
+            const ticketIds = tickets.map((t: any) => t.id)
+            const { count } = await (supabase as any)
+                .from('support_messages')
+                .select('id', { count: 'exact', head: true })
+                .in('ticket_id', ticketIds)
+                .eq('is_staff_reply', true)
+                .is('read_at', null)
+
+            return count || 0
+        },
+        enabled: !!user && !isOpen,
+        refetchInterval: 30000, // Check every 30 seconds
+    })
+
     // Create Ticket Mutation - MUST be called before any conditional returns
     const createTicketMutation = useMutation({
         mutationFn: async () => {
@@ -97,9 +125,14 @@ export default function SupportButton() {
                 <button
                     onClick={handleOpen}
                     aria-label="เปิดแชทสนับสนุน"
-                    className="bg-teal-600 hover:bg-teal-700 text-white p-4 rounded-full shadow-lg transition-transform hover:scale-110 flex items-center justify-center"
+                    className="relative bg-teal-600 hover:bg-teal-700 text-white p-4 rounded-full shadow-lg transition-transform hover:scale-110 flex items-center justify-center"
                 >
                     <MessageCircle className="w-6 h-6" aria-hidden="true" />
+                    {(unreadCount ?? 0) > 0 && (
+                        <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center animate-pulse">
+                            {unreadCount! > 99 ? '99+' : unreadCount}
+                        </span>
+                    )}
                 </button>
             )}
         </div>
