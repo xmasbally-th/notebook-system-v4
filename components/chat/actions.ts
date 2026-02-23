@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendDiscordNotification } from '@/lib/notifications'
 
 export async function createTicketAction() {
@@ -22,7 +23,34 @@ export async function createTicketAction() {
 
     if (error) throw error
 
-    // 2. Fetch User Profile for nice notification
+    // 2. Send Auto-Reply if enabled
+    try {
+        const { data: config } = await supabase
+            .from('system_config')
+            .select('support_auto_reply_enabled, support_auto_reply_message')
+            .eq('id', 1)
+            .single()
+
+        if (config?.support_auto_reply_enabled && config?.support_auto_reply_message) {
+            // Use service role to insert system message (sender_id = null bypasses RLS)
+            if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+                const supabaseAdmin = createSupabaseClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    process.env.SUPABASE_SERVICE_ROLE_KEY
+                )
+                await supabaseAdmin.from('support_messages').insert({
+                    ticket_id: ticket.id,
+                    sender_id: null,
+                    message: config.support_auto_reply_message,
+                    is_staff_reply: true,
+                })
+            }
+        }
+    } catch (e) {
+        console.error('Auto-reply failed:', e)
+    }
+
+    // 3. Fetch User Profile for nice notification
     const { data: profile } = await supabase
         .from('profiles')
         .select('first_name, last_name, email')
@@ -31,7 +59,7 @@ export async function createTicketAction() {
 
     const userName = profile ? `${profile.first_name} ${profile.last_name}` : user.email
 
-    // 3. Send Discord Notification
+    // 4. Send Discord Notification
     await sendDiscordNotification(
         `🎫 **New Support Ticket**\n**User:** ${userName}\n**Ticket ID:** \`${ticket.id}\``
     )

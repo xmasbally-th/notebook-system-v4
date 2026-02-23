@@ -347,6 +347,8 @@ export interface Database {
                     announcement_active: boolean
                     document_logo_url: string | null
                     document_template_url: string | null
+                    support_auto_reply_enabled: boolean
+                    support_auto_reply_message: string | null
                     updated_at: string
                 }
                 Insert: {
@@ -370,6 +372,8 @@ export interface Database {
                     announcement_active?: boolean
                     document_logo_url?: string | null
                     document_template_url?: string | null
+                    support_auto_reply_enabled?: boolean
+                    support_auto_reply_message?: string | null
                     updated_at?: string
                 }
                 Update: {
@@ -393,19 +397,20 @@ export interface Database {
                     announcement_active?: boolean
                     document_logo_url?: string | null
                     document_template_url?: string | null
+                    support_auto_reply_enabled?: boolean
+                    support_auto_reply_message?: string | null
                     updated_at?: string
                 }
             }
-        }
-        Functions: {
-            check_reservation_conflict: {
-                Args: {
-                    target_equipment_id: string
-                    new_start_date: string
-                    new_end_date: string
+            Functions: {
+                check_reservation_conflict: {
+                    Args: {
+                        target_equipment_id: string
+                        new_start_date: string
+                        new_end_date: string
+                    }
+                    Returns: boolean
                 }
-                Returns: boolean
             }
         }
     }
-}

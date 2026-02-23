@@ -112,6 +112,8 @@ function getDefaultConfig(): SystemConfig {
         discord_webhook_reservations: null,
         discord_webhook_maintenance: null,
         evaluation_cutoff_date: null,
+        support_auto_reply_enabled: true,
+        support_auto_reply_message: 'สวัสดีครับ🙏 ฝากข้อความไว้ เจ้าหน้าที่จะตอบกลับโดยเร็วที่สุด...',
     } as SystemConfig
 }
 

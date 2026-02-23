@@ -5,7 +5,7 @@ import AdminLayout from '@/components/admin/AdminLayout'
 import { supabase } from '@/lib/supabase/client'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import ChatWindow from '@/components/chat/ChatWindow'
-import { MessageSquare, User, Clock, CheckCircle, ArrowLeft, ChevronRight } from 'lucide-react'
+import { MessageSquare, User, Clock, CheckCircle, ArrowLeft, ChevronRight, Settings, Bot, Save, Eye, ChevronDown, ChevronUp } from 'lucide-react'
 
 // Helper for time ago
 function timeAgo(dateString: string) {
@@ -35,10 +35,60 @@ export default function AdminSupportPage() {
     const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
     const queryClient = useQueryClient()
     const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+    const [settingsOpen, setSettingsOpen] = useState(false)
+    const [autoReplyEnabled, setAutoReplyEnabled] = useState(true)
+    const [autoReplyMessage, setAutoReplyMessage] = useState('')
+    const [showPreview, setShowPreview] = useState(false)
+    const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id || null))
     }, [])
+
+    // Fetch auto-reply settings
+    const { data: autoReplyConfig } = useQuery({
+        queryKey: ['auto-reply-config'],
+        queryFn: async () => {
+            const { data, error } = await (supabase as any)
+                .from('system_config')
+                .select('support_auto_reply_enabled, support_auto_reply_message')
+                .eq('id', 1)
+                .single()
+
+            if (error) throw error
+            return data as { support_auto_reply_enabled: boolean, support_auto_reply_message: string | null }
+        }
+    })
+
+    // Initialize settings when config loads
+    useEffect(() => {
+        if (autoReplyConfig) {
+            setAutoReplyEnabled(autoReplyConfig.support_auto_reply_enabled ?? true)
+            setAutoReplyMessage(autoReplyConfig.support_auto_reply_message || '')
+        }
+    }, [autoReplyConfig])
+
+    // Save auto-reply settings mutation
+    const saveAutoReplyMutation = useMutation({
+        mutationFn: async () => {
+            const { error } = await (supabase as any)
+                .from('system_config')
+                .update({
+                    support_auto_reply_enabled: autoReplyEnabled,
+                    support_auto_reply_message: autoReplyMessage.trim() || null,
+                })
+                .eq('id', 1)
+
+            if (error) throw error
+        },
+        onMutate: () => setSaveStatus('saving'),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['auto-reply-config'] })
+            setSaveStatus('saved')
+            setTimeout(() => setSaveStatus('idle'), 2000)
+        },
+        onError: () => setSaveStatus('idle'),
+    })
 
     // Realtime subscription for tickets
     useEffect(() => {
@@ -115,8 +165,131 @@ export default function AdminSupportPage() {
         setSelectedTicketId(null)
     }
 
+    // Check if settings changed
+    const hasChanges = autoReplyConfig && (
+        autoReplyEnabled !== (autoReplyConfig.support_auto_reply_enabled ?? true) ||
+        autoReplyMessage !== (autoReplyConfig.support_auto_reply_message || '')
+    )
+
     return (
         <AdminLayout title="System Support" subtitle="จัดการการสนทนาและแจ้งปัญหาการใช้งาน">
+            {/* Auto-Reply Settings Panel */}
+            <div className="mb-4">
+                <button
+                    onClick={() => setSettingsOpen(!settingsOpen)}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-white rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors"
+                >
+                    <div className="flex items-center gap-2">
+                        <Settings className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-700">ตั้งค่าข้อความอัตโนมัติ</span>
+                        {autoReplyEnabled && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-green-100 text-green-700 font-medium">เปิดใช้งาน</span>
+                        )}
+                    </div>
+                    {settingsOpen ? (
+                        <ChevronUp className="w-4 h-4 text-gray-400" />
+                    ) : (
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                    )}
+                </button>
+
+                {settingsOpen && (
+                    <div className="mt-2 p-4 bg-white rounded-lg shadow-sm border border-gray-200 space-y-4">
+                        {/* Toggle */}
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Bot className="w-4 h-4 text-blue-600" />
+                                <span className="text-sm font-medium text-gray-700">เปิดใช้งานข้อความอัตโนมัติ</span>
+                            </div>
+                            <button
+                                onClick={() => setAutoReplyEnabled(!autoReplyEnabled)}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autoReplyEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
+                            >
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${autoReplyEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                            </button>
+                        </div>
+
+                        {/* Message Input */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                                ข้อความอัตโนมัติ
+                            </label>
+                            <textarea
+                                value={autoReplyMessage}
+                                onChange={(e) => setAutoReplyMessage(e.target.value)}
+                                disabled={!autoReplyEnabled}
+                                rows={3}
+                                placeholder="พิมพ์ข้อความอัตโนมัติที่ผู้ใช้จะได้รับเมื่อเปิด Support Chat..."
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-400 resize-none"
+                            />
+                            <p className="text-xs text-gray-400 mt-1">ข้อความนี้จะส่งให้ผู้ใช้โดยอัตโนมัติเมื่อเปิดห้องแชทใหม่</p>
+                        </div>
+
+                        {/* Preview Toggle */}
+                        {autoReplyEnabled && autoReplyMessage && (
+                            <div>
+                                <button
+                                    onClick={() => setShowPreview(!showPreview)}
+                                    className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                >
+                                    <Eye className="w-3.5 h-3.5" />
+                                    {showPreview ? 'ซ่อนตัวอย่าง' : 'ดูตัวอย่าง'}
+                                </button>
+
+                                {showPreview && (
+                                    <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                        <p className="text-[10px] text-gray-400 mb-2 text-center">ตัวอย่างที่ผู้ใช้จะเห็น</p>
+                                        <div className="flex justify-center">
+                                            <div className="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow-sm bg-blue-50 border border-blue-100 text-gray-700">
+                                                <div className="flex items-center gap-1.5 mb-1 text-blue-600 font-medium text-xs">
+                                                    <span>🤖</span>
+                                                    <span>ข้อความอัตโนมัติ</span>
+                                                </div>
+                                                <p>{autoReplyMessage}</p>
+                                                <div className="flex items-center justify-end mt-1 text-gray-400">
+                                                    <span className="text-[10px]">เมื่อสักครู่</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Save Button */}
+                        <div className="flex justify-end">
+                            <button
+                                onClick={() => saveAutoReplyMutation.mutate()}
+                                disabled={!hasChanges || saveAutoReplyMutation.isPending}
+                                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${saveStatus === 'saved'
+                                        ? 'bg-green-100 text-green-700 border border-green-200'
+                                        : hasChanges
+                                            ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    }`}
+                            >
+                                {saveStatus === 'saving' ? (
+                                    <>
+                                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        กำลังบันทึก...
+                                    </>
+                                ) : saveStatus === 'saved' ? (
+                                    <>
+                                        <CheckCircle className="w-3.5 h-3.5" />
+                                        บันทึกแล้ว
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="w-3.5 h-3.5" />
+                                        บันทึกการตั้งค่า
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
             {/* Mobile Layout - Stack view with toggle */}
             <div className="md:hidden h-[calc(100vh-180px)] flex flex-col">
                 {/* Mobile: Show ticket list when no ticket selected */}
@@ -352,3 +525,4 @@ export default function AdminSupportPage() {
         </AdminLayout>
     )
 }
+

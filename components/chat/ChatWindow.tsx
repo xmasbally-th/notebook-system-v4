@@ -238,11 +238,32 @@ export default function ChatWindow({ ticketId, currentUserId, isStaffView = fals
                     </div>
                 ) : (
                     messages?.map((msg) => {
+                        const isSystemMessage = msg.sender_id === null
                         const isMe = msg.sender_id === currentUserId
                         // If staff view: my messages are right (purple), user messages are left (gray)
                         // If user view: my messages are right (teal), staff messages are left (gray)
                         const alignRight = isMe
                         const isRead = !!msg.read_at
+
+                        // System auto-reply message
+                        if (isSystemMessage) {
+                            return (
+                                <div key={msg.id} className="flex justify-center">
+                                    <div className="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow-sm bg-blue-50 border border-blue-100 text-gray-700">
+                                        <div className="flex items-center gap-1.5 mb-1 text-blue-600 font-medium text-xs">
+                                            <span>🤖</span>
+                                            <span>ข้อความอัตโนมัติ</span>
+                                        </div>
+                                        <p>{msg.message}</p>
+                                        <div className="flex items-center justify-end mt-1 text-gray-400">
+                                            <span className="text-[10px]">
+                                                {new Date(msg.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        }
 
                         return (
                             <div key={msg.id} className={`flex ${alignRight ? 'justify-end' : 'justify-start'}`}>
