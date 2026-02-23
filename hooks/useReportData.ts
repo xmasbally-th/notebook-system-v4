@@ -152,6 +152,7 @@ export interface ReportData {
     monthlyStats: MonthlyStats[]
     equipmentTypes: EquipmentType[]
     allEquipment: Equipment[]
+    borrowedEquipmentIds: Set<string>
 }
 
 export function useReportData(dateRange: DateRange) {
@@ -222,6 +223,13 @@ export function useReportData(dateRange: DateRange) {
                 ? loans.filter((l: any) => new Date(l.created_at) >= today).length
                 : 0
 
+            // Build a set of equipment IDs that are currently borrowed (loan status = approved)
+            const borrowedEquipmentIds = new Set<string>(
+                Array.isArray(loans)
+                    ? loans.filter((l: any) => l.status === 'approved' && l.equipment_id).map((l: any) => l.equipment_id)
+                    : []
+            )
+
             return {
                 loanStats,
                 reservationStats,
@@ -234,7 +242,8 @@ export function useReportData(dateRange: DateRange) {
                 staffActivity,
                 monthlyStats,
                 equipmentTypes: Array.isArray(equipmentTypes) ? equipmentTypes : [],
-                allEquipment: Array.isArray(equipment) ? equipment : []
+                allEquipment: Array.isArray(equipment) ? equipment : [],
+                borrowedEquipmentIds
             }
         }
     })

@@ -15,7 +15,8 @@ import {
     ArrowRight,
     History,
     AlertTriangle,
-    ChevronLeft
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react'
 
 interface EquipmentTabProps {
@@ -63,6 +64,8 @@ function BorrowHistoryModal({
     const [records, setRecords] = useState<BorrowRecord[]>([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [currentPage, setCurrentPage] = useState(1)
+    const ITEMS_PER_PAGE = 10
 
     const fetchHistory = useCallback(async () => {
         if (!equipment) return
@@ -105,11 +108,13 @@ function BorrowHistoryModal({
 
     useEffect(() => {
         if (isOpen && equipment) {
+            setCurrentPage(1)
             fetchHistory()
         }
         return () => {
             setRecords([])
             setError(null)
+            setCurrentPage(1)
         }
     }, [isOpen, equipment, fetchHistory])
 
@@ -169,74 +174,119 @@ function BorrowHistoryModal({
                             <p className="text-gray-500 font-medium">ไม่มีประวัติการยืมในช่วงเวลานี้</p>
                             <p className="text-xs text-gray-400">ลองเปลี่ยนช่วงวันที่ดู</p>
                         </div>
-                    ) : (
-                        <div className="space-y-3">
-                            <p className="text-xs text-gray-500 mb-4">ทั้งหมด {records.length} รายการ</p>
-                            {records.map((record) => {
-                                const userName = record.profiles
-                                    ? `${record.profiles.first_name || ''} ${record.profiles.last_name || ''}`.trim()
-                                    : 'ไม่ทราบ'
-                                const isReturned = record.status === 'returned'
+                    ) : (() => {
+                        const totalPages = Math.ceil(records.length / ITEMS_PER_PAGE)
+                        const startIdx = (currentPage - 1) * ITEMS_PER_PAGE
+                        const paginatedRecords = records.slice(startIdx, startIdx + ITEMS_PER_PAGE)
 
-                                return (
-                                    <div
-                                        key={record.id}
-                                        className="group bg-gray-50 hover:bg-gray-100/80 rounded-xl p-4 transition-all duration-200 border border-gray-100"
-                                    >
-                                        <div className="flex items-start gap-3">
-                                            {/* Avatar */}
-                                            <div className="flex-shrink-0">
-                                                {record.profiles?.avatar_url ? (
-                                                    <img
-                                                        src={record.profiles.avatar_url}
-                                                        alt={userName}
-                                                        className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
-                                                    />
-                                                ) : (
-                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center border-2 border-white shadow-sm">
-                                                        <User className="w-5 h-5 text-blue-500" />
-                                                    </div>
-                                                )}
-                                            </div>
+                        return (
+                            <div className="space-y-3">
+                                <p className="text-xs text-gray-500 mb-4">
+                                    ทั้งหมด {records.length} รายการ
+                                    {totalPages > 1 && ` • หน้า ${currentPage}/${totalPages}`}
+                                </p>
+                                {paginatedRecords.map((record) => {
+                                    const userName = record.profiles
+                                        ? `${record.profiles.first_name || ''} ${record.profiles.last_name || ''}`.trim()
+                                        : 'ไม่ทราบ'
+                                    const isReturned = record.status === 'returned'
 
-                                            {/* Info */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <p className="font-semibold text-gray-900 text-sm truncate">{userName}</p>
-                                                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${isReturned
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : 'bg-blue-100 text-blue-700'
-                                                        }`}>
-                                                        {isReturned ? 'คืนแล้ว' : 'กำลังยืม'}
-                                                    </span>
-                                                </div>
-                                                {record.profiles?.email && (
-                                                    <p className="text-xs text-gray-500 truncate mt-0.5">{record.profiles.email}</p>
-                                                )}
-                                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-gray-500">
-                                                    <span className="inline-flex items-center gap-1">
-                                                        <span className="font-medium text-gray-600">ยืม:</span>
-                                                        {formatThaiDate(record.created_at)}
-                                                    </span>
-                                                    <ArrowRight className="w-3 h-3 text-gray-300 hidden sm:block" />
-                                                    <span className="inline-flex items-center gap-1">
-                                                        <span className="font-medium text-gray-600">กำหนดคืน:</span>
-                                                        {formatThaiDate(record.end_date)}
-                                                    </span>
-                                                    {record.returned_at && (
-                                                        <span className="inline-flex items-center gap-1 text-green-600">
-                                                            <span className="font-medium">คืนจริง:</span>
-                                                            {formatThaiDate(record.returned_at)}
-                                                        </span>
+                                    return (
+                                        <div
+                                            key={record.id}
+                                            className="group bg-gray-50 hover:bg-gray-100/80 rounded-xl p-4 transition-all duration-200 border border-gray-100"
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                {/* Avatar */}
+                                                <div className="flex-shrink-0">
+                                                    {record.profiles?.avatar_url ? (
+                                                        <img
+                                                            src={record.profiles.avatar_url}
+                                                            alt={userName}
+                                                            className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center border-2 border-white shadow-sm">
+                                                            <User className="w-5 h-5 text-blue-500" />
+                                                        </div>
                                                     )}
+                                                </div>
+
+                                                {/* Info */}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <p className="font-semibold text-gray-900 text-sm truncate">{userName}</p>
+                                                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${isReturned
+                                                            ? 'bg-green-100 text-green-700'
+                                                            : 'bg-blue-100 text-blue-700'
+                                                            }`}>
+                                                            {isReturned ? 'คืนแล้ว' : 'กำลังยืม'}
+                                                        </span>
+                                                    </div>
+                                                    {record.profiles?.email && (
+                                                        <p className="text-xs text-gray-500 truncate mt-0.5">{record.profiles.email}</p>
+                                                    )}
+                                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-gray-500">
+                                                        <span className="inline-flex items-center gap-1">
+                                                            <span className="font-medium text-gray-600">ยืม:</span>
+                                                            {formatThaiDate(record.created_at)}
+                                                        </span>
+                                                        <ArrowRight className="w-3 h-3 text-gray-300 hidden sm:block" />
+                                                        <span className="inline-flex items-center gap-1">
+                                                            <span className="font-medium text-gray-600">กำหนดคืน:</span>
+                                                            {formatThaiDate(record.end_date)}
+                                                        </span>
+                                                        {record.returned_at && (
+                                                            <span className="inline-flex items-center gap-1 text-green-600">
+                                                                <span className="font-medium">คืนจริง:</span>
+                                                                {formatThaiDate(record.returned_at)}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
+                                    )
+                                })}
+
+                                {/* Pagination Controls */}
+                                {totalPages > 1 && (
+                                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                                        <button
+                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                            disabled={currentPage === 1}
+                                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            <ChevronLeft className="w-3.5 h-3.5" />
+                                            ก่อนหน้า
+                                        </button>
+                                        <div className="flex items-center gap-1">
+                                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                                                <button
+                                                    key={page}
+                                                    onClick={() => setCurrentPage(page)}
+                                                    className={`w-8 h-8 flex items-center justify-center text-xs font-medium rounded-lg transition-colors ${currentPage === page
+                                                            ? 'bg-blue-600 text-white'
+                                                            : 'text-gray-600 hover:bg-gray-100'
+                                                        }`}
+                                                >
+                                                    {page}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <button
+                                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                            disabled={currentPage === totalPages}
+                                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            ถัดไป
+                                            <ChevronRight className="w-3.5 h-3.5" />
+                                        </button>
                                     </div>
-                                )
-                            })}
-                        </div>
-                    )}
+                                )}
+                            </div>
+                        )
+                    })()}
                 </div>
 
                 {/* Footer */}
@@ -274,6 +324,16 @@ export default function EquipmentTab({ data, isLoading, dateRange: parentDateRan
         return { from, to }
     }, [parentDateRange])
 
+    // Set of equipment IDs currently borrowed (from active loans)
+    const borrowedIds = data?.borrowedEquipmentIds ?? new Set<string>()
+
+    // Compute effective status: cross-reference DB status with active loans
+    const getEffectiveStatus = useCallback((eq: { id: string; status: string }) => {
+        if (borrowedIds.has(eq.id)) return 'borrowed'
+        if (eq.status === 'borrowed' && !borrowedIds.has(eq.id)) return 'ready'
+        return eq.status
+    }, [borrowedIds])
+
     // Category breakdown with stats
     const categories = useMemo(() => {
         if (!data?.allEquipment || !data?.equipmentTypes) return []
@@ -281,9 +341,9 @@ export default function EquipmentTab({ data, isLoading, dateRange: parentDateRan
         return data.equipmentTypes.map(type => {
             const items = data.allEquipment.filter(eq => eq.equipment_type_id === type.id)
             const total = items.length
-            const ready = items.filter(e => e.status === 'ready' || e.status === 'active').length
-            const borrowed = items.filter(e => e.status === 'borrowed').length
-            const maintenance = items.filter(e => e.status === 'maintenance').length
+            const ready = items.filter(e => { const s = getEffectiveStatus(e); return s === 'ready' || s === 'active' }).length
+            const borrowed = items.filter(e => getEffectiveStatus(e) === 'borrowed').length
+            const maintenance = items.filter(e => getEffectiveStatus(e) === 'maintenance').length
 
             return {
                 id: type.id,
@@ -295,7 +355,7 @@ export default function EquipmentTab({ data, isLoading, dateRange: parentDateRan
                 maintenance
             }
         }).filter(cat => cat.total > 0).sort((a, b) => b.total - a.total)
-    }, [data?.allEquipment, data?.equipmentTypes])
+    }, [data?.allEquipment, data?.equipmentTypes, getEffectiveStatus])
 
     // Filter equipment by selected type
     const filteredEquipment = useMemo(() => {
@@ -326,7 +386,7 @@ export default function EquipmentTab({ data, isLoading, dateRange: parentDateRan
             id: eq.id,
             name: eq.name,
             equipment_number: eq.equipment_number,
-            status: eq.status
+            status: getEffectiveStatus(eq)
         })
         setIsModalOpen(true)
     }
@@ -449,7 +509,8 @@ export default function EquipmentTab({ data, isLoading, dateRange: parentDateRan
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                 {filteredEquipment.map(eq => {
-                                    const config = STATUS_MAP[eq.status] || STATUS_MAP.ready
+                                    const effectiveStatus = getEffectiveStatus(eq)
+                                    const config = STATUS_MAP[effectiveStatus] || STATUS_MAP.ready
                                     const StatusIcon = config.icon
                                     const usage = usageMap[eq.id]
 
@@ -466,8 +527,8 @@ export default function EquipmentTab({ data, isLoading, dateRange: parentDateRan
                                                     </p>
                                                     <p className="text-xs font-mono text-gray-400 mt-0.5">#{eq.equipment_number}</p>
                                                 </div>
-                                                <StatusIcon className={`w-4 h-4 flex-shrink-0 ml-2 ${eq.status === 'borrowed' ? 'text-blue-500'
-                                                    : eq.status === 'maintenance' ? 'text-orange-500'
+                                                <StatusIcon className={`w-4 h-4 flex-shrink-0 ml-2 ${effectiveStatus === 'borrowed' ? 'text-blue-500'
+                                                    : effectiveStatus === 'maintenance' ? 'text-orange-500'
                                                         : 'text-green-500'
                                                     }`} />
                                             </div>
