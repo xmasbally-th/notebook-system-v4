@@ -4,8 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { sendDiscordNotification } from '@/lib/notifications'
 import { revalidatePath } from 'next/cache'
 import { formatThaiDate, formatThaiTime, formatThaiDateTime } from '@/lib/formatThaiDate'
-import { checkTimeConflict } from '@/lib/reservations'
 import { parseLoanFormData } from '@/lib/schemas'
+import { validateBooking } from '@/lib/domain'
 
 type LoanLimitsByType = {
     [key: string]: {
@@ -119,29 +119,36 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
         }
     }
 
-    // 5.5 Check Time Conflict (Double Booking Prevention)
-    const hasConflict = await checkTimeConflict(equipmentId, start, end)
-    if (hasConflict) {
-        // Send Admin Alert (Anomaly Detection)
-        const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
-        const dept = profile.departments?.name || '-'
-        const equipmentName = equipment?.name || 'ไม่ทราบชื่อ'
-        const equipmentNumber = equipment?.equipment_number || '-'
+    // 5.5 Domain Validation (Conflicts)
+    const validation = await validateBooking({
+        userId: user.id,
+        equipmentId,
+        startDate: start,
+        endDate: end,
+        bookingType: 'loan'
+    })
 
-        const alertMessage = `
+    if (!validation.valid) {
+        if (validation.errorCode === 'TIME_CONFLICT') {
+            // Send Admin Alert (Anomaly Detection)
+            const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+            const dept = profile.departments?.name || '-'
+            const equipmentName = equipment?.name || 'ไม่ทราบชื่อ'
+            const equipmentNumber = equipment?.equipment_number || '-'
+
+            const alertMessage = `
 ⚠️ **แจ้งเตือนระวังการยืมซ้ำซ้อน (Anomaly Detected)**
 
 มีการพยายามยืมอุปกรณ์ที่ถูกจองหรือใช้งานอยู่แล้วในช่วงเวลาดังกล่าว
 👤 **ผู้ทำรายการ:** ${fullName} (${dept})
 📦 **อุปกรณ์:** ${equipmentName} (#${equipmentNumber})
-📅 **ช่วงเวลาที่ขอ:** ${formatThaiDateTime(startDate)} - ${formatThaiDateTime(endDate)}
+📅 **ช่วงเวลาที่ขอ:** ${formatThaiDateTime(start)} - ${formatThaiDateTime(end)}
 
 ระบบได้ทำการระงับการยืมนี้แล้ว กรุณาตรวจสอบหากมีความผิดปกติเพิ่มเติม
 `.trim()
-
-        await sendDiscordNotification(alertMessage, 'maintenance')
-
-        return { error: 'อุปกรณ์นี้ถูกใช้งานหรือจองแล้วในช่วงเวลาดังกล่าว' }
+            await sendDiscordNotification(alertMessage, 'maintenance')
+        }
+        return { error: validation.error || 'การยืมไม่ถูกต้อง' }
     }
 
     // 6. Create Loan Request

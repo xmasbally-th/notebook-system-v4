@@ -4,8 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { sendDiscordNotification } from '@/lib/notifications'
 import { revalidatePath } from 'next/cache'
 import { formatThaiDate, formatThaiTime, formatThaiDateTime } from '@/lib/formatThaiDate'
-import { checkTimeConflict, checkTypeConflict } from '@/lib/reservations'
 import { parseReservationFormData } from '@/lib/schemas'
+import { validateBooking, getInitialStatus, isStaffOrAdmin } from '@/lib/domain'
 
 export async function submitReservationRequest(formData: FormData) {
     const supabase = await createClient()
@@ -37,15 +37,17 @@ export async function submitReservationRequest(formData: FormData) {
     const start = new Date(startDate)
     const end = new Date(endDate)
 
-    // Check conflicts
-    try {
-        const typeConflict = await checkTypeConflict(user.id, equipmentId)
-        if (typeConflict.hasConflict) {
-            return { error: 'คุณมีการจองหรือยืมอุปกรณ์ประเภทนี้อยู่แล้ว' }
-        }
+    // 3. Domain Validation (Conflicts)
+    const validation = await validateBooking({
+        userId: user.id,
+        equipmentId,
+        startDate: start,
+        endDate: end,
+        bookingType: 'reservation'
+    })
 
-        const timeConflict = await checkTimeConflict(equipmentId, start, end)
-        if (timeConflict) {
+    if (!validation.valid) {
+        if (validation.errorCode === 'TIME_CONFLICT') {
             // Anomaly Detection Notification
             const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
             const dept = profile.departments?.name || '-'
@@ -56,23 +58,18 @@ export async function submitReservationRequest(formData: FormData) {
 มีการพยายามจองอุปกรณ์ในช่วงเวลาที่ไม่ว่าง
 👤 **ผู้ทำรายการ:** ${fullName} (${dept})
 📦 **รหัสอุปกรณ์ที่ขอ:** ${equipmentId}
-📅 **ช่วงเวลาที่ขอ:** ${formatThaiDateTime(startDate)} - ${formatThaiDateTime(endDate)}
+📅 **ช่วงเวลาที่ขอ:** ${formatThaiDateTime(start)} - ${formatThaiDateTime(end)}
 
 ระบบได้ทำการระงับการจองนี้แล้ว
 `.trim()
             await sendDiscordNotification(alertMessage, 'maintenance')
-
-            return { error: 'ช่วงเวลาที่เลือกมีการจองหรือยืมอยู่แล้ว' }
         }
-    } catch (e) {
-        console.error('Validation error:', e)
-        // Continue if checks fail? No, better safe than sorry
-        // But the original code swallowed some errors. Let's rely on DB constraints as final gate.
+        return { error: validation.error || 'การจองไม่ถูกต้อง' }
     }
 
     // 4. Create Reservation
-    const isSelfAction = profile.role === 'staff' || profile.role === 'admin'
-    const status = isSelfAction ? 'approved' : 'pending'
+    const isSelfAction = isStaffOrAdmin(profile.role)
+    const status = getInitialStatus(profile.role)
 
     const { data: insertedReservation, error } = await (supabase as any)
         .from('reservations')
