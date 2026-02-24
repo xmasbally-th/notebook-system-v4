@@ -5,6 +5,7 @@ import { sendDiscordNotification } from '@/lib/notifications'
 import { revalidatePath } from 'next/cache'
 import { formatThaiDate, formatThaiTime, formatThaiDateTime } from '@/lib/formatThaiDate'
 import { checkTimeConflict, checkTypeConflict } from '@/lib/reservations'
+import { parseReservationFormData } from '@/lib/schemas'
 
 export async function submitReservationRequest(formData: FormData) {
     const supabase = await createClient()
@@ -25,36 +26,16 @@ export async function submitReservationRequest(formData: FormData) {
         return { error: 'บัญชีของคุณยังไม่ได้รับการอนุมัติ' }
     }
 
-    // 2. Parse Data
-    const equipmentId = formData.get('equipmentId') as string
-    const startDate = formData.get('startDate') as string
-    const endDate = formData.get('endDate') as string
-    const pickupTime = formData.get('pickupTime') as string | null
-    const returnTime = formData.get('returnTime') as string | null
-
-    if (!equipmentId || !startDate || !endDate) {
-        return { error: 'กรุณากรอกข้อมูลให้ครบทุกช่อง' }
+    // 2. Parse & Validate Data with Zod
+    const parsed = parseReservationFormData(formData)
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message || 'ข้อมูลไม่ถูกต้อง'
+        return { error: firstError }
     }
 
-    // 3. Validation
+    const { equipmentId, startDate, endDate, pickupTime, returnTime } = parsed.data
     const start = new Date(startDate)
     const end = new Date(endDate)
-
-    // Check dates logic
-    if (start < new Date()) {
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const startDay = new Date(start)
-        startDay.setHours(0, 0, 0, 0)
-
-        if (startDay < today) {
-            return { error: 'วันที่รับต้องไม่เป็นวันที่ผ่านมาแล้ว' }
-        }
-    }
-
-    if (end < start) {
-        return { error: 'วันที่คืนต้องไม่ก่อนวันที่รับ' }
-    }
 
     // Check conflicts
     try {

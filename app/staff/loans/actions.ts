@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendDiscordNotification } from '@/lib/notifications'
 import type { ActionType } from '@/lib/staffActivityLog'
+import { loanActionSchema, rejectLoanSchema } from '@/lib/schemas'
 
 // Server-side function to log staff activity
 async function logStaffActivityServer(
@@ -45,6 +46,12 @@ async function logStaffActivityServer(
 }
 
 export async function approveLoan(loanId: string) {
+    // Validate input with Zod
+    const parsed = loanActionSchema.safeParse({ loanId })
+    if (!parsed.success) {
+        return { success: false, error: parsed.error.issues[0]?.message || 'รหัสคำขอไม่ถูกต้อง' }
+    }
+
     console.log('[approveLoan] Starting approval for loan:', loanId)
     const supabase = await createClient()
 
@@ -210,6 +217,12 @@ export async function bulkApproveLoans(loanIds: string[]) {
 
 // Reject loan with reason
 export async function rejectLoan(loanId: string, reason: string) {
+    // Validate input with Zod
+    const parsed = rejectLoanSchema.safeParse({ loanId, reason })
+    if (!parsed.success) {
+        return { success: false, error: parsed.error.issues[0]?.message || 'ข้อมูลไม่ถูกต้อง' }
+    }
+
     console.log('[rejectLoan] Starting rejection for loan:', loanId)
     const supabase = await createClient()
 

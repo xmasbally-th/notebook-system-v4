@@ -5,6 +5,7 @@ import { sendDiscordNotification } from '@/lib/notifications'
 import { revalidatePath } from 'next/cache'
 import { formatThaiDate, formatThaiTime, formatThaiDateTime } from '@/lib/formatThaiDate'
 import { checkTimeConflict } from '@/lib/reservations'
+import { parseLoanFormData } from '@/lib/schemas'
 
 type LoanLimitsByType = {
     [key: string]: {
@@ -33,15 +34,14 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
         return { error: 'บัญชีของคุณยังไม่ได้รับการอนุมัติ' }
     }
 
-    // 2. Parse Data
-    const equipmentId = formData.get('equipmentId') as string
-    const startDate = formData.get('startDate') as string
-    const endDate = formData.get('endDate') as string
-    const returnTime = formData.get('returnTime') as string | null
-
-    if (!equipmentId || !startDate || !endDate) {
-        return { error: 'กรุณากรอกข้อมูลให้ครบทุกช่อง' }
+    // 2. Parse & Validate Data with Zod
+    const parsed = parseLoanFormData(formData)
+    if (!parsed.success) {
+        const firstError = parsed.error.issues[0]?.message || 'ข้อมูลไม่ถูกต้อง'
+        return { error: firstError }
     }
+
+    const { equipmentId, startDate, endDate, returnTime } = parsed.data
 
     // 3. Get System Config for Validation
     const { data: config } = await (supabase as any)
@@ -58,27 +58,8 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
     const loanLimits = config?.loan_limits_by_type as LoanLimitsByType | null
     const limits = loanLimits?.[userType as keyof LoanLimitsByType] || { max_days: 7, max_items: 1, type_limits: {} }
 
-    // Parse dates
     const start = new Date(startDate)
     const end = new Date(endDate)
-
-    // Get today at midnight for comparison
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    // Check if start date is in the past
-    const startDateOnly = new Date(start)
-    startDateOnly.setHours(0, 0, 0, 0)
-    if (startDateOnly < today) {
-        return { error: 'วันที่ยืมต้องไม่เป็นวันที่ผ่านมาแล้ว' }
-    }
-
-    // Check if end date is before start date
-    const endDateOnly = new Date(end)
-    endDateOnly.setHours(0, 0, 0, 0)
-    if (endDateOnly < startDateOnly) {
-        return { error: 'วันที่คืนต้องไม่ก่อนวันที่ยืม' }
-    }
 
     // Check loan duration
     const durationMs = end.getTime() - start.getTime()
