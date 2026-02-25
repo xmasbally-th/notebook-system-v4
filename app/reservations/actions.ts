@@ -6,24 +6,26 @@ import { revalidatePath } from 'next/cache'
 import { formatThaiDate, formatThaiTime, formatThaiDateTime } from '@/lib/formatThaiDate'
 import { parseReservationFormData } from '@/lib/schemas'
 import { validateBooking, getInitialStatus, isStaffOrAdmin } from '@/lib/domain'
+import { requireApprovedUser, requireStaff } from '@/lib/auth-guard'
 
 export async function submitReservationRequest(formData: FormData) {
-    const supabase = await createClient()
-
-    // 1. Validate User
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-        return { error: 'กรุณาเข้าสู่ระบบก่อน' }
+    // 1. Auth Guard — requires approved user
+    const { user, error: authError } = await requireApprovedUser()
+    if (authError || !user) {
+        return { error: authError || 'กรุณาเข้าสู่ระบบก่อน' }
     }
 
+    const supabase = await createClient()
+
+    // Fetch extended profile info needed for notifications
     const { data: profile } = await (supabase as any)
         .from('profiles')
-        .select('role, status, first_name, last_name, email, departments(name)')
+        .select('role, first_name, last_name, email, departments(name)')
         .eq('id', user.id)
         .single()
 
-    if (profile?.status !== 'approved') {
-        return { error: 'บัญชีของคุณยังไม่ได้รับการอนุมัติ' }
+    if (!profile) {
+        return { error: 'ไม่พบข้อมูลผู้ใช้' }
     }
 
     // 2. Parse & Validate Data with Zod
@@ -185,22 +187,23 @@ async function logStaffActivityServer(
 export async function convertReservationToLoanAction(
     reservationId: string
 ): Promise<{ success: boolean; error?: string; loanId?: string }> {
-    const supabase = await createClient()
-
-    // 1. Authenticate user & check role
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-        return { success: false, error: 'กรุณาเข้าสู่ระบบ' }
+    // 1. Auth Guard — requires staff or admin
+    const { user, error: authError } = await requireStaff()
+    if (authError || !user) {
+        return { success: false, error: authError || 'ไม่มีสิทธิ์ดำเนินการ' }
     }
 
+    const supabase = await createClient()
+
+    // Fetch extended profile for discord notification & activity log
     const { data: profile } = await (supabase as any)
         .from('profiles')
         .select('role, first_name, last_name')
         .eq('id', user.id)
         .single()
 
-    if (!profile || (profile.role !== 'staff' && profile.role !== 'admin')) {
-        return { success: false, error: 'ไม่มีสิทธิ์ดำเนินการ' }
+    if (!profile) {
+        return { success: false, error: 'ไม่พบข้อมูลผู้ใช้' }
     }
 
     // 2. Fetch reservation with equipment info — validate status (🟡 Fix #3)

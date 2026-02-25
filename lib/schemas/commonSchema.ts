@@ -61,3 +61,11 @@ export const futureDateSchema = isoDateStringSchema.refine(
     },
     { message: 'วันที่ต้องไม่เป็นวันที่ผ่านมาแล้ว' }
 )
+
+// ─── General-purpose text schemas ────────────────────────────────────────────
+
+/** Short display text: names, titles, codes (max 255 chars) */
+export const shortTextSchema = z.string().trim().min(1, 'กรุณากรอกข้อมูล').max(255, 'ข้อความยาวเกินไป (สูงสุด 255 ตัวอักษร)')
+
+/** Long free-form text: notes, reasons, messages (max 2,000 chars) */
+export const longTextSchema = z.string().trim().max(2000, 'ข้อความยาวเกินไป (สูงสุด 2,000 ตัวอักษร)').optional()

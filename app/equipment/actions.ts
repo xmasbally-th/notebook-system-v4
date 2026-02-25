@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { formatThaiDate, formatThaiTime, formatThaiDateTime } from '@/lib/formatThaiDate'
 import { parseLoanFormData } from '@/lib/schemas'
 import { validateBooking } from '@/lib/domain'
+import { requireApprovedUser } from '@/lib/auth-guard'
 
 type LoanLimitsByType = {
     [key: string]: {
@@ -16,22 +17,23 @@ type LoanLimitsByType = {
 }
 
 export async function submitLoanRequest(prevState: any, formData: FormData) {
-    const supabase = await createClient()
-
-    // 1. Validate User
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-        return { error: 'กรุณาเข้าสู่ระบบก่อน' }
+    // 1. Auth Guard — requires approved user
+    const { user, error: authError } = await requireApprovedUser()
+    if (authError || !user) {
+        return { error: authError || 'กรุณาเข้าสู่ระบบก่อน' }
     }
 
+    const supabase = await createClient()
+
+    // Fetch extended profile info for business logic & notifications
     const { data: profile } = await (supabase as any)
         .from('profiles')
         .select('status, first_name, last_name, email, user_type, departments(name)')
         .eq('id', user.id)
         .single()
 
-    if (profile?.status !== 'approved') {
-        return { error: 'บัญชีของคุณยังไม่ได้รับการอนุมัติ' }
+    if (!profile) {
+        return { error: 'ไม่พบข้อมูลผู้ใช้' }
     }
 
     // 2. Parse & Validate Data with Zod

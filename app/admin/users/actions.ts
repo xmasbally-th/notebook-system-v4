@@ -1,6 +1,7 @@
 'use server'
 
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/auth-guard'
 import { sendApprovalEmail } from '@/lib/email'
 import { revalidatePath } from 'next/cache'
 import {
@@ -18,24 +19,14 @@ export async function updateUserStatus(userId: string, newStatus: 'approved' | '
         return { error: parsed.error.issues[0]?.message || 'ข้อมูลไม่ถูกต้อง' }
     }
 
-    const supabase = await createClient()
-
     // 2. Check Admin Permission
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { error: 'Unauthorized' }
+    const auth = await requireAdmin()
+    if (auth.error) return { error: auth.error }
 
-    const { data: adminProfile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-    if (adminProfile?.role !== 'admin') {
-        return { error: 'Forbidden: Admin access required' }
-    }
+    const adminClient = createAdminClient()
 
     // 3. Update Status
-    const { error, data: updatedUser } = await supabase
+    const { error, data: updatedUser } = await adminClient
         .from('profiles')
         .update({ status: newStatus })
         .eq('id', userId)
@@ -61,24 +52,14 @@ export async function updateUserRole(userId: string, newRole: 'admin' | 'staff' 
         return { error: parsed.error.issues[0]?.message || 'ข้อมูลไม่ถูกต้อง' }
     }
 
-    const supabase = await createClient()
-
     // 2. Check Admin Permission
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { error: 'Unauthorized' }
+    const auth = await requireAdmin()
+    if (auth.error) return { error: auth.error }
 
-    const { data: adminProfile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-    if (adminProfile?.role !== 'admin') {
-        return { error: 'Forbidden: Admin access required' }
-    }
+    const adminClient = createAdminClient()
 
     // 3. Update Role
-    const { error } = await supabase
+    const { error } = await adminClient
         .from('profiles')
         .update({ role: newRole })
         .eq('id', userId)
@@ -100,26 +81,16 @@ export async function updateMultipleUserStatus(
         return { error: parsed.error.issues[0]?.message || 'ข้อมูลไม่ถูกต้อง' }
     }
 
-    const supabase = await createClient()
-
     // 2. Check Admin Permission
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { error: 'Unauthorized' }
+    const auth = await requireAdmin()
+    if (auth.error) return { error: auth.error }
 
-    const { data: adminProfile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-    if (adminProfile?.role !== 'admin') {
-        return { error: 'Forbidden: Admin access required' }
-    }
+    const adminClient = createAdminClient()
 
     // 3. Get users for email notification
     let usersToNotify: any[] = []
     if (newStatus === 'approved') {
-        const { data } = await supabase
+        const { data } = await adminClient
             .from('profiles')
             .select('id, email, first_name, last_name, title')
             .in('id', userIds)
@@ -128,7 +99,7 @@ export async function updateMultipleUserStatus(
     }
 
     // 4. Batch Update Status
-    const { error } = await supabase
+    const { error } = await adminClient
         .from('profiles')
         .update({ status: newStatus })
         .in('id', userIds)
@@ -141,8 +112,6 @@ export async function updateMultipleUserStatus(
             const fullName = `${u.title || ''}${u.first_name} ${u.last_name || ''}`.trim()
             return sendApprovalEmail(u.email, fullName)
         })
-
-        // Send emails in parallel
         await Promise.allSettled(emailPromises)
     }
 
@@ -177,24 +146,14 @@ export async function updateUserProfile(
         return { error: parsed.error.issues[0]?.message || 'ข้อมูลไม่ถูกต้อง' }
     }
 
-    const supabase = await createClient()
-
     // 2. Check Admin Permission
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { error: 'Unauthorized' }
+    const auth = await requireAdmin()
+    if (auth.error) return { error: auth.error }
 
-    const { data: adminProfile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-    if (adminProfile?.role !== 'admin') {
-        return { error: 'Forbidden: Admin access required' }
-    }
+    const adminClient = createAdminClient()
 
     // 3. Update Profile
-    const { error } = await supabase
+    const { error } = await adminClient
         .from('profiles')
         .update({
             first_name: data.first_name,
@@ -221,24 +180,12 @@ export async function deleteUser(userId: string) {
         return { success: false, error: 'ID ผู้ใช้ไม่ถูกต้อง' }
     }
 
-    const supabase = await createClient()
-
-    // 2. Check Admin Permission with regular client
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { success: false, error: 'Unauthorized' }
-
-    const { data: adminProfile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-    if (adminProfile?.role !== 'admin') {
-        return { success: false, error: 'Forbidden: Admin access required' }
-    }
+    // 2. Check Admin Permission
+    const { user: currentUser, error: guardError } = await requireAdmin()
+    if (guardError) return { success: false, error: guardError }
 
     // 3. Prevent self-deletion
-    if (userId === user.id) {
+    if (userId === currentUser!.id) {
         return { success: false, error: 'ไม่สามารถลบบัญชีของตัวเองได้' }
     }
 
@@ -301,9 +248,9 @@ export async function deleteUser(userId: string) {
         return { success: false, error: `ไม่สามารถลบโปรไฟล์ได้: ${profileError.message}` }
     }
 
-    const { error: authError } = await adminClient.auth.admin.deleteUser(userId)
-    if (authError) {
-        return { success: false, error: `ลบโปรไฟล์สำเร็จ แต่ลบใน Auth ไม่สำเร็จ: ${authError.message}` }
+    const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(userId)
+    if (deleteAuthError) {
+        return { success: false, error: `ลบโปรไฟล์สำเร็จ แต่ลบใน Auth ไม่สำเร็จ: ${deleteAuthError.message}` }
     }
 
     revalidatePath('/admin/users')

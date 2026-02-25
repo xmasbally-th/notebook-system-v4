@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { sendDiscordNotification } from '@/lib/notifications'
 import type { ActionType } from '@/lib/staffActivityLog'
 import { loanActionSchema, rejectLoanSchema } from '@/lib/schemas'
+import { requireStaff } from '@/lib/auth-guard'
 
 // Server-side function to log staff activity
 async function logStaffActivityServer(
@@ -53,41 +54,25 @@ export async function approveLoan(loanId: string) {
     }
 
     console.log('[approveLoan] Starting approval for loan:', loanId)
+
+    // 1. Auth Guard — requires staff or admin
+    const { user, error: authError } = await requireStaff()
+    if (authError || !user) {
+        return { success: false, error: authError || 'Unauthorized: Staff access required' }
+    }
+
     const supabase = await createClient()
 
     try {
-        // 1. Check authentication/authorization
-        console.log('[approveLoan] Checking authentication...')
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-        if (authError) {
-            console.error('[approveLoan] Auth error:', authError)
-            throw new Error('Authentication failed: ' + authError.message)
-        }
-
-        if (!user) {
-            console.error('[approveLoan] No user found')
-            throw new Error('Unauthorized: Please login first')
-        }
-
-        console.log('[approveLoan] User authenticated:', user.id)
-
-        // Check if user is staff or admin
-        console.log('[approveLoan] Checking user role...')
-        const { data: profile, error: profileError } = await supabase
+        // Fetch role for activity log
+        const { data: profile } = await supabase
             .from('profiles')
             .select('role')
             .eq('id', user.id)
             .single()
 
-        if (profileError) {
-            console.error('[approveLoan] Profile fetch error:', profileError)
-            throw new Error('Failed to fetch profile: ' + profileError.message)
-        }
-
-        if (!profile || !['admin', 'staff'].includes(profile.role)) {
-            console.error('[approveLoan] User role not authorized:', profile?.role)
-            throw new Error('Unauthorized: Staff access required')
+        if (!profile) {
+            return { success: false, error: 'Profile not found' }
         }
 
         console.log('[approveLoan] User role verified:', profile.role)
@@ -224,25 +209,25 @@ export async function rejectLoan(loanId: string, reason: string) {
     }
 
     console.log('[rejectLoan] Starting rejection for loan:', loanId)
+
+    // 1. Auth Guard — requires staff or admin
+    const { user, error: authError } = await requireStaff()
+    if (authError || !user) {
+        return { success: false, error: authError || 'Unauthorized: Staff access required' }
+    }
+
     const supabase = await createClient()
 
     try {
-        // 1. Check authentication/authorization
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-        if (authError || !user) {
-            throw new Error('Unauthorized: Please login first')
-        }
-
-        // Check if user is staff or admin
-        const { data: profile, error: profileError } = await supabase
+        // Fetch role for activity log
+        const { data: profile } = await supabase
             .from('profiles')
             .select('role')
             .eq('id', user.id)
             .single()
 
-        if (profileError || !profile || !['admin', 'staff'].includes(profile.role)) {
-            throw new Error('Unauthorized: Staff access required')
+        if (!profile) {
+            return { success: false, error: 'Profile not found' }
         }
 
         // 2. Update loan status
