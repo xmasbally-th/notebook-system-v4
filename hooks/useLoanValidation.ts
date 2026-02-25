@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { createBrowserClient } from '@supabase/ssr'
+import { supabase } from '@/lib/supabase/client'
 import { useMemo } from 'react'
 
 type LoanLimitsByType = {
@@ -36,74 +36,38 @@ interface LoanValidationResult {
     activeLoans: any[]
 }
 
-// Get credentials for direct fetch API
-function getSupabaseCredentials() {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    return { url, key }
-}
-
-// Get client for auth operations
-function getSupabaseClient() {
-    const { url, key } = getSupabaseCredentials()
-    if (!url || !key) return null
-    return createBrowserClient(url, key)
-}
 
 export function useLoanValidation(userType: UserType = 'student'): LoanValidationResult {
     // Fetch system config using direct fetch
     const { data: systemConfig, isLoading: configLoading } = useQuery({
         queryKey: ['system_config'],
-        staleTime: 30000,
+        staleTime: 5 * 60 * 1000, // 5 minutes - config rarely changes
         queryFn: async () => {
-            const { url, key } = getSupabaseCredentials()
-            if (!url || !key) return null
-
-            // Try to get user's access token for authenticated requests
-            const client = getSupabaseClient()
-            let authToken = key
-            if (client) {
-                const { data: { session } } = await client.auth.getSession()
-                if (session?.access_token) {
-                    authToken = session.access_token
-                }
-            }
-
-            const response = await fetch(`${url}/rest/v1/system_config?select=*&limit=1`, {
-                headers: {
-                    'apikey': key,
-                    'Authorization': `Bearer ${authToken}`
-                }
-            })
-            if (!response.ok) return null
-            const data = await response.json()
-            return data?.[0] || null
+            const { data, error } = await (supabase as any)
+                .from('system_config')
+                .select('*')
+                .limit(1)
+                .single()
+            if (error) return null
+            return data || null
         }
     })
 
     // Fetch current user's active loans count and details
     const { data: activeLoanData, isLoading: loansLoading } = useQuery({
         queryKey: ['my-active-loans-count'],
-        staleTime: 30000,
+        staleTime: 60 * 1000, // 1 minute
         queryFn: async () => {
-            const client = getSupabaseClient()
-            if (!client) return { count: 0, loans: [] }
-
-            const { data: { user } } = await client.auth.getUser()
+            const { data: { user } } = await supabase.auth.getUser()
             if (!user) return { count: 0, loans: [] }
 
-            const { url, key } = getSupabaseCredentials()
-            const response = await fetch(
-                `${url}/rest/v1/loanRequests?user_id=eq.${user.id}&status=in.(pending,approved)&select=id,equipment_id,equipment(equipment_type_id)`,
-                {
-                    headers: {
-                        'apikey': key,
-                        'Authorization': `Bearer ${key}`
-                    }
-                }
-            )
-            if (!response.ok) return { count: 0, loans: [] }
-            const data = await response.json()
+            const { data, error } = await (supabase as any)
+                .from('loanRequests')
+                .select('id,equipment_id,equipment(equipment_type_id)')
+                .eq('user_id', user.id)
+                .in('status', ['pending', 'approved'])
+
+            if (error) return { count: 0, loans: [] }
             return { count: data?.length || 0, loans: data || [] }
         }
     })

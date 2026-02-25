@@ -51,7 +51,7 @@ const nextConfig = {
             ].filter(Boolean),
         },
         // Optimize barrel imports to reduce bundle size
-        optimizePackageImports: ['lucide-react'],
+        optimizePackageImports: ['lucide-react', 'recharts', 'date-fns'],
     },
     images: {
         remotePatterns: [

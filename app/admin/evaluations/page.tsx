@@ -11,7 +11,12 @@ import {
 } from 'lucide-react'
 import { format, subDays, startOfMonth, endOfDay, startOfDay, parseISO, isWithinInterval } from 'date-fns'
 import { th } from 'date-fns/locale'
-import EvaluationCharts from '@/components/admin/EvaluationCharts'
+import dynamic from 'next/dynamic'
+
+const EvaluationCharts = dynamic(() => import('@/components/admin/EvaluationCharts'), {
+    ssr: false,
+    loading: () => <div className="h-[300px] animate-pulse bg-gray-100 rounded-xl mb-6" />,
+})
 
 type TabType = 'completed' | 'pending'
 type PendingFilter = 'mandatory' | 'all'

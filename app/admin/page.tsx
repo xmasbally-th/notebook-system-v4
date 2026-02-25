@@ -37,7 +37,7 @@ export default function AdminDashboard() {
     // Fetch stats using Supabase client
     const { data: stats, isLoading } = useQuery({
         queryKey: ['admin-stats'],
-        // staleTime: Infinity, // Let Realtime handle updates
+        staleTime: Infinity, // Realtime channel handles invalidation
         queryFn: async () => {
             const [
                 { count: equipment },

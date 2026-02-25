@@ -8,10 +8,11 @@ export default function QueryProvider({ children }: { children: React.ReactNode 
     const [queryClient] = useState(() => new QueryClient({
         defaultOptions: {
             queries: {
-                staleTime: 30 * 1000,  // 30 seconds - shorter for fresher data
-                retry: 2,              // Retry failed queries twice
+                staleTime: 60 * 1000,          // 1 minute — realtime handles live updates
+                gcTime: 5 * 60 * 1000,         // 5 minutes cache retention
+                retry: 1,                       // 1 retry only (faster error surfacing)
                 retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-                refetchOnWindowFocus: true,
+                refetchOnWindowFocus: false,    // realtime subscriptions handle updates
             },
         },
     }))

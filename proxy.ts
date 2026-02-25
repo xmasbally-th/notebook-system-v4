@@ -80,31 +80,22 @@ export default async function proxy(request: NextRequest) {
             return NextResponse.redirect(url)
         }
 
-        // Get user profile for status/role checking
+        // Get user profile for status/role checking (minimal select)
         const { data: profile } = await supabase
             .from('profiles')
-            .select('status, role, first_name, last_name, phone_number')
+            .select('status, role')
             .eq('id', user.id)
             .single()
 
         if (profile) {
-            const isProfileIncomplete = !profile.first_name || !profile.last_name || !profile.phone_number
-            const isProfileComplete = profile.first_name && profile.last_name && profile.phone_number
             const isPending = profile.status === 'pending'
             const isRejected = profile.status === 'rejected'
             const isApproved = profile.status === 'approved'
             const isAdminUser = profile.role === 'admin'
             const isStaffUser = profile.role === 'staff'
 
-            // If profile is incomplete, redirect to setup (unless already there)
-            if (isProfileIncomplete && !isProfileSetupRoute && !isPublicRoute) {
-                const url = request.nextUrl.clone()
-                url.pathname = '/register/complete-profile'
-                return NextResponse.redirect(url)
-            }
-
             // If pending/rejected, redirect to pending-approval
-            if ((isPending || isRejected) && !isPendingRoute && !isProfileSetupRoute && isProfileComplete) {
+            if ((isPending || isRejected) && !isPendingRoute && !isProfileSetupRoute) {
                 const url = request.nextUrl.clone()
                 url.pathname = '/pending-approval'
                 return NextResponse.redirect(url)
