@@ -3,35 +3,48 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { sendApprovalEmail } from '@/lib/email'
 import { revalidatePath } from 'next/cache'
+import {
+    updateUserStatusSchema,
+    updateUserRoleSchema,
+    bulkUpdateUserStatusSchema,
+    updateUserProfileSchema,
+    uuidSchema
+} from '@/lib/schemas'
 
 export async function updateUserStatus(userId: string, newStatus: 'approved' | 'rejected' | 'pending') {
+    // 1. Zod Validation
+    const parsed = updateUserStatusSchema.safeParse({ userId, newStatus })
+    if (!parsed.success) {
+        return { error: parsed.error.issues[0]?.message || 'ข้อมูลไม่ถูกต้อง' }
+    }
+
     const supabase = await createClient()
 
-    // 1. Check Admin Permission
+    // 2. Check Admin Permission
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Unauthorized')
+    if (!user) return { error: 'Unauthorized' }
 
     const { data: adminProfile } = await supabase
-        .from('profiles' as any)
+        .from('profiles')
         .select('role')
         .eq('id', user.id)
         .single()
 
     if (adminProfile?.role !== 'admin') {
-        throw new Error('Forbidden: Admin access required')
+        return { error: 'Forbidden: Admin access required' }
     }
 
-    // 2. Update Status
+    // 3. Update Status
     const { error, data: updatedUser } = await supabase
-        .from('profiles' as any)
+        .from('profiles')
         .update({ status: newStatus })
         .eq('id', userId)
         .select('email, first_name, last_name, title')
         .single()
 
-    if (error) throw new Error(error.message)
+    if (error) return { error: error.message }
 
-    // 3. Send Email if Approved
+    // 4. Send Email if Approved
     if (newStatus === 'approved' && updatedUser) {
         const fullName = `${updatedUser.title || ''}${updatedUser.first_name} ${updatedUser.last_name || ''}`.trim()
         await sendApprovalEmail(updatedUser.email, fullName)
@@ -42,29 +55,35 @@ export async function updateUserStatus(userId: string, newStatus: 'approved' | '
 }
 
 export async function updateUserRole(userId: string, newRole: 'admin' | 'staff' | 'user') {
+    // 1. Zod Validation
+    const parsed = updateUserRoleSchema.safeParse({ userId, newRole })
+    if (!parsed.success) {
+        return { error: parsed.error.issues[0]?.message || 'ข้อมูลไม่ถูกต้อง' }
+    }
+
     const supabase = await createClient()
 
-    // 1. Check Admin Permission
+    // 2. Check Admin Permission
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Unauthorized')
+    if (!user) return { error: 'Unauthorized' }
 
     const { data: adminProfile } = await supabase
-        .from('profiles' as any)
+        .from('profiles')
         .select('role')
         .eq('id', user.id)
         .single()
 
     if (adminProfile?.role !== 'admin') {
-        throw new Error('Forbidden: Admin access required')
+        return { error: 'Forbidden: Admin access required' }
     }
 
-    // 2. Update Role
+    // 3. Update Role
     const { error } = await supabase
-        .from('profiles' as any)
+        .from('profiles')
         .update({ role: newRole })
         .eq('id', userId)
 
-    if (error) throw new Error(error.message)
+    if (error) return { error: error.message }
 
     revalidatePath('/admin/users')
     return { success: true }
@@ -75,42 +94,48 @@ export async function updateMultipleUserStatus(
     userIds: string[],
     newStatus: 'approved' | 'rejected' | 'pending'
 ) {
+    // 1. Zod Validation
+    const parsed = bulkUpdateUserStatusSchema.safeParse({ userIds, newStatus })
+    if (!parsed.success) {
+        return { error: parsed.error.issues[0]?.message || 'ข้อมูลไม่ถูกต้อง' }
+    }
+
     const supabase = await createClient()
 
-    // 1. Check Admin Permission
+    // 2. Check Admin Permission
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Unauthorized')
+    if (!user) return { error: 'Unauthorized' }
 
     const { data: adminProfile } = await supabase
-        .from('profiles' as any)
+        .from('profiles')
         .select('role')
         .eq('id', user.id)
         .single()
 
     if (adminProfile?.role !== 'admin') {
-        throw new Error('Forbidden: Admin access required')
+        return { error: 'Forbidden: Admin access required' }
     }
 
-    // 2. Get users for email notification
+    // 3. Get users for email notification
     let usersToNotify: any[] = []
     if (newStatus === 'approved') {
         const { data } = await supabase
-            .from('profiles' as any)
+            .from('profiles')
             .select('id, email, first_name, last_name, title')
             .in('id', userIds)
 
         usersToNotify = data || []
     }
 
-    // 3. Batch Update Status
+    // 4. Batch Update Status
     const { error } = await supabase
-        .from('profiles' as any)
+        .from('profiles')
         .update({ status: newStatus })
         .in('id', userIds)
 
-    if (error) throw new Error(error.message)
+    if (error) return { error: error.message }
 
-    // 4. Send Approval Emails (if approved)
+    // 5. Send Approval Emails (if approved)
     if (newStatus === 'approved' && usersToNotify.length > 0) {
         const emailPromises = usersToNotify.map(u => {
             const fullName = `${u.title || ''}${u.first_name} ${u.last_name || ''}`.trim()
@@ -137,25 +162,40 @@ export async function updateUserProfile(
         department_id?: string | null
     }
 ) {
+    // 1. Zod Validation
+    const parsed = updateUserProfileSchema.safeParse({
+        userId,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        title: data.title,
+        phoneNumber: data.phone_number,
+        userType: data.user_type,
+        departmentId: data.department_id
+    })
+
+    if (!parsed.success) {
+        return { error: parsed.error.issues[0]?.message || 'ข้อมูลไม่ถูกต้อง' }
+    }
+
     const supabase = await createClient()
 
-    // 1. Check Admin Permission
+    // 2. Check Admin Permission
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Unauthorized')
+    if (!user) return { error: 'Unauthorized' }
 
     const { data: adminProfile } = await supabase
-        .from('profiles' as any)
+        .from('profiles')
         .select('role')
         .eq('id', user.id)
         .single()
 
     if (adminProfile?.role !== 'admin') {
-        throw new Error('Forbidden: Admin access required')
+        return { error: 'Forbidden: Admin access required' }
     }
 
-    // 2. Update Profile
+    // 3. Update Profile
     const { error } = await supabase
-        .from('profiles' as any)
+        .from('profiles')
         .update({
             first_name: data.first_name,
             last_name: data.last_name,
@@ -167,7 +207,7 @@ export async function updateUserProfile(
         })
         .eq('id', userId)
 
-    if (error) throw new Error(error.message)
+    if (error) return { error: error.message }
 
     revalidatePath('/admin/users')
     return { success: true }
@@ -175,114 +215,98 @@ export async function updateUserProfile(
 
 // Delete user - uses admin client to bypass RLS
 export async function deleteUser(userId: string) {
-    try {
-        const supabase = await createClient()
-
-        // 1. Check Admin Permission with regular client
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) throw new Error('Unauthorized')
-
-        const { data: adminProfile } = await supabase
-            .from('profiles' as any)
-            .select('role')
-            .eq('id', user.id)
-            .single()
-
-        if (adminProfile?.role !== 'admin') {
-            throw new Error('Forbidden: Admin access required')
-        }
-
-        // 2. Prevent self-deletion
-        if (userId === user.id) {
-            throw new Error('ไม่สามารถลบบัญชีของตัวเองได้')
-        }
-
-        // 3. Use admin client to bypass RLS for delete operations
-        const adminClient = createAdminClient()
-
-        // 4. Check for blocking conditions (Active Loans/Reservations)
-        const { count: activeLoanCount, error: loanError } = await adminClient
-            .from('loanRequests')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', userId)
-            .eq('status', 'approved')
-
-        if (loanError) throw new Error(`ไม่สามารถตรวจสอบการยืมได้: ${loanError.message}`)
-        if (activeLoanCount && activeLoanCount > 0) {
-            throw new Error(`ไม่สามารถลบผู้ใช้ได้ เนื่องจากยังมีรายการยืมที่ "กำลังยืม" อยู่ (กรุณาทำรายการคืนก่อน)`)
-        }
-
-        const { count: activeResCount, error: resError } = await adminClient
-            .from('reservations')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', userId)
-            .in('status', ['approved', 'ready'])
-
-        if (resError) throw new Error(`ไม่สามารถตรวจสอบการจองได้: ${resError.message}`)
-        if (activeResCount && activeResCount > 0) {
-            throw new Error(`ไม่สามารถลบผู้ใช้ได้ เนื่องจากยังมีรายการจองที่ "อนุมัติแล้ว/รอรับของ" (กรุณาทำรายการหรือยกเลิกก่อน)`)
-        }
-
-        // 5. Delete/Update related records (Cleanup logic)
-
-        // Clear approved_by/created_by references in related tables
-        await Promise.all([
-            adminClient.from('loanRequests').update({ approved_by: null }).eq('approved_by', userId),
-            adminClient.from('reservations').update({ approved_by: null }).eq('approved_by', userId),
-            adminClient.from('reservations').update({ ready_by: null }).eq('ready_by', userId),
-            adminClient.from('reservations').update({ completed_by: null }).eq('completed_by', userId),
-            adminClient.from('special_loan_requests').update({ created_by: null }).eq('created_by', userId),
-            adminClient.from('special_loan_requests').update({ approved_by: null }).eq('approved_by', userId),
-            adminClient.from('support_messages').update({ sender_id: null }).eq('sender_id', userId),
-            adminClient.from('data_backups').update({ deleted_by: null }).eq('deleted_by', userId),
-            adminClient.from('data_backups').update({ restored_by: null }).eq('restored_by', userId)
-        ])
-
-        // Delete user's data (Loans, Reservations, Notifications, Evaluations)
-        // Note: Active loans/reservations are already blocked above, so these are safe to delete (history)
-        await Promise.all([
-            adminClient.from('loanRequests').delete().eq('user_id', userId),
-            adminClient.from('reservations').delete().eq('user_id', userId),
-            adminClient.from('notifications').delete().eq('user_id', userId),
-            adminClient.from('evaluations').delete().eq('user_id', userId),
-            adminClient.from('support_tickets').delete().eq('user_id', userId)
-        ])
-
-        // Handle support_messages linked to deleted tickets 
-        // (Supabase CASCADE might handle this, but explicit cleanup is safer if not set)
-
-        // Log Anonymization (instead of delete)
-        // If user was staff, anonymize their actions
-        await adminClient.from('staff_activity_log').update({ staff_id: null }).eq('staff_id', userId)
-        // If user was a target of an action, anonymize target
-        await adminClient.from('staff_activity_log').update({ target_user_id: null }).eq('target_user_id', userId)
-
-
-
-        // 5. Finally delete the user profile
-        const { error } = await adminClient
-            .from('profiles')
-            .delete()
-            .eq('id', userId)
-
-        if (error) {
-            console.error('Delete profile error:', error)
-            throw new Error(`ไม่สามารถลบผู้ใช้ได้: ${error.message}`)
-        }
-
-        // 6. Delete from Auth (Supabase Authentication)
-        const { error: authError } = await adminClient.auth.admin.deleteUser(userId)
-
-        if (authError) {
-            console.error('Delete auth user error:', authError)
-            return { success: false, error: `ลบข้อมูลใน Database สำเร็จ แต่ลบใน Auth ไม่สำเร็จ: ${authError.message}` }
-        }
-
-        revalidatePath('/admin/users')
-        return { success: true }
-    } catch (error: any) {
-        console.error('deleteUser error:', error)
-        return { success: false, error: error.message || 'เกิดข้อผิดพลาดในการลบผู้ใช้' }
+    // 1. Zod Validation
+    const parsed = uuidSchema.safeParse(userId)
+    if (!parsed.success) {
+        return { success: false, error: 'ID ผู้ใช้ไม่ถูกต้อง' }
     }
+
+    const supabase = await createClient()
+
+    // 2. Check Admin Permission with regular client
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: 'Unauthorized' }
+
+    const { data: adminProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (adminProfile?.role !== 'admin') {
+        return { success: false, error: 'Forbidden: Admin access required' }
+    }
+
+    // 3. Prevent self-deletion
+    if (userId === user.id) {
+        return { success: false, error: 'ไม่สามารถลบบัญชีของตัวเองได้' }
+    }
+
+    // 4. Use admin client to bypass RLS for delete operations
+    const adminClient = createAdminClient()
+
+    // 5. Check for blocking conditions (Active Loans/Reservations)
+    const { count: activeLoanCount, error: loanError } = await adminClient
+        .from('loanRequests')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('status', 'approved')
+
+    if (loanError) return { success: false, error: `ไม่สามารถตรวจสอบการยืมได้: ${loanError.message}` }
+    if (activeLoanCount && activeLoanCount > 0) {
+        return { success: false, error: `ไม่สามารถลบผู้ใช้ได้ เนื่องจากยังมีรายการยืมที่ "กำลังยืม" อยู่ (กรุณาทำรายการคืนก่อน)` }
+    }
+
+    const { count: activeResCount, error: resError } = await adminClient
+        .from('reservations')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .in('status', ['approved', 'ready'])
+
+    if (resError) return { success: false, error: `ไม่สามารถตรวจสอบการจองได้: ${resError.message}` }
+    if (activeResCount && activeResCount > 0) {
+        return { success: false, error: `ไม่สามารถลบผู้ใช้ได้ เนื่องจากยังมีรายการจองที่ "อนุมัติแล้ว/รอรับของ" (กรุณาทำรายการหรือยกเลิกก่อน)` }
+    }
+
+    // 6. Delete/Update related records (Cleanup logic)
+    await Promise.all([
+        adminClient.from('loanRequests').update({ approved_by: null }).eq('approved_by', userId),
+        adminClient.from('reservations').update({ approved_by: null }).eq('approved_by', userId),
+        adminClient.from('reservations').update({ ready_by: null }).eq('ready_by', userId),
+        adminClient.from('reservations').update({ completed_by: null }).eq('completed_by', userId),
+        adminClient.from('special_loan_requests').update({ created_by: null }).eq('created_by', userId),
+        adminClient.from('special_loan_requests').update({ approved_by: null }).eq('approved_by', userId),
+        adminClient.from('support_messages').update({ sender_id: null }).eq('sender_id', userId),
+        adminClient.from('data_backups').update({ created_by: null }).eq('created_by', userId),
+        adminClient.from('staff_activity_log').update({ staff_id: null }).eq('staff_id', userId),
+        adminClient.from('staff_activity_log').update({ target_user_id: null }).eq('target_user_id', userId)
+    ])
+
+    // Delete user's data (History)
+    await Promise.all([
+        adminClient.from('loanRequests').delete().eq('user_id', userId),
+        adminClient.from('reservations').delete().eq('user_id', userId),
+        adminClient.from('notifications').delete().eq('user_id', userId),
+        adminClient.from('evaluations').delete().eq('user_id', userId),
+        adminClient.from('support_tickets').delete().eq('user_id', userId)
+    ])
+
+    // 7. Finally delete the user profile and auth user
+    const { error: profileError } = await adminClient
+        .from('profiles')
+        .delete()
+        .eq('id', userId)
+
+    if (profileError) {
+        return { success: false, error: `ไม่สามารถลบโปรไฟล์ได้: ${profileError.message}` }
+    }
+
+    const { error: authError } = await adminClient.auth.admin.deleteUser(userId)
+    if (authError) {
+        return { success: false, error: `ลบโปรไฟล์สำเร็จ แต่ลบใน Auth ไม่สำเร็จ: ${authError.message}` }
+    }
+
+    revalidatePath('/admin/users')
+    return { success: true }
 }
 

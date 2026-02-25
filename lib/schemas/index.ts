@@ -10,3 +10,5 @@ export * from './loanSchema'
 export * from './profileSchema'
 export * from './equipmentSchema'
 export * from './commonSchema'
+export * from './notificationSchema'
+

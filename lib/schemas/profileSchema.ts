@@ -43,6 +43,14 @@ export const updateUserRoleSchema = z.object({
     }),
 })
 
+// Schema สำหรับเปลี่ยนสถานะผู้ใช้หลายคน
+export const bulkUpdateUserStatusSchema = z.object({
+    userIds: z.array(uuidSchema).min(1, 'กรุณาเลือกผู้ใช้อย่างน้อย 1 คน'),
+    newStatus: z.enum(['approved', 'rejected', 'pending'], {
+        message: 'สถานะไม่ถูกต้อง',
+    }),
+})
+
 // Helper: ดึงข้อมูลจาก FormData สำหรับ Registration
 export function parseRegistrationFormData(formData: FormData) {
     const raw = {

@@ -3,13 +3,25 @@
 import { createClient } from '@/lib/supabase/server'
 import { sendDiscordNotification } from '@/lib/notifications'
 import { formatThaiDate, formatThaiDateTime } from '@/lib/formatThaiDate'
+import {
+    notifyReservationSchema,
+    notifyReservationStatusSchema,
+    notifyReturnSchema
+} from '@/lib/schemas'
 
 // Notify new reservation
 export async function notifyReservationCreated(reservationId: string) {
     try {
+        // 1. Zod Validation
+        const parsed = notifyReservationSchema.safeParse({ reservationId })
+        if (!parsed.success) {
+            console.error('Invalid reservationId for notification:', parsed.error.issues[0]?.message)
+            return
+        }
+
         const supabase = await createClient()
 
-        const { data: reservation } = await (supabase as any)
+        const { data: reservation } = await supabase
             .from('reservations')
             .select('*, profiles(first_name, last_name, email, departments(name)), equipment(name, equipment_number)')
             .eq('id', reservationId)
@@ -17,11 +29,10 @@ export async function notifyReservationCreated(reservationId: string) {
 
         if (!reservation) return
 
-        const profile = reservation.profiles
-        const equipment = reservation.equipment
+        const profile = reservation.profiles as any
+        const equipment = reservation.equipment as any
         const fullName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim()
         const dept = profile?.departments?.name || '-'
-        // Assuming time is stored in start_date/end_dateISO strings
 
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
@@ -50,9 +61,16 @@ export async function notifyReservationCreated(reservationId: string) {
 // Notify reservation status change (Approved, Rejected, Ready)
 export async function notifyReservationStatusChange(reservationId: string, status: string, byUserId?: string) {
     try {
+        // 1. Zod Validation
+        const parsed = notifyReservationStatusSchema.safeParse({ reservationId, status, byUserId })
+        if (!parsed.success) {
+            console.error('Invalid parameters for status notification:', parsed.error.issues[0]?.message)
+            return
+        }
+
         const supabase = await createClient()
 
-        const { data: reservation } = await (supabase as any)
+        const { data: reservation } = await supabase
             .from('reservations')
             .select('*, profiles(first_name, last_name, email), equipment(name, equipment_number)')
             .eq('id', reservationId)
@@ -60,8 +78,8 @@ export async function notifyReservationStatusChange(reservationId: string, statu
 
         if (!reservation) return
 
-        const profile = reservation.profiles
-        const equipment = reservation.equipment
+        const profile = reservation.profiles as any
+        const equipment = reservation.equipment as any
         const fullName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim()
 
         let header = `**📝 อัปเดตสถานะการจอง**`
@@ -102,11 +120,16 @@ ${reservation.rejection_reason ? `💬 **เหตุผล:** ${reservation.rej
 // Notify Return
 export async function notifyReturn(loanId: string, condition: string, notes?: string) {
     try {
+        // 1. Zod Validation
+        const parsed = notifyReturnSchema.safeParse({ loanId, condition, notes })
+        if (!parsed.success) {
+            console.error('Invalid parameters for return notification:', parsed.error.issues[0]?.message)
+            return
+        }
+
         const supabase = await createClient()
 
-        // Use service role if available to ensure we can fetch borrower info even if RLS is strict
-        // But for now relying on the updated RLS policy from migration
-        const { data: loan } = await (supabase as any)
+        const { data: loan } = await supabase
             .from('loanRequests')
             .select('*, profiles(first_name, last_name, email), equipment(name, equipment_number)')
             .eq('id', loanId)
@@ -114,8 +137,8 @@ export async function notifyReturn(loanId: string, condition: string, notes?: st
 
         if (!loan) return
 
-        const profile = loan.profiles
-        const equipment = loan.equipment
+        const profile = loan.profiles as any
+        const equipment = loan.equipment as any
         const fullName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim()
 
         const isDamaged = condition !== 'good'
