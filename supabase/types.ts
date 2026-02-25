@@ -93,7 +93,7 @@ export interface Database {
                     brand: string | null
                     model: string | null
                     equipment_type_id: string | null
-                    status: 'ready' | 'borrowed' | 'maintenance' | 'retired'
+                    status: 'active' | 'ready' | 'borrowed' | 'maintenance' | 'retired'
                     images: Json
                     search_keywords: string[]
                     location: Json | null
@@ -109,7 +109,7 @@ export interface Database {
                     brand?: string | null
                     model?: string | null
                     equipment_type_id?: string | null
-                    status?: 'ready' | 'borrowed' | 'maintenance' | 'retired'
+                    status?: 'active' | 'ready' | 'borrowed' | 'maintenance' | 'retired'
                     images?: Json
                     search_keywords?: string[]
                     location?: Json | null
@@ -125,7 +125,7 @@ export interface Database {
                     brand?: string | null
                     model?: string | null
                     equipment_type_id?: string | null
-                    status?: 'ready' | 'borrowed' | 'maintenance' | 'retired'
+                    status?: 'active' | 'ready' | 'borrowed' | 'maintenance' | 'retired'
                     images?: Json
                     search_keywords?: string[]
                     location?: Json | null

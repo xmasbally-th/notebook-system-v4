@@ -26,8 +26,8 @@ interface EquipmentListWithFiltersProps {
 }
 
 const STATUS_CONFIG = {
-    ready: { label: 'พร้อมให้ยืม', color: 'bg-green-100 text-green-700', icon: CheckCircle, canBorrow: true },
     active: { label: 'พร้อมให้ยืม', color: 'bg-green-100 text-green-700', icon: CheckCircle, canBorrow: true },
+    ready: { label: 'พร้อมให้ยืม', color: 'bg-green-100 text-green-700', icon: CheckCircle, canBorrow: true },
     borrowed: { label: 'กำลังถูกยืม', color: 'bg-orange-100 text-orange-700', icon: Users, canBorrow: false },
     maintenance: { label: 'ซ่อมบำรุง', color: 'bg-yellow-100 text-yellow-700', icon: Wrench, canBorrow: false },
     retired: { label: 'เลิกใช้งาน', color: 'bg-gray-100 text-gray-600', icon: Package, canBorrow: false },
@@ -125,7 +125,12 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
 
         // Status filter (Client-side for now)
         if (selectedStatus !== 'all') {
-            items = items.filter(item => item.status === selectedStatus)
+            items = items.filter(item => {
+                if (selectedStatus === 'ready') {
+                    return item.status === 'ready' || item.status === 'active'
+                }
+                return item.status === selectedStatus
+            })
         }
 
         // Sort by recently borrowed first

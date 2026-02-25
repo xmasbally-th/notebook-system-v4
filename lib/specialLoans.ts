@@ -150,6 +150,22 @@ export async function createSpecialLoan(
         const data = await response.json()
         const id = data[0]?.id
 
+        // Update equipment status to 'borrowed' for all equipment in this special loan
+        if (input.equipmentIds.length > 0) {
+            await fetch(
+                `${url}/rest/v1/equipment?id=in.(${input.equipmentIds.join(',')})`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: 'borrowed' })
+                }
+            )
+        }
+
         // Log activity
         await logStaffActivity({
             staffId: admin.id,
@@ -291,6 +307,19 @@ export async function completeSpecialLoan(
     if (!accessToken) return { success: false, error: 'กรุณาเข้าสู่ระบบ' }
 
     try {
+        // Fetch the special loan to get equipment_ids before marking as returned
+        const loanFetchResponse = await fetch(
+            `${url}/rest/v1/special_loan_requests?id=eq.${id}&select=equipment_ids`,
+            {
+                headers: {
+                    'apikey': key,
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            }
+        )
+        const loanData = loanFetchResponse.ok ? await loanFetchResponse.json() : []
+        const equipmentIds: string[] = loanData[0]?.equipment_ids || []
+
         const response = await fetch(`${url}/rest/v1/special_loan_requests?id=eq.${id}`, {
             method: 'PATCH',
             headers: {
@@ -308,6 +337,22 @@ export async function completeSpecialLoan(
 
         if (!response.ok) {
             return { success: false, error: 'ไม่สามารถบันทึกการคืนได้' }
+        }
+
+        // Reset equipment status back to 'ready'
+        if (equipmentIds.length > 0) {
+            await fetch(
+                `${url}/rest/v1/equipment?id=in.(${equipmentIds.join(',')})`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: 'active' })
+                }
+            )
         }
 
         // Log activity
@@ -342,6 +387,19 @@ export async function cancelSpecialLoan(
     if (!accessToken) return { success: false, error: 'กรุณาเข้าสู่ระบบ' }
 
     try {
+        // Fetch the special loan to get equipment_ids before cancelling
+        const loanFetchResponse = await fetch(
+            `${url}/rest/v1/special_loan_requests?id=eq.${id}&select=equipment_ids`,
+            {
+                headers: {
+                    'apikey': key,
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            }
+        )
+        const loanData = loanFetchResponse.ok ? await loanFetchResponse.json() : []
+        const equipmentIds: string[] = loanData[0]?.equipment_ids || []
+
         const response = await fetch(`${url}/rest/v1/special_loan_requests?id=eq.${id}`, {
             method: 'PATCH',
             headers: {
@@ -357,6 +415,22 @@ export async function cancelSpecialLoan(
 
         if (!response.ok) {
             return { success: false, error: 'ไม่สามารถยกเลิกได้' }
+        }
+
+        // Reset equipment status back to 'ready'
+        if (equipmentIds.length > 0) {
+            await fetch(
+                `${url}/rest/v1/equipment?id=in.(${equipmentIds.join(',')})`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: 'active' })
+                }
+            )
         }
 
         return { success: true }
