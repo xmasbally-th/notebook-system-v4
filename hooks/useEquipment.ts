@@ -42,7 +42,7 @@ export function useEquipment(id?: string | null, filters?: { typeId?: string | n
             try {
                 let query = supabase
                     .from('equipment')
-                    .select('id,name,equipment_number,brand,model,status,description,equipment_type_id,images,search_keywords,created_at')
+                    .select('id,name,equipment_number,brand,model,status,equipment_type_id,images,search_keywords,created_at')
 
                 if (id) {
                     query = query.eq('id', id) as any
