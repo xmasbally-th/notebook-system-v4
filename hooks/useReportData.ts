@@ -139,6 +139,31 @@ export interface MonthlyStats {
     overdue: number
 }
 
+export interface SpecialLoanItem {
+    id: string
+    borrower_name: string
+    borrower_department: string | null
+    external_borrower_org: string | null
+    equipment_type_name: string
+    quantity: number
+    equipment_numbers: string[]
+    loan_date: string
+    return_date: string
+    purpose: string
+    status: 'active' | 'returned' | 'cancelled'
+    returned_at: string | null
+    created_at: string
+}
+
+export interface SpecialLoanStats {
+    total: number
+    active: number
+    returned: number
+    cancelled: number
+    totalEquipment: number
+    items: SpecialLoanItem[]
+}
+
 export interface ReportData {
     loanStats: LoanStats
     reservationStats: ReservationStats
@@ -153,6 +178,7 @@ export interface ReportData {
     equipmentTypes: EquipmentType[]
     allEquipment: Equipment[]
     borrowedEquipmentIds: Set<string>
+    specialLoanStats: SpecialLoanStats
 }
 
 export function useReportData(dateRange: DateRange) {
@@ -193,20 +219,34 @@ export function useReportData(dateRange: DateRange) {
                 // Staff activity log in date range - REMOVED profiles embed to fix FK issue
                 fetch(`${url}/rest/v1/staff_activity_log?select=id,staff_id,staff_role,action_type,target_type,target_id,created_at,details&created_at=gte.${fromDate}&created_at=lte.${toDate}&order=created_at.desc`, { headers }),
                 // All equipment types
-                fetch(`${url}/rest/v1/equipment_types?select=id,name,icon&order=name.asc`, { headers })
+                fetch(`${url}/rest/v1/equipment_types?select=id,name,icon&order=name.asc`, { headers }),
+                // Special loans in date range
+                fetch(`${url}/rest/v1/special_loan_requests?select=id,borrower_name,borrower_department,external_borrower_org,equipment_type_name,quantity,equipment_numbers,loan_date,return_date,purpose,status,returned_at,created_at&created_at=gte.${fromDate}&created_at=lte.${toDate}&order=created_at.desc`, { headers })
             ])
 
-            const [loansRes, reservationsRes, equipmentRes, overdueRes, profilesRes, staffActivityRes, equipmentTypesRes] = results
+            const [loansRes, reservationsRes, equipmentRes, overdueRes, profilesRes, staffActivityRes, equipmentTypesRes, specialLoansRes] = results
 
-            const [loans, reservations, equipment, overdueLoans, profiles, staffActivityLog, equipmentTypes] = await Promise.all([
+            const [loans, reservations, equipment, overdueLoans, profiles, staffActivityLog, equipmentTypes, specialLoansRaw] = await Promise.all([
                 loansRes.json(),
                 reservationsRes.json(),
                 equipmentRes.json(),
                 overdueRes.json(),
                 profilesRes.json(),
                 staffActivityRes.json(),
-                equipmentTypesRes.json()
+                equipmentTypesRes.json(),
+                specialLoansRes.json()
             ])
+
+            // Process special loan stats
+            const specialLoans: SpecialLoanItem[] = Array.isArray(specialLoansRaw) ? specialLoansRaw : []
+            const specialLoanStats: SpecialLoanStats = {
+                total: specialLoans.length,
+                active: specialLoans.filter(l => l.status === 'active').length,
+                returned: specialLoans.filter(l => l.status === 'returned').length,
+                cancelled: specialLoans.filter(l => l.status === 'cancelled').length,
+                totalEquipment: specialLoans.reduce((sum, l) => sum + (l.quantity || 0), 0),
+                items: specialLoans
+            }
 
             // Use processor functions
             const loanStats = calculateLoanStats(loans, overdueLoans)
@@ -243,7 +283,8 @@ export function useReportData(dateRange: DateRange) {
                 monthlyStats,
                 equipmentTypes: Array.isArray(equipmentTypes) ? equipmentTypes : [],
                 allEquipment: Array.isArray(equipment) ? equipment : [],
-                borrowedEquipmentIds
+                borrowedEquipmentIds,
+                specialLoanStats
             }
         }
     })
