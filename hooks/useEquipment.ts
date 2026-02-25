@@ -48,6 +48,8 @@ export function useEquipment(id?: string | null, filters?: { typeId?: string | n
                     query = query.eq('id', id) as any
                 } else {
                     // Apply filters
+                    query = query.eq('is_active', true)
+
                     if (filters?.typeId && filters.typeId !== 'all') {
                         query = query.eq('equipment_type_id', filters.typeId)
                     }
