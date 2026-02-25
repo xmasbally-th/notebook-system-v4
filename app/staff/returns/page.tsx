@@ -87,24 +87,49 @@ export default function StaffReturnsPage() {
             const profiles = profileResponse.ok ? await profileResponse.json() : []
             const staffRole = profiles[0]?.role || 'staff'
 
-            // Update loan request to returned
-            // Note: return_condition & return_notes columns need to be added via migration
+            // Step 1: Update loan status to returned (core fields only)
             const loanResponse = await fetch(`${url}/rest/v1/loanRequests?id=eq.${loanId}`, {
                 method: 'PATCH',
                 headers: {
                     'apikey': key,
                     'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
                 },
                 body: JSON.stringify({
                     status: 'returned',
                     returned_at: new Date().toISOString(),
-                    return_condition: condition,
-                    return_notes: notes
                 })
             })
 
-            if (!loanResponse.ok) throw new Error('Failed to update loan')
+            if (!loanResponse.ok) {
+                const errText = await loanResponse.text()
+                console.error('[Return] PATCH status failed:', loanResponse.status, errText)
+                throw new Error(`Failed to update loan status: ${errText}`)
+            }
+
+            // Step 2: Try to update optional return detail fields (may not exist in older DB)
+            try {
+                const detailResponse = await fetch(`${url}/rest/v1/loanRequests?id=eq.${loanId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({
+                        return_condition: condition,
+                        return_notes: notes || null
+                    })
+                })
+                if (!detailResponse.ok) {
+                    console.warn('[Return] Could not save return details (columns may not exist yet)')
+                }
+            } catch {
+                console.warn('[Return] Skipped return detail fields')
+            }
+
 
             // Update equipment status back to active (if not damaged)
             const newStatus = condition === 'good' ? 'active' : 'maintenance'

@@ -1,19 +1,25 @@
 -- ============================================
--- Migration: Fix loanRequests CHECK constraint + Equipment RLS
--- Date: 2026-02-25
--- Description:
---   1. Fix loanRequests status CHECK constraint (add 'returned')
---      Uses system catalog to drop constraint by ANY name (robust)
---   2. Ensure equipment SELECT policy exists for approved users
---   3. Ensure staff/admin can UPDATE equipment (needed for return flow)
---   4. Add composite index on profiles(id, status) for RLS performance
+-- Migration: Fix missing columns + CHECK constraint + RLS
+-- Date: 2026-02-25 (v2 - adds missing columns)
 -- ============================================
 
 -- ============================================================
--- FIX 1: loanRequests status CHECK constraint
--- Drop ALL CHECK constraints on "loanRequests" that reference
--- the status column — regardless of their name.
--- (Old DB may have system-generated or differently-named constraints)
+-- FIX 1: Add missing columns to loanRequests (IF NOT EXISTS)
+-- The old schema may not have these columns since
+-- CREATE TABLE IF NOT EXISTS skips column additions.
+-- ============================================================
+
+ALTER TABLE public."loanRequests"
+    ADD COLUMN IF NOT EXISTS returned_at TIMESTAMPTZ;
+
+ALTER TABLE public."loanRequests"
+    ADD COLUMN IF NOT EXISTS return_condition TEXT;
+
+ALTER TABLE public."loanRequests"
+    ADD COLUMN IF NOT EXISTS return_notes TEXT;
+
+-- ============================================================
+-- FIX 2: Fix status CHECK constraint (robust — drops any name)
 -- ============================================================
 
 DO $$
@@ -33,14 +39,12 @@ BEGIN
 END;
 $$;
 
--- Add the correct CHECK constraint with all valid statuses
 ALTER TABLE public."loanRequests"
     ADD CONSTRAINT "loanRequests_status_check"
     CHECK (status IN ('pending', 'approved', 'rejected', 'returned'));
 
 -- ============================================================
--- FIX 2: Equipment RLS policies
--- Ensure correct policies exist for all roles
+-- FIX 3: Equipment RLS policies
 -- ============================================================
 
 DROP POLICY IF EXISTS "Approved users view equipment"  ON public.equipment;
@@ -49,7 +53,6 @@ DROP POLICY IF EXISTS "equipment_select_approved"      ON public.equipment;
 DROP POLICY IF EXISTS "equipment_all_admin"            ON public.equipment;
 DROP POLICY IF EXISTS "equipment_all_staff"            ON public.equipment;
 
--- All approved users can SELECT equipment
 CREATE POLICY "equipment_select_approved" ON public.equipment FOR SELECT
     USING (
         EXISTS (
@@ -58,12 +61,11 @@ CREATE POLICY "equipment_select_approved" ON public.equipment FOR SELECT
         )
     );
 
--- Staff and admin can manage equipment (needed for status update on return)
 CREATE POLICY "equipment_all_staff" ON public.equipment FOR ALL
     USING (get_my_role() IN ('staff', 'admin'));
 
 -- ============================================================
--- FIX 3: loanRequests staff/admin policy
+-- FIX 4: loanRequests staff/admin policy
 -- ============================================================
 
 DROP POLICY IF EXISTS "Staff manage all loans"  ON public."loanRequests";
@@ -73,7 +75,7 @@ CREATE POLICY "loanrequests_all_staff" ON public."loanRequests" FOR ALL
     USING (get_my_role() IN ('staff', 'admin'));
 
 -- ============================================================
--- FIX 4: Performance index for equipment SELECT RLS sub-select
+-- FIX 5: Performance index
 -- ============================================================
 
 CREATE INDEX IF NOT EXISTS idx_profiles_id_status
