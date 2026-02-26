@@ -59,6 +59,16 @@ export const bulkRejectLoanSchema = z.object({
         .max(500, 'เหตุผลยาวเกินไป (สูงสุด 500 ตัวอักษร)'),
 })
 
+// Schema สำหรับบันทึกการคืนอุปกรณ์
+export const processReturnSchema = z.object({
+    loanId: uuidSchema,
+    equipmentId: uuidSchema,
+    condition: z.enum(['good', 'damaged', 'missing_parts'], {
+        message: 'กรุณาเลือกสภาพอุปกรณ์',
+    }),
+    notes: z.string().trim().max(1000, 'หมายเหตุยาวเกินไป').optional(),
+})
+
 // Helper: ดึงข้อมูลจาก FormData แล้ว Parse ผ่าน submitLoanSchema
 export function parseLoanFormData(formData: FormData) {
     const raw = {

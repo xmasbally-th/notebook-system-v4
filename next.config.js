@@ -41,6 +41,15 @@ const nextConfig = {
             },
         ]
     },
+    async redirects() {
+        return [
+            {
+                source: '/admin/returns',
+                destination: '/admin/loans?tab=returns',
+                permanent: true,
+            },
+        ]
+    },
     // Experimental features for better env handling
     experimental: {
         serverActions: {
