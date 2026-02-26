@@ -10,7 +10,8 @@ import {
     formatOverdueItems,
     calculateUserStats,
     processStaffActivityLog,
-    calculateMonthlyStats
+    calculateMonthlyStats,
+    getDueDate
 } from '@/lib/reportDataProcessors'
 
 // Get access token from session
@@ -141,6 +142,7 @@ export interface MonthlyStats {
 
 export interface SpecialLoanItem {
     id: string
+    borrower_id: string | null
     borrower_name: string
     borrower_department: string | null
     external_borrower_org: string | null
@@ -212,8 +214,8 @@ export function useReportData(dateRange: DateRange) {
                 fetch(`${url}/rest/v1/reservations?select=id,status,created_at,user_id,equipment_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`, { headers }),
                 // All equipment
                 fetch(`${url}/rest/v1/equipment?select=id,name,equipment_number,status,equipment_type_id,images,brand,model`, { headers }),
-                // Overdue loans (approved but past end_date)
-                fetch(`${url}/rest/v1/loanRequests?select=id,end_date,user_id,equipment_id,profiles:user_id(first_name,last_name,email),equipment:equipment_id(name,equipment_number)&status=eq.approved&end_date=lt.${new Date().toISOString()}`, { headers }),
+                // Overdue loans (status=approved, filtered in client to include return_time)
+                fetch(`${url}/rest/v1/loanRequests?select=id,end_date,return_time,user_id,equipment_id,profiles:user_id(first_name,last_name,email),equipment:equipment_id(name,equipment_number)&status=eq.approved`, { headers }),
                 // All profiles for user stats (added avatar_url)
                 fetch(`${url}/rest/v1/profiles?status=eq.approved&select=id,email,first_name,last_name,avatar_url,department:departments(name),role,status`, { headers }),
                 // Staff activity log in date range - REMOVED profiles embed to fix FK issue
@@ -221,12 +223,12 @@ export function useReportData(dateRange: DateRange) {
                 // All equipment types
                 fetch(`${url}/rest/v1/equipment_types?select=id,name,icon&order=name.asc`, { headers }),
                 // Special loans in date range
-                fetch(`${url}/rest/v1/special_loan_requests?select=id,borrower_name,borrower_department,external_borrower_org,equipment_type_name,quantity,equipment_numbers,loan_date,return_date,purpose,status,returned_at,created_at&created_at=gte.${fromDate}&created_at=lte.${toDate}&order=created_at.desc`, { headers })
+                fetch(`${url}/rest/v1/special_loan_requests?select=id,borrower_id,borrower_name,external_borrower_org,equipment_type_name,quantity,equipment_numbers,loan_date,return_date,purpose,status,returned_at,created_at&created_at=gte.${fromDate}&created_at=lte.${toDate}&order=created_at.desc`, { headers })
             ])
 
             const [loansRes, reservationsRes, equipmentRes, overdueRes, profilesRes, staffActivityRes, equipmentTypesRes, specialLoansRes] = results
 
-            const [loans, reservations, equipment, overdueLoans, profiles, staffActivityLog, equipmentTypes, specialLoansRaw] = await Promise.all([
+            const [loans, reservations, equipment, rawOverdueLoans, profiles, staffActivityLog, equipmentTypes, specialLoansRaw] = await Promise.all([
                 loansRes.json(),
                 reservationsRes.json(),
                 equipmentRes.json(),
@@ -237,8 +239,28 @@ export function useReportData(dateRange: DateRange) {
                 specialLoansRes.json()
             ])
 
+            // Filter overdue loans accurately using return_time
+            const now = new Date()
+            const overdueLoans = Array.isArray(rawOverdueLoans)
+                ? rawOverdueLoans.filter((loan: any) => now > getDueDate(loan.end_date, loan.return_time))
+                : []
+
             // Process special loan stats
-            const specialLoans: SpecialLoanItem[] = Array.isArray(specialLoansRaw) ? specialLoansRaw : []
+            let specialLoans: SpecialLoanItem[] = Array.isArray(specialLoansRaw) ? specialLoansRaw : []
+
+            // Map borrower_department from profiles if borrower_id exists
+            if (specialLoans.length > 0 && Array.isArray(profiles)) {
+                specialLoans = specialLoans.map(loan => {
+                    if (loan.borrower_id) {
+                        const profile = profiles.find(p => p.id === loan.borrower_id)
+                        if (profile && profile.department) {
+                            loan.borrower_department = profile.department.name
+                        }
+                    }
+                    return loan
+                })
+            }
+
             const specialLoanStats: SpecialLoanStats = {
                 total: specialLoans.length,
                 active: specialLoans.filter(l => l.status === 'active').length,

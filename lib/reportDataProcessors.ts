@@ -38,6 +38,26 @@ const ACTION_LABELS: Record<string, string> = {
 }
 
 /**
+ * Helper function to calculate exact due date combining date and time
+ */
+export function getDueDate(endDateStr: string, returnTimeStr?: string | null): Date {
+    const dueDate = new Date(endDateStr)
+    if (returnTimeStr) {
+        const [hours, minutes] = returnTimeStr.split(':').map(Number)
+        if (!isNaN(hours) && !isNaN(minutes)) {
+            // Set local time
+            dueDate.setHours(hours, minutes, 0, 0)
+        } else {
+            dueDate.setHours(23, 59, 59, 999)
+        }
+    } else {
+        // Default to end of day if no time specified
+        dueDate.setHours(23, 59, 59, 999)
+    }
+    return dueDate
+}
+
+/**
  * Calculate loan statistics from loan data
  */
 export function calculateLoanStats(loans: any[], overdueLoans: any[]): LoanStats {
@@ -134,9 +154,16 @@ export function formatOverdueItems(overdueLoans: any[]): OverdueItem[] {
     if (!Array.isArray(overdueLoans)) return []
 
     return overdueLoans.map((loan: any) => {
-        const endDate = new Date(loan.end_date)
+        const dueDate = getDueDate(loan.end_date, loan.return_time)
         const now = new Date()
-        const daysOverdue = Math.floor((now.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
+
+        let daysOverdue = 0
+        const msDiff = now.getTime() - dueDate.getTime()
+        if (msDiff > 0) {
+            daysOverdue = Math.floor(msDiff / (1000 * 60 * 60 * 24))
+            // If overdue but less than 1 day (e.g. 2 hours), count as 1 day overdue for display, unless they want hours.
+            if (daysOverdue === 0) daysOverdue = 1
+        }
 
         return {
             id: loan.id,
@@ -169,8 +196,11 @@ export function calculateUserStats(
             userLoanCounts[loan.user_id] = (userLoanCounts[loan.user_id] || 0) + 1
 
             // Allow checking for late returns in history
-            if (loan.status === 'returned' && loan.returned_at && new Date(loan.returned_at) > new Date(loan.end_date)) {
-                userOverdueCounts[loan.user_id] = (userOverdueCounts[loan.user_id] || 0) + 1
+            if (loan.status === 'returned' && loan.returned_at) {
+                const dueDate = getDueDate(loan.end_date, loan.return_time)
+                if (new Date(loan.returned_at) > dueDate) {
+                    userOverdueCounts[loan.user_id] = (userOverdueCounts[loan.user_id] || 0) + 1
+                }
             }
         })
     }
@@ -399,15 +429,15 @@ export function calculateMonthlyStats(loans: any[], reservations: any[]): Monthl
             const monthKey = `${date.getFullYear()}-${date.getMonth()}`
 
             if (monthlyData[monthKey]) {
-                const endDate = new Date(loan.end_date)
+                const dueDate = getDueDate(loan.end_date, loan.return_time)
                 const returnedAt = loan.returned_at ? new Date(loan.returned_at) : null
                 const now = new Date()
 
                 // Check if late return or currently overdue
-                if (returnedAt && returnedAt > endDate) {
+                if (returnedAt && returnedAt > dueDate) {
                     // Returned late
                     monthlyData[monthKey].overdue++
-                } else if (!returnedAt && loan.status === 'approved' && now > endDate) {
+                } else if (!returnedAt && loan.status === 'approved' && now > dueDate) {
                     // Currently overdue
                     monthlyData[monthKey].overdue++
                 }

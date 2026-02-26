@@ -180,23 +180,20 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
     const equipmentName = equipment?.name || 'ไม่ทราบชื่อ'
     const equipmentNumber = equipment?.equipment_number || '-'
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+    const formattedReturnTime = returnTime ? returnTime.substring(0, 5) : '-'
 
     const message = `
 **📋 คำขอยืมอุปกรณ์ใหม่**
 
 👤 **ผู้ยืม:** ${fullName}
 🏢 **หน่วยงาน:** ${dept}
-📧 **อีเมล:** ${profile.email}
 
 📦 **อุปกรณ์:** ${equipmentName}
 🔖 **รหัส:** #${equipmentNumber}
 
 📅 **วันที่ยืม:** ${formatThaiDate(startDate)}
-📅 **วันที่คืน:** ${formatThaiDateTime(endDate)}
-⏱️ **ระยะเวลา:** ${durationDays} วัน
-
-🔗 [ตรวจสอบคำขอ](${appUrl}/admin/loans)
+📅 **วันที่คืน:** ${formatThaiDate(endDate)}
+⏰ **เวลาที่คืน:** ${formattedReturnTime}
     `.trim()
 
     await sendDiscordNotification(message, 'loan')
