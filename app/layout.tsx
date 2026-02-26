@@ -30,6 +30,8 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import DebugConsole from '@/components/debug/DebugConsole'
 import ErrorBoundary from '@/components/error/ErrorBoundary'
 import { ThemeProvider } from '@/components/providers/ThemeContext'
+import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 export default function RootLayout({
     children,
@@ -49,6 +51,8 @@ export default function RootLayout({
                         </QueryProvider>
                     </ErrorBoundary>
                     <DebugConsole />
+                    <Analytics />
+                    <SpeedInsights />
                 </ThemeProvider>
             </body>
         </html>
