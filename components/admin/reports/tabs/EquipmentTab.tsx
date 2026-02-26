@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { ReportData } from '@/hooks/useReportData'
 import { getSupabaseCredentials } from '@/lib/supabase-helpers'
@@ -200,11 +201,15 @@ function BorrowHistoryModal({
                                                 {/* Avatar */}
                                                 <div className="flex-shrink-0">
                                                     {record.profiles?.avatar_url ? (
-                                                        <img
-                                                            src={record.profiles.avatar_url}
-                                                            alt={userName}
-                                                            className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
-                                                        />
+                                                        <div className="w-10 h-10 rounded-full relative overflow-hidden border-2 border-white shadow-sm">
+                                                            <Image
+                                                                src={record.profiles.avatar_url}
+                                                                alt={userName}
+                                                                fill
+                                                                sizes="40px"
+                                                                className="object-cover"
+                                                            />
+                                                        </div>
                                                     ) : (
                                                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center border-2 border-white shadow-sm">
                                                             <User className="w-5 h-5 text-blue-500" />
@@ -266,8 +271,8 @@ function BorrowHistoryModal({
                                                     key={page}
                                                     onClick={() => setCurrentPage(page)}
                                                     className={`w-8 h-8 flex items-center justify-center text-xs font-medium rounded-lg transition-colors ${currentPage === page
-                                                            ? 'bg-blue-600 text-white'
-                                                            : 'text-gray-600 hover:bg-gray-100'
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'text-gray-600 hover:bg-gray-100'
                                                         }`}
                                                 >
                                                     {page}

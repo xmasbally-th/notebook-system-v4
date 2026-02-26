@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Header from '@/components/layout/Header'
@@ -51,9 +52,16 @@ export default async function EquipmentListPage() {
                 {/* Equipment List with Filters */}
                 <section className="py-8 md:py-12">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <EquipmentListWithFilters
-                            equipmentTypes={equipmentTypes || []}
-                        />
+                        <Suspense fallback={
+                            <div className="space-y-4 animate-pulse">
+                                <div className="h-12 bg-gray-200 rounded-xl" />
+                                <div className="h-64 bg-gray-200 rounded-xl" />
+                            </div>
+                        }>
+                            <EquipmentListWithFilters
+                                equipmentTypes={equipmentTypes || []}
+                            />
+                        </Suspense>
                     </div>
                 </section>
             </main>

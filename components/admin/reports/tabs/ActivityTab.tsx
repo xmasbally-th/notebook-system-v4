@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { ReportData, StaffActivityItem } from '@/hooks/useReportData'
 import { exportToCSV } from '@/lib/reports'
@@ -127,9 +128,9 @@ export default function ActivityTab({ data, isLoading }: ActivityTabProps) {
                                     <tr key={activity.id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4 text-sm font-medium text-gray-900">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden relative">
                                                     {activity.staff_avatar ? (
-                                                        <img src={activity.staff_avatar} alt="" className="w-8 h-8 object-cover" />
+                                                        <Image src={activity.staff_avatar} alt="" fill sizes="32px" className="object-cover" />
                                                     ) : (
                                                         <User className="w-4 h-4 text-gray-400" />
                                                     )}

@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState, useMemo } from 'react'
 import { ReportData, UserStats } from '@/hooks/useReportData'
 import { exportToCSV } from '@/lib/reports'
@@ -199,9 +200,9 @@ export default function UsersTab({ data, isLoading }: UsersTabProps) {
                                         <td className="px-6 py-4 text-sm text-gray-700">{index + 1}</td>
                                         <td className="px-6 py-4 text-sm font-medium text-gray-900">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden relative">
                                                     {user.avatar_url ? (
-                                                        <img src={user.avatar_url} alt="" className="w-8 h-8 object-cover" />
+                                                        <Image src={user.avatar_url} alt="" fill sizes="32px" className="object-cover" />
                                                     ) : (
                                                         <User className="w-4 h-4 text-gray-400" />
                                                     )}

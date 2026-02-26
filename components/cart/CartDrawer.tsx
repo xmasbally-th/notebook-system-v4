@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCart } from './CartContext'
@@ -503,7 +504,15 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                 <h4 className="text-sm font-semibold text-gray-700">📦 รายการอุปกรณ์</h4>
                                 {items.map((item) => (
                                     <div key={item.id} className="flex items-center gap-2 text-sm">
-                                        <img src={item.imageUrl} alt={item.name} className="w-8 h-8 object-contain bg-white rounded" />
+                                        <div className="w-8 h-8 rounded relative flex-shrink-0 bg-white overflow-hidden">
+                                            <Image
+                                                src={item.imageUrl}
+                                                alt={item.name}
+                                                fill
+                                                sizes="32px"
+                                                className="object-contain"
+                                            />
+                                        </div>
                                         <div className="min-w-0 flex-1">
                                             <p className="font-medium text-gray-900 truncate">{item.name}</p>
                                             <p className="text-xs text-gray-500 font-mono">{item.equipment_number}</p>
@@ -648,11 +657,15 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                                 : 'bg-gray-50'
                                                 }`}
                                         >
-                                            <img
-                                                src={item.imageUrl}
-                                                alt={item.name}
-                                                className={`w-16 h-16 object-contain bg-white rounded-lg ${isUnavailable ? 'opacity-50' : ''}`}
-                                            />
+                                            <div className={`w-16 h-16 rounded-lg bg-white relative flex-shrink-0 overflow-hidden ${isUnavailable ? 'opacity-50' : ''}`}>
+                                                <Image
+                                                    src={item.imageUrl}
+                                                    alt={item.name}
+                                                    fill
+                                                    sizes="64px"
+                                                    className="object-contain"
+                                                />
+                                            </div>
                                             <div className="flex-1 min-w-0">
                                                 <h4 className={`font-medium truncate ${isUnavailable ? 'text-red-700' : 'text-gray-900'}`}>{item.name}</h4>
                                                 <p className="text-xs text-gray-500 font-mono">{item.equipment_number}</p>

@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEquipment } from '@/hooks/useEquipment'
 import { useRecentlyBorrowed, isRecentlyBorrowed, sortByRecentlyBorrowed } from '@/hooks/useRecentlyBorrowed'
 import { useState, useMemo, useEffect } from 'react'
@@ -364,11 +365,13 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                                         <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="h-12 w-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                                                        <img
+                                                    <div className="h-12 w-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 relative">
+                                                        <Image
                                                             src={imageUrl}
                                                             alt={item.name}
-                                                            className="h-12 w-12 object-cover"
+                                                            fill
+                                                            sizes="48px"
+                                                            className="object-cover"
                                                         />
                                                     </div>
                                                     <div className="flex items-center gap-2">
@@ -457,11 +460,13 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                             return (
                                 <div key={item.id} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
                                     <div className="flex items-start gap-3">
-                                        <div className="h-16 w-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                                            <img
+                                        <div className="h-16 w-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 relative">
+                                            <Image
                                                 src={imageUrl}
                                                 alt={item.name}
-                                                className="h-16 w-16 object-cover"
+                                                fill
+                                                sizes="64px"
+                                                className="object-cover"
                                             />
                                         </div>
                                         <div className="flex-1 min-w-0">

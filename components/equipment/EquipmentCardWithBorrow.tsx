@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { Database } from '@/supabase/types'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -65,11 +66,12 @@ export default function EquipmentCardWithBorrow({ item, isRecentlyBorrowed = fal
 
             {/* Image Area - Responsive Thumbnail (max 300x300px) */}
             <Link href={`/equipment/${item.id}`} className="relative aspect-square w-full max-h-[300px] overflow-hidden bg-gray-100">
-                <img
+                <Image
                     src={imageUrl}
                     alt={item.name}
-                    className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
-                    loading="lazy"
+                    fill
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    className="object-cover object-center transition-transform duration-500 group-hover:scale-105"
                 />
                 {/* Status Badge */}
                 <div className="absolute right-2 top-2">

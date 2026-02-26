@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { Database } from '@/supabase/types'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -25,10 +26,12 @@ export default function EquipmentCard({ item }: EquipmentCardProps) {
             <div className="relative flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
                 {/* Image Area */}
                 <div className="relative aspect-video w-full overflow-hidden bg-gray-100">
-                    <img
+                    <Image
                         src={imageUrl}
                         alt={item.name}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     <div className="absolute right-2 top-2">
                         <span className={cn(
