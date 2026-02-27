@@ -19,6 +19,7 @@ export async function getLoanRequests() {
         .from('loanRequests')
         .select('*, profiles(first_name,last_name,email,avatar_url), equipment(name,equipment_number,images)')
         .order('created_at', { ascending: false })
+        .limit(150) // cap payload — client-side filter/pagination handles the rest
 
     if (error) {
         console.error('[getLoanRequests]', error)
@@ -37,6 +38,7 @@ export async function getActiveLoans() {
         .select('*, profiles(first_name,last_name,email,phone_number,avatar_url), equipment(id,name,equipment_number,images)')
         .eq('status', 'approved')
         .order('end_date', { ascending: true })
+        .limit(200) // active loans rarely exceed this; all must be visible for returns
 
     if (error) {
         console.error('[getActiveLoans]', error)
