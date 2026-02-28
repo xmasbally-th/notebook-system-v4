@@ -1,43 +1,62 @@
 import { Suspense } from 'react'
 import AdminLayout from '@/components/admin/AdminLayout'
 import { getLoanRequests, getActiveLoans } from './actions'
+import LoanRequestsSection from '@/components/admin/loans/LoanRequestsSection'
+import ActiveLoansSection from '@/components/admin/loans/ActiveLoansSection'
 import LoansTabs from './_components/LoansTabs'
-import LoadingSkeleton from './loading'
+import TabSkeleton from './loading'
 
 export const metadata = {
     title: 'จัดการการยืม-คืน | Admin',
 }
 
-// ─── ใช้ revalidate แทน force-dynamic ──────────────────────────────────────
-// Cache 30 วินาที — revalidatePath() ในทุก action จะ purge cache ทันทีเมื่อมีการเปลี่ยนแปลง
+// Cache 30 วินาที — revalidatePath() ในทุก action จะ purge cache ทันที
 export const revalidate = 30
 
-// ─── Async Server Component: ดึงข้อมูลแบบ parallel ──────────────────────────
-// HTML shell (AdminLayout + header) จะ render และ stream ออกไปก่อน
-// component นี้ suspend ระหว่างรอ query → Suspense แสดง skeleton แทน
-async function LoansDataFetcher() {
-    const [loanRequests, activeLoans] = await Promise.all([
-        getLoanRequests(),
-        getActiveLoans(),
-    ])
+// ─── Independent async fetchers ──────────────────────────────────────────────
+// แต่ละ fetcher stream อิสระ ไม่รอกัน
+// Tab ที่ user อยู่จะ resolve ก่อน ซึ่งทำให้ TTI เร็วขึ้น
 
-    return (
-        <LoansTabs
-            loanRequests={loanRequests}
-            activeLoans={activeLoans}
-        />
-    )
+async function LoanRequestsFetcher() {
+    const data = await getLoanRequests()
+    return <LoanRequestsSection initialData={data} />
+}
+
+async function ActiveLoansFetcher() {
+    const data = await getActiveLoans()
+    return <ActiveLoansSection initialData={data} />
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
-export default function LoansPage() {
+export default async function LoansPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ tab?: string }>
+}) {
+    const { tab } = await searchParams
+    const activeTab = tab === 'returns' ? 'returns' : 'requests'
+
     return (
         <AdminLayout title="จัดการการยืม-คืน" subtitle="คำขอยืม และรับคืนอุปกรณ์">
-            {/* HTML shell ส่งออกทันที → FCP จับที่ header/sidebar
-                LoansDataFetcher suspend ระหว่าง DB query → skeleton แสดงแทน */}
-            <Suspense fallback={<LoadingSkeleton />}>
-                <LoansDataFetcher />
-            </Suspense>
+            {/* Tab navigation ส่งออกทันที — ไม่ต้องรอ data */}
+            <LoansTabs activeTab={activeTab}>
+                {/* คำขอยืม — stream อิสระ */}
+                <Suspense
+                    key="requests"
+                    fallback={<TabSkeleton />}
+                >
+                    <LoanRequestsFetcher />
+                </Suspense>
+
+                {/* รับคืนอุปกรณ์ — stream อิสระ */}
+                <Suspense
+                    key="returns"
+                    fallback={<TabSkeleton />}
+                >
+                    <ActiveLoansFetcher />
+                </Suspense>
+            </LoansTabs>
         </AdminLayout>
     )
 }
+
