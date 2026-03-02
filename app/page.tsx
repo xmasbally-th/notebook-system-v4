@@ -1,4 +1,4 @@
-
+import { Suspense } from 'react'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import RulesSection from '@/components/home/RulesSection'
@@ -10,6 +10,7 @@ import { Laptop, Tablet, Headphones, Monitor, ArrowRight, LogIn, Package } from 
 import ActiveEvaluationPrompt from '@/components/evaluations/ActiveEvaluationPrompt'
 import SystemStatusBadge from '@/components/home/SystemStatusBadge'
 import QuickSearch from '@/components/home/QuickSearch'
+
 
 export default async function Home() {
     const supabase = await createClient()
@@ -54,8 +55,16 @@ export default async function Home() {
 
                     <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
                         <div className="text-center">
-                            {/* Dynamic Status Badge */}
-                            <SystemStatusBadge />
+                            {/* Dynamic Status Badge — wrapped in Suspense to avoid blocking FCP */}
+                            <Suspense fallback={
+                                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white text-sm font-medium mb-4">
+                                    <span className="w-2 h-2 bg-gray-400 rounded-full" />
+                                    กำลังตรวจสอบสถานะ...
+                                </div>
+                            }>
+                                <SystemStatusBadge />
+                            </Suspense>
+
 
                             <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white tracking-tight mb-4">
                                 ระบบยืม-คืนพัสดุและครุภัณฑ์
