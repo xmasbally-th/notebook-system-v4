@@ -5,11 +5,12 @@ import AdminLayout from '@/components/admin/AdminLayout'
 import ExportTab from '@/components/admin/data-management/ExportTab'
 import ImportTab from '@/components/admin/data-management/ImportTab'
 import DeleteTab from '@/components/admin/data-management/DeleteTab'
-import { Download, Upload, Trash2, Database, ShieldAlert } from 'lucide-react'
+import ArchiveTab from '@/components/admin/data-management/ArchiveTab'
+import { Download, Upload, Trash2, Database, ShieldAlert, Archive } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useProfile } from '@/hooks/useProfile'
 
-type TabType = 'export' | 'import' | 'delete'
+type TabType = 'export' | 'import' | 'delete' | 'archive'
 
 function getSupabaseClient() {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -37,7 +38,8 @@ export default function DataManagementPage() {
     const tabs = [
         { id: 'export' as TabType, label: 'ส่งออกข้อมูล', icon: Download, color: 'blue' },
         { id: 'import' as TabType, label: 'นำเข้าข้อมูล', icon: Upload, color: 'purple' },
-        { id: 'delete' as TabType, label: 'ลบข้อมูล', icon: Trash2, color: 'red' }
+        { id: 'delete' as TabType, label: 'ลบข้อมูล', icon: Trash2, color: 'red' },
+        { id: 'archive' as TabType, label: 'Auto-Archive', icon: Archive, color: 'orange' }
     ]
 
     // Loading state
@@ -99,12 +101,14 @@ export default function DataManagementPage() {
                         const colorClasses = {
                             blue: isActive ? 'border-blue-600 text-blue-600' : '',
                             purple: isActive ? 'border-purple-600 text-purple-600' : '',
-                            red: isActive ? 'border-red-600 text-red-600' : ''
+                            red: isActive ? 'border-red-600 text-red-600' : '',
+                            orange: isActive ? 'border-orange-600 text-orange-600' : ''
                         }
                         const iconColors = {
                             blue: isActive ? 'text-blue-600' : 'text-gray-400',
                             purple: isActive ? 'text-purple-600' : 'text-gray-400',
-                            red: isActive ? 'text-red-600' : 'text-gray-400'
+                            red: isActive ? 'text-red-600' : 'text-gray-400',
+                            orange: isActive ? 'text-orange-600' : 'text-gray-400'
                         }
                         return (
                             <button
@@ -131,6 +135,7 @@ export default function DataManagementPage() {
                     {activeTab === 'export' && <ExportTab userId={userId} />}
                     {activeTab === 'import' && <ImportTab userId={userId} />}
                     {activeTab === 'delete' && <DeleteTab userId={userId} />}
+                    {activeTab === 'archive' && <ArchiveTab />}
                 </div>
             </div>
 
