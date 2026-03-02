@@ -1,0 +1,188 @@
+'use client'
+
+import {
+    ClipboardList, Clock, CheckCircle, AlertTriangle,
+    RotateCcw, ArrowRight
+} from 'lucide-react'
+import Link from 'next/link'
+import type { StaffDashboardStats, RecentActivityItem } from '@/lib/data/staff-dashboard'
+
+interface StaffDashboardClientProps {
+    stats: StaffDashboardStats
+    recentActivity: RecentActivityItem[]
+}
+
+function getStatusBadge(status: string) {
+    switch (status) {
+        case 'pending':
+            return <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-700">รออนุมัติ</span>
+        case 'approved':
+            return <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">อนุมัติแล้ว</span>
+        case 'rejected':
+            return <span className="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-700">ปฏิเสธ</span>
+        case 'returned':
+            return <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700">คืนแล้ว</span>
+        default:
+            return <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">{status}</span>
+    }
+}
+
+function formatDate(dateString: string) {
+    return new Date(dateString).toLocaleDateString('th-TH', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    })
+}
+
+export default function StaffDashboardClient({ stats, recentActivity }: StaffDashboardClientProps) {
+    const statCards = [
+        {
+            title: 'รออนุมัติ',
+            value: stats.pending,
+            icon: Clock,
+            color: 'bg-yellow-50 text-yellow-600',
+            iconBg: 'bg-yellow-100',
+            href: '/staff/loans?status=pending',
+        },
+        {
+            title: 'กำลังยืม',
+            value: stats.approved,
+            icon: CheckCircle,
+            color: 'bg-green-50 text-green-600',
+            iconBg: 'bg-green-100',
+            href: '/staff/returns',
+        },
+        {
+            title: 'ค้างคืน',
+            value: stats.overdue,
+            icon: AlertTriangle,
+            color: 'bg-red-50 text-red-600',
+            iconBg: 'bg-red-100',
+            href: '/staff/overdue',
+        },
+        {
+            title: 'คำขอทั้งหมด',
+            value: stats.total,
+            icon: ClipboardList,
+            color: 'bg-blue-50 text-blue-600',
+            iconBg: 'bg-blue-100',
+            href: '/staff/loans',
+        },
+    ]
+
+    return (
+        <>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {statCards.map((card) => {
+                    const Icon = card.icon
+                    return (
+                        <Link
+                            key={card.title}
+                            href={card.href}
+                            className={`${card.color} rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className={`p-2 ${card.iconBg} rounded-lg`}>
+                                    <Icon className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-bold">{card.value}</p>
+                                    <p className="text-xs opacity-80">{card.title}</p>
+                                </div>
+                            </div>
+                        </Link>
+                    )
+                })}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <Link
+                    href="/staff/loans"
+                    className="flex items-center justify-between bg-white rounded-xl p-4 border border-gray-200 hover:border-teal-300 transition-colors group"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-teal-50 rounded-lg">
+                            <ClipboardList className="w-5 h-5 text-teal-600" />
+                        </div>
+                        <div>
+                            <p className="font-medium text-gray-900">จัดการคำขอยืม</p>
+                            <p className="text-sm text-gray-500">อนุมัติหรือปฏิเสธคำขอ</p>
+                        </div>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-teal-600 transition-colors" />
+                </Link>
+                <Link
+                    href="/staff/returns"
+                    className="flex items-center justify-between bg-white rounded-xl p-4 border border-gray-200 hover:border-teal-300 transition-colors group"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-teal-50 rounded-lg">
+                            <RotateCcw className="w-5 h-5 text-teal-600" />
+                        </div>
+                        <div>
+                            <p className="font-medium text-gray-900">รับคืนอุปกรณ์</p>
+                            <p className="text-sm text-gray-500">ตรวจสอบและรับคืน</p>
+                        </div>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-teal-600 transition-colors" />
+                </Link>
+                <Link
+                    href="/staff/overdue"
+                    className="flex items-center justify-between bg-white rounded-xl p-4 border border-gray-200 hover:border-red-300 transition-colors group"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-red-50 rounded-lg">
+                            <AlertTriangle className="w-5 h-5 text-red-600" />
+                        </div>
+                        <div>
+                            <p className="font-medium text-gray-900">รายการค้างคืน</p>
+                            <p className="text-sm text-gray-500">ติดตามและแจ้งเตือน</p>
+                        </div>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-red-600 transition-colors" />
+                </Link>
+            </div>
+
+            {/* Recent Activity */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="p-4 border-b border-gray-200">
+                    <h2 className="text-lg font-semibold text-gray-900">กิจกรรมล่าสุด</h2>
+                </div>
+                <div className="divide-y divide-gray-100">
+                    {recentActivity.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500">
+                            <ClipboardList className="w-12 h-12 mx-auto text-gray-300 mb-2" />
+                            <p>ยังไม่มีกิจกรรม</p>
+                        </div>
+                    ) : (
+                        recentActivity.map((activity) => (
+                            <div key={activity.id} className="p-4 hover:bg-gray-50">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-900">
+                                            {activity.profiles?.first_name} {activity.profiles?.last_name}
+                                        </p>
+                                        <p className="text-sm text-gray-500">
+                                            ยืม: {activity.equipment?.name || '-'}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        {getStatusBadge(activity.status)}
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            {formatDate(activity.updated_at)}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        </>
+    )
+}
