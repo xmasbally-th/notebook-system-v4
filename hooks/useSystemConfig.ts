@@ -3,9 +3,19 @@ import { useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { Database } from '@/supabase/types'
 
-type SystemConfig = Database['public']['Tables']['system_config']['Row']
-type SystemConfigUpdate = Database['public']['Tables']['system_config']['Update']
+type _SystemConfigBase = Database['public']['Tables']['system_config']['Row']
+type _SystemConfigUpdateBase = Database['public']['Tables']['system_config']['Update']
 
+// Extended with new archive columns (added via migration 20260302)
+type ArchiveFields = {
+    archive_enabled: boolean | null
+    archive_support_after_days: number | null
+    archive_notifications_after_days: number | null
+    last_archived_at: string | null
+}
+
+type SystemConfig = _SystemConfigBase & ArchiveFields
+type SystemConfigUpdate = _SystemConfigUpdateBase & Partial<ArchiveFields>
 
 
 export function useSystemConfig() {
@@ -114,6 +124,10 @@ function getDefaultConfig(): SystemConfig {
         evaluation_cutoff_date: null,
         support_auto_reply_enabled: true,
         support_auto_reply_message: 'สวัสดีครับ🙏 ฝากข้อความไว้ เจ้าหน้าที่จะตอบกลับโดยเร็วที่สุด...',
+        archive_enabled: false,
+        archive_support_after_days: 180,
+        archive_notifications_after_days: 90,
+        last_archived_at: null,
     } as SystemConfig
 }
 

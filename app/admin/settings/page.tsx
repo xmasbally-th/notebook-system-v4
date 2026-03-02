@@ -27,8 +27,12 @@ import {
     Image as ImageIcon,
     X,
     Palette,
-    Check
+    Check,
+    Archive,
+    PlayCircle,
+    CheckCircle2
 } from 'lucide-react'
+import { runAutoArchiveAction, type ArchiveResult } from '@/lib/dataManagement'
 import { Database } from '@/supabase/types'
 import { useTheme, themeInfo, type Theme } from '@/components/providers/ThemeContext'
 
@@ -54,7 +58,7 @@ const userTypeLabels: Record<string, string> = {
     staff: 'บุคลากร'
 }
 
-type TabType = 'limits' | 'hours' | 'features' | 'notifications' | 'documents' | 'theme'
+type TabType = 'limits' | 'hours' | 'features' | 'notifications' | 'documents' | 'theme' | 'archive'
 
 const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     { id: 'limits', label: 'ขีดจำกัด', icon: <Users className="w-4 h-4" /> },
@@ -63,6 +67,7 @@ const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     { id: 'notifications', label: 'แจ้งเตือน', icon: <Megaphone className="w-4 h-4" /> },
     { id: 'documents', label: 'เอกสาร', icon: <FileText className="w-4 h-4" /> },
     { id: 'theme', label: 'ธีม', icon: <Palette className="w-4 h-4" /> },
+    { id: 'archive', label: 'จัดเก็บข้อมูล', icon: <Archive className="w-4 h-4" /> },
 ]
 
 export default function AdminSettingsPage() {
@@ -81,6 +86,13 @@ export default function AdminSettingsPage() {
     const [isUploadingLogo, setIsUploadingLogo] = useState(false)
     const [templateUrl, setTemplateUrl] = useState<string | null>(null)
     const [isUploadingTemplate, setIsUploadingTemplate] = useState(false)
+    // Archive policy state
+    const [archiveEnabled, setArchiveEnabled] = useState(false)
+    const [archiveSupportDays, setArchiveSupportDays] = useState(180)
+    const [archiveNotifDays, setArchiveNotifDays] = useState(90)
+    const [isArchiving, setIsArchiving] = useState(false)
+    const [archiveResult, setArchiveResult] = useState<ArchiveResult | null>(null)
+    const [archiveError, setArchiveError] = useState<string | null>(null)
 
     useEffect(() => {
         if (config) {
@@ -108,6 +120,10 @@ export default function AdminSettingsPage() {
             }
             setLogoUrl(config.document_logo_url || null)
             setTemplateUrl(config.document_template_url || null)
+            // Archive policy
+            setArchiveEnabled(config.archive_enabled ?? false)
+            setArchiveSupportDays(config.archive_support_after_days ?? 180)
+            setArchiveNotifDays(config.archive_notifications_after_days ?? 90)
         }
     }, [config])
 
@@ -300,7 +316,10 @@ export default function AdminSettingsPage() {
         const updates = {
             ...formData,
             loan_limits_by_type: loanLimits,
-            closed_dates: closedDates
+            closed_dates: closedDates,
+            archive_enabled: archiveEnabled,
+            archive_support_after_days: archiveSupportDays,
+            archive_notifications_after_days: archiveNotifDays,
         }
         updateMutation.mutate(updates, {
             onSuccess: () => {
@@ -311,6 +330,21 @@ export default function AdminSettingsPage() {
                 alert(`เกิดข้อผิดพลาด: ${err.message}`)
             }
         })
+    }
+
+    const handleRunArchive = async () => {
+        if (!confirm('ยืนยันการลบข้อมูลเก่า? การกระทำนี้ไม่สามารถกู้คืนได้')) return
+        setIsArchiving(true)
+        setArchiveResult(null)
+        setArchiveError(null)
+        try {
+            const result = await runAutoArchiveAction()
+            setArchiveResult(result)
+        } catch (err: any) {
+            setArchiveError(err.message || 'เกิดข้อผิดพลาด')
+        } finally {
+            setIsArchiving(false)
+        }
     }
 
     const formatDate = (dateStr: string) => {
@@ -1049,6 +1083,136 @@ export default function AdminSettingsPage() {
                                 <p className="text-sm text-gray-500 text-center">
                                     🎨 การเปลี่ยนธีมจะมีผลทันทีและจะถูกบันทึกไว้สำหรับการใช้งานครั้งต่อไป
                                 </p>
+                            </div>
+                        </section>
+                    )}
+                    {/* Archive Tab */}
+                    {activeTab === 'archive' && (
+                        <section className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
+                            {/* Header */}
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-amber-50 rounded-xl">
+                                    <Archive className="w-5 h-5 text-amber-600" />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-semibold text-gray-900">นโยบายจัดเก็บข้อมูล</h2>
+                                    <p className="text-sm text-gray-500">ลบข้อมูลเก่าอัตโนมัติเพื่อประหยัดพื้นที่ database</p>
+                                </div>
+                            </div>
+
+                            {/* Warning */}
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-3">
+                                <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                                <div className="text-sm text-red-700">
+                                    <p className="font-semibold mb-1">คำเตือน: Hard Delete</p>
+                                    <p>ข้อมูลที่ลบไปแล้ว <strong>ไม่สามารถกู้คืนได้</strong> — การสนทนา Support ที่ปิดแล้ว และ Notification เก่าจะถูกลบถาวร</p>
+                                </div>
+                            </div>
+
+                            {/* Toggle */}
+                            <ToggleItem
+                                label="เปิดใช้งาน Auto-Archive"
+                                description="แสดงสถานะ policy ที่ตั้งไว้ (Admin ยังต้องกดปุ่ม Run Archive Now ด้วยตนเอง)"
+                                checked={archiveEnabled}
+                                onChange={(v) => { setArchiveEnabled(v); setIsDirty(true) }}
+                                color="blue"
+                            />
+
+                            {/* Retention Settings */}
+                            <div className="grid sm:grid-cols-2 gap-4">
+                                <div className="p-4 bg-gray-50 rounded-xl">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        การสนทนา Support Chat
+                                    </label>
+                                    <p className="text-xs text-gray-400 mb-2">ลบ ticket ที่ปิดแล้ว และข้อความทั้งหมดที่เก่ากว่า</p>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            min={30}
+                                            max={3650}
+                                            value={archiveSupportDays}
+                                            onChange={(e) => { setArchiveSupportDays(parseInt(e.target.value) || 180); setIsDirty(true) }}
+                                            className="w-24 px-3 py-2 border border-gray-200 rounded-lg text-center focus:ring-2 focus:ring-amber-500"
+                                        />
+                                        <span className="text-sm text-gray-600">วัน</span>
+                                        <span className="text-xs text-gray-400">(~{Math.round(archiveSupportDays / 30)} เดือน)</span>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 bg-gray-50 rounded-xl">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        การแจ้งเตือน (Notifications)
+                                    </label>
+                                    <p className="text-xs text-gray-400 mb-2">ลบ notification ทุกรายการที่เก่ากว่า</p>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            min={30}
+                                            max={3650}
+                                            value={archiveNotifDays}
+                                            onChange={(e) => { setArchiveNotifDays(parseInt(e.target.value) || 90); setIsDirty(true) }}
+                                            className="w-24 px-3 py-2 border border-gray-200 rounded-lg text-center focus:ring-2 focus:ring-amber-500"
+                                        />
+                                        <span className="text-sm text-gray-600">วัน</span>
+                                        <span className="text-xs text-gray-400">(~{Math.round(archiveNotifDays / 30)} เดือน)</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Summary Info Card */}
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+                                <p className="font-medium text-amber-900 mb-2">สิ่งที่จะถูกลบเมื่อรัน Archive:</p>
+                                <ul className="space-y-1 text-amber-800">
+                                    <li>✅ Support Ticket ที่ปิดแล้ว และไม่ได้อัปเดตนานกว่า <strong>{archiveSupportDays} วัน</strong></li>
+                                    <li>✅ ข้อความทั้งหมดใน Ticket เหล่านั้น (CASCADE)</li>
+                                    <li>✅ Notification ทุกรายการที่เก่ากว่า <strong>{archiveNotifDays} วัน</strong></li>
+                                    <li className="text-amber-600">❌ ไม่ลบข้อมูลการยืม-คืน, อุปกรณ์, หรือผู้ใช้</li>
+                                </ul>
+                            </div>
+
+                            {/* Last archived info */}
+                            {config?.last_archived_at && (
+                                <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                                    Archive ล่าสุด: {new Date(config.last_archived_at).toLocaleString('th-TH')}
+                                </p>
+                            )}
+
+                            {/* Archive Result */}
+                            {archiveResult && (
+                                <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm">
+                                    <div className="flex items-center gap-2 font-semibold text-green-800 mb-2">
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        Archive เสร็จสมบูรณ์
+                                    </div>
+                                    <ul className="space-y-1 text-green-700">
+                                        <li>✅ ลบ Ticket: <strong>{archiveResult.deleted_tickets}</strong> รายการ</li>
+                                        <li>✅ ลบ Notification: <strong>{archiveResult.deleted_notifications}</strong> รายการ</li>
+                                    </ul>
+                                </div>
+                            )}
+
+                            {/* Archive Error */}
+                            {archiveError && (
+                                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
+                                    <p className="font-semibold">เกิดข้อผิดพลาด</p>
+                                    <p>{archiveError}</p>
+                                </div>
+                            )}
+
+                            {/* Run Archive Button */}
+                            <div className="flex justify-end">
+                                <button
+                                    onClick={handleRunArchive}
+                                    disabled={isArchiving}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                                >
+                                    {isArchiving ? (
+                                        <><Loader2 className="w-4 h-4 animate-spin" />กำลังลบ...</>
+                                    ) : (
+                                        <><PlayCircle className="w-4 h-4" />Run Archive Now</>
+                                    )}
+                                </button>
                             </div>
                         </section>
                     )}
