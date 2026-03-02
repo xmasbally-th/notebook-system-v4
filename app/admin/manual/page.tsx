@@ -6,7 +6,8 @@ import {
     LayoutDashboard, Users, Package, ClipboardList, RotateCcw,
     CalendarPlus, FileStack, Activity, MessageSquare, Database,
     BarChart3, Settings, HelpCircle, CheckCircle2, AlertTriangle,
-    Search, Plus, Edit, Trash2, ArrowRight, Star, Shield, Bell
+    Search, Plus, Edit, Trash2, ArrowRight, Star, Shield, Bell,
+    Archive
 } from 'lucide-react'
 import React from 'react'
 
@@ -31,13 +32,14 @@ export default function AdminManualPage() {
                 </div>
 
                 {/* Quick Nav */}
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-10 text-center">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-10 text-center">
                     <QuickNavLink href="#dashboard" icon={LayoutDashboard} label="Dashboard" color="blue" />
                     <QuickNavLink href="#users" icon={Users} label="ผู้ใช้งาน" color="indigo" />
                     <QuickNavLink href="#equipment" icon={Package} label="อุปกรณ์" color="orange" />
                     <QuickNavLink href="#loans" icon={ClipboardList} label="การยืม-คืน" color="green" />
                     <QuickNavLink href="#reports" icon={BarChart3} label="รายงาน" color="purple" />
                     <QuickNavLink href="#support" icon={MessageSquare} label="Support Chat" color="teal" />
+                    <QuickNavLink href="#data" icon={Database} label="จัดการข้อมูล" color="amber" />
                     <QuickNavLink href="#settings" icon={Settings} label="ตั้งค่า" color="gray" />
                 </div>
 
@@ -214,8 +216,41 @@ export default function AdminManualPage() {
                         </div>
                     </Section>
 
-                    {/* 7. Settings */}
-                    <Section id="settings" title="7. ตั้งค่าระบบ (Settings)" icon={Settings} color="gray">
+                    {/* 7. Data Management */}
+                    <Section id="data" title="7. จัดการข้อมูล (Data Management)" icon={Database} color="amber">
+                        <p className="mb-4 text-gray-600">
+                            หน้า <strong>Data Management</strong> รวมเครื่องมือสำหรับบริหารข้อมูลทุกประเภทในระบบ — Export, Import, ลบข้อมูล และ Auto-Archive
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <FeatureItem
+                                title="ส่งออกข้อมูล (Export)"
+                                desc="Export ข้อมูลการยืม, อุปกรณ์, ผู้ใช้ เป็น CSV/Excel เพื่อรายงานหรือสำรองข้อมูล"
+                            />
+                            <FeatureItem
+                                title="นำเข้าข้อมูล (Import)"
+                                desc="Import ข้อมูลอุปกรณ์จากไฟล์ Excel/CSV สำหรับเพิ่มอุปกรณ์จำนวนมากในครั้งเดียว"
+                            />
+                            <FeatureItem
+                                title="ลบข้อมูล (Hard Delete)"
+                                desc="ลบข้อมูลเก่าแบบ manual เลือกช่วงวันที่ ประเภท และยืนยันก่อนลบ — รองรับ: การยืม, การจอง, อุปกรณ์, แจ้งเตือน, ประเมิน, และการสนทนา"
+                            />
+                            <FeatureItem
+                                title="Auto-Archive"
+                                desc="ลบข้อมูลเก่าตาม retention policy โดยอัตโนมัติ — ตั้งจำนวนวัน แล้วกด Run Archive Now เพื่อลบ closed tickets และ notifications เก่าในครั้งเดียว"
+                            />
+                        </div>
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm">
+                            <p className="font-semibold text-amber-900 mb-1">🗄️ Auto-Archive ลบอะไรบ้าง?</p>
+                            <ul className="text-amber-800 space-y-1">
+                                <li>✅ Support Ticket ที่ปิดแล้ว เก่ากว่าที่กำหนด (พร้อมข้อความทั้งหมด)</li>
+                                <li>✅ Notification ที่เก่ากว่าที่กำหนด</li>
+                                <li className="text-amber-600">❌ ไม่ลบข้อมูลการยืม-คืน, อุปกรณ์, หรือผู้ใช้</li>
+                            </ul>
+                        </div>
+                    </Section>
+
+                    {/* 8. Settings */}
+                    <Section id="settings" title="8. ตั้งค่าระบบ (Settings)" icon={Settings} color="gray">
                         <p className="mb-4 text-gray-600">
                             กำหนดค่าพื้นฐานของระบบผ่านหน้า Settings — เฉพาะ Admin เท่านั้นที่เข้าถึงได้
                         </p>
@@ -278,6 +313,7 @@ export default function AdminManualPage() {
                                         <li>✅ Export รายงานสรุปเดือน</li>
                                         <li>✅ ทบทวนค่าตั้งค่าระบบ</li>
                                         <li>✅ ตรวจสอบแบบประเมิน</li>
+                                        <li>✅ รัน Auto-Archive ลบข้อมูลเก่า</li>
                                     </ul>
                                 </div>
                             </div>
@@ -288,7 +324,7 @@ export default function AdminManualPage() {
                 {/* Footer Help */}
                 <div className="mt-16 text-center border-t border-gray-200 pt-10 pb-8">
                     <p className="text-gray-500 text-sm">
-                        คู่มือนี้เป็นแนวทางสำหรับ Notebook System V5 — อัปเดต 27 กุมภาพันธ์ 2569
+                        คู่มือนี้เป็นแนวทางสำหรับ Notebook System V5 — อัปเดต 2 มีนาคม 2569
                     </p>
                 </div>
             </div>
