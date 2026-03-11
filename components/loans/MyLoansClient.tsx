@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, startTransition } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
@@ -11,8 +12,13 @@ import {
 } from 'lucide-react'
 import Header from '@/components/layout/Header'
 import Pagination from '@/components/ui/Pagination'
-import EvaluationModal from '@/components/evaluations/EvaluationModal'
 import type { MyHistoryItem, MyLoanItem } from '@/lib/data/my-loans'
+
+// Dynamic import: EvaluationModal loaded only when user opens it
+const EvaluationModal = dynamic(
+    () => import('@/components/evaluations/EvaluationModal'),
+    { ssr: false }
+)
 
 type FilterTab = 'all' | 'loans' | 'reservations'
 
@@ -63,8 +69,10 @@ export default function MyLoansClient({ loans, reservations, evaluationCutoffDat
     const paginatedItems = filteredItems.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
     const handleFilterChange = (newFilter: FilterTab) => {
-        setFilter(newFilter)
-        setCurrentPage(1)
+        startTransition(() => {
+            setFilter(newFilter)
+            setCurrentPage(1)
+        })
     }
 
     const handleEvaluate = (loan: any) => {

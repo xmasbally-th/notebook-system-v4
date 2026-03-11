@@ -2,24 +2,16 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr'
 import { Loader2, Clock, CheckCircle2, Mail, Phone, LogOut, Laptop, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useToast } from '@/components/ui/toast'
 import { useSystemConfig } from '@/hooks/useSystemConfig'
+import { getSupabaseBrowserClient, getSupabaseCredentials } from '@/lib/supabase-helpers'
 
-// Get Supabase credentials and client
-function getSupabaseCredentials() {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    return { url, key }
-}
-
+// Use singleton client
 function getSupabaseClient() {
-    const { url, key } = getSupabaseCredentials()
-    if (!url || !key) return null
-    return createBrowserClient(url, key)
+    return getSupabaseBrowserClient()
 }
 
 // Faster polling interval (15 seconds)

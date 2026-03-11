@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { Database } from '@/supabase/types'
 
@@ -8,30 +7,7 @@ type Equipment = Database['public']['Tables']['equipment']['Row']
 
 
 export function useEquipment(id?: string | null, filters?: { typeId?: string | null, search?: string | null, enabled?: boolean }) {
-    const queryClient = useQueryClient()
-
-    useEffect(() => {
-        // Subscribe to realtime equipment changes
-        const channel = supabase
-            .channel('equipment-changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'equipment'
-                },
-                (payload) => {
-                    // console.log('Equipment change:', payload)
-                    queryClient.invalidateQueries({ queryKey: ['equipment'] })
-                }
-            )
-            .subscribe()
-
-        return () => {
-            supabase.removeChannel(channel)
-        }
-    }, [queryClient])
+    // Realtime invalidation moved to useRealtimeInvalidator — no inline channel here
 
     return useQuery({
         queryKey: ['equipment', id, filters?.typeId, filters?.search],

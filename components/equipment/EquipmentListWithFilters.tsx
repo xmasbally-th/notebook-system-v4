@@ -3,14 +3,20 @@
 import Image from 'next/image'
 import { useEquipment } from '@/hooks/useEquipment'
 import { useRecentlyBorrowed, isRecentlyBorrowed, sortByRecentlyBorrowed } from '@/hooks/useRecentlyBorrowed'
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, startTransition } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import dynamic from 'next/dynamic'
 import { Database } from '@/supabase/types'
 import { Search, X, Package, Plus, Check, Clock, CheckCircle, Users, Wrench, AlertTriangle } from 'lucide-react'
 import { CartProvider, useCart } from '@/components/cart/CartContext'
 import CartButton from '@/components/cart/CartButton'
-import CartDrawer from '@/components/cart/CartDrawer'
 import Link from 'next/link'
+
+// Dynamic import: CartDrawer loaded only when user opens it
+const CartDrawer = dynamic(
+    () => import('@/components/cart/CartDrawer'),
+    { ssr: false }
+)
 import { cn } from '@/lib/utils'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
@@ -151,11 +157,13 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
     }, [debouncedSearch, selectedTypeId, selectedStatus])
 
     const clearFilters = () => {
-        setSearchTerm('')
-        setDebouncedSearch('')
-        setSelectedTypeId(null)
-        setSelectedStatus('all')
-        setCurrentPage(1)
+        startTransition(() => {
+            setSearchTerm('')
+            setDebouncedSearch('')
+            setSelectedTypeId(null)
+            setSelectedStatus('all')
+            setCurrentPage(1)
+        })
         router.replace('/equipment')
     }
 

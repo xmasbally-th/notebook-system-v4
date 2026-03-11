@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr'
 import { useQueryClient } from '@tanstack/react-query'
+import { getSupabaseBrowserClient, getSupabaseCredentials } from '@/lib/supabase-helpers'
 import Loading from '@/components/ui/Loading'
 
 type Profile = {
@@ -37,17 +37,9 @@ const SETUP_PATHS = [
     '/register/complete-profile'
 ]
 
-// Get credentials and client
-function getSupabaseCredentials() {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    return { url, key }
-}
-
+// Use singleton client from supabase-helpers
 function getSupabaseClient() {
-    const { url, key } = getSupabaseCredentials()
-    if (!url || !key) return null
-    return createBrowserClient(url, key)
+    return getSupabaseBrowserClient()
 }
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -208,7 +200,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         // Listen for auth changes
         if (client) {
             const { data: { subscription } } = client.auth.onAuthStateChange(
-                async (event, session) => {
+                async (event: any, session: any) => {
                     if (!isMounted) return
 
                     if (event === 'SIGNED_OUT') {

@@ -81,7 +81,7 @@ export default function ProfilePage() {
     useEffect(() => {
         const client = getSupabaseBrowserClient()
         if (client) {
-            client.auth.getSession().then(({ data: { session } }) => {
+            client.auth.getSession().then(({ data: { session } }: any) => {
                 setSession(session)
             })
         }

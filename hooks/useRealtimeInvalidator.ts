@@ -1,31 +1,24 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { createBrowserClient } from '@supabase/ssr'
-
-function getSupabaseCredentials() {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    return { url, key }
-}
+import { getSupabaseBrowserClient } from '@/lib/supabase-helpers'
 
 /**
- * Hook to invalidate query keys when Realtime events occur
- * @param tables Array of table names to listen to (or object with table and filter)
- * @param queryKeys Array of query keys to invalidate
+ * Hook to invalidate query keys when Realtime events occur.
+ * Uses singleton client and debounces invalidation to avoid rapid re-renders.
  */
 export function useRealtimeInvalidator(
     tables: string[],
     queryKeys: string[][]
 ) {
     const queryClient = useQueryClient()
+    const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     useEffect(() => {
-        const { url, key } = getSupabaseCredentials()
-        if (!url || !key) return
+        const client = getSupabaseBrowserClient()
+        if (!client) return
 
-        const client = createBrowserClient(url, key)
         const channelName = `invalidator-${tables.join('-')}`
 
         let channel = client.channel(channelName)
@@ -35,10 +28,15 @@ export function useRealtimeInvalidator(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: table },
                 () => {
-                    // Invalidate all provided keys
-                    queryKeys.forEach(queryKey => {
-                        queryClient.invalidateQueries({ queryKey })
-                    })
+                    // Debounce: batch rapid changes into one invalidation (300ms)
+                    if (debounceTimerRef.current) {
+                        clearTimeout(debounceTimerRef.current)
+                    }
+                    debounceTimerRef.current = setTimeout(() => {
+                        queryKeys.forEach(queryKey => {
+                            queryClient.invalidateQueries({ queryKey })
+                        })
+                    }, 300)
                 }
             )
         })
@@ -46,7 +44,10 @@ export function useRealtimeInvalidator(
         channel.subscribe()
 
         return () => {
+            if (debounceTimerRef.current) {
+                clearTimeout(debounceTimerRef.current)
+            }
             client.removeChannel(channel)
         }
-    }, [tables.join(','), queryKeys.join(',')]) // Re-subscribe if tables/keys change
+    }, [tables.join(','), queryKeys.join(',')])
 }

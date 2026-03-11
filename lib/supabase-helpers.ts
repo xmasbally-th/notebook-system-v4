@@ -12,12 +12,17 @@ export function getSupabaseCredentials() {
     return { url, key }
 }
 
-// Get browser client for auth operations
+// Singleton browser client — created once, reused everywhere
+let _browserClient: ReturnType<typeof createBrowserClient> | null = null
+
 export function getSupabaseBrowserClient() {
+    if (_browserClient) return _browserClient
     const { url, key } = getSupabaseCredentials()
     if (!url || !key) return null
-    return createBrowserClient(url, key)
+    _browserClient = createBrowserClient(url, key)
+    return _browserClient
 }
+
 
 // Direct fetch helper for database operations
 export async function supabaseFetch<T>(
