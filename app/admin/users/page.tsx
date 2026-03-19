@@ -1,31 +1,73 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import UserTable from './user-table'
 import AdminLayout from '@/components/admin/AdminLayout'
 import { Users, UserCheck, Clock, UserX } from 'lucide-react'
 
+// Skeleton for the stats cards while data loads
+function StatCardSkeleton() {
+    return (
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm animate-pulse">
+            <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-gray-100 rounded-lg" />
+                <div>
+                    <div className="h-7 w-10 bg-gray-200 rounded mb-1" />
+                    <div className="h-3 w-20 bg-gray-100 rounded" />
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// Skeleton for table
+function TableSkeleton() {
+    return (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-pulse">
+            <div className="p-4 border-b border-gray-100">
+                <div className="h-10 bg-gray-100 rounded-xl w-full" />
+            </div>
+            {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="px-6 py-4 border-b border-gray-50 flex items-center gap-4">
+                    <div className="w-10 h-10 bg-gray-100 rounded-full flex-shrink-0" />
+                    <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-100 rounded w-40" />
+                        <div className="h-3 bg-gray-50 rounded w-56" />
+                    </div>
+                    <div className="h-6 w-20 bg-gray-100 rounded-full" />
+                    <div className="h-8 w-24 bg-gray-100 rounded-lg" />
+                </div>
+            ))}
+        </div>
+    )
+}
+
 export default async function AdminUsersPage() {
     const supabase = await createClient()
 
-    // 1. Check Auth & Role
+    // 1. Auth check first (needed before anything else)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) redirect('/login')
 
-    const { data: adminCheck } = await supabase
-        .from('profiles' as any)
-        .select('role')
-        .eq('id', user.id)
-        .single()
+    // 2. Fetch admin check + user list IN PARALLEL
+    const [adminCheckResult, usersResult] = await Promise.all([
+        supabase
+            .from('profiles' as any)
+            .select('role')
+            .eq('id', user.id)
+            .single(),
+        supabase
+            .from('profiles' as any)
+            .select('id, email, first_name, last_name, title, role, status, user_type, phone_number, avatar_url, created_at, department_id, departments(name)')
+            .order('created_at', { ascending: false })
+    ])
 
+    const adminCheck = adminCheckResult.data
     if (adminCheck?.role !== 'admin') {
         redirect('/')
     }
 
-    // 2. Fetch Users
-    const { data: users, error } = await supabase
-        .from('profiles' as any)
-        .select('id, email, first_name, last_name, title, role, status, user_type, phone_number, avatar_url, created_at, department_id, departments(name)')
-        .order('created_at', { ascending: false })
+    const { data: users, error } = usersResult
 
     if (error) {
         return <div className="p-8 text-red-500">Error loading users: {error.message}</div>

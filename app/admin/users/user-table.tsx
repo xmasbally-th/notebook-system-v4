@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, startTransition } from 'react'
 import {
     Check,
     X,
@@ -360,7 +360,7 @@ export default function UserTable({ users }: { users: User[] }) {
                             placeholder="ค้นหาผู้ใช้..."
                             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => startTransition(() => setSearch(e.target.value))}
                         />
                     </div>
 
@@ -374,7 +374,7 @@ export default function UserTable({ users }: { users: User[] }) {
                         ].map(tab => (
                             <button
                                 key={tab.value}
-                                onClick={() => setFilterStatus(tab.value)}
+                                onClick={() => startTransition(() => setFilterStatus(tab.value))}
                                 className={`
                                     px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all
                                     ${filterStatus === tab.value
