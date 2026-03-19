@@ -1,41 +1,28 @@
-'use client'
-
-import React from 'react'
+import { Suspense } from 'react'
 import StaffSidebar from './StaffSidebar'
 import StaffNotificationBell from './StaffNotificationBell'
-import { useProfile } from '@/hooks/useProfile'
-import { createBrowserClient } from '@supabase/ssr'
-import { useEffect, useState } from 'react'
 import { isStaffOrAbove, getRoleDisplayName } from '@/lib/permissions'
 import type { Role } from '@/lib/permissions'
 
-// Get Supabase client for auth operations
-function getSupabaseClient() {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    if (!url || !key) return null
-    return createBrowserClient(url, key)
+interface ProfileData {
+    first_name: string | null
+    last_name: string | null
+    role: string
 }
 
 interface StaffLayoutProps {
     children: React.ReactNode
     title: string
     subtitle?: string
+    profile?: ProfileData | null
 }
 
-export default function StaffLayout({ children, title, subtitle }: StaffLayoutProps) {
-    const [userId, setUserId] = useState<string | undefined>(undefined)
-
-    useEffect(() => {
-        const client = getSupabaseClient()
-        if (client) {
-            client.auth.getUser().then(({ data: { user } }) => {
-                setUserId(user?.id || undefined)
-            })
-        }
-    }, [])
-
-    const { data: profile } = useProfile(userId)
+/**
+ * Server-compatible StaffLayout.
+ * Receives profile as a prop (fetched on server) → no client-side auth waterfall.
+ * StaffSidebar stays 'use client' for mobile toggle interactivity.
+ */
+export default function StaffLayout({ children, title, subtitle, profile }: StaffLayoutProps) {
     const hasAccess = profile?.role && isStaffOrAbove(profile.role as Role)
 
     return (
@@ -44,7 +31,7 @@ export default function StaffLayout({ children, title, subtitle }: StaffLayoutPr
 
             {/* Main Content Area */}
             <div className="lg:pl-64 transition-all duration-300">
-                {/* Top Header */}
+                {/* Top Header — renders immediately, no client waterfall */}
                 <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
                     <div className="flex items-center justify-between px-6 py-4 lg:px-8">
                         <div className="pl-12 lg:pl-0">
@@ -54,7 +41,9 @@ export default function StaffLayout({ children, title, subtitle }: StaffLayoutPr
                             )}
                         </div>
                         <div className="flex items-center gap-4">
-                            <StaffNotificationBell isStaff={hasAccess || false} />
+                            <Suspense fallback={<div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse" />}>
+                                <StaffNotificationBell isStaff={hasAccess || false} />
+                            </Suspense>
                             {profile && (
                                 <div className="hidden sm:flex items-center gap-2 text-sm">
                                     <div className="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center">

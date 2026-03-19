@@ -1,3 +1,5 @@
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import StaffLayout from '@/components/staff/StaffLayout'
 import StaffDashboardClient from '@/components/staff/StaffDashboardClient'
 import { getStaffDashboardStats, getRecentActivity } from '@/lib/data/staff-dashboard'
@@ -6,14 +8,36 @@ import { getStaffDashboardStats, getRecentActivity } from '@/lib/data/staff-dash
 export const revalidate = 60
 
 export default async function StaffDashboard() {
-    // Fetch both datasets in parallel on the server — no client waterfall
-    const [stats, recentActivity] = await Promise.all([
+    const supabase = await createClient()
+
+    // 1. Auth check
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) redirect('/login')
+
+    // 2. Fetch profile + dashboard data in parallel
+    const [profileResult, stats, recentActivity] = await Promise.all([
+        supabase
+            .from('profiles')
+            .select('first_name, last_name, role')
+            .eq('id', user.id)
+            .single(),
         getStaffDashboardStats(),
         getRecentActivity(),
     ])
 
+    const profile = profileResult.data
+
+    // 3. Access check
+    if (!profile || !['staff', 'admin'].includes(profile.role)) {
+        redirect('/')
+    }
+
     return (
-        <StaffLayout title="Dashboard" subtitle="ภาพรวมการยืม-คืนอุปกรณ์">
+        <StaffLayout
+            title="Dashboard"
+            subtitle="ภาพรวมการยืม-คืนอุปกรณ์"
+            profile={profile}
+        >
             <StaffDashboardClient stats={stats} recentActivity={recentActivity} />
         </StaffLayout>
     )
