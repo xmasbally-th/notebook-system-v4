@@ -1,39 +1,27 @@
-'use client'
-
+import { Suspense } from 'react'
 import React from 'react'
 import AdminSidebar from './AdminSidebar'
 import AdminNotificationBell from './AdminNotificationBell'
-import { useProfile } from '@/hooks/useProfile'
-import { createBrowserClient } from '@supabase/ssr'
-import { useEffect, useState } from 'react'
 
-// Get Supabase client for auth operations
-function getSupabaseClient() {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    if (!url || !key) return null
-    return createBrowserClient(url, key)
+interface ProfileData {
+    first_name: string | null
+    last_name: string | null
+    role: string
 }
 
 interface AdminLayoutProps {
     children: React.ReactNode
     title: string
     subtitle?: string
+    profile?: ProfileData | null
 }
 
-export default function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
-    const [userId, setUserId] = useState<string | undefined>(undefined)
-
-    useEffect(() => {
-        const client = getSupabaseClient()
-        if (client) {
-            client.auth.getUser().then(({ data: { user } }) => {
-                setUserId(user?.id || undefined)
-            })
-        }
-    }, [])
-
-    const { data: profile } = useProfile(userId)
+/**
+ * Server-compatible AdminLayout.
+ * Receives profile as a prop (fetched on server) — no client-side auth waterfall.
+ * AdminSidebar stays 'use client' for mobile toggle interactivity.
+ */
+export default function AdminLayout({ children, title, subtitle, profile }: AdminLayoutProps) {
     const isAdmin = profile?.role === 'admin'
 
     return (
@@ -42,7 +30,7 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
 
             {/* Main Content Area */}
             <div className="lg:pl-64 transition-all duration-300">
-                {/* Top Header */}
+                {/* Top Header — renders immediately, no client waterfall */}
                 <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
                     <div className="flex items-center justify-between px-6 py-4 lg:px-8">
                         <div className="pl-12 lg:pl-0">
@@ -52,7 +40,9 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
                             )}
                         </div>
                         <div className="flex items-center gap-4">
-                            <AdminNotificationBell isAdmin={isAdmin} />
+                            <Suspense fallback={<div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse" />}>
+                                <AdminNotificationBell isAdmin={isAdmin} />
+                            </Suspense>
                             {profile && (
                                 <div className="hidden sm:flex items-center gap-2 text-sm">
                                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
