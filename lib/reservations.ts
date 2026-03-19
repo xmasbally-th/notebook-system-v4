@@ -718,3 +718,84 @@ export async function convertReservationToLoan(
         return { success: false, error: 'เกิดข้อผิดพลาด' }
     }
 }
+
+/**
+ * Admin: Update editable fields on any reservation
+ */
+export async function adminUpdateReservation(
+    reservationId: string,
+    updates: {
+        start_date?: string
+        end_date?: string
+        pickup_time?: string | null
+        return_time?: string | null
+        status?: ReservationStatus
+        rejection_reason?: string | null
+    }
+): Promise<{ success: boolean; error?: string }> {
+    const { url, key } = getSupabaseCredentials()
+    if (!url || !key) return { success: false, error: 'Missing credentials' }
+
+    const userPromise = getCurrentUser()
+    const accessTokenPromise = getAccessToken()
+
+    const user = await userPromise
+    if (!user || user.role !== 'admin') {
+        return { success: false, error: 'เฉพาะ Admin เท่านั้นที่สามารถแก้ไขการจองได้' }
+    }
+
+    const accessToken = await accessTokenPromise
+    if (!accessToken) return { success: false, error: 'กรุณาเข้าสู่ระบบ' }
+
+    // Validate dates if both provided
+    if (updates.start_date && updates.end_date) {
+        const start = new Date(updates.start_date)
+        const end = new Date(updates.end_date)
+        start.setHours(0, 0, 0, 0)
+        end.setHours(0, 0, 0, 0)
+        if (end < start) {
+            return { success: false, error: 'วันที่คืนต้องไม่ก่อนวันที่รับ' }
+        }
+    }
+
+    try {
+        const body: Record<string, any> = {
+            updated_at: new Date().toISOString(),
+        }
+        if (updates.start_date !== undefined) body.start_date = updates.start_date
+        if (updates.end_date !== undefined) body.end_date = updates.end_date
+        if (updates.pickup_time !== undefined) body.pickup_time = updates.pickup_time || null
+        if (updates.return_time !== undefined) body.return_time = updates.return_time || null
+        if (updates.status !== undefined) body.status = updates.status
+        if (updates.rejection_reason !== undefined) body.rejection_reason = updates.rejection_reason || null
+
+        const response = await fetch(`${url}/rest/v1/reservations?id=eq.${reservationId}`, {
+            method: 'PATCH',
+            headers: {
+                'apikey': key,
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        })
+
+        if (!response.ok) {
+            return { success: false, error: 'ไม่สามารถแก้ไขการจองได้' }
+        }
+
+        await logStaffActivity({
+            staffId: user.id,
+            staffRole: 'admin',
+            actionType: 'edit_reservation',
+            targetType: 'reservation',
+            targetId: reservationId,
+            isSelfAction: false,
+            details: { updated_fields: Object.keys(updates) }
+        })
+
+        return { success: true }
+    } catch (error) {
+        console.error('[adminUpdateReservation] Error:', error)
+        return { success: false, error: 'เกิดข้อผิดพลาด' }
+    }
+}

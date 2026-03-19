@@ -20,6 +20,7 @@ export type ActionType =
     | 'create_special_loan'
     | 'complete_special_loan'
     | 'cancel_special_loan'
+    | 'edit_reservation'
 
 
 export interface ActivityLogEntry {
@@ -115,7 +116,8 @@ export function getActionTypeLabel(actionType: ActionType): string {
         'restore_data': 'กู้คืนข้อมูล',
         'create_special_loan': 'สร้างยืมพิเศษ',
         'complete_special_loan': 'บันทึกคืนยืมพิเศษ',
-        'cancel_special_loan': 'ยกเลิกยืมพิเศษ'
+        'cancel_special_loan': 'ยกเลิกยืมพิเศษ',
+        'edit_reservation': 'แก้ไขการจอง'
     }
     return labels[actionType] || actionType
 }
@@ -142,7 +144,8 @@ export function getActionTypeIcon(actionType: ActionType): string {
         'restore_data': '♻️',
         'create_special_loan': '📋',
         'complete_special_loan': '✅',
-        'cancel_special_loan': '🚫'
+        'cancel_special_loan': '🚫',
+        'edit_reservation': '✏️'
     }
     return icons[actionType] || '📝'
 }

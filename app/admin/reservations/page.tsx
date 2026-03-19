@@ -6,6 +6,7 @@ import {
     rejectReservation,
     markReservationReady,
     cancelReservation,
+    adminUpdateReservation,
     ReservationStatus
 } from '@/lib/reservations'
 import { convertReservationToLoanAction } from '@/app/reservations/actions'
@@ -19,7 +20,7 @@ import {
     Calendar, ArrowRight, Loader2, AlertTriangle,
     Search, CalendarPlus, Bell, ArrowRightCircle,
     MessageSquare, Timer, Ban, Trash2, BarChart3,
-    Download, Filter
+    Download, Pencil, Save, X
 } from 'lucide-react'
 import { notifyReservationStatusChange } from '@/app/notifications/actions'
 
@@ -41,6 +42,15 @@ export default function AdminReservationsPage() {
     const [rejectModal, setRejectModal] = useState<{ id: string; userId: string } | null>(null)
     const [rejectReason, setRejectReason] = useState('')
     const [deleteModal, setDeleteModal] = useState<string | null>(null)
+    const [editModal, setEditModal] = useState<any | null>(null)
+    const [editForm, setEditForm] = useState<{
+        start_date: string
+        end_date: string
+        pickup_time: string
+        return_time: string
+        status: ReservationStatus
+        rejection_reason: string
+    } | null>(null)
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
 
@@ -142,6 +152,48 @@ export default function AdminReservationsPage() {
             queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
             queryClient.invalidateQueries({ queryKey: ['staff-loan-requests'] })
             notifyReservationStatusChange(reservation.id, 'completed')
+        } else {
+            toast.error(result.error || 'เกิดข้อผิดพลาด')
+        }
+    }
+
+    const handleOpenEdit = (reservation: any) => {
+        setEditModal(reservation)
+        setEditForm({
+            start_date: reservation.start_date?.substring(0, 10) || '',
+            end_date: reservation.end_date?.substring(0, 10) || '',
+            pickup_time: reservation.pickup_time?.substring(0, 5) || '',
+            return_time: reservation.return_time?.substring(0, 5) || '',
+            status: reservation.status as ReservationStatus,
+            rejection_reason: reservation.rejection_reason || '',
+        })
+    }
+
+    const handleEditSave = async () => {
+        if (!editModal || !editForm) return
+        if (!editForm.start_date || !editForm.end_date) {
+            toast.error('กรุณาระบุวันที่ให้ครบถ้วน')
+            return
+        }
+        if (editForm.end_date < editForm.start_date) {
+            toast.error('วันที่คืนต้องไม่ก่อนวันที่รับ')
+            return
+        }
+        setProcessing(editModal.id)
+        const result = await adminUpdateReservation(editModal.id, {
+            start_date: editForm.start_date,
+            end_date: editForm.end_date,
+            pickup_time: editForm.pickup_time || null,
+            return_time: editForm.return_time || null,
+            status: editForm.status,
+            rejection_reason: editForm.status === 'rejected' ? editForm.rejection_reason || null : null,
+        })
+        setProcessing(null)
+        if (result.success) {
+            toast.success('แก้ไขการจองเรียบร้อยแล้ว')
+            queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
+            setEditModal(null)
+            setEditForm(null)
         } else {
             toast.error(result.error || 'เกิดข้อผิดพลาด')
         }
@@ -443,6 +495,16 @@ export default function AdminReservationsPage() {
                                                     </button>
                                                 )}
 
+                                                {/* Admin-only: Edit */}
+                                                <button
+                                                    onClick={() => handleOpenEdit(reservation)}
+                                                    disabled={isProcessing}
+                                                    className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 disabled:opacity-50"
+                                                    title="แก้ไขการจอง (Admin)"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+
                                                 {/* Admin-only: Force Cancel */}
                                                 {canCancel && (
                                                     <button
@@ -590,6 +652,133 @@ export default function AdminReservationsPage() {
                                 className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
                             >
                                 {processing === deleteModal ? 'กำลังลบ...' : 'ยืนยันลบ'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Modal */}
+            {editModal && editForm && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl p-6 max-w-lg w-full shadow-xl">
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-5">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-100 rounded-lg">
+                                    <Pencil className="w-5 h-5 text-blue-600" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900">แก้ไขข้อมูลการจอง</h3>
+                                    <p className="text-xs text-gray-500">
+                                        {editModal.profiles?.first_name} {editModal.profiles?.last_name} · {editModal.equipment?.name}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => { setEditModal(null); setEditForm(null) }}
+                                className="p-1.5 rounded-lg hover:bg-gray-100"
+                            >
+                                <X className="w-5 h-5 text-gray-500" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {/* Dates */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">วันที่รับ</label>
+                                    <input
+                                        type="date"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={editForm.start_date}
+                                        onChange={(e) => setEditForm({ ...editForm, start_date: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">วันที่คืน</label>
+                                    <input
+                                        type="date"
+                                        min={editForm.start_date}
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={editForm.end_date}
+                                        onChange={(e) => setEditForm({ ...editForm, end_date: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Times */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">เวลารับ (optional)</label>
+                                    <input
+                                        type="time"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={editForm.pickup_time}
+                                        onChange={(e) => setEditForm({ ...editForm, pickup_time: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">เวลาคืน (optional)</label>
+                                    <input
+                                        type="time"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={editForm.return_time}
+                                        onChange={(e) => setEditForm({ ...editForm, return_time: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Status */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
+                                <select
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                    value={editForm.status}
+                                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value as ReservationStatus })}
+                                >
+                                    <option value="pending">รออนุมัติ</option>
+                                    <option value="approved">อนุมัติแล้ว</option>
+                                    <option value="ready">พร้อมรับ</option>
+                                    <option value="completed">เสร็จสิ้น</option>
+                                    <option value="rejected">ปฏิเสธ</option>
+                                    <option value="cancelled">ยกเลิก</option>
+                                    <option value="expired">หมดเวลา</option>
+                                </select>
+                            </div>
+
+                            {/* Rejection reason — only when status is rejected */}
+                            {editForm.status === 'rejected' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">เหตุผลปฏิเสธ</label>
+                                    <textarea
+                                        rows={2}
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="ระบุเหตุผล..."
+                                        value={editForm.rejection_reason}
+                                        onChange={(e) => setEditForm({ ...editForm, rejection_reason: e.target.value })}
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={() => { setEditModal(null); setEditForm(null) }}
+                                className="flex-1 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm font-medium"
+                            >
+                                ยกเลิก
+                            </button>
+                            <button
+                                onClick={handleEditSave}
+                                disabled={processing === editModal.id}
+                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
+                            >
+                                {processing === editModal.id
+                                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                                    : <Save className="w-4 h-4" />
+                                }
+                                บันทึกการแก้ไข
                             </button>
                         </div>
                     </div>
