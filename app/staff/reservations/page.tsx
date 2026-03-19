@@ -245,10 +245,19 @@ export default function StaffReservationsPage() {
                                                 <p className="text-sm text-gray-600">{reservation.equipment?.name}</p>
                                                 <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
                                                     <Calendar className="w-3 h-3" />
-                                                    <span>{formatThaiDate(reservation.start_date)}</span>
+                                                    <span>{formatThaiDate(reservation.start_date?.substring(0, 10))}</span>
                                                     <ArrowRight className="w-3 h-3" />
-                                                    <span>{formatThaiDate(reservation.end_date)}</span>
+                                                    <span>{formatThaiDate(reservation.end_date?.substring(0, 10))}</span>
                                                 </div>
+                                                {reservation.pickup_time && (
+                                                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                                        <Clock className="w-3 h-3" />
+                                                        <span>เวลารับ: {reservation.pickup_time.substring(0, 5)} น.</span>
+                                                        {reservation.return_time && (
+                                                            <span className="text-gray-400">| คืน: {reservation.return_time.substring(0, 5)} น.</span>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 

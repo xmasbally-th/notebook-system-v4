@@ -129,13 +129,21 @@ export default function MyReservationsPage() {
                                                 </span>
                                             </div>
 
-                                            {/* Dates */}
                                             <div className="mt-4 flex items-center gap-2 text-sm text-gray-600">
                                                 <Calendar className="w-4 h-4 text-gray-400" />
-                                                <span>{formatThaiDate(reservation.start_date)}</span>
+                                                <span>{formatThaiDate(reservation.start_date?.substring(0, 10))}</span>
                                                 <ArrowRight className="w-4 h-4 text-gray-400" />
-                                                <span>{formatThaiDate(reservation.end_date)}</span>
+                                                <span>{formatThaiDate(reservation.end_date?.substring(0, 10))}</span>
                                             </div>
+                                            {reservation.pickup_time && (
+                                                <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                                                    <Clock className="w-4 h-4 text-gray-400" />
+                                                    <span>เวลารับ: {reservation.pickup_time.substring(0, 5)} น.</span>
+                                                    {reservation.return_time && (
+                                                        <span className="text-gray-400">| คืน: {reservation.return_time.substring(0, 5)} น.</span>
+                                                    )}
+                                                </div>
+                                            )}
 
                                             {/* Ready countdown */}
                                             {status === 'ready' && reservation.ready_at && (

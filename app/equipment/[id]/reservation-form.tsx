@@ -122,8 +122,8 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
         try {
             const formData = new FormData()
             formData.append('equipmentId', equipmentId)
-            formData.append('startDate', `${startDate}T${pickupTime}:00`)
-            formData.append('endDate', `${endDate}T${returnTime}:00`)
+            formData.append('startDate', startDate)
+            formData.append('endDate', endDate)
             formData.append('pickupTime', pickupTime)
             formData.append('returnTime', returnTime)
 
