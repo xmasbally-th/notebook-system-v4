@@ -150,13 +150,13 @@ export default function LoanRequestsSection({ initialData }: Props) {
                                 placeholder="ค้นหาชื่อผู้ยืม, อุปกรณ์..."
                                 className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                                 value={searchTerm}
-                                onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1) }}
+                                onChange={e => startTransition(() => { setSearchTerm(e.target.value); setCurrentPage(1) })}
                             />
                         </div>
                         <select
                             className="px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm min-w-[140px]"
                             value={statusFilter}
-                            onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1) }}
+                            onChange={e => startTransition(() => { setStatusFilter(e.target.value); setCurrentPage(1) })}
                         >
                             <option value="all">ทุกสถานะ</option>
                             <option value="pending">รออนุมัติ</option>
@@ -211,7 +211,7 @@ export default function LoanRequestsSection({ initialData }: Props) {
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {paginatedItems.map(request => {
+                                    {paginatedItems.map((request, index) => {
                                         const cfg = STATUS_CONFIG[request.status] ?? STATUS_CONFIG.pending
                                         const Icon = cfg.icon
                                         const canSelect = request.status === 'pending'
@@ -230,7 +230,7 @@ export default function LoanRequestsSection({ initialData }: Props) {
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
                                                             {request.profiles?.avatar_url ? (
-                                                                <Image src={request.profiles.avatar_url} alt="" width={32} height={32} className="object-cover" />
+                                                                <Image src={request.profiles.avatar_url} alt="" width={32} height={32} className="object-cover" priority={index < 4} />
                                                             ) : (
                                                                 <User className="w-4 h-4 text-gray-400" />
                                                             )}
@@ -247,7 +247,7 @@ export default function LoanRequestsSection({ initialData }: Props) {
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
                                                             {request.equipment?.images?.[0] ? (
-                                                                <Image src={request.equipment.images[0]} alt="" width={40} height={40} className="object-cover" />
+                                                                <Image src={request.equipment.images[0]} alt="" width={40} height={40} className="object-cover" priority={index < 4} />
                                                             ) : (
                                                                 <Package className="w-5 h-5 text-gray-400" />
                                                             )}
@@ -289,7 +289,7 @@ export default function LoanRequestsSection({ initialData }: Props) {
 
                         {/* Mobile Cards */}
                         <div className="lg:hidden p-4 space-y-3">
-                            {paginatedItems.map(request => {
+                            {paginatedItems.map((request, index) => {
                                 const cfg = STATUS_CONFIG[request.status] ?? STATUS_CONFIG.pending
                                 const Icon = cfg.icon
                                 const canSelect = request.status === 'pending'
@@ -310,7 +310,7 @@ export default function LoanRequestsSection({ initialData }: Props) {
                                                 )}
                                                 <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                                                     {request.profiles?.avatar_url ? (
-                                                        <Image src={request.profiles.avatar_url} alt="" width={32} height={32} className="object-cover" />
+                                                        <Image src={request.profiles.avatar_url} alt="" width={32} height={32} className="object-cover" priority={index < 4} />
                                                     ) : (
                                                         <User className="w-4 h-4 text-gray-400" />
                                                     )}
@@ -330,7 +330,7 @@ export default function LoanRequestsSection({ initialData }: Props) {
                                         <div className="flex items-center gap-3 mb-3 bg-white rounded-lg p-2">
                                             <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
                                                 {request.equipment?.images?.[0] ? (
-                                                    <Image src={request.equipment.images[0]} alt="" width={48} height={48} className="object-cover" />
+                                                    <Image src={request.equipment.images[0]} alt="" width={48} height={48} className="object-cover" priority={index < 4} />
                                                 ) : (
                                                     <Package className="w-6 h-6 text-gray-400" />
                                                 )}
@@ -364,7 +364,7 @@ export default function LoanRequestsSection({ initialData }: Props) {
                             <span>แสดง</span>
                             <select
                                 value={pageSize}
-                                onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1) }}
+                                onChange={e => startTransition(() => { setPageSize(Number(e.target.value)); setCurrentPage(1) })}
                                 className="border border-gray-300 rounded-lg px-2 py-1 text-sm"
                             >
                                 {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
@@ -373,14 +373,14 @@ export default function LoanRequestsSection({ initialData }: Props) {
                         </div>
                         <div className="flex gap-2">
                             <button
-                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                onClick={() => startTransition(() => setCurrentPage(p => Math.max(1, p - 1)))}
                                 disabled={currentPage === 1}
                                 className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-50"
                             >
                                 ก่อนหน้า
                             </button>
                             <button
-                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                onClick={() => startTransition(() => setCurrentPage(p => Math.min(totalPages, p + 1)))}
                                 disabled={currentPage === totalPages}
                                 className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-50"
                             >

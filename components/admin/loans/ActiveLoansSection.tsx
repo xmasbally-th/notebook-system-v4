@@ -94,7 +94,7 @@ export default function ActiveLoansSection({ initialData }: Props) {
                         placeholder="ค้นหาผู้ยืม หรืออุปกรณ์..."
                         className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
+                        onChange={e => startTransition(() => setSearchTerm(e.target.value))}
                     />
                 </div>
             </div>
@@ -114,7 +114,7 @@ export default function ActiveLoansSection({ initialData }: Props) {
                     </div>
                 ) : (
                     <div className="divide-y divide-gray-100">
-                        {filteredLoans.map(loan => {
+                        {filteredLoans.map((loan, index) => {
                             const overdue = isOverdue(loan)
                             return (
                                 <div key={loan.id} className={`p-4 hover:bg-gray-50 ${overdue ? 'bg-red-50' : ''}`}>
@@ -122,7 +122,7 @@ export default function ActiveLoansSection({ initialData }: Props) {
                                         <div className="flex items-start gap-4">
                                             <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
                                                 {loan.equipment?.images?.[0] ? (
-                                                    <Image src={loan.equipment.images[0]} alt="" width={64} height={64} className="object-cover" />
+                                                    <Image src={loan.equipment.images[0]} alt="" width={64} height={64} className="object-cover" priority={index < 4} />
                                                 ) : (
                                                     <Package className="w-8 h-8 text-gray-400" />
                                                 )}
