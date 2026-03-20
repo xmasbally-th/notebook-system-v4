@@ -12,6 +12,7 @@ export interface Database {
             profiles: {
                 Row: {
                     id: string
+                    user_id: string | null
                     email: string | null
                     title: string | null
                     first_name: string | null
@@ -27,6 +28,7 @@ export interface Database {
                 }
                 Insert: {
                     id: string
+                    user_id?: string | null
                     email?: string | null
                     title?: string | null
                     first_name?: string | null
@@ -42,6 +44,7 @@ export interface Database {
                 }
                 Update: {
                     id?: string
+                    user_id?: string | null
                     email?: string | null
                     title?: string | null
                     first_name?: string | null
@@ -330,6 +333,7 @@ export interface Database {
                     id: number
                     max_loan_days: number
                     max_items_per_user: number
+                    welpru_notifications_enabled: boolean
                     opening_time: string | null
                     closing_time: string | null
                     break_start_time: string | null
@@ -355,6 +359,7 @@ export interface Database {
                     id?: number
                     max_loan_days?: number
                     max_items_per_user?: number
+                    welpru_notifications_enabled?: boolean
                     opening_time?: string | null
                     closing_time?: string | null
                     break_start_time?: string | null
@@ -380,6 +385,7 @@ export interface Database {
                     id?: number
                     max_loan_days?: number
                     max_items_per_user?: number
+                    welpru_notifications_enabled?: boolean
                     opening_time?: string | null
                     closing_time?: string | null
                     break_start_time?: string | null

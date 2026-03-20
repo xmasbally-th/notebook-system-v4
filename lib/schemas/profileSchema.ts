@@ -14,6 +14,7 @@ export const completeRegistrationSchema = z.object({
     phone: thaiPhoneSchema,
     userType: z.string().trim().min(1, 'กรุณาเลือกประเภทผู้ใช้'),
     departmentId: uuidSchema,
+    userId: z.string().trim().min(1, 'กรุณากรอกรหัสนักศึกษา/บุคลากร'),
 })
 
 // Schema สำหรับ Admin แก้ไขโปรไฟล์ผู้ใช้
@@ -60,6 +61,7 @@ export function parseRegistrationFormData(formData: FormData) {
         phone: formData.get('phone') as string,
         userType: formData.get('user-type') as string,
         departmentId: formData.get('department') as string,
+        userId: formData.get('user-id') as string,
     }
     return completeRegistrationSchema.safeParse(raw)
 }

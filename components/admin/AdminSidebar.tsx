@@ -23,7 +23,8 @@ import {
     FileStack,
     MessageSquare,
     MessageCircle,
-    BookOpen
+    BookOpen,
+    Megaphone
 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
@@ -52,6 +53,7 @@ const menuItems = [
     { href: '/admin/evaluations', label: 'การประเมินผล', icon: MessageSquare },
     { href: '/admin/data-management', label: 'จัดการข้อมูล', icon: Database },
     { href: '/admin/reports', label: 'รายงาน', icon: BarChart3 },
+    { href: '/admin/notifications', label: 'แจ้งเตือน', icon: Megaphone },
     { href: '/admin/settings', label: 'ตั้งค่าระบบ', icon: Settings },
     { href: '/admin/manual', label: 'คู่มือการใช้งาน', icon: BookOpen },
 ]

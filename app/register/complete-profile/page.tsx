@@ -22,6 +22,7 @@ export default function CompleteProfilePage() {
     const [firstName, setFirstName] = useState('')
     const [lastName, setLastName] = useState('')
     const [phone, setPhone] = useState('')
+    const [userId, setUserId] = useState('')
     const [userType, setUserType] = useState('student')
     const [departmentId, setDepartmentId] = useState('')
 
@@ -171,6 +172,20 @@ export default function CompleteProfilePage() {
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
                                 value={phone}
                                 onChange={e => setPhone(e.target.value)}
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="user-id" className="block text-sm font-medium text-gray-700">รหัสนักศึกษา / รหัสบุคลากร</label>
+                            <input
+                                type="text"
+                                name="user-id"
+                                id="user-id"
+                                required
+                                placeholder="เพื่อรับการแจ้งเตือน WeLPRU"
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                value={userId}
+                                onChange={e => setUserId(e.target.value)}
                             />
                         </div>
 

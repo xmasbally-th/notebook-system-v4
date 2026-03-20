@@ -110,3 +110,122 @@ export async function sendDiscordNotification(message: string, type: Notificatio
     }
 }
 
+// ─── WeLPRU Push Notifications ────────────────────────────────────────────────
+
+const WELPRU_API_URL = 'https://api.lpruhub.com/api'
+
+export interface WeLPRUDirectMessageParams {
+    userIds: string[]; // List of Student IDs or PIDs
+    title: string;
+    body: string;
+    link?: string;
+    data?: Record<string, any>;
+}
+
+export interface WeLPRUGroupMessageParams {
+    targetGroup: 'all' | 'student' | 'personnel';
+    title: string;
+    body: string;
+    data?: Record<string, any>;
+}
+
+/**
+ * Sends a direct/bulk push notification to specific users via WeLPRU app.
+ */
+export async function sendWeLPRUNotification(params: WeLPRUDirectMessageParams) {
+    try {
+        const apiKey = process.env.WELPRU_API_KEY
+        if (!apiKey) {
+            console.log('[WeLPRU] Notification skipped - WELPRU_API_KEY not configured.')
+            return
+        }
+
+        if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            const supabaseAdmin = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+            const { data: config } = await supabaseAdmin.from('system_config').select('welpru_notifications_enabled').eq('id', 1).single()
+            if (!(config as any)?.welpru_notifications_enabled) return
+        }
+        
+        if (!params.userIds || params.userIds.length === 0) {
+            console.warn('[WeLPRU] No user IDs provided.')
+            return
+        }
+
+        const payload = {
+            user_ids: params.userIds,
+            title: params.title,
+            body: params.body,
+            ...(params.link && { link: params.link }),
+            ...(params.data && { data: params.data }),
+        }
+
+        const res = await fetch(`${WELPRU_API_URL}/notify/user`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': apiKey,
+            },
+            body: JSON.stringify(payload),
+        })
+
+        if (!res.ok) {
+            const errText = await res.text()
+            console.error(`[WeLPRU] API returned ${res.status}: ${errText}`)
+            return
+        }
+
+        // 202 Accepted expected for direct messaging
+        console.log(`[WeLPRU] Successfully queued notification for ${params.userIds.length} users.`)
+    } catch (error) {
+        // Fail gracefully
+        console.error('[WeLPRU] Error in sendWeLPRUNotification:', error)
+    }
+}
+
+/**
+ * Sends a broadcast push notification to a group via WeLPRU app.
+ */
+export async function sendWeLPRUGroupBroadcast(params: WeLPRUGroupMessageParams) {
+    try {
+        const apiKey = process.env.WELPRU_API_KEY
+        if (!apiKey) {
+            console.log('[WeLPRU] Group Broadcast skipped - WELPRU_API_KEY not configured.')
+            return
+        }
+
+        if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            const supabaseAdmin = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+            const { data: config } = await supabaseAdmin.from('system_config').select('welpru_notifications_enabled').eq('id', 1).single()
+            if (!(config as any)?.welpru_notifications_enabled) return
+        }
+
+        const payload = {
+            target_group: params.targetGroup,
+            title: params.title,
+            body: params.body,
+            ...(params.data && { data: params.data }),
+        }
+
+        const res = await fetch(`${WELPRU_API_URL}/notify/group`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': apiKey,
+            },
+            body: JSON.stringify(payload),
+        })
+
+        if (!res.ok) {
+            const errText = await res.text()
+            console.error(`[WeLPRU] API returned ${res.status}: ${errText}`)
+            return
+        }
+
+        // 200 OK expected for group broadcasts
+        console.log(`[WeLPRU] Successfully sent broadcast to group: ${params.targetGroup}.`)
+    } catch (error) {
+        // Fail gracefully
+        console.error('[WeLPRU] Error in sendWeLPRUGroupBroadcast:', error)
+    }
+}
+

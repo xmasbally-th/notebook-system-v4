@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานการพัฒนาระบบยืม-คืนอุปกรณ์คอมพิวเตอร์ (Notebook System V5)</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+
+
+
+    <style>
+        :root {
+            --primary-color: #0f172a;
+            --text-color: #334155;
+            --border-color: #e2e8f0;
+            --bg-color: #ffffff;
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            color: var(--text-color);
+            background-color: #f1f5f9;
+            margin: 0;
+            padding: 0;
+            line-height: 1.8;
+            font-size: 16px;
+        }
+
+        .document-container {
+            max-width: 21cm;
+            /* A4 Width */
+            margin: 0 auto;
+            background: var(--bg-color);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .page {
+            width: 100%;
+            min-height: 29.7cm;
+            /* A4 Height */
+            padding: 2.54cm 3cm;
+            /* 1-inch top/bottom, wider left/right for binding */
+            box-sizing: border-box;
+            background: white;
+            position: relative;
+        }
+
+        /* ====== @page: ตั้งค่าขนาดกระดาษสำหรับการปริ้น ====== */
+        @page {
+            size: A4 portrait;
+            margin-top: 1cm;
+            margin-bottom: 1cm;
+            margin-left: 2cm;   /* ขอบซ้ายเผื่อเข้าเล่ม */
+            margin-right: 1.5cm;
+        }
+
+        /* สำหรับแบ่งหน้าเมื่อปรินท์ */
+        @media print {
+            body {
+                background: white;
+                margin: 0;
+                padding: 0;
+                font-size: 12pt; /* ลดขนาดตัวอักษรเนื้อหาเล็กน้อยสำหรับปริ้น */
+            }
+
+            .document-container {
+                box-shadow: none;
+                max-width: 100%;
+                margin: 0;
+            }
+
+            .page {
+                page-break-after: always;
+                min-height: auto;
+                padding: 0; /* ปล่อยให้ @page margin ควบคุมขอบแทน */
+                box-sizing: border-box;
+            }
+
+            .no-break {
+                page-break-inside: avoid;
+            }
+
+            .diagram-container {
+                page-break-inside: avoid;
+                border-left: 4px solid #4F46E5;
+                background: #f5f7ff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            /* ซ่อน border ระหว่างหน้าบนหน้าจอ */
+            .page {
+                border-bottom: none !important;
+            }
+
+            /* ให้ Mermaid SVG พิมพ์ได้ชัดเจน */
+            .mermaid svg {
+                max-width: 100% !important;
+            }
+        }
+
+
+        /* Mermaid SVG: ขนาดถูกควบคุมโดย JS post-render และ viewBox
+           ไม่ต้อง override font-size ตรงนี้เพราะจะขัดแย้งกับ Mermaid theme */
+        .mermaid {
+            width: 100%;
+            overflow: hidden;
+        }
+        .mermaid svg {
+            display: block;
+            width: 100% !important;
+            height: auto !important;
+            max-width: 100%;
+        }
+
+        /* Screen Only styling for fake pages */
+        @media screen {
+            .page {
+                margin-bottom: 2rem;
+                border-bottom: 1px dashed #ccc;
+            }
+        }
+
+        h1 {
+            font-size: 24pt;
+            font-weight: bold;
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 2rem;
+        }
+
+        h2 {
+            font-size: 18pt;
+            font-weight: bold;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        h3 {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        h4 {
+            font-size: 14pt;
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+
+        p {
+            text-align: justify;
+            text-justify: inter-word;
+            text-indent: 1.5cm;
+            margin-bottom: 1rem;
+        }
+
+        ul,
+        ol {
+            margin-left: 1.5cm;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            font-size: 14pt;
+        }
+
+        th,
+        td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8fafc;
+            text-align: center;
+        }
+
+        .center {
+            text-align: center;
+            text-indent: 0;
+        }
+
+        .bold {
+            font-weight: bold;
+        }
+
+        .diagram-container {
+            margin: 2rem 0;
+            padding: 1.5rem 1rem;
+            border: 1px solid #c7d2fe;
+            border-left: 5px solid #4F46E5;
+            border-radius: 0 8px 8px 0;
+            background: #f5f7ff;
+            text-align: center;
+            overflow-x: auto;
+        }
+
+        .figure-caption {
+            text-align: center;
+            font-size: 12pt;
+            margin-top: 0.5rem;
+            font-weight: bold;
+            text-indent: 0;
+        }
+
+        /* Cover Specific */
+        .cover-title {
+            font-size: 28pt;
+            margin-top: 5cm;
+            margin-bottom: 2cm;
+        }
+
+        .cover-subtitle {
+            font-size: 20pt;
+            margin-bottom: 5cm;
+        }
+
+        .cover-author {
+            font-size: 18pt;
+        }
+
+        .cover-date {
+            font-size: 16pt;
+            margin-top: 2cm;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="document-container">
+
+        <!-- หน้าปก (Page 1) -->
+        <div class="page cover-page">
+            <div class="center cover-title bold">รายงานการพัฒนาระบบยืม-คืนอุปกรณ์คอมพิวเตอร์</div>
+            <br><br><br><br><br><br>
+            <div class="center cover-author">จัดทำโดย<br>นาย พิสิฐ เทียมเย็น<br>ตำแหน่ง : นักวิชาการคอมพิวเตอร์</div>
+            <br><br><br><br><br>
+            <div class="center cover-date">คณะวิทยาการจัดการ มหาวิทยาลัยราชภัฏลำปาง</div>
+        </div>
+
+        <!-- สารบัญ (Page 2) -->
+        <div class="page no-break">
+            <h1 style="text-indent: 0;">สารบัญ</h1>
+            <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 14pt;">
+                <span>เรื่อง</span><span>หน้า</span>
+            </div>
+            <hr>
+            <div style="font-size: 14pt; line-height: 2;">
+                บทที่ 1 บทนำ (Introduction)<br>
+                บทที่ 2 แนวคิดและทฤษฎีที่เกี่ยวข้อง (Literature Review)<br>
+                บทที่ 3 การวิเคราะห์ระบบ (System Analysis)<br>
+                บทที่ 4 การออกแบบระบบ (System Design)<br>
+                บทที่ 5 การพัฒนาและการทดสอบระบบ (System Development & Testing)<br>
+                บทที่ 6 การติดตั้งและการใช้งาน (System Implementation)<br>
+                บทที่ 7 สรุปผล อภิปรายผล และข้อเสนอแนะ<br>
+                บรรณานุกรม (Bibliography)<br>
+                ภาคผนวก (Appendix)<br>
+            </div>
+        </div>
+
+
+        <!-- บทที่ 1 (Page 3) -->
+        <div class="page">
+            <h1 style="text-indent: 0;">บทที่ 1 บทนำ (Introduction)</h1>
+
+            <h2>1. ความเป็นมาและความสำคัญของปัญหา</h2>
+            <p>ในอดีต การบริหารจัดการพัสดุและครุภัณฑ์ โดยเฉพาะอุปกรณ์คอมพิวเตอร์พกพา (Notebook) ของคณะวิทยาการจัดการ
+                มหาวิทยาลัยราชภัฏลำปาง เจ้าหน้าที่ได้ประยุกต์ใช้เทคโนโลยีสารสนเทศเบื้องต้นอย่าง Google Forms
+                ในการบันทึกข้อมูลการยืมและการคืนอุปกรณ์ เพื่อทดแทนการจดบันทึกลงในสมุดแบบเดิม อย่างไรก็ตาม
+                เมื่อปริมาณอุปกรณ์และการใช้งานเพิ่มมากขึ้น พบว่าการใช้ Google Forms มีข้อจำกัดสำคัญหลายประการ เช่น
+                ไม่สามารถแสดงสถานะความพร้อมของอุปกรณ์ได้แบบเรียลไทม์ (Real-time Status)
+                ทำให้ผู้ใช้งานไม่ทราบว่าอุปกรณ์ใดว่างหรือถูกยืมไปแล้วก่อนที่จะกรอกแบบฟอร์ม
+                อีกทั้งเจ้าหน้าที่ยังประสบปัญหาในการติดตามอุปกรณ์ที่เลยกำหนดคืน
+                เนื่องจากระบบเดิมขาดการแจ้งเตือนอัตโนมัติและการเชื่อมโยงข้อมูลที่เป็นระบบฐานข้อมูลเชิงสัมพันธ์อย่างแท้จริง
+            </p>
+            <p>ด้วยเหตุนี้ ข้าพเจ้าจึงเล็งเห็นความสำคัญในการยกระดับกระบวนการทำงานสู่ระบบดิจิทัลที่สมบูรณ์แบบยิ่งขึ้น
+                จึงได้ดำเนินการพัฒนา Notebook System V5 ซึ่งเป็นระบบเว็บแอปพลิเคชันที่พัฒนาด้วยเทคโนโลยี Next.js 15 และ
+                Supabase เพื่อแก้ปัญหาที่พบในระบบเดิม ระบบใหม่นี้ไม่เพียงแต่ทำหน้าที่บันทึกข้อมูล
+                แต่ยังครอบคลุมถึงการตรวจสอบสถานะอุปกรณ์แบบทันที การจองอุปกรณ์ล่วงหน้า และการแจ้งเตือนผ่าน Discord
+                Webhook ที่จะช่วยให้ทั้งผู้ใช้งานและเจ้าหน้าที่สามารถสื่อสารและติดตามพัสดุได้อย่างแม่นยำ
+                การเปลี่ยนแปลงจากระบบบันทึกข้อมูลทั่วไปสู่ระบบจัดการทรัพยากรแบบครบวงจรนี้
+                ถือเป็นก้าวสำคัญในการเพิ่มประสิทธิภาพการบริหารจัดการพัสดุให้มีความโปร่งใส ตรวจสอบได้
+                และลดภาระงานซ้ำซ้อนของเจ้าหน้าที่ได้อย่างมีประสิทธิภาพ</p>
+            <p>นอกจากนี้ การพัฒนาระบบในเวอร์ชันล่าสุดยังมุ่งเน้นไปที่ความมั่นคงปลอดภัยของข้อมูลผ่านระบบ Row Level
+                Security (RLS) เพื่อป้องกันการเข้าถึงข้อมูลสำคัญโดยมิชอบ
+                และรองรับการขยายตัวของข้อมูลที่มีปริมาณมากในอนาคต
+                การพัฒนาครั้งนี้จึงไม่เพียงแต่เป็นการปรับปรุงเครื่องมือทำงานจากรูปแบบเดิมที่จำกัดอยู่เพียงการจัดเก็บข้อมูลผ่าน
+                Google Forms
+                แต่เป็นการวางรากฐานด้านนวัตกรรมดิจิทัลที่จะช่วยส่งเสริมภาพลักษณ์และการบริหารจัดการเชิงรุกของคณะวิทยาการจัดการ
+                มหาวิทยาลัยราชภัฏลำปาง ให้มีความเป็นมืออาชีพและยั่งยืนตามมาตรฐานการปฏิบัติงานยุคดิจิทัล</p>
+
+            <h2>2. วัตถุประสงค์ของโครงการ</h2>
+            <p>1.เพื่อพัฒนาระบบบริหารจัดการยืม-คืนอุปกรณ์โน้ตบุ๊คที่รองรับการใช้งานผ่านอินเทอร์เน็ตที่เข้าถึงได้ตลอดเวลา
+            </p>
+            <p>2.เพื่อเปลี่ยนผ่านจากการใช้ระบบบันทึกข้อมูลแบบทั่วไป (Google Forms)
+                สู่ระบบจัดการทรัพยากรที่รองรับการทำงานแบบเรียลไทม์</p>
+            <p>3.เพื่อให้ผู้ดูแลระบบ (Admin) มีความสามารถในการดูรายงานสถิติ และการใช้งานอุปกรณ์ในรูปแบบ Dashboard
+                เพื่อง่ายต่อการตัดสินใจบริหารทรัพย์สิน</p>
+            <p>4.เพื่อสร้างระบบแจ้งเตือนแบบเรียลไทม์ และระบบ Support Chat ภายในแอปพลิเคชัน
+                เพื่อประสานงานระหว่างผู้ใช้งานกับเจ้าหน้าที่ได้ทันท่วงที</p>
+
+            <h2>3. ขอบเขตของโครงการ</h2>
+            <p>การพัฒนาระบบมีการแบ่งส่วนสิทธิ์ผู้ใช้ออกเป็น 3 ระดับหลัก คือ</p>
+            <ul>
+                <li><strong>ผู้ดูแลระบบ (Admin):</strong> มีสิทธิ์ระดับสูงสุด สามารถเพิ่ม ลบ แก้ไข ข้อมูลอุปกรณ์
+                    หมวดหมู่ผู้ใช้ ดูแลระบบสถิติ รวมไปถึงการตอบ Support Chat</li>
+                <li><strong>เจ้าหน้าที่ผู้ปฏิบัติงาน (Staff):</strong> สามารถอนุมัติหรือปฏิเสธคำขอยืม
+                    การตรวจสอบสภาพเครื่องและทำการบันทึกการส่งคืน และรับหน้าเสื่อแจ้งเตือนต่างๆ</li>
+                <li><strong>ผู้ใช้งานทั่วไป (User):</strong> มีสิทธิ์เข้าดูแคตตาล็อกอุปกรณ์ ค้นหาตัวเลือก ขอยืม
+                    จองคิวล่วงหน้า ยกเลิกการจอง และการตอบแบบประเมินเมื่อคืนเสร็จสิ้น</li>
+            </ul>
+
+            <h2>4 ประโยชน์ที่คาดว่าจะได้รับ</h2>
+            <p>การนำระบบ Notebook System V5 มาใช้งาน
+                คาดว่าจะเพิ่มประสิทธิภาพในการจัดการสินทรัพย์เทคโนโลยีให้กับองค์กรได้เกินกว่า 80%
+                ป้องกันการสูญหายของทรัพย์สิน และสามารถอ้างอิงหลักฐานทางดิจิทัลหรือ Audit Log
+                ได้จากฐานข้อมูลกลางที่มีความปลอดภัยสูง รวมถึงช่วยลดต้นทุนเวลาการทำงานของเจ้าหน้าที่ฝ่ายสนับสนุนทางด้าน
+                IT</p>
+        </div>
+
+
+        <!-- บทที่ 2 (Page 4-5) -->
+        <div class="page">
+            <h1 style="text-indent: 0;">บทที่ 2 แนวคิดและทฤษฎีที่เกี่ยวข้อง (Literature Review)</h1>
+
+            <p>ในการศึกษาและพัฒนาระบบ Notebook System V5 ผู้จัดทำได้ทำการรวบรวมทฤษฎี หลักการ และซอฟต์แวร์เครื่องมือต่างๆ
+                เพื่อนำมาประกอบและออกแบบระบบให้มีความเหมาะสม ทันต่อเทคโนโลยี และง่ายต่อการปรับขยายในอนาคต
+                ดังรายละเอียดต่อไปนี้</p>
+
+            <h2>2.1 กรอบแนวคิดการประมวลผลและการพัฒนาด้วย Next.js 15+ (App Router)</h2>
+            <p>Next.js เป็น React Framework ที่ถูกสร้างขึ้นมาเพื่อตอบสนองการทำ Server-Side Rendering (SSR) และ Static
+                Site Generation (SSG) ที่ช่วยให้เว็บแอปพลิเคชันมีประสิทธิภาพสูงขึ้น โหลดหน้าเว็บได้เร็ว และเป็นมิตรต่อ
+                SEO โดยในระบบนี้เราเลือกใช้สถาปัตยกรรมแบบ App Router รุ่นใหม่ของ Next.js 15+
+                ซึ่งทำให้โครงสร้างของเส้นทาง (Routing) ดูแลรักษาง่ายขึ้น ร่วมกับการใช้ Server Actions เพื่อทำ Data
+                Mutation ได้อย่างปลอดภัยโดยไม่ต้องสร้าง API Gateway ภายนอกให้ซับซ้อน</p>
+
+            <h2>2.2 ระบบจัดการฐานข้อมูล Supabase (PostgreSQL)</h2>
+            <p>Supabase คือ แพลตฟอร์มที่เป็นโอเพ่นซอร์สซึ่งสร้างบนสถาปัตยกรรม PostgreSQL ที่มีความแข็งแกร่ง มีระบบ
+                Authentication ในตัวที่มีความปลอดภัย และรองรับการทำ Row-Level Security (RLS)
+                เพื่อป้องกันและจำกัดสิทธิ์ผู้ใช้ที่จะเข้าถึงข้อมูลต่างๆ ได้อย่างแม่นยำ ด้วยคุณสมบัตินี้ สิทธิ์ระดับ
+                Admin และ User จะเห็นเฉพาะข้อมูลที่ตนมีสิทธิ์ ไม่สามารถล้วงลูกข้อมูลจาก API สาธารณะได้เด็ดขาด
+                และยังเชื่อมรวมกับการทำงานแบบ Real-time subscriptions ในบางฟังก์ชัน</p>
+
+            <h2>2.3 กรอบและการแสดงผลด้วย TailwindCSS และ Recharts</h2>
+            <p>สำหรับการออกแบบ User Interface ระบบได้ทำงานสอดประสานกับ TailwindCSS ซึ่งเป็น Utility-first CSS framework
+                เพื่อความรวดเร็วในการจัดตำแหน่งและองค์ประกอบบนหน้าจอ (Responsive Web Design) สามารถรองรับการแสดงผลทั้งบน
+                Desktop และ Mobile ส่วนในด้านการนำเสนอข้อมูลหน้า Admin Dashboard ได้ใช้ Recharts ซึ่งเป็น Component ของ
+                React ในการวาดกราฟเส้น กราฟแท่ง ให้สวยงามและง่ายต่อการตีความทางสถิติ</p>
+
+            <h2>2.4 ทฤษฎีความปลอดภัยและการตรวจสอบโครงสร้างข้อมูลด้วย Zod</h2>
+            <p>Zod คือ Schema Declaration และ Validation library สำหรับ TypeScript ในระบบของ Notebook System V5
+                มีระบบฟอร์มทั้งการสมัคร บันทึกอุปกรณ์ และขอยืมข้อมูล จึงมีการประยุกต์ใช้ Zod Schema เพื่อตรวจสอบ
+                (Validate) ทุกข้อมูลขาเข้าก่อนที่จะส่งบันทึกลงใน Database เพื่อป้องกันปัญหา XSS หรือ SQL Injection
+                รูปแบบใหม่ๆ</p>
+        </div>
+
+
+        <!-- บทที่ 3 (Page 6-7) -->
+        <div class="page">
+            <h1 style="text-indent: 0;">บทที่ 3 การวิเคราะห์ระบบ (System Analysis)</h1>
+
+            <h2>3.1 การวิเคราะห์ระบบงานเดิม</h2>
+            <p>ระบบการยืมและคืนอุปกรณ์โน้ตบุ๊คในอดีต มักใช้การกรอกในแฟ้มเอกสารกระดาษหรือการลงทะเบียนผ่าน Google Forms
+                แบบง่ายๆ ข้อเสียของกระบวนการเหล่านี้คือ 1) ไม่สามารถตรวจเช็คได้ทันทีว่า ณ
+                เวลานั้นอุปกรณ์เครื่องใดกำลังว่าง 2)
+                ข้อผิดพลาดของการส่งคืนล่าช้าไม่ได้รับการติดตามหรือไม่มีการแจ้งเตือนอัตโนมัติ และ 3)
+                ภาระตกอยู่กับผู้ปฏิบัติงาน (Staff) ที่จะต้องตรวจคัดกรองข้อมูลทั้งหมดเอง</p>
+
+            <h2>3.2 ความต้องการของระบบ (System Requirements)</h2>
+            <p>ผลจากการวิเคราะห์ปัญหา นำไปสู่การวางข้อกำหนดและฟังก์ชันการทำงานใหม่ (Functional Requirements) ดังต่อไปนี้
+            </p>
+            <ol>
+                <li>ระบบต้องให้ผู้ใช้งานเข้าสู่ระบบ (Login) ด้วย Google Account ได้อย่างปลอดภัย</li>
+                <li>ระบบต้องแสดงสถานะของอุปกรณ์แยกเป็น ว่าง ถูกยืม ซ่อมบำรุง เลิกใช้งาน ได้แบบทันที</li>
+                <li>ระบบสำหรับ Admin ต้องสามารถจัดการฐานข้อมูลอุปกรณ์ ดูประวัติย้อนหลังได้ไม่จำกัด</li>
+                <li>ระบบต้องมีช่องทาง Support Chat ภายใน เพื่อสื่อสารระหว่างเจ้าหน้าที่และผู้ใช้งาน</li>
+                <li>ระบบต้องส่งแจ้งเตือนให้กับผู้ใช้ (ผ่านแอปพลิเคชันและ Discord Webhook) ในทุกๆ State ของธุรกรรม</li>
+            </ol>
+
+            <h2>3.3 กระบวนการกระแสข้อมูลและแผนผังรวม (Flowcharts)</h2>
+            <p>เพื่อเห็นภาพรวมของระบบการให้บริการ ได้มีการออกแบบแผนผังแบบจำลองกระบวนการทำงานหลัก (System Flowchart)
+                โดยแบ่งออกตามความสามารถพื้นฐาน 3 กระบวนการ ประกอบด้วย ระบบขอยืม ระบบคืน
+                และระบบบริหารจัดการดังรายละเอียดผังการทำงานด้านล่างนี้</p>
+
+            <h3>3.3.1 แผนผังกระบวนการยืมอุปกรณ์ (Lending Process)</h3>
+            <div class="diagram-placeholder">
+                <div class="placeholder-label">ภาพที่ 3.1 — Flowchart กระบวนการยืมอุปกรณ์ (Lending Process)</div>
+                <div class="placeholder-hint">ℹ️ ดูโค้ด Mermaid ได้ในไฟล์ <strong>docs/flowcharts.md</strong> — ภาพที่ 3.1</div>
+            </div>
+
+            <h3>3.3.1b แผนผังกระบวนการจองล่วงหน้า (Reservation Process)</h3>
+            <div class="diagram-placeholder">
+                <div class="placeholder-label">ภาพที่ 3.1b — Flowchart กระบวนการจองล่วงหน้า (Reservation Process)</div>
+                <div class="placeholder-hint">ℹ️ ดูโค้ด Mermaid ได้ในไฟล์ <strong>docs/flowcharts.md</strong> — ภาพที่ 3.1b</div>
+            </div>
+        </div>
+
+
+        <!-- บทที่ 3 ต่อ -->
+        <div class="page">
+            <h3>3.3.2 แผนผังกระบวนการส่งคืนอุปกรณ์ (Return Process)</h3>
+            <p>กระบวนการคืนอุปกรณ์จะเกิดขึ้นเมื่อผู้ใช้งานนำทรัพยากรมาคืนที่ศูนย์ปฏิบัติการตามช่วงเวลาที่กำหนด
+                เจ้าหน้าที่จะเป็นผู้ตรวจสอบและเปลี่ยนสถานะกลับคืน</p>
+            <div class="diagram-placeholder">
+                <div class="placeholder-label">ภาพที่ 3.2 — Flowchart กระบวนการส่งคืนอุปกรณ์ (Return Process)</div>
+                <div class="placeholder-hint">ℹ️ ดูโค้ด Mermaid ได้ในไฟล์ <strong>docs/flowcharts.md</strong> — ภาพที่ 3.2</div>
+            </div>
+
+            <h3>3.3.3 แผนผังกระบวนการสำหรับ Admin (Management Process)</h3>
+            <div class="diagram-placeholder">
+                <div class="placeholder-label">ภาพที่ 3.3 — Flowchart กระบวนการบริหารจัดการโดย Admin (Management Process)</div>
+                <div class="placeholder-hint">ℹ️ ดูโค้ด Mermaid ได้ในไฟล์ <strong>docs/flowcharts.md</strong> — ภาพที่ 3.3</div>
+            </div>
+        </div>
+
+        <!-- บทที่ 3 หน้าถัดไป: Flowcharts เพิ่มเติม -->
+        <div class="page">
+            <h3>3.3.4 แผนผังระบบแจ้งเตือนอัตโนมัติ (Notification System)</h3>
+            <p>ระบบแจ้งเตือนทำหน้าที่กระจายสัญญาณเมื่อมีการเปลี่ยนแปลงสถานะใดๆ ในกระบวนการยืม-คืน
+                โดยส่งทั้งแจ้งเตือนภายในแอปและผ่าน Discord Webhook ไปยังช่องที่กำหนด</p>
+            <div class="diagram-placeholder">
+                <div class="placeholder-label">ภาพที่ 3.4 — Flowchart ระบบแจ้งเตือนอัตโนมัติ (Notification System)</div>
+                <div class="placeholder-hint">ℹ️ ดูโค้ด Mermaid ได้ในไฟล์ <strong>docs/flowcharts.md</strong> — ภาพที่ 3.4</div>
+            </div>
+
+            <h3>3.3.5 แผนผังระบบ Support Chat (ช่องทางสื่อสาร)</h3>
+            <p>ระบบ Support Chat ออกแบบให้ Admin เป็นฝ่ายเปิด Ticket ก่อนเสมอ เพื่อป้องกัน Spam
+                และจัดลำดับการตอบปัญหาได้อย่างมีโครงสร้าง</p>
+            <div class="diagram-placeholder">
+                <div class="placeholder-label">ภาพที่ 3.5 — Flowchart ระบบ Support Chat (ช่องทางสื่อสาร)</div>
+                <div class="placeholder-hint">ℹ️ ดูโค้ด Mermaid ได้ในไฟล์ <strong>docs/flowcharts.md</strong> — ภาพที่ 3.5</div>
+            </div>
+        </div>
+
+
+        <!-- บทที่ 4 (Page 8-9) -->
+        <div class="page">
+            <h1 style="text-indent: 0;">บทที่ 4 การออกแบบระบบ (System Design)</h1>
+
+            <h2>4.1 สถาปัตยกรรมของระบบ (System Architecture)</h2>
+            <p>ระบบถูกออกแบบบนสถาปัตยกรรมแบบ Client-Server Architecture ในรูปแบบของ Cloud-Native
+                โดยส่วนของเบราว์เซอร์หรือไคลเอนต์ (Client) จะทำการเรนเดอร์เนื้อหาจาก Next.js Web Server
+                โดยอาศัยข้อมูลเชิง Relational ผ่าน Supabase API ในการจัดการธุรกรรมสถาปัตยกรรมโครงสร้างหลักจะประกอบไปด้วย
+                3 Layers ด้วยกัน คือ 1. Presentation Layer ทำโดย React Components 2. Application Logic ควบคุมโดย Next.js
+                Server Actions และ 3. Data Tier ดูแลโดย PostgreSQL (Supabase) Database</p>
+
+            <h2>4.2 การออกแบบโครงสร้างฐานข้อมูล (Database Schema)</h2>
+            <p>ตารางข้อมูล (Tables) ถูกร่างขึ้นตามหลักของ Entity-Relationship Model (ERM)
+                เพื่อการเข้าถึงอย่างสัมพันธ์กัน ฐานข้อมูลหลักประกอบด้วยตารางข้อมูลดังต่อไปนี้:</p>
+
+            <p class="bold">รายละเอียดโครงสร้างตารางข้อมูล</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Table Name</th>
+                        <th>คำอธิบาย (Description)</th>
+                        <th>การเชื่อมโยง (Relationships)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>profiles</code></td>
+                        <td>จัดเก็บข้อมูลรายชื่อผู้ใช้ที่ผ่าน Auth จาก Google แล้ว เช่น ชื่อ เบอร์ติดต่อ
+                            ตำแหน่งภาควิชาและ Role ลำดับสิทธิ์</td>
+                        <td>pk_id อ้างอิงจาก auth.users ของ Supabase</td>
+                    </tr>
+                    <tr>
+                        <td><code>equipment</code></td>
+                        <td>เก็บพารามิเตอร์ฮาร์ดแวร์ ชื่อ ยี่ห้อ Serial Number และสถานะใช้งาน ณ ปัจจุบัน</td>
+                        <td>fk_category_id อ้างไปยัง categories</td>
+                    </tr>
+                    <tr>
+                        <td><code>loan_requests</code></td>
+                        <td>เป็น Core Table หลักสำหรับเก็บบันทึกการออกคำขอยืม การตั้งสถานะ วันที่จะรับและส่งคืน
+                            เวลาสร้าง</td>
+                        <td>fk_user_id (profiles), fk_equipment_id (equipment)</td>
+                    </tr>
+                    <tr>
+                        <td><code>evaluations</code></td>
+                        <td>ตารางอิสระใช้สำหรับรวบรวมแบบประเมิน คะแนนความพึงพอใจการใช้ระบบและฮาร์ดแวร์</td>
+                        <td>fk_loan_id (loan_requests)</td>
+                    </tr>
+                    <tr>
+                        <td><code>support_tickets</code></td>
+                        <td>ระบบกล่องรับข้อความสำหรับพิมพ์ตอบระหว่าง Admin และ User</td>
+                        <td>fk_user_id, fk_admin_id (profiles)</td>
+                    </tr>
+                    <tr>
+                        <td><code>staff_activity_log</code></td>
+                        <td>ร่องรอยการทำงาน (Audit log) รวบรวบทุกการกระทำของ Staff เพื่อป้องกันการทุจริต</td>
+                        <td>fk_staff_id, action_timestamp</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>4.3 การออกแบบการตรวจสอบความปลอดภัย (Security & Concept Design)</h2>
+            <p>เนื่องจากเป็นระบบสารสนเทศที่มีข้อมูลส่วนบุคคลของผู้อยู่ในภาควิชา การป้องกันการรั่วไหลจึงอาศัยตรรกะ Row
+                Level Security (RLS) แบบเข้มงวดของ Supabase อาทิ:</p>
+            <ul>
+                <li>เฉพาะ <code>Admin</code> หรือ <code>Staff</code> เท่านั้นที่สามารถเรียกดูรายการ
+                    <code>profiles</code> ทั้งหมดของคนในระบบด้วยกันได้
+                </li>
+                <li>ผู้ใช้งานสาย <code>User</code> จะสามารถ Query คำขอยืม <code>loan_requests</code>
+                    ของตัวเองได้เท่านั้น (Where user_id = auth.uid()) ไม่สามารถดึงของเพื่อดูของเพื่อนได้</li>
+                <li>ปิดกั้นการลบข้อมูล (Delete Restriction) ทุกกรณีในประวัติการยืม หากไม่ต้องการให้แสดงให้ทำสถานะซ่อน
+                    (Archived) แทน เพื่อรักษาความสมบูรณ์เชิงสถิติ</li>
+            </ul>
+        </div>
+
+
+        <!-- บทที่ 5 (Page 10-11) -->
+        <div class="page">
+            <h1 style="text-indent: 0;">บทที่ 5 การพัฒนาและการทดสอบระบบ (System Development & Testing)</h1>
+
+            <h2>5.1 การพัฒนาระบบ (System Development)</h2>
+            <p>ในขั้นตอนการพัฒนา โปรแกรมถูกเขียนขึ้นด้วยภาษา TypeScript โดยรันสคริปต์อยู่บน Node.js Environment
+                การแบ่งแฟ้มหลักตามโครงสร้างของ Next.js ตัวระบบรวมมีโฟลเดอร์ปฏิบัติการหลักคือ โฟลเดอร์ <code>app</code>
+                นอกเหนือจากนี้ ในระดับการติดต่อเพื่อ Query ฐานข้อมูล ได้มีการสร้างโฟลเดอร์ <code>lib/data/</code>
+                เพื่อจำกัดความซับซ้อนและการตรวจสอบ Validation จาก Zod Schema ในโฟลเดอร์ <code>lib/schemas/</code></p>
+
+            <h3>ตัวอย่างการประยุกต์ใช้เครื่องมือพัฒนา</h3>
+            <p>ระบบแจ้งเตือนได้รับการพัฒนาให้สามารถยิง Trigger ไปยังห้องสนทนาของ Discord Server กลางหน่วยงาน โดยนำ
+                Endpoint Webhook มาฝังผ่าน <code>lib/actions/discord.ts</code> เมื่อผู้ใช้ส่งคำขอ หรือเมื่อ Admin
+                อนุมัติสำเร็จ ระบบจะส่ง Payload ในรูปแบบของ Embed Rich Text Card ทันที ซึ่งสามารถปรับแต่ง Dynamic
+                ได้ผ่าน <code>system_config</code> table ใน Database</p>
+
+            <h2>5.2 การทดสอบระบบ (System Testing)</h2>
+            <p>การทดสอบมีจุดมุ่งหมายเพื่อการันตีการทำงานก่อนการนำไปใช้งานจริง (Go-Live) โดยจัดแบ่งการทดสอบออกเป็นส่วนๆ
+                ดังนี้:</p>
+
+            <h3>5.2.1 การทดสอบระดับโมดูล (Unit Testing และ Integration)</h3>
+            <p>ได้ทำการทดสอบฟังก์ชันหน้าบ้าน อาทิ การกดเปิดหน้าจอป๊อบอัป การแสดงผลคำขอยืม
+                การฟอร์แมตวันที่และการคำนวณวันเกินกำหนด (Overdue Calculator) รวมถึงการทดสอบ Server Actions
+                ว่าจะสามารถคืนค่าพารามิเตอร์ Error อย่างถูกต้องไปยังฝั่ง Client Component หากส่งวันที่ล้าหลังเข้าระบบ
+                หรือรูปแบบหมายเลขลำดับไม่ถูกต้อง เป็นการป้องกันในระดับแรก</p>
+
+            <h3>5.2.2 การทดสอบยอมรับจากผู้ใช้ (User Acceptance Testing - UAT)</h3>
+            <p>ในการจัดทำโครงการ ได้ให้กลุ่มตัวอย่างที่เป็นนักศึกษา อาจารย์และผู้รับผิดชอบคลังพัสดุ
+                เข้ามาทดลองใช้ระบบในสภาวะแวดล้อมเสมือนจริง (Staging Database) จากผลการทดสอบพบว่า</p>
+            <ul>
+                <li>หน้าตาเว็บไซต์สามารถนำเสนอข้อมูลได้อย่างครบถ้วนและตอบคำถามที่ผู้ใช้อยากรู้ (ความจุ RAM,
+                    ตำแหน่งจัดเก็บ)</li>
+                <li>ผู้ใช้งานกลุ่ม Staff ชื่นชมระบบ Dashboard และกราฟสรุปจำนวนรอบการยืมที่แสดงสถานะเป็นก้อนสีต่างๆ
+                    ชัดเจนในหน้า Admin/Loans</li>
+                <li>พบข้อสังเกตเรื่องความสับสนเรื่องสถานะคำขอในครั้งแรก ซึ่งผู้พัฒนาได้แก้ไขโดยการเพิ่ม Badge
+                    สถานะสีสดใสกำกับพร้อมความหมายแนบไว้ทุกหน้าคำขอของฉัน</li>
+            </ul>
+        </div>
+
+
+        <!-- บทที่ 6 (Page 12) -->
+        <div class="page">
+            <h1 style="text-indent: 0;">บทที่ 6 การติดตั้งและการใช้งาน (System Implementation)</h1>
+
+            <h2>6.1 การตั้งค่าระบบและการติดตั้ง (Deployment)</h2>
+            <p>การติดตั้งแอปพลิเคชันสู่เครือข่ายอินเทอร์เน็ตสาธารณะ (Production) ใช้ระบบคลาวด์แพลตฟอร์ม Vercel
+                ซึ่งรองรับสถาปัตยกรรมของ Next.js อย่างไร้รอยต่อ โดยเชื่อมต่อร่วมกับ GitHub Repository ด้วยกระบวนการ
+                CI/CD (Continuous Integration / Continuous Deployment)
+                ทำให้การเขียนโค้ดเวอร์ชันล่าสุดอัปเดตขึ้นสู่โฮสติ้งทุกครั้งที่มีการเปลี่ยนข้อมูลบน Branch
+                <code>main</code> ส่วนทางด้านระบบเก็บรักษาข้อมูล (Database) ใช้โครงสร้างของระบบคลาวด์บน Supabase
+                Platform (PostgreSQL AS-A-Service)
+            </p>
+
+            <p><b>ตัวแปรสภาพแวดล้อม (Environment Variables) ที่จำเป็น:</b></p>
+            <ul>
+                <li><code>NEXT_PUBLIC_SUPABASE_URL</code> : สำหรับเชื่อมต่อกับโปรเจกต์ฐานข้อมูล</li>
+                <li><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> : กุญแจการเข้าถึงสำหรับ Client</li>
+                <li><code>SUPABASE_SERVICE_ROLE_KEY</code> : กุญแจแอดมินใช้เฉพาะฝั่งเซิร์ฟเวอร์เท่านั้น
+                    ห้ามเผยแพร่สู่เบราว์เซอร์</li>
+            </ul>
+
+            <h2>6.2 คู่มือการใช้งานสำหรับผู้ใช้ทั่วไป (User Guide Snippet)</h2>
+            <p>1. ไปที่ URL เว็บไซต์เข้าจากอุปกรณ์ใดก็ได้ คลิกเครื่องมือ <strong>"เข้าสู่ระบบด้วย Google"</strong></p>
+            <p>2. การระบุข้อมูลบัญชีครั้งแรกให้ครบ ต้องรอ Admin 1 วันทำการเพื่อเปิดสถานะบัญชีอนุมัติ</p>
+            <p>3. เลือกไปยังหน้าจอ <strong>อุปกรณ์</strong> พิมพ์หากรรไกรหา โน้ตบุ๊ค ฮาร์ดแวร์ เมื่อเจอสิ่งที่ต้องการ
+                ให้คลิกไปที่การ์ด กดเลือกปุ่มยืนยันส่งขอยืมในแบบฟอร์ม</p>
+            <p>4. รอการตรวจสอบ (สถานะ รอการอนุมัติ สีเหลือง) หากสำเร็จจะเป็นสีเขียว ให้นำหลักฐานรหัสคิวอาร์โค้ดไปแสดง ณ
+                ศูนย์อุปกรณ์เพื่อรับของกลับบ้าน และโปรดเคารพกฎระยะเวลาส่งคืน</p>
+
+            <h2>6.3 การสนับสนุนและการแชทสนทนาระหว่างผู้ดูแล</h2>
+            <p>หากมีปัญหาเฉพาะกรณีระหว่างบุคคล สามารถกดที่ไอคอนจุดแชท ที่มุมล่างขวา 💬
+                เพื่อตั้งคำถามถึงผู้ดูแลพัสดุโดยตรงได้ทันที เสมือนโปรแกรม Messenger
+                ช่วยลดระยะเวลาที่ต้องโทรหาหรือเดินมาติดต่อด้วยตนเองที่ห้อง</p>
+        </div>
+
+
+        <!-- บทที่ 7 (Page 13) -->
+        <div class="page">
+            <h1 style="text-indent: 0;">บทที่ 7 สรุปผล อภิปรายผล และข้อเสนอแนะ</h1>
+
+            <h2>7.1 สรุปผลการพัฒนาระบบ</h2>
+            <p>โครงการ Notebook System V5 ประสบความสำเร็จตามวัตถุประสงค์ที่ตั้งไว้ ระบบสามารถช่วยการขอยืม จอง
+                และคืนอุปกรณ์ได้โดยไม่ใช้ระบบกระดาษ ผสานความสะดวกของ Web Application
+                ทั้งในระบบติดตามสถานะและการสื่อสารข้อซักถามผ่านระบบ Support Chat
+                โดยจากการวัดผลระหว่างการออกแบบและนำไปประยุกต์ใช้จริง
+                พบว่าระบบได้ลดภาระกระบวนการทำงานซ้ำซ้อนของเจ้าหน้าที่คลังลงได้อย่างเป็นรูปธรรม
+                และยังคงได้รับสถิติและแบบรายงานอย่างทรงพลังผ่านพอร์ทัลสิทธิ Admin ได้อย่างถูกต้องและแม่นยำ
+                ทุกส่วนบนหลักทำงานบนระบบความปลอดภัยเชิงโครงสร้างของ Cloud Solutions
+                ที่ไม่ต้องคอยกังวลเรื่องการสำรองข้อมูลรายวัน</p>
+
+            <h2>7.2 อภิปรายผล</h2>
+            <p>สืบเนื่องมาจากโครงการนี้ใช้ Framework ระดับโลกอย่าง Next.js ในการก่อร่างโครงสร้าง
+                ทำให้ความลื่นไหลของหน้าเว็บไซต์ และ TTFB (Time To First Byte) ต่ำมากๆ
+                ทำให้เกิดขีดความสามารถการให้บริการผู้พร้อมกันในปริมาณสูงในช่วงสอบของมหาวิทยาลัยโดยไม่เกิดข้อผิดพลาด
+                นอกจากนั้นการเลือกใช้ Recharts ในโมดูลของ Dashboard ให้ผลเชิงสถิติที่สวยงาม
+                สามารถดึงดูดผู้ประเมินผลบริหารได้เป็นอย่างดี อย่างไรก็ตามในการตั้งค่าชั้นสูงของ Supabase RLS Policy
+                นั้นเคยเกิดปัญหา Bug ที่ผู้ใช้ทุกคนเข้าไม่ถึงข้อมูลของตัวเองใน Version ก่อนหน้า
+                ซึ่งก็ได้รับการแพตซ์และแก้ไขประวัติเป็นระบบ RLS Hardening ครบถ้วนแล้วใน V5 ฉบับนี้</p>
+
+            <h2>7.3 ข้อเสนอแนะเพื่อการพัฒนาต่อยอดในอนาคต</h2>
+            <p>1. จัดทำแอพพลิเคชันมือถือในรูปแบบ Native App (React Native/Flutter)
+                ที่โหลดลงเครื่องเพื่ออำนวยความสะดวกในการสแกนบาร์โค้ดจากตัวผู้รับเองในการส่งคืนอุปกรณ์</p>
+            <p>2. การนำระบบพยากรณ์และปัญญาประดิษฐ์ (AI) เข้ามาใช้ในการวิเคราะห์พฤติกรรมการยืม
+                และพยากรณ์อายุชิ้นส่วนซ่อมบำรุงว่าเมื่อไหร่เสื่อมสภาพที่จะต้องปลดเพื่อจัดสรรงบประมาณล่วงหน้า</p>
+            <p>3. เพิ่มตัวดึงข้อมูลด้วยปฏิทินยืมอุปกรณ์ (Calendar Dashboard view)
+                เพื่อให้เห็นกราฟเส้นยาวยืมคืนชัดเจนเสมือนระบบโรงแรมมากยิ่งขึ้น</p>
+
+        </div>
+
+
+        <!-- บรรณานุกรม & ภาคผนวก (Page 14-15+) -->
+        <div class="page">
+            <h1 style="text-indent: 0;">บรรณานุกรม (Bibliography)</h1>
+            <p>1. Next.js Documentation. (2026). <em>Building Web Applications with App Router and Server
+                    Components</em>. Vercel Inc. Retrieved from https://nextjs.org/docs</p>
+            <p>2. Supabase Documentation. (2025). <em>PostgreSQL and Row-Level Security Handbook</em>. Supabase.
+                Retrieved from https://supabase.com/docs</p>
+            <p>3. Tailwind Labs. (2025). <em>TailwindCSS Utility-First CSS Guide</em>. Retrieved from
+                https://tailwindcss.com/</p>
+            <p>4. Zod Documentation. (2024). <em>TypeScript-first Schema Validation</em>. Colin McDonnell. Retrieved
+                from https://zod.dev/</p>
+            <p>5. Recharts Contributors. (2024). <em>A Composable Charting Library Build on React Components</em>.
+                Retrieved from https://recharts.org/en-US/</p>
+
+            <h1 style="text-indent: 0; margin-top: 3cm;">ภาคผนวก (Appendix)</h1>
+
+            <h2>ก. ตัวอย่างหน้าจอสถิติแอดมิน (Admin Dashboard View)</h2>
+            <p>รูปหน้าจอพื้นที่ปฏิบัติงานสำหรับการแสดงกราฟในหน้าระบบ ซึ่งเป็นหน้าสรุปการประเมิน กราฟรวมคำขอยืม
+                และการตรวจนับ Staff Activity โดยรวม ซึ่งระบบจะดึงออกมาในรูปกราฟแท่ง (Bar Chart) อย่างมืออาชีพ</p>
+            <div
+                style="height: 10cm; background: #e2e8f0; border: 1px dashed #94a3b8; display: flex; align-items: center; justify-content: center; color: #475569; margin-bottom: 2rem;">
+                [ภาพแสดงหน้าจอ Dashboard จำลอง กรุณาแนบภาพประกอบจริงภายหลังจากการใช้งานระบบ]
+            </div>
+
+            <h2>ข. หน้าจอแบบฟอร์มคำขอ (Loan Form Modal UI)</h2>
+            <p>หน้าต่าง Modal ป๊อบอัปที่จะให้ผู้ใช้เลือกวันที่ตามปฏิทิน และมีระบบตัวกรองป้องกันการเลือกวันที่ย้อนหลัง
+                (Disabled Past Dates) ไปจนถึงปุ่มยืนยันคำขอ</p>
+            <div
+                style="height: 8cm; background: #e2e8f0; border: 1px dashed #94a3b8; display: flex; align-items: center; justify-content: center; color: #475569;">
+                [ภาพแสดงหน้าจอฟอร์มการกดยืมและปฏิทิน จำลอง กรุณาแนบภาพประกอบจริงภายหลังจากการใช้งานระบบ]
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Script สำหรับให้คลิกพิมพ์ได้ง่าย (สำหรับเวอร์ชั่นนำเสนอ) -->
+    <script>
+        // Un-comment to auto-print on load for the final generated PDF conversion
+        // document.addEventListener('DOMContentLoaded', () => { setTimeout(() => { window.print(); }, 2000); });
+    </script>
+
+</body>
+
+</html>

@@ -7,6 +7,7 @@ import {
     bulkLoanActionSchema,
     processReturnSchema,
 } from '@/lib/schemas/loanSchema'
+import { sendWeLPRUNotification } from '@/lib/notifications'
 
 // ─── Queries (used by Server Component) ──────────────────────────────────────
 
@@ -75,12 +76,31 @@ export async function approveLoanRequests(loanIds: string[]) {
     if (auth.error) return { error: auth.error }
 
     // 3. Update
-    const { error } = await createAdminClient()
+    const adminClient = createAdminClient()
+    const { data: updatedLoans, error } = await adminClient
         .from('loanRequests')
         .update({ status: 'approved', approved_by: auth.user!.id })
         .in('id', parsed.data.loanIds)
+        .select(`
+            id,
+            equipment:equipment_id(name),
+            profiles:user_id(user_id)
+        `)
 
     if (error) return { error: error.message }
+
+    if (updatedLoans && updatedLoans.length > 0) {
+        for (const loan of updatedLoans as any[]) {
+            const studentId = loan.profiles?.user_id
+            if (studentId) {
+                await sendWeLPRUNotification({
+                    userIds: [studentId],
+                    title: 'คำขอยืมอุปกรณ์ได้รับการอนุมัติ',
+                    body: `คำขอยืมอุปกรณ์ ${loan.equipment?.name || ''} ของคุณได้รับการอนุมัติแล้ว กรุณาติดต่อรับอุปกรณ์ตามเวลาที่กำหนด`
+                })
+            }
+        }
+    }
 
     revalidatePath('/admin/loans')
     return { success: true, count: parsed.data.loanIds.length }
@@ -101,12 +121,31 @@ export async function rejectLoanRequests(loanIds: string[]) {
     if (auth.error) return { error: auth.error }
 
     // 3. Update
-    const { error } = await createAdminClient()
+    const adminClient = createAdminClient()
+    const { data: updatedLoans, error } = await adminClient
         .from('loanRequests')
         .update({ status: 'rejected', approved_by: auth.user!.id })
         .in('id', parsed.data.loanIds)
+        .select(`
+            id,
+            equipment:equipment_id(name),
+            profiles:user_id(user_id)
+        `)
 
     if (error) return { error: error.message }
+
+    if (updatedLoans && updatedLoans.length > 0) {
+        for (const loan of updatedLoans as any[]) {
+            const studentId = loan.profiles?.user_id
+            if (studentId) {
+                await sendWeLPRUNotification({
+                    userIds: [studentId],
+                    title: 'คำขอยืมอุปกรณ์ถูกปฏิเสธ',
+                    body: `คำขอยืมอุปกรณ์ ${loan.equipment?.name || ''} ของคุณไม่ได้รับการอนุมัติ กรุณาติดต่อเจ้าหน้าที่สำหรับข้อมูลเพิ่มเติม`
+                })
+            }
+        }
+    }
 
     revalidatePath('/admin/loans')
     return { success: true, count: parsed.data.loanIds.length }
@@ -136,7 +175,7 @@ export async function processReturn(
     const adminClient = createAdminClient()
 
     // 3. Update loan → returned
-    const { error: loanError } = await adminClient
+    const { data: updatedLoan, error: loanError } = await adminClient
         .from('loanRequests')
         .update({
             status: 'returned',
@@ -145,8 +184,24 @@ export async function processReturn(
             return_notes: parsed.data.notes ?? null,
         })
         .eq('id', parsed.data.loanId)
+        .select(`
+            id,
+            equipment:equipment_id(name),
+            profiles:user_id(user_id)
+        `)
+        .single()
 
     if (loanError) return { error: loanError.message }
+
+    const profileData = updatedLoan as any
+    const studentId = profileData?.profiles?.user_id
+    if (studentId) {
+        await sendWeLPRUNotification({
+            userIds: [studentId],
+            title: 'คืนอุปกรณ์เสร็จสิ้น',
+            body: `บันทึกการรับคืนอุปกรณ์ ${profileData?.equipment?.name || ''} เรียบร้อยแล้ว ขอบคุณที่ใช้บริการ`
+        })
+    }
 
     // 4. Update equipment status
     const newEquipmentStatus = parsed.data.condition === 'good' ? 'active' : 'maintenance'

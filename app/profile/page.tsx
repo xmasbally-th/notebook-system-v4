@@ -53,6 +53,7 @@ export default function ProfilePage() {
         first_name: '',
         last_name: '',
         phone_number: '',
+        user_id: '',
         user_type: '' as UserType | '',
         department_id: '',
     })
@@ -94,9 +95,14 @@ export default function ProfilePage() {
                 first_name: profile.first_name || '',
                 last_name: profile.last_name || '',
                 phone_number: profile.phone_number || '',
+                user_id: profile.user_id || '',
                 user_type: profile.user_type || '',
                 department_id: profile.department_id || '',
             })
+            // Force edit mode if user_id is missing
+            if (!profile.user_id) {
+                setIsEditing(true)
+            }
         }
     }, [profile])
 
@@ -114,6 +120,7 @@ export default function ProfilePage() {
                 first_name: profile.first_name || '',
                 last_name: profile.last_name || '',
                 phone_number: profile.phone_number || '',
+                user_id: profile.user_id || '',
                 user_type: profile.user_type || '',
                 department_id: profile.department_id || '',
             })
@@ -148,6 +155,7 @@ export default function ProfilePage() {
                     first_name: formData.first_name,
                     last_name: formData.last_name,
                     phone_number: formData.phone_number,
+                    user_id: formData.user_id,
                     user_type: formData.user_type || null,
                     department_id: formData.department_id || null,
                 })
@@ -223,6 +231,14 @@ export default function ProfilePage() {
                     <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
                         <CheckCircle2 className="w-5 h-5 text-green-600" />
                         <span className="text-green-800 font-medium">{successMessage}</span>
+                    </div>
+                )}
+
+                {/* Warning Message if user_id is missing */}
+                {profile && !profile.user_id && (
+                    <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl flex items-center gap-3">
+                        <User className="w-5 h-5 text-orange-600" />
+                        <span className="text-orange-800 font-medium">กรุณาระบุ "รหัสนักศึกษา / รหัสบุคลากร" เพื่อใช้งานระบบและรับการแจ้งเตือน WeLPRU</span>
                     </div>
                 )}
 
@@ -317,21 +333,39 @@ export default function ProfilePage() {
                                 </div>
 
                                 {/* Phone */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        เบอร์โทรศัพท์ <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <input
-                                            type="tel"
-                                            required
-                                            placeholder="0812345678"
-                                            pattern="[0-9]{9,10}"
-                                            className="w-full rounded-lg border-gray-300 shadow-sm border p-2.5 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            value={formData.phone_number}
-                                            onChange={e => setFormData({ ...formData, phone_number: e.target.value })}
-                                        />
-                                        <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                            เบอร์โทรศัพท์ <span className="text-red-500">*</span>
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type="tel"
+                                                required
+                                                placeholder="0812345678"
+                                                pattern="[0-9]{9,10}"
+                                                className="w-full rounded-lg border-gray-300 shadow-sm border p-2.5 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                value={formData.phone_number}
+                                                onChange={e => setFormData({ ...formData, phone_number: e.target.value })}
+                                            />
+                                            <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                            รหัสนักศึกษา / รหัสบุคลากร <span className="text-red-500">*</span>
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="กรอกรหัสประจำตัว"
+                                                className="w-full rounded-lg border-gray-300 shadow-sm border p-2.5 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                value={formData.user_id}
+                                                onChange={e => setFormData({ ...formData, user_id: e.target.value })}
+                                            />
+                                            <User className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                        </div>
                                     </div>
                                 </div>
 
@@ -424,6 +458,14 @@ export default function ProfilePage() {
                                         <div>
                                             <p className="text-xs text-gray-500 mb-1">เบอร์โทรศัพท์</p>
                                             <p className="font-medium text-gray-900">{profile?.phone_number || '-'}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
+                                        <User className="w-5 h-5 text-gray-400 mt-0.5" />
+                                        <div>
+                                            <p className="text-xs text-gray-500 mb-1">รหัสนักศึกษา / รหัสบุคลากร</p>
+                                            <p className="font-medium text-gray-900">{profile?.user_id || '-'}</p>
                                         </div>
                                     </div>
 

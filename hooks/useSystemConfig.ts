@@ -107,6 +107,8 @@ function getDefaultConfig(): SystemConfig {
         discord_webhook_url: null,
         announcement_message: null,
         announcement_active: false,
+        // WeLPRU notifications
+        welpru_notifications_enabled: false,
         updated_at: new Date().toISOString(),
         break_start_time: '12:00:00',
         break_end_time: '13:00:00',

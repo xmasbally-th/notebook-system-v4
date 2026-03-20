@@ -99,6 +99,7 @@ export default function AdminSettingsPage() {
                 discord_webhook_maintenance: config.discord_webhook_maintenance,
                 announcement_message: config.announcement_message,
                 announcement_active: config.announcement_active,
+                welpru_notifications_enabled: config.welpru_notifications_enabled,
             })
             if (config.loan_limits_by_type) {
                 setLoanLimits(config.loan_limits_by_type as LoanLimitsByType)
@@ -712,6 +713,28 @@ export default function AdminSettingsPage() {
                     {/* Notifications Tab */}
                     {activeTab === 'notifications' && (
                         <>
+                            {/* WeLPRU Integration */}
+                            <section className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm mb-6">
+                                <div className="flex items-center gap-3 mb-5">
+                                    <div className="p-2 bg-blue-50 rounded-xl">
+                                        <Megaphone className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-gray-900">WeLPRU Push Notifications</h2>
+                                        <p className="text-sm text-gray-500">ตั้งค่าการแจ้งเตือนผ่านแอปพลิเคชัน WeLPRU</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <ToggleItem
+                                        label="เปิดใช้งานการแจ้งเตือน WeLPRU"
+                                        description="เปิดหรือปิดการส่งข้อความแจ้งเตือนอัตโนมัติไปยังแอปพลิเคชัน WeLPRU"
+                                        checked={formData.welpru_notifications_enabled ?? false}
+                                        onChange={(checked) => handleChange('welpru_notifications_enabled', checked)}
+                                        color="blue"
+                                    />
+                                </div>
+                            </section>
+
                             {/* Discord Integration */}
                             <section className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm">
                                 <div className="flex items-center gap-3 mb-5">

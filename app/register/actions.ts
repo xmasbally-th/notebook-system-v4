@@ -65,7 +65,7 @@ export async function completeRegistrationAction(
         return { error: firstError }
     }
 
-    const { title, firstName, lastName, phone, userType, departmentId } = parsed.data
+    const { title, firstName, lastName, phone, userType, departmentId, userId: profileUserId } = parsed.data
 
     // 4. Update Profile
     const updates = {
@@ -77,6 +77,7 @@ export async function completeRegistrationAction(
         phone_number: phone,
         user_type: userType,
         department_id: departmentId,
+        user_id: profileUserId,
         updated_at: new Date().toISOString(),
     }
 
