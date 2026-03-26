@@ -350,7 +350,7 @@ export async function completeSpecialLoan(
                         'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ status: 'active' })
+                    body: JSON.stringify({ status: 'ready' })
                 }
             )
         }
@@ -428,7 +428,7 @@ export async function cancelSpecialLoan(
                         'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ status: 'active' })
+                    body: JSON.stringify({ status: 'ready' })
                 }
             )
         }

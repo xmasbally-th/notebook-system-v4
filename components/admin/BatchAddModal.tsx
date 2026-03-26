@@ -134,7 +134,7 @@ export default function BatchAddModal({ isOpen, onClose }: BatchAddModalProps) {
                     brand: brand.trim() || null,
                     model: model.trim() || null,
                     equipment_type_id: equipmentTypeId || null,
-                    status: 'active',
+                    status: 'ready',
                     status_new: 'ready',
                     location: { building: building.trim(), room: room.trim() },
                     specifications: {},
