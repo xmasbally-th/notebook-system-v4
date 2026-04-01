@@ -3,7 +3,7 @@
 import { useSystemConfig } from '@/hooks/useSystemConfig'
 import { useQuery } from '@tanstack/react-query'
 import { ShieldCheck, AlertCircle, Users, Loader2, AlertTriangle, Calendar, Package, ChevronDown, ChevronUp } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { getActiveSpecialLoans, SpecialLoan } from '@/lib/specialLoans'
 
 type LoanLimitsByType = {
@@ -21,6 +21,7 @@ const userTypeLabels: Record<string, string> = {
 export default function RulesSection() {
     const { data: config, isLoading } = useSystemConfig()
     const [showEquipmentList, setShowEquipmentList] = useState(false)
+    const [, startTransition] = useTransition()
 
     // Fetch active special loans
     const { data: activeSpecialLoans = [] } = useQuery<SpecialLoan[]>({
@@ -109,7 +110,7 @@ export default function RulesSection() {
                                         {loan.equipment_numbers && loan.equipment_numbers.length > 0 && (
                                             <div className="mt-1">
                                                 <button
-                                                    onClick={() => setShowEquipmentList(!showEquipmentList)}
+                                                    onClick={() => startTransition(() => setShowEquipmentList(!showEquipmentList))}
                                                     className="text-xs text-amber-700 hover:text-amber-900 flex items-center gap-1"
                                                 >
                                                     หมายเลขครุภัณฑ์ที่ไม่พร้อมให้บริการ

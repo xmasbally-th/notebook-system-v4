@@ -309,8 +309,18 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         }
     }, [authState, profile, pathname, matchesPath, handleRedirect])
 
-    // Show loading spinner during initial load
+    // Show loading spinner during initial load — but NOT for public/equipment pages
     if (authState === 'loading') {
+        // P2: Let public/equipment pages render immediately without waiting for auth
+        const isPublicPath = PUBLIC_PATHS.some(p =>
+            p === '/' ? pathname === '/' : pathname.startsWith(p)
+        )
+        const isEquipmentPath = pathname.startsWith('/equipment')
+
+        if (isPublicPath || isEquipmentPath) {
+            return <>{children}</>
+        }
+
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <Loading text="กำลังตรวจสอบสิทธิ์…" />

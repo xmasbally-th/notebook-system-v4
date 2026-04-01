@@ -19,25 +19,21 @@ const ThemeContext = createContext<ThemeContextType>({
 const THEME_STORAGE_KEY = 'notebook-system-theme'
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const [theme, setThemeState] = useState<Theme>('playful')
-    const [mounted, setMounted] = useState(false)
-
-    // Load theme from localStorage on mount
-    useEffect(() => {
-        const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null
-        if (savedTheme && (savedTheme === 'classic' || savedTheme === 'playful')) {
-            setThemeState(savedTheme)
+    const [theme, setThemeState] = useState<Theme>(() => {
+        // SSR-safe: default to 'playful', inline script in layout.tsx
+        // already sets data-theme before paint so there's no flash
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null
+            if (saved === 'classic' || saved === 'playful') return saved
         }
-        setMounted(true)
-    }, [])
+        return 'playful'
+    })
 
-    // Apply theme to document
+    // Sync theme to DOM + localStorage whenever it changes
     useEffect(() => {
-        if (mounted) {
-            document.documentElement.setAttribute('data-theme', theme)
-            localStorage.setItem(THEME_STORAGE_KEY, theme)
-        }
-    }, [theme, mounted])
+        document.documentElement.setAttribute('data-theme', theme)
+        localStorage.setItem(THEME_STORAGE_KEY, theme)
+    }, [theme])
 
     const setTheme = useCallback((newTheme: Theme) => {
         setThemeState(newTheme)
@@ -47,11 +43,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setThemeState(prev => prev === 'playful' ? 'classic' : 'playful')
     }, [])
 
-    // Prevent flash of wrong theme
-    if (!mounted) {
-        return null
-    }
-
+    // Always render children immediately — no blocking!
     return (
         <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
             {children}

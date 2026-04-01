@@ -7,9 +7,11 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Laptop, Tablet, Headphones, Monitor, ArrowRight, LogIn, Package } from 'lucide-react'
-import ActiveEvaluationPrompt from '@/components/evaluations/ActiveEvaluationPrompt'
 import SystemStatusBadge from '@/components/home/SystemStatusBadge'
 import QuickSearch from '@/components/home/QuickSearch'
+
+// P5: Lazy loaded via client wrapper — avoids loading heavy EvaluationModal upfront
+import LazyEvaluationPrompt from '@/components/evaluations/LazyEvaluationPrompt'
 
 /**
  * Async component that handles auth check + profile redirect + CTA rendering.
@@ -143,7 +145,7 @@ export default function Home() {
         <div className="min-h-screen bg-white flex flex-col font-sans">
             <Header />
 
-            <ActiveEvaluationPrompt />
+            <LazyEvaluationPrompt />
 
             <main className="flex-grow">
                 {/* Hero Section - streams immediately (no await!) */}

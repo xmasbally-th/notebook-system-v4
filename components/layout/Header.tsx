@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { Laptop, LogIn, LogOut, User, Menu, X, Package, Monitor, HelpCircle } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import UserNotificationBell from '@/components/ui/UserNotificationBell'
 import { useSystemConfig } from '@/hooks/useSystemConfig'
 
@@ -22,6 +22,7 @@ export default function Header() {
     const [user, setUser] = useState<any>(null)
     const [accessToken, setAccessToken] = useState<string | null>(null)
     const [isMenuOpen, setIsMenuOpen] = useState(false)
+    const [, startTransition] = useTransition()
     const router = useRouter()
     const { data: systemConfig } = useSystemConfig()
 
@@ -129,7 +130,7 @@ export default function Header() {
                     {/* Mobile Menu Button */}
                     <button
                         className="md:hidden p-2 text-gray-600 hover:text-gray-900 z-50 relative"
-                        onClick={() => setIsMenuOpen(!isMenuOpen)}
+                        onClick={() => startTransition(() => setIsMenuOpen(!isMenuOpen))}
                         aria-label={isMenuOpen ? "ปิดเมนู" : "เปิดเมนู"}
                         aria-expanded={isMenuOpen}
                     >
