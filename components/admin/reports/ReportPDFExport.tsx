@@ -77,28 +77,31 @@ function buildCategoryBreakdown(data: ReportData) {
     }).sort((a, b) => b.total - a.total)
 }
 
-// Build least-borrowed equipment list
-function buildLeastBorrowed(data: ReportData) {
-    if (!data.allEquipment || !data.popularEquipment) return []
-
-    const usageMap: Record<string, number> = {}
-    data.popularEquipment.forEach(item => {
-        usageMap[item.id] = item.total_usage
+// Build borrowers by department
+function buildBorrowersByDepartment(data: ReportData) {
+    if (!data.userStats) return []
+    
+    const deptMap: Record<string, { borrowerCount: number, totalLoans: number }> = {}
+    
+    data.userStats.forEach(user => {
+        const dept = user.department || 'ไม่ระบุ'
+        if (!deptMap[dept]) {
+            deptMap[dept] = { borrowerCount: 0, totalLoans: 0 }
+        }
+        if (user.loan_count > 0 || user.total_activity > 0) {
+            deptMap[dept].borrowerCount++
+            deptMap[dept].totalLoans += user.loan_count
+        }
     })
-
-    return data.allEquipment
-        .map(eq => {
-            const type = data.equipmentTypes?.find(t => t.id === eq.equipment_type_id)
-            return {
-                name: eq.name,
-                equipment_number: eq.equipment_number,
-                type_name: type ? `${type.icon} ${type.name}` : '-',
-                total_usage: usageMap[eq.id] || 0,
-                status: eq.status,
-            }
-        })
-        .sort((a, b) => a.total_usage - b.total_usage)
-        .slice(0, 10)
+    
+    return Object.entries(deptMap)
+        .map(([name, stats]) => ({
+            name,
+            borrowerCount: stats.borrowerCount,
+            totalLoans: stats.totalLoans
+        }))
+        .filter(d => d.borrowerCount > 0)
+        .sort((a, b) => b.borrowerCount - a.borrowerCount)
 }
 
 // Status label helper
@@ -116,7 +119,7 @@ function getStatusThaiLabel(status: string): string {
 // Generate printable HTML with full report data
 function generatePrintableHTML(data: ReportData, dateRange: { from: Date; to: Date }): string {
     const categoryBreakdown = buildCategoryBreakdown(data)
-    const leastBorrowed = buildLeastBorrowed(data)
+    const borrowersByDept = buildBorrowersByDepartment(data)
 
     return `
 <!DOCTYPE html>
@@ -441,59 +444,26 @@ function generatePrintableHTML(data: ReportData, dateRange: { from: Date; to: Da
     </div>
     ` : ''}
     
-    <!-- Popular Equipment -->
-    ${data.popularEquipment && data.popularEquipment.length > 0 ? `
+    <!-- Borrowers by Department -->
+    ${borrowersByDept.length > 0 ? `
     <div class="section">
-        <div class="section-title">🏆 อุปกรณ์ที่ถูกยืมมากที่สุด (Top 10)</div>
+        <div class="section-title">👥 จำนวนผู้ยืมโดยแบ่งตามหน่วยงาน/สาขาวิชา</div>
         <table>
             <thead>
                 <tr>
                     <th class="text-center">อันดับ</th>
-                    <th>ชื่ออุปกรณ์</th>
-                    <th>รหัส</th>
-                    <th class="text-right">จำนวนครั้งที่ยืม</th>
-                    <th class="text-right">รวมการใช้งาน</th>
+                    <th>หน่วยงาน/สาขาวิชา</th>
+                    <th class="text-right">จำนวนผู้ยืม (คน)</th>
+                    <th class="text-right">รวมการยืม (ครั้ง)</th>
                 </tr>
             </thead>
             <tbody>
-                ${data.popularEquipment.slice(0, 10).map((item, index) => `
+                ${borrowersByDept.map((item, index) => `
                     <tr>
                         <td class="text-center"><span class="rank-badge">${index + 1}</span></td>
                         <td class="text-bold">${item.name}</td>
-                        <td class="text-gray">${item.equipment_number}</td>
-                        <td class="text-right">${item.loan_count.toLocaleString()}</td>
-                        <td class="text-right text-bold">${item.total_usage.toLocaleString()}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    </div>
-    ` : ''}
-    
-    <!-- Least Borrowed Equipment -->
-    ${leastBorrowed.length > 0 ? `
-    <div class="section">
-        <div class="section-title">📉 อุปกรณ์ที่ถูกยืมน้อยที่สุด (10 อันดับ)</div>
-        <table>
-            <thead>
-                <tr>
-                    <th class="text-center">อันดับ</th>
-                    <th>ชื่ออุปกรณ์</th>
-                    <th>รหัส</th>
-                    <th>ประเภท</th>
-                    <th class="text-right">จำนวนครั้งที่ยืม</th>
-                    <th>สถานะ</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${leastBorrowed.map((item, index) => `
-                    <tr>
-                        <td class="text-center"><span class="rank-badge">${index + 1}</span></td>
-                        <td class="text-bold">${item.name}</td>
-                        <td class="text-gray">${item.equipment_number}</td>
-                        <td>${item.type_name}</td>
-                        <td class="text-right ${item.total_usage === 0 ? 'text-red text-bold' : 'text-orange'}">${item.total_usage} ครั้ง</td>
-                        <td>${getStatusThaiLabel(item.status)}</td>
+                        <td class="text-right text-blue text-bold">${item.borrowerCount.toLocaleString()}</td>
+                        <td class="text-right">${item.totalLoans.toLocaleString()}</td>
                     </tr>
                 `).join('')}
             </tbody>
