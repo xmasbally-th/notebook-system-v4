@@ -31,14 +31,14 @@ export default function AdminManualPage() {
                     </div>
                 </div>
 
-                {/* Quick Nav */}
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-10 text-center">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-9 gap-3 mb-10 text-center">
                     <QuickNavLink href="#dashboard" icon={LayoutDashboard} label="Dashboard" color="blue" />
                     <QuickNavLink href="#users" icon={Users} label="ผู้ใช้งาน" color="indigo" />
                     <QuickNavLink href="#equipment" icon={Package} label="อุปกรณ์" color="orange" />
                     <QuickNavLink href="#loans" icon={ClipboardList} label="การยืม-คืน" color="green" />
                     <QuickNavLink href="#reports" icon={BarChart3} label="รายงาน" color="purple" />
                     <QuickNavLink href="#support" icon={MessageSquare} label="Support Chat" color="teal" />
+                    <QuickNavLink href="#welpru" icon={Bell} label="แจ้งเตือน" color="blue" />
                     <QuickNavLink href="#data" icon={Database} label="จัดการข้อมูล" color="amber" />
                     <QuickNavLink href="#settings" icon={Settings} label="ตั้งค่า" color="gray" />
                 </div>
@@ -136,8 +136,12 @@ export default function AdminManualPage() {
                                 desc="ตรวจสอบข้อมูลผู้ยืม, วันที่, เหตุผล → อนุมัติหรือปฏิเสธพร้อมระบุเหตุผล ระบบแจ้งเตือนผู้ยืมอัตโนมัติ"
                             />
                             <FeatureItem
+                                title="แก้ไขรายการจอง (Edit Reservations)"
+                                desc="แก้ไขวันที่รับ/คืน, เปลี่ยนเวลา, สถานะ, หรือระบุเหตุผลได้โดยตรงที่หน้าการจัดการการจอง"
+                            />
+                            <FeatureItem
                                 title="ยืมพิเศษ (Special Loans)"
-                                desc="สำหรับบันทึกการยืมนอกเหนือระเบียบปกติ เช่น ยืมออกนอกสถานที่ หรือในกิจการส่วนกลาง"
+                                desc="สำหรับบันทึกการยืมนอกเหนือระเบียบปกติ (สถานะอุปกรณ์จะติดตามอัตโนมัติ)"
                             />
                             <FeatureItem
                                 title="ติดตามอุปกรณ์ค้างคืน"
@@ -216,8 +220,28 @@ export default function AdminManualPage() {
                         </div>
                     </Section>
 
-                    {/* 7. Data Management */}
-                    <Section id="data" title="7. จัดการข้อมูล (Data Management)" icon={Database} color="amber">
+                    {/* 7. WeLPRU Notifications */}
+                    <Section id="welpru" title="7. ระบบแจ้งเตือน WeLPRU (Push Notifications)" icon={Bell} color="blue">
+                        <p className="mb-4 text-gray-600">
+                            หน้า <strong>แจ้งเตือน (Notifications)</strong> สามารถส่งข้อความแบบ Push Notification ไปยังแอปพลิเคชัน WeLPRU ในโทรศัพท์ของผู้รับได้
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <FeatureItem
+                                title="ส่งแบบกลุ่ม (Broadcast)"
+                                desc="ส่งข้อความให้ผู้ใช้งานทั้งหมด, เฉพาะนักศึกษา หรือเฉพาะบุคลากรพร้อมกันในครั้งเดียว"
+                            />
+                            <FeatureItem
+                                title="ระบุบุคคล (Direct)"
+                                desc="ส่งข้อความแจ้งเตือนหาบุคคลเฉพาะผ่านรหัสประจำตัว (นักศึกษา/บุคลากร) ได้โดยตรง"
+                            />
+                        </div>
+                        <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-800">
+                            💡 <strong>เพิ่มเติม:</strong> ต้องเปิดใช้งานฟีเจอร์ "WeLPRU Notifications" ไว้ในหน้า "ตั้งค่า (Settings)" ก่อนจึงจะสามารถใช้งานระบบส่งข้อความได้
+                        </div>
+                    </Section>
+
+                    {/* 8. Data Management */}
+                    <Section id="data" title="8. จัดการข้อมูล (Data Management)" icon={Database} color="amber">
                         <p className="mb-4 text-gray-600">
                             หน้า <strong>Data Management</strong> รวมเครื่องมือสำหรับบริหารข้อมูลทุกประเภทในระบบ — Export, Import, ลบข้อมูล และ Auto-Archive
                         </p>
@@ -249,8 +273,8 @@ export default function AdminManualPage() {
                         </div>
                     </Section>
 
-                    {/* 8. Settings */}
-                    <Section id="settings" title="8. ตั้งค่าระบบ (Settings)" icon={Settings} color="gray">
+                    {/* 9. Settings */}
+                    <Section id="settings" title="9. ตั้งค่าระบบ (Settings)" icon={Settings} color="gray">
                         <p className="mb-4 text-gray-600">
                             กำหนดค่าพื้นฐานของระบบผ่านหน้า Settings — เฉพาะ Admin เท่านั้นที่เข้าถึงได้
                         </p>
@@ -324,7 +348,7 @@ export default function AdminManualPage() {
                 {/* Footer Help */}
                 <div className="mt-16 text-center border-t border-gray-200 pt-10 pb-8">
                     <p className="text-gray-500 text-sm">
-                        คู่มือนี้เป็นแนวทางสำหรับ Notebook System V5 — อัปเดต 2 มีนาคม 2569
+                        คู่มือนี้เป็นแนวทางสำหรับ Notebook System V5 — อัปเดตล่าสุด 2 เมษายน 2569
                     </p>
                 </div>
             </div>
@@ -340,6 +364,7 @@ function Section({ id, title, icon: Icon, children, color }: { id: string; title
         green: 'text-green-700 bg-green-100',
         purple: 'text-purple-700 bg-purple-100',
         teal: 'text-teal-700 bg-teal-100',
+        amber: 'text-amber-700 bg-amber-100',
         gray: 'text-gray-700 bg-gray-100',
     }
     const parts = colors[color].split(' ')
@@ -381,6 +406,7 @@ function QuickNavLink({ href, icon: Icon, label, color }: { href: string; icon: 
         green: 'hover:text-green-600 hover:bg-green-50',
         purple: 'hover:text-purple-600 hover:bg-purple-50',
         teal: 'hover:text-teal-600 hover:bg-teal-50',
+        amber: 'hover:text-amber-600 hover:bg-amber-50',
         gray: 'hover:text-gray-600 hover:bg-gray-50',
     }
 

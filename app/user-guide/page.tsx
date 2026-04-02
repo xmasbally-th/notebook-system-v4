@@ -8,7 +8,7 @@ import {
     Package, CalendarPlus, Clock, CheckCircle2, XCircle,
     Send, ArrowRight, Bookmark, AlertTriangle, Timer,
     Monitor, ClipboardList, ArrowLeft, HelpCircle, Search,
-    User, Bell, MessageSquare, LogIn, RotateCcw
+    User, Bell, MessageSquare, LogIn, RotateCcw, ShoppingCart
 } from 'lucide-react'
 import React from 'react'
 
@@ -187,8 +187,12 @@ export default function UserGuidePage() {
                                     />
                                     <Step
                                         number={2}
-                                        title="คลิกปุ่ม 'ขอยืม'"
-                                        description="เปิดหน้ารายละเอียดอุปกรณ์ → คลิกปุ่ม 'ขอยืม'"
+                                        title={
+                                            <span className="flex items-center gap-1.5 flex-wrap">
+                                                คลิกปุ่ม <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-600 text-white rounded-full text-xs font-medium"><ShoppingCart className="w-3.5 h-3.5" /> รายการที่เลือก</span>
+                                            </span>
+                                        }
+                                        description="เมื่อเลือกอุปกรณ์ลงตะกร้าแล้ว ให้กดที่ปุ่ม 'รายการที่เลือก' เพื่อเข้าสู่หน้าจอกรอกข้อมูล"
                                     />
                                     <Step
                                         number={3}
@@ -381,6 +385,9 @@ export default function UserGuidePage() {
                                     <Link href="/notifications" className="text-blue-600 hover:underline font-medium">การแจ้งเตือน</Link>
                                     {' '}เพื่อดูการแจ้งเตือนทั้งหมด
                                 </p>
+                                <div className="mb-4 bg-teal-50 border border-teal-100 rounded-lg p-3 text-sm text-teal-800">
+                                    📱 <strong>WeLPRU Notifications:</strong> ระบบรองรับการส่งการแจ้งเตือนผ่านแอปพลิเคชัน <strong>WeLPRU</strong> โดยตรง (ต้องกรอกรหัสนักศึกษา/บุคลากรที่หน้าโปรไฟล์ให้ถูกต้อง)
+                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     {[
                                         { label: 'บัญชีได้รับการอนุมัติ', desc: 'เมื่อ Admin อนุมัติบัญชีใหม่ของคุณ' },
@@ -519,7 +526,7 @@ export default function UserGuidePage() {
 // Step Component
 function Step({ number, title, description, isLast = false }: {
     number: number
-    title: string
+    title: React.ReactNode
     description: React.ReactNode
     isLast?: boolean
 }) {

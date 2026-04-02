@@ -187,7 +187,7 @@ export default function StaffManualPage() {
                 {/* Footer Help */}
                 <div className="mt-16 text-center border-t border-gray-200 pt-10">
                     <p className="text-gray-500 mb-4">หากพบปัญหาการใช้งานหรือต้องการความช่วยเหลือเพิ่มเติม</p>
-                    <p className="text-gray-400 text-sm">ติดต่อ Admin ผ่านระบบ หรือแจ้งโดยตรง — Notebook System V5 อัปเดต 27 กุมภาพันธ์ 2569</p>
+                    <p className="text-gray-400 text-sm">ติดต่อ Admin ผ่านระบบ หรือแจ้งโดยตรง — Notebook System V5 อัปเดตล่าสุด 2 เมษายน 2569</p>
                 </div>
             </div>
         </StaffLayout>
