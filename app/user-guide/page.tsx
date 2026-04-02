@@ -8,7 +8,8 @@ import {
     Package, CalendarPlus, Clock, CheckCircle2, XCircle,
     Send, ArrowRight, Bookmark, AlertTriangle, Timer,
     Monitor, ClipboardList, ArrowLeft, HelpCircle, Search,
-    User, Bell, MessageSquare, LogIn, RotateCcw, ShoppingCart
+    User, Bell, MessageSquare, LogIn, RotateCcw, ShoppingCart,
+    Printer
 } from 'lucide-react'
 import React from 'react'
 
@@ -22,13 +23,22 @@ export default function UserGuidePage() {
                     {/* Page Header */}
                     <div className="bg-gradient-to-r from-blue-600 to-blue-700 py-8 md:py-12">
                         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2 bg-white/20 rounded-lg">
-                                    <HelpCircle className="w-6 h-6 text-white" />
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-white/20 rounded-lg">
+                                        <HelpCircle className="w-6 h-6 text-white" />
+                                    </div>
+                                    <h1 className="text-2xl md:text-3xl font-bold text-white">
+                                        คู่มือการใช้งานระบบ
+                                    </h1>
                                 </div>
-                                <h1 className="text-2xl md:text-3xl font-bold text-white">
-                                    คู่มือการใช้งานระบบ
-                                </h1>
+                                <button 
+                                    onClick={() => window.print()}
+                                    className="print-hidden inline-flex items-center justify-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors border border-white/20 backdrop-blur-sm self-start sm:self-auto text-sm font-medium"
+                                >
+                                    <Printer className="w-4 h-4" />
+                                    Export PDF
+                                </button>
                             </div>
                             <p className="text-blue-100">
                                 ขั้นตอนการเข้าสู่ระบบ, ยืม, คืน, จองอุปกรณ์ และฟีเจอร์ต่างๆ สำหรับผู้ใช้งานทั่วไป

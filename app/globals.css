@@ -385,3 +385,26 @@
     transform: none !important;
   }
 }
+
+/* 🖨️ Print Styles for A4 Manual Export */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 1.5cm;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Hide navigation, headers, footers, and interactive elements when printing */
+  nav, header, footer, button, .print-hidden {
+    display: none !important;
+  }
+
+  /* Ensure background colors and shadows are printed if wanted, but remove heavy shadows */
+  * {
+    box-shadow: none !important;
+  }
+}
