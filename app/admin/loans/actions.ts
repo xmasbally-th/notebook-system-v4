@@ -61,9 +61,6 @@ export async function getActiveLoans() {
 
 // ─── Mutations (Server Actions) ───────────────────────────────────────────────
 
-/**
- * อนุมัติคำขอยืมหลายรายการพร้อมกัน (Bulk Approve)
- */
 export async function approveLoanRequests(loanIds: string[]) {
     // 1. Zod Validation
     const parsed = bulkLoanActionSchema.safeParse({ loanIds })
@@ -75,8 +72,26 @@ export async function approveLoanRequests(loanIds: string[]) {
     const auth = await requireStaff()
     if (auth.error) return { error: auth.error }
 
-    // 3. Update
     const adminClient = createAdminClient()
+
+    // 2.5 Concurrency Check: Ensure all requested equipment is still 'active'
+    const { data: requestedLoans, error: checkError } = await adminClient
+        .from('loanRequests')
+        .select(`
+            id,
+            equipment:equipment_id(id, status, name)
+        `)
+        .in('id', parsed.data.loanIds)
+
+    if (checkError) return { error: checkError.message }
+
+    const unavailableItems = requestedLoans?.filter((loan: any) => loan.equipment?.status !== 'active')
+    if (unavailableItems && unavailableItems.length > 0) {
+        const names = unavailableItems.map((l: any) => l.equipment?.name).join(', ')
+        return { error: `ไม่สามารถอนุมัติได้: อุปกรณ์ต่อไปนี้ไม่ว่างแล้ว (${names})` }
+    }
+
+    // 3. Update
     const { data: updatedLoans, error } = await adminClient
         .from('loanRequests')
         .update({ status: 'approved', approved_by: auth.user!.id })
