@@ -44,6 +44,7 @@ type User = {
     created_at: string
     departments: { name: string } | null
     department_id?: string | null
+    user_id?: string | null
 }
 
 type Department = {
@@ -86,7 +87,8 @@ export default function UserTable({ users }: { users: User[] }) {
         last_name: '',
         phone_number: '',
         user_type: '',
-        department_id: '' as string | null
+        department_id: '' as string | null,
+        user_id: '' as string | null
     })
     const [departments, setDepartments] = useState<Department[]>([])
     const [editLoading, setEditLoading] = useState(false)
@@ -292,7 +294,8 @@ export default function UserTable({ users }: { users: User[] }) {
             last_name: user.last_name || '',
             phone_number: user.phone_number || '',
             user_type: user.user_type || '',
-            department_id: user.department_id || null
+            department_id: user.department_id || null,
+            user_id: user.user_id || null
         })
         setEditModalOpen(true)
     }
@@ -313,7 +316,8 @@ export default function UserTable({ users }: { users: User[] }) {
                 last_name: editForm.last_name || undefined,
                 phone_number: editForm.phone_number || undefined,
                 user_type: editForm.user_type || undefined,
-                department_id: editForm.department_id || null
+                department_id: editForm.department_id || null,
+                user_id: editForm.user_id || undefined
             })
             router.refresh()
             toast.success('อัปเดตข้อมูลผู้ใช้เรียบร้อยแล้ว')
@@ -525,6 +529,7 @@ export default function UserTable({ users }: { users: User[] }) {
                                                     </div>
                                                     <div className="text-gray-500 text-xs">
                                                         {user.user_type ? userTypeLabels[user.user_type] : '-'}
+                                                        {user.user_id && <span className="ml-2 text-gray-400">รหัส: {user.user_id}</span>}
                                                     </div>
                                                 </div>
                                             </div>
@@ -711,7 +716,10 @@ export default function UserTable({ users }: { users: User[] }) {
                                                 <Shield className="w-4 h-4 text-purple-600 flex-shrink-0" />
                                             )}
                                         </div>
-                                        <div className="text-sm text-gray-500 truncate">{user.email}</div>
+                                        <div className="text-sm text-gray-500 truncate">
+                                            {user.email}
+                                            {user.user_id && <span className="ml-2 text-gray-400">รหัส: {user.user_id}</span>}
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${status.color}`}>
@@ -939,6 +947,18 @@ export default function UserTable({ users }: { users: User[] }) {
                                     <option value="lecturer">อาจารย์</option>
                                     <option value="staff">บุคลากร</option>
                                 </select>
+                            </div>
+
+                            {/* รหัสนักศึกษา/บุคลากร */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">รหัสนักศึกษา/บุคลากร</label>
+                                <input
+                                    type="text"
+                                    value={editForm.user_id || ''}
+                                    onChange={(e) => setEditForm({ ...editForm, user_id: e.target.value })}
+                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="กรอกรหัสนักศึกษาหรือรหัสบุคลากร"
+                                />
                             </div>
 
                             {/* หน่วยงาน */}

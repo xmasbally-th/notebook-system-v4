@@ -129,6 +129,7 @@ export async function updateUserProfile(
         phone_number?: string
         user_type?: string
         department_id?: string | null
+        user_id?: string
     }
 ) {
     // 1. Zod Validation
@@ -139,7 +140,8 @@ export async function updateUserProfile(
         title: data.title,
         phoneNumber: data.phone_number,
         userType: data.user_type,
-        departmentId: data.department_id
+        departmentId: data.department_id,
+        user_id: data.user_id
     })
 
     if (!parsed.success) {
@@ -162,6 +164,7 @@ export async function updateUserProfile(
             phone_number: data.phone_number,
             user_type: data.user_type,
             department_id: data.department_id,
+            user_id: data.user_id,
             updated_at: new Date().toISOString()
         })
         .eq('id', userId)

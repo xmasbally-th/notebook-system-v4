@@ -26,6 +26,7 @@ export const updateUserProfileSchema = z.object({
     phoneNumber: thaiPhoneSchema.optional(),
     userType: z.string().trim().optional(),
     departmentId: uuidSchema.nullable().optional(),
+    user_id: z.string().trim().optional(),
 })
 
 // Schema สำหรับเปลี่ยนสถานะผู้ใช้

@@ -48,7 +48,7 @@ async function UsersContent() {
     // Fetch user list (Auth and Admin check is already handled by app/admin/layout.tsx)
     const { data: users, error } = await supabase
         .from('profiles' as any)
-        .select('id, email, first_name, last_name, title, role, status, user_type, phone_number, avatar_url, created_at, department_id, departments(name)')
+        .select('id, email, first_name, last_name, title, role, status, user_type, phone_number, avatar_url, created_at, department_id, user_id, departments(name)')
         .order('created_at', { ascending: false })
 
     if (error) {
