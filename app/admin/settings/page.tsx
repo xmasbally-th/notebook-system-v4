@@ -31,6 +31,7 @@ import {
 } from 'lucide-react'
 import { Database } from '@/supabase/types'
 import { useTheme, themeInfo, type Theme } from '@/components/providers/ThemeContext'
+import ManualNotificationSender from '@/components/admin/ManualNotificationSender'
 
 type SystemConfigUpdate = Database['public']['Tables']['system_config']['Update']
 
@@ -810,6 +811,9 @@ export default function AdminSettingsPage() {
                                     </div>
                                 </div>
                             </section>
+
+                            {/* Manual Notification Sender */}
+                            <ManualNotificationSender />
 
                             {/* Discord Integration */}
                             <section className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm">

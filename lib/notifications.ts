@@ -132,7 +132,7 @@ export interface WeLPRUGroupMessageParams {
 /**
  * Sends a direct/bulk push notification to specific users via WeLPRU app.
  */
-export async function sendWeLPRUNotification(params: WeLPRUDirectMessageParams) {
+export async function sendWeLPRUNotification(params: WeLPRUDirectMessageParams): Promise<{ success: boolean; error?: string }> {
     try {
         // Read API Key: DB first, fallback to env var
         let apiKey: string | null = null
@@ -146,18 +146,18 @@ export async function sendWeLPRUNotification(params: WeLPRUDirectMessageParams) 
                 .select('welpru_notifications_enabled, welpru_api_key')
                 .eq('id', 1)
                 .single()
-            if (!(config as any)?.welpru_notifications_enabled) return
+        if (!(config as any)?.welpru_notifications_enabled) return { success: false, error: 'WeLPRU notifications are disabled in settings' }
             apiKey = (config as any)?.welpru_api_key || null
         }
         if (!apiKey) apiKey = process.env.WELPRU_API_KEY || null
         if (!apiKey) {
             console.log('[WeLPRU] Notification skipped - API Key not configured.')
-            return
+            return { success: false, error: 'WeLPRU API Key not configured' }
         }
 
         if (!params.userIds || params.userIds.length === 0) {
             console.warn('[WeLPRU] No user IDs provided.')
-            return
+            return { success: false, error: 'No user IDs provided' }
         }
 
         const payload = {
@@ -180,21 +180,23 @@ export async function sendWeLPRUNotification(params: WeLPRUDirectMessageParams) 
         if (!res.ok) {
             const errText = await res.text()
             console.error(`[WeLPRU] API returned ${res.status}: ${errText}`)
-            return
+            return { success: false, error: `API Error: ${res.status} ${errText}` }
         }
 
         // 202 Accepted expected for direct messaging
         console.log(`[WeLPRU] Successfully queued notification for ${params.userIds.length} users.`)
-    } catch (error) {
+        return { success: true }
+    } catch (error: any) {
         // Fail gracefully
         console.error('[WeLPRU] Error in sendWeLPRUNotification:', error)
+        return { success: false, error: error?.message || 'Unknown error' }
     }
 }
 
 /**
  * Sends a broadcast push notification to a group via WeLPRU app.
  */
-export async function sendWeLPRUGroupBroadcast(params: WeLPRUGroupMessageParams) {
+export async function sendWeLPRUGroupBroadcast(params: WeLPRUGroupMessageParams): Promise<{ success: boolean; error?: string }> {
     try {
         // Read API Key: DB first, fallback to env var
         let apiKey: string | null = null
@@ -208,13 +210,13 @@ export async function sendWeLPRUGroupBroadcast(params: WeLPRUGroupMessageParams)
                 .select('welpru_notifications_enabled, welpru_api_key')
                 .eq('id', 1)
                 .single()
-            if (!(config as any)?.welpru_notifications_enabled) return
+        if (!(config as any)?.welpru_notifications_enabled) return { success: false, error: 'WeLPRU notifications are disabled in settings' }
             apiKey = (config as any)?.welpru_api_key || null
         }
         if (!apiKey) apiKey = process.env.WELPRU_API_KEY || null
         if (!apiKey) {
             console.log('[WeLPRU] Group Broadcast skipped - API Key not configured.')
-            return
+            return { success: false, error: 'WeLPRU API Key not configured' }
         }
 
         const payload = {
@@ -236,14 +238,16 @@ export async function sendWeLPRUGroupBroadcast(params: WeLPRUGroupMessageParams)
         if (!res.ok) {
             const errText = await res.text()
             console.error(`[WeLPRU] API returned ${res.status}: ${errText}`)
-            return
+            return { success: false, error: `API Error: ${res.status} ${errText}` }
         }
 
         // 200 OK expected for group broadcasts
         console.log(`[WeLPRU] Successfully sent broadcast to group: ${params.targetGroup}.`)
-    } catch (error) {
+        return { success: true }
+    } catch (error: any) {
         // Fail gracefully
         console.error('[WeLPRU] Error in sendWeLPRUGroupBroadcast:', error)
+        return { success: false, error: error?.message || 'Unknown error' }
     }
 }
 
