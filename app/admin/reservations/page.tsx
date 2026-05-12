@@ -11,7 +11,7 @@ import {
 } from '@/lib/reservations'
 import { convertReservationToLoanAction } from '@/app/reservations/actions'
 import { useState, useMemo } from 'react'
-import AdminLayout from '@/components/admin/AdminLayout'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { formatThaiDate } from '@/lib/formatThaiDate'
 import { useToast } from '@/components/ui/toast'
 import { useQueryClient } from '@tanstack/react-query'
@@ -278,7 +278,8 @@ export default function AdminReservationsPage() {
     }
 
     return (
-        <AdminLayout title="จัดการการจอง" subtitle="ดูแลและจัดการการจองล่วงหน้าทั้งหมด (Admin)">
+        <>
+            <AdminPageHeader title="จัดการการจอง" subtitle="ดูแลและจัดการการจองล่วงหน้าทั้งหมด (Admin)"/>
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                 <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
@@ -784,6 +785,6 @@ export default function AdminReservationsPage() {
                     </div>
                 </div>
             )}
-        </AdminLayout>
+        </>
     )
 }

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useSystemConfig, useUpdateSystemConfig } from '@/hooks/useSystemConfig'
 import { useEquipmentTypes } from '@/hooks/useEquipmentTypes'
 import Link from 'next/link'
-import AdminLayout from '@/components/admin/AdminLayout'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import {
     Loader2,
     Save,
@@ -326,17 +326,19 @@ export default function AdminSettingsPage() {
 
     if (isLoading) {
         return (
-            <AdminLayout title="ตั้งค่าระบบ" subtitle="กำลังโหลด...">
+            <>
+            <AdminPageHeader title="ตั้งค่าระบบ" subtitle="กำลังโหลด..."/>
                 <div className="flex items-center justify-center py-20">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
                 </div>
-            </AdminLayout>
+            </>
         )
     }
 
     if (error) {
         return (
-            <AdminLayout title="ตั้งค่าระบบ" subtitle="เกิดข้อผิดพลาด">
+            <>
+            <AdminPageHeader title="ตั้งค่าระบบ" subtitle="เกิดข้อผิดพลาด"/>
                 <div className="bg-red-50 border border-red-200 rounded-xl p-6 max-w-lg">
                     <div className="flex items-center gap-3 mb-4">
                         <AlertTriangle className="w-6 h-6 text-red-500" />
@@ -351,12 +353,13 @@ export default function AdminSettingsPage() {
                         ลองใหม่
                     </button>
                 </div>
-            </AdminLayout>
+            </>
         )
     }
 
     return (
-        <AdminLayout title="ตั้งค่าระบบ" subtitle="จัดการการตั้งค่าระบบยืม-คืนอุปกรณ์">
+        <>
+            <AdminPageHeader title="ตั้งค่าระบบ" subtitle="จัดการการตั้งค่าระบบยืม-คืนอุปกรณ์"/>
             {/* Sticky Save Button */}
             {isDirty && (
                 <div className="fixed bottom-4 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-6 z-50 animate-slide-in">
@@ -1077,7 +1080,7 @@ export default function AdminSettingsPage() {
                     )}
                 </div>
             </div>
-        </AdminLayout>
+        </>
     )
 }
 

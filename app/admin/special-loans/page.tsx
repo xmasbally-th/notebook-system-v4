@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import AdminLayout from '@/components/admin/AdminLayout'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import {
     Loader2,
     Plus,
@@ -117,16 +117,18 @@ export default function AdminSpecialLoansPage() {
 
     if (isLoading) {
         return (
-            <AdminLayout title="ยืมพิเศษ" subtitle="จัดการการยืมอุปกรณ์จำนวนมาก">
+            <>
+            <AdminPageHeader title="ยืมพิเศษ" subtitle="จัดการการยืมอุปกรณ์จำนวนมาก"/>
                 <div className="flex items-center justify-center py-20">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
                 </div>
-            </AdminLayout>
+            </>
         )
     }
 
     return (
-        <AdminLayout title="ยืมพิเศษ" subtitle="จัดการการยืมอุปกรณ์จำนวนมากสำหรับอาจารย์">
+        <>
+            <AdminPageHeader title="ยืมพิเศษ" subtitle="จัดการการยืมอุปกรณ์จำนวนมากสำหรับอาจารย์"/>
             {/* Header Actions */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
                 <button
@@ -332,6 +334,6 @@ export default function AdminSpecialLoansPage() {
                     templateUrl={config?.document_template_url}
                 />
             )}
-        </AdminLayout>
+        </>
     )
 }

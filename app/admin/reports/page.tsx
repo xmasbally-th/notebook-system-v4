@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import AdminLayout from '@/components/admin/AdminLayout'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import ReportDateRangePicker from '@/components/admin/reports/ReportDateRangePicker'
 import ReportPDFExport from '@/components/admin/reports/ReportPDFExport'
 import { useReportData, DateRange } from '@/hooks/useReportData'
@@ -52,7 +52,8 @@ export default function AdminReportsPage() {
     ]
 
     return (
-        <AdminLayout title="รายงาน" subtitle="รายงานและสถิติการใช้งานระบบ">
+        <>
+            <AdminPageHeader title="รายงาน" subtitle="รายงานและสถิติการใช้งานระบบ"/>
             {/* Header with Date Range and Export */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-2">
@@ -100,6 +101,6 @@ export default function AdminReportsPage() {
                     <p className="text-sm mt-1">{(error as Error).message}</p>
                 </div>
             )}
-        </AdminLayout>
+        </>
     )
 }

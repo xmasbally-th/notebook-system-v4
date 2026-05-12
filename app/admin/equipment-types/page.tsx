@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { useEquipmentTypes, useEquipmentTypeMutation } from '@/hooks/useEquipmentTypes'
 import { Database } from '@/supabase/types'
-import AdminLayout from '@/components/admin/AdminLayout'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { Plus, Edit, Trash2, Tag, CheckCircle, XCircle, AlertTriangle, RefreshCw } from 'lucide-react'
 
 type EquipmentType = Database['public']['Tables']['equipment_types']['Row']
@@ -31,7 +31,8 @@ export default function EquipmentTypesPage() {
     }
 
     return (
-        <AdminLayout title="จัดการประเภทอุปกรณ์" subtitle="เพิ่ม แก้ไข และลบประเภทอุปกรณ์">
+        <>
+            <AdminPageHeader title="จัดการประเภทอุปกรณ์" subtitle="เพิ่ม แก้ไข และลบประเภทอุปกรณ์"/>
             {/* Error Display */}
             {error && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-center justify-between">
@@ -251,6 +252,6 @@ export default function EquipmentTypesPage() {
                     </div>
                 </div>
             )}
-        </AdminLayout>
+        </>
     )
 }

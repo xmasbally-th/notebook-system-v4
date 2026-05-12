@@ -1,6 +1,6 @@
 'use client'
 
-import AdminLayout from '@/components/admin/AdminLayout'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import Link from 'next/link'
 import {
     LayoutDashboard, Users, Package, ClipboardList, RotateCcw,
@@ -13,7 +13,8 @@ import React from 'react'
 
 export default function AdminManualPage() {
     return (
-        <AdminLayout title="คู่มือการใช้งาน (สำหรับผู้ดูแลระบบ)" subtitle="แนะนำการใช้งานระบบสำหรับผู้ดูแลระบบ (Admin) — Notebook System V5">
+        <>
+            <AdminPageHeader title="คู่มือการใช้งาน (สำหรับผู้ดูแลระบบ)" subtitle="แนะนำการใช้งานระบบสำหรับผู้ดูแลระบบ (Admin) — Notebook System V5"/>
             <div className="max-w-6xl mx-auto">
                 {/* Introduction */}
                 <div className="bg-gradient-to-r from-blue-700 to-blue-900 rounded-2xl p-8 mb-8 text-white shadow-lg">
@@ -361,7 +362,7 @@ export default function AdminManualPage() {
                     </p>
                 </div>
             </div>
-        </AdminLayout>
+        </>
     )
 }
 

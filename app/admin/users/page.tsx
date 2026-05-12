@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import UserTable from './user-table'
-import AdminLayout from '@/components/admin/AdminLayout'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { Users, UserCheck, Clock, UserX } from 'lucide-react'
 
 // Skeleton for the stats cards while data loads
@@ -42,32 +42,14 @@ function TableSkeleton() {
     )
 }
 
-export default async function AdminUsersPage() {
+async function UsersContent() {
     const supabase = await createClient()
 
-    // 1. Auth check first (needed before anything else)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) redirect('/login')
-
-    // 2. Fetch admin check + user list IN PARALLEL
-    const [adminCheckResult, usersResult] = await Promise.all([
-        supabase
-            .from('profiles' as any)
-            .select('role')
-            .eq('id', user.id)
-            .single(),
-        supabase
-            .from('profiles' as any)
-            .select('id, email, first_name, last_name, title, role, status, user_type, phone_number, avatar_url, created_at, department_id, departments(name)')
-            .order('created_at', { ascending: false })
-    ])
-
-    const adminCheck = adminCheckResult.data
-    if (adminCheck?.role !== 'admin') {
-        redirect('/')
-    }
-
-    const { data: users, error } = usersResult
+    // Fetch user list (Auth and Admin check is already handled by app/admin/layout.tsx)
+    const { data: users, error } = await supabase
+        .from('profiles' as any)
+        .select('id, email, first_name, last_name, title, role, status, user_type, phone_number, avatar_url, created_at, department_id, departments(name)')
+        .order('created_at', { ascending: false })
 
     if (error) {
         return <div className="p-8 text-red-500">Error loading users: {error.message}</div>
@@ -80,7 +62,7 @@ export default async function AdminUsersPage() {
     const totalCount = users?.length || 0
 
     return (
-        <AdminLayout title="จัดการผู้ใช้" subtitle="อนุมัติผู้ใช้ใหม่และจัดการสิทธิ์การเข้าถึง">
+        <>
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
@@ -130,6 +112,31 @@ export default async function AdminUsersPage() {
             </div>
 
             <UserTable users={users || []} />
-        </AdminLayout>
+        </>
+    )
+}
+
+function PageSkeleton() {
+    return (
+        <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <StatCardSkeleton />
+                <StatCardSkeleton />
+                <StatCardSkeleton />
+                <StatCardSkeleton />
+            </div>
+            <TableSkeleton />
+        </>
+    )
+}
+
+export default function AdminUsersPage() {
+    return (
+        <>
+            <AdminPageHeader title="จัดการผู้ใช้" subtitle="อนุมัติผู้ใช้ใหม่และจัดการสิทธิ์การเข้าถึง" />
+            <Suspense fallback={<PageSkeleton />}>
+                <UsersContent />
+            </Suspense>
+        </>
     )
 }

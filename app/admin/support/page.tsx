@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import AdminLayout from '@/components/admin/AdminLayout'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { supabase } from '@/lib/supabase/client'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import ChatWindow from '@/components/chat/ChatWindow'
@@ -216,7 +216,8 @@ export default function AdminSupportPage() {
     )
 
     return (
-        <AdminLayout title="System Support" subtitle="จัดการการสนทนาและแจ้งปัญหาการใช้งาน">
+        <>
+            <AdminPageHeader title="System Support" subtitle="จัดการการสนทนาและแจ้งปัญหาการใช้งาน"/>
             {/* Auto-Reply Settings Panel */}
             <div className="mb-4">
                 <button
@@ -706,7 +707,7 @@ export default function AdminSupportPage() {
                     </div>
                 </div>
             )}
-        </AdminLayout>
+        </>
     )
 }
 

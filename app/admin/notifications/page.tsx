@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useTransition } from 'react'
-import AdminLayout from '@/components/admin/AdminLayout'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { Megaphone, Send, AlertTriangle, Users, User, CheckCircle2 } from 'lucide-react'
 import { sendManualNotification } from './actions'
 
@@ -54,7 +54,8 @@ export default function AdminNotificationsPage() {
     }
 
     return (
-        <AdminLayout title="ระบบแจ้งเตือน" subtitle="ส่งข้อความแจ้งเตือนผ่านแอปพลิเคชัน WeLPRU">
+        <>
+            <AdminPageHeader title="ระบบแจ้งเตือน" subtitle="ส่งข้อความแจ้งเตือนผ่านแอปพลิเคชัน WeLPRU"/>
             <div className="max-w-3xl space-y-6">
                 
                 {/* Status Message */}
@@ -230,6 +231,6 @@ export default function AdminNotificationsPage() {
                     </ul>
                 </div>
             </div>
-        </AdminLayout>
+        </>
     )
 }

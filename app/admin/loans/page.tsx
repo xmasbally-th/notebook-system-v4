@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import AdminLayout from '@/components/admin/AdminLayout'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { getLoanRequests, getActiveLoans } from './actions'
 import LoanRequestsSection from '@/components/admin/loans/LoanRequestsSection'
 import ActiveLoansSection from '@/components/admin/loans/ActiveLoansSection'
@@ -37,7 +37,8 @@ export default async function LoansPage({
     const activeTab = tab === 'returns' ? 'returns' : 'requests'
 
     return (
-        <AdminLayout title="จัดการการยืม-คืน" subtitle="คำขอยืม และรับคืนอุปกรณ์">
+        <>
+            <AdminPageHeader title="จัดการการยืม-คืน" subtitle="คำขอยืม และรับคืนอุปกรณ์"/>
             {/* Tab navigation ส่งออกทันที — ไม่ต้องรอ data */}
             <LoansTabs activeTab={activeTab}>
                 {/* คำขอยืม — stream อิสระ */}
@@ -56,7 +57,7 @@ export default async function LoansPage({
                     <ActiveLoansFetcher />
                 </Suspense>
             </LoansTabs>
-        </AdminLayout>
+        </>
     )
 }
 

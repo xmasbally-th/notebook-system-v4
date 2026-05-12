@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { getSupabaseCredentials } from '@/lib/supabase-helpers'
-import AdminLayout from '@/components/admin/AdminLayout'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { useState, useMemo, Fragment } from 'react'
 import {
     Star, MessageSquare, ChevronDown, ChevronUp,
@@ -250,7 +250,8 @@ export default function EvaluationsPage() {
     const totalPending = pendingEvaluations?.length || 0
 
     return (
-        <AdminLayout title="ผลการประเมินการใช้งาน" subtitle="ดูคะแนนความพึงพอใจและข้อเสนอแนะจากผู้ใช้">
+        <>
+            <AdminPageHeader title="ผลการประเมินการใช้งาน" subtitle="ดูคะแนนความพึงพอใจและข้อเสนอแนะจากผู้ใช้"/>
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
@@ -691,6 +692,6 @@ export default function EvaluationsPage() {
                     </div>
                 )}
             </div>
-        </AdminLayout>
+        </>
     )
 }

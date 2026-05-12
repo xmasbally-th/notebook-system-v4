@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSupabaseCredentials, getSupabaseBrowserClient } from '@/lib/supabase-helpers'
 import { Database } from '@/supabase/types'
-import AdminLayout from '@/components/admin/AdminLayout'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import {
     Plus, Edit, Trash2, Search, Package,
     CheckCircle, Users, Wrench, Archive,
@@ -177,7 +177,8 @@ export default function AdminEquipmentList() {
     }, [searchTerm, selectedStatus, selectedType])
 
     return (
-        <AdminLayout title="จัดการอุปกรณ์" subtitle="เพิ่ม แก้ไข และจัดการอุปกรณ์ทั้งหมด">
+        <>
+            <AdminPageHeader title="จัดการอุปกรณ์" subtitle="เพิ่ม แก้ไข และจัดการอุปกรณ์ทั้งหมด"/>
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
@@ -592,6 +593,6 @@ export default function AdminEquipmentList() {
                 isOpen={showBatchModal}
                 onClose={() => setShowBatchModal(false)}
             />
-        </AdminLayout>
+        </>
     )
 }

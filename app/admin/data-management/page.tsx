@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import AdminLayout from '@/components/admin/AdminLayout'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import ExportTab from '@/components/admin/data-management/ExportTab'
 import ImportTab from '@/components/admin/data-management/ImportTab'
 import DeleteTab from '@/components/admin/data-management/DeleteTab'
@@ -45,21 +45,23 @@ export default function DataManagementPage() {
     // Loading state
     if (profileLoading || !userId) {
         return (
-            <AdminLayout title="จัดการข้อมูล" subtitle="ส่งออก, นำเข้า, และลบข้อมูลในระบบ">
+            <>
+            <AdminPageHeader title="จัดการข้อมูล" subtitle="ส่งออก, นำเข้า, และลบข้อมูลในระบบ"/>
                 <div className="flex items-center justify-center min-h-[400px]">
                     <div className="text-center">
                         <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
                         <p className="text-gray-500">กำลังโหลด...</p>
                     </div>
                 </div>
-            </AdminLayout>
+            </>
         )
     }
 
     // Access denied for non-admin
     if (!isAdmin) {
         return (
-            <AdminLayout title="จัดการข้อมูล" subtitle="ส่งออก, นำเข้า, และลบข้อมูลในระบบ">
+            <>
+            <AdminPageHeader title="จัดการข้อมูล" subtitle="ส่งออก, นำเข้า, และลบข้อมูลในระบบ"/>
                 <div className="flex items-center justify-center min-h-[400px]">
                     <div className="text-center max-w-md">
                         <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -71,12 +73,13 @@ export default function DataManagementPage() {
                         </p>
                     </div>
                 </div>
-            </AdminLayout>
+            </>
         )
     }
 
     return (
-        <AdminLayout title="จัดการข้อมูล" subtitle="ส่งออก, นำเข้า, และลบข้อมูลในระบบ">
+        <>
+            <AdminPageHeader title="จัดการข้อมูล" subtitle="ส่งออก, นำเข้า, และลบข้อมูลในระบบ"/>
             {/* Header Info */}
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-6 mb-6 text-white">
                 <div className="flex items-center gap-4">
@@ -146,6 +149,6 @@ export default function DataManagementPage() {
                     ทุกการกระทำในหน้านี้จะถูกบันทึกลงระบบ Activity Log
                 </p>
             </div>
-        </AdminLayout>
+        </>
     )
 }

@@ -3,7 +3,7 @@
 import { useStaffActivityLog, useStaffList } from '@/hooks/useReservations'
 import { getActionTypeLabel, getActionTypeIcon, ActionType } from '@/lib/staffActivityLog'
 import { useState } from 'react'
-import AdminLayout from '@/components/admin/AdminLayout'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { formatThaiDate } from '@/lib/formatThaiDate'
 import {
     Loader2, AlertTriangle, Search, Filter, User,
@@ -49,7 +49,8 @@ export default function AdminStaffActivityPage() {
     ) || []
 
     return (
-        <AdminLayout title="ประวัติการทำงาน Staff" subtitle="ดูบันทึกการดำเนินการของเจ้าหน้าที่และผู้ดูแลระบบ">
+        <>
+            <AdminPageHeader title="ประวัติการทำงาน Staff" subtitle="ดูบันทึกการดำเนินการของเจ้าหน้าที่และผู้ดูแลระบบ"/>
             {/* Filters */}
             <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -260,6 +261,6 @@ export default function AdminStaffActivityPage() {
                     </>
                 )}
             </div>
-        </AdminLayout>
+        </>
     )
 }

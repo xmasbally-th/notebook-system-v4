@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
-import AdminLayout from '@/components/admin/AdminLayout'
+import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { useDuplicateCheck } from '@/hooks/useDuplicateCheck'
 import {
     Plus,
@@ -124,7 +124,8 @@ export default function DepartmentsPage() {
     const inactiveCount = departments.filter(d => !d.is_active).length
 
     return (
-        <AdminLayout title="จัดการหน่วยงาน" subtitle="เพิ่ม แก้ไข หรือลบหน่วยงาน/ภาควิชา">
+        <>
+            <AdminPageHeader title="จัดการหน่วยงาน" subtitle="เพิ่ม แก้ไข หรือลบหน่วยงาน/ภาควิชา"/>
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4 mb-6 max-w-md">
                 <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
@@ -318,6 +319,6 @@ export default function DepartmentsPage() {
                     </table>
                 </div>
             </div>
-        </AdminLayout>
+        </>
     )
 }
