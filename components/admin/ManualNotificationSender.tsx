@@ -1,14 +1,16 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Send, Users, User, AlertCircle, CheckCircle2, Loader2, Plus, X } from 'lucide-react'
+import { Send, Users, User, AlertCircle, CheckCircle2, Loader2, Plus, X, Search } from 'lucide-react'
 import { sendManualNotification } from '@/app/admin/settings/actions'
+import { supabase } from '@/lib/supabase/client'
+import { useQuery } from '@tanstack/react-query'
 
 export default function ManualNotificationSender() {
     const [type, setType] = useState<'group' | 'individual'>('group')
     const [targetGroup, setTargetGroup] = useState<'all' | 'student' | 'personnel'>('all')
-    const [userIds, setUserIds] = useState<string[]>([])
-    const [currentUserId, setCurrentUserId] = useState('')
+    const [selectedUsers, setSelectedUsers] = useState<any[]>([])
+    const [userSearch, setUserSearch] = useState('')
     const [title, setTitle] = useState('')
     const [body, setBody] = useState('')
     const [link, setLink] = useState('')
@@ -16,23 +18,36 @@ export default function ManualNotificationSender() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null)
 
-    const handleAddUser = () => {
-        if (currentUserId.trim() && !userIds.includes(currentUserId.trim())) {
-            setUserIds([...userIds, currentUserId.trim()])
-            setCurrentUserId('')
+    // User search query
+    const { data: searchUsers, isLoading: searchLoading } = useQuery({
+        queryKey: ['search-users-notify', userSearch],
+        queryFn: async () => {
+            if (!userSearch.trim()) return []
+            
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, first_name, last_name, email, avatar_url')
+                .eq('status', 'approved')
+                .or(`first_name.ilike.%${userSearch}%,last_name.ilike.%${userSearch}%,email.ilike.%${userSearch}%,id.ilike.%${userSearch}%`)
+                .limit(10)
+
+            if (error) throw error
+            return data
+        },
+        enabled: type === 'individual'
+    })
+
+    const handleAddUser = (user: any) => {
+        if (!selectedUsers.find(u => u.id === user.id)) {
+            setSelectedUsers([...selectedUsers, user])
+            setUserSearch('') // Clear search after picking
         }
     }
 
     const handleRemoveUser = (id: string) => {
-        setUserIds(userIds.filter(uid => uid !== id))
+        setSelectedUsers(selectedUsers.filter(u => u.id !== id))
     }
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            e.preventDefault()
-            handleAddUser()
-        }
-    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -43,8 +58,8 @@ export default function ManualNotificationSender() {
             return
         }
 
-        if (type === 'individual' && userIds.length === 0) {
-            setStatus({ type: 'error', message: 'กรุณาระบุรหัสผู้ใช้อย่างน้อย 1 คน' })
+        if (type === 'individual' && selectedUsers.length === 0) {
+            setStatus({ type: 'error', message: 'กรุณาเลือกผู้รับอย่างน้อย 1 คน' })
             return
         }
 
@@ -53,7 +68,7 @@ export default function ManualNotificationSender() {
             const result = await sendManualNotification({
                 type,
                 targetGroup: type === 'group' ? targetGroup : undefined,
-                userIds: type === 'individual' ? userIds : undefined,
+                userIds: type === 'individual' ? selectedUsers.map(u => u.id) : undefined,
                 title,
                 body,
                 link: link.trim() || undefined
@@ -64,7 +79,7 @@ export default function ManualNotificationSender() {
                 setTitle('')
                 setBody('')
                 setLink('')
-                if (type === 'individual') setUserIds([])
+                if (type === 'individual') setSelectedUsers([])
             } else {
                 setStatus({ type: 'error', message: result.error || 'เกิดข้อผิดพลาดในการส่ง' })
             }
@@ -144,43 +159,92 @@ export default function ManualNotificationSender() {
                     </div>
                 ) : (
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">รหัสผู้ใช้ (User IDs)</label>
-                        <div className="flex gap-2 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">ค้นหาผู้รับ (รายบุคคล)</label>
+                        <div className="relative mb-3">
+                            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                             <input
                                 type="text"
-                                placeholder="เช่น 6600001, 30489..."
-                                value={currentUserId}
-                                onChange={(e) => setCurrentUserId(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                                placeholder="พิมพ์ชื่อ, นามสกุล, อีเมล หรือรหัสผู้ใช้เพื่อค้นหา..."
+                                value={userSearch}
+                                onChange={(e) => setUserSearch(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                             />
-                            <button
-                                type="button"
-                                onClick={handleAddUser}
-                                disabled={!currentUserId.trim()}
-                                className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-xl hover:bg-indigo-200 disabled:opacity-50 transition-colors flex items-center justify-center"
-                            >
-                                <Plus className="w-5 h-5" />
-                            </button>
+                            
+                            {/* Search Results Dropdown */}
+                            {userSearch.trim() && (
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto z-10">
+                                    {searchLoading ? (
+                                        <div className="p-4 text-center text-gray-500 flex items-center justify-center gap-2">
+                                            <Loader2 className="w-4 h-4 animate-spin" /> กำลังค้นหา...
+                                        </div>
+                                    ) : !searchUsers?.length ? (
+                                        <div className="p-4 text-center text-gray-500 text-sm">ไม่พบผู้ใช้ที่ตรงกับคำค้นหา</div>
+                                    ) : (
+                                        <div className="p-1">
+                                            {searchUsers.map((u: any) => (
+                                                <button
+                                                    key={u.id}
+                                                    type="button"
+                                                    onClick={() => handleAddUser(u)}
+                                                    className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded-lg flex items-center gap-3 transition-colors"
+                                                >
+                                                    <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                                                        {u.avatar_url ? (
+                                                            <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <User className="w-4 h-4 text-gray-500" />
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium text-gray-900 truncate">
+                                                            {u.first_name} {u.last_name}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500 truncate">{u.email || u.id}</p>
+                                                    </div>
+                                                    {selectedUsers.find(su => su.id === u.id) && (
+                                                        <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
-                        {userIds.length > 0 ? (
-                            <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100 min-h-[60px]">
-                                {userIds.map(id => (
-                                    <span key={id} className="inline-flex items-center gap-1 pl-3 pr-1 py-1 bg-white border border-gray-200 text-sm font-medium text-gray-700 rounded-full shadow-sm">
-                                        {id}
+
+                        {/* Selected Users List */}
+                        {selectedUsers.length > 0 ? (
+                            <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100 max-h-[150px] overflow-y-auto">
+                                {selectedUsers.map(user => (
+                                    <div key={user.id} className="flex items-center justify-between bg-white border border-gray-200 p-2 rounded-lg shadow-sm">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <div className="w-6 h-6 rounded-full bg-gray-200 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                                                {user.avatar_url ? (
+                                                    <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <User className="w-3 h-3 text-gray-500" />
+                                                )}
+                                            </div>
+                                            <div className="min-w-0 text-sm">
+                                                <p className="font-medium text-gray-900 truncate leading-tight">
+                                                    {user.first_name} {user.last_name}
+                                                </p>
+                                                <p className="text-[10px] text-gray-500 truncate leading-tight">{user.email || user.id}</p>
+                                            </div>
+                                        </div>
                                         <button
                                             type="button"
-                                            onClick={() => handleRemoveUser(id)}
-                                            className="p-1 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full transition-colors"
+                                            onClick={() => handleRemoveUser(user.id)}
+                                            className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-md transition-colors flex-shrink-0"
                                         >
-                                            <X className="w-3 h-3" />
+                                            <X className="w-4 h-4" />
                                         </button>
-                                    </span>
+                                    </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="p-3 text-sm text-gray-400 bg-gray-50 rounded-xl border border-gray-100 border-dashed text-center">
-                                ยังไม่มีผู้รับ พิมพ์รหัสผู้ใช้แล้วกดเพิ่ม หรือกด Enter
+                            <div className="p-4 text-sm text-gray-400 bg-gray-50 rounded-xl border border-gray-100 border-dashed text-center">
+                                ยังไม่มีผู้รับ พิมพ์ค้นหาแล้วคลิกเพื่อเพิ่ม
                             </div>
                         )}
                     </div>
@@ -229,7 +293,7 @@ export default function ManualNotificationSender() {
                 <div className="pt-2">
                     <button
                         type="submit"
-                        disabled={isSubmitting || !title.trim() || !body.trim() || (type === 'individual' && userIds.length === 0)}
+                        disabled={isSubmitting || !title.trim() || !body.trim() || (type === 'individual' && selectedUsers.length === 0)}
                         className="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                     >
                         {isSubmitting ? (
