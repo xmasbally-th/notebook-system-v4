@@ -26,9 +26,9 @@ export default function ManualNotificationSender() {
             
             const { data, error } = await supabase
                 .from('profiles')
-                .select('id, first_name, last_name, email, avatar_url')
+                .select('id, user_id, first_name, last_name, email, avatar_url')
                 .eq('status', 'approved')
-                .or(`first_name.ilike.%${userSearch}%,last_name.ilike.%${userSearch}%,email.ilike.%${userSearch}%,id.ilike.%${userSearch}%`)
+                .or(`first_name.ilike.%${userSearch}%,last_name.ilike.%${userSearch}%,email.ilike.%${userSearch}%,user_id.ilike.%${userSearch}%`)
                 .limit(10)
 
             if (error) throw error
@@ -199,7 +199,7 @@ export default function ManualNotificationSender() {
                                                         <p className="text-sm font-medium text-gray-900 truncate">
                                                             {u.first_name} {u.last_name}
                                                         </p>
-                                                        <p className="text-xs text-gray-500 truncate">{u.email || u.id}</p>
+                                                        <p className="text-xs text-gray-500 truncate">{u.user_id ? `รหัส: ${u.user_id}` : ''} {u.email ? `(${u.email})` : ''}</p>
                                                     </div>
                                                     {selectedUsers.find(su => su.id === u.id) && (
                                                         <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
@@ -229,7 +229,7 @@ export default function ManualNotificationSender() {
                                                 <p className="font-medium text-gray-900 truncate leading-tight">
                                                     {user.first_name} {user.last_name}
                                                 </p>
-                                                <p className="text-[10px] text-gray-500 truncate leading-tight">{user.email || user.id}</p>
+                                                <p className="text-[10px] text-gray-500 truncate leading-tight">{user.user_id ? `รหัส: ${user.user_id}` : ''} {user.email ? `(${user.email})` : ''}</p>
                                             </div>
                                         </div>
                                         <button
