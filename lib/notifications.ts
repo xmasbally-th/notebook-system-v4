@@ -134,18 +134,27 @@ export interface WeLPRUGroupMessageParams {
  */
 export async function sendWeLPRUNotification(params: WeLPRUDirectMessageParams) {
     try {
-        const apiKey = process.env.WELPRU_API_KEY
+        // Read API Key: DB first, fallback to env var
+        let apiKey: string | null = null
+        if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            const supabaseAdmin = createSupabaseClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL,
+                process.env.SUPABASE_SERVICE_ROLE_KEY
+            )
+            const { data: config } = await supabaseAdmin
+                .from('system_config')
+                .select('welpru_notifications_enabled, welpru_api_key')
+                .eq('id', 1)
+                .single()
+            if (!(config as any)?.welpru_notifications_enabled) return
+            apiKey = (config as any)?.welpru_api_key || null
+        }
+        if (!apiKey) apiKey = process.env.WELPRU_API_KEY || null
         if (!apiKey) {
-            console.log('[WeLPRU] Notification skipped - WELPRU_API_KEY not configured.')
+            console.log('[WeLPRU] Notification skipped - API Key not configured.')
             return
         }
 
-        if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-            const supabaseAdmin = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
-            const { data: config } = await supabaseAdmin.from('system_config').select('welpru_notifications_enabled').eq('id', 1).single()
-            if (!(config as any)?.welpru_notifications_enabled) return
-        }
-        
         if (!params.userIds || params.userIds.length === 0) {
             console.warn('[WeLPRU] No user IDs provided.')
             return
@@ -187,16 +196,25 @@ export async function sendWeLPRUNotification(params: WeLPRUDirectMessageParams) 
  */
 export async function sendWeLPRUGroupBroadcast(params: WeLPRUGroupMessageParams) {
     try {
-        const apiKey = process.env.WELPRU_API_KEY
-        if (!apiKey) {
-            console.log('[WeLPRU] Group Broadcast skipped - WELPRU_API_KEY not configured.')
-            return
-        }
-
+        // Read API Key: DB first, fallback to env var
+        let apiKey: string | null = null
         if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-            const supabaseAdmin = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
-            const { data: config } = await supabaseAdmin.from('system_config').select('welpru_notifications_enabled').eq('id', 1).single()
+            const supabaseAdmin = createSupabaseClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL,
+                process.env.SUPABASE_SERVICE_ROLE_KEY
+            )
+            const { data: config } = await supabaseAdmin
+                .from('system_config')
+                .select('welpru_notifications_enabled, welpru_api_key')
+                .eq('id', 1)
+                .single()
             if (!(config as any)?.welpru_notifications_enabled) return
+            apiKey = (config as any)?.welpru_api_key || null
+        }
+        if (!apiKey) apiKey = process.env.WELPRU_API_KEY || null
+        if (!apiKey) {
+            console.log('[WeLPRU] Group Broadcast skipped - API Key not configured.')
+            return
         }
 
         const payload = {

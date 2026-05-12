@@ -100,6 +100,7 @@ export default function AdminSettingsPage() {
                 announcement_message: config.announcement_message,
                 announcement_active: config.announcement_active,
                 welpru_notifications_enabled: config.welpru_notifications_enabled,
+                welpru_api_key: (config as any).welpru_api_key ?? null,
             })
             if (config.loan_limits_by_type) {
                 setLoanLimits(config.loan_limits_by_type as LoanLimitsByType)
@@ -727,7 +728,9 @@ export default function AdminSettingsPage() {
                                         <p className="text-sm text-gray-500">ตั้งค่าการแจ้งเตือนผ่านแอปพลิเคชัน WeLPRU</p>
                                     </div>
                                 </div>
-                                <div className="space-y-4">
+
+                                <div className="space-y-5">
+                                    {/* Toggle */}
                                     <ToggleItem
                                         label="เปิดใช้งานการแจ้งเตือน WeLPRU"
                                         description="เปิดหรือปิดการส่งข้อความแจ้งเตือนอัตโนมัติไปยังแอปพลิเคชัน WeLPRU"
@@ -735,6 +738,76 @@ export default function AdminSettingsPage() {
                                         onChange={(checked) => handleChange('welpru_notifications_enabled', checked)}
                                         color="blue"
                                     />
+
+                                    {/* API Key Input */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                            WeLPRU API Key
+                                            {(formData as any).welpru_api_key ? (
+                                                <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                                                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>ตั้งค่าแล้ว
+                                                </span>
+                                            ) : (
+                                                <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full">
+                                                    <span className="w-1.5 h-1.5 bg-orange-400 rounded-full"></span>ยังไม่ได้ตั้งค่า
+                                                </span>
+                                            )}
+                                        </label>
+                                        <input
+                                            type="password"
+                                            placeholder="วาง API Key ที่ได้รับจาก WeLPRU ที่นี่..."
+                                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                                            value={(formData as any).welpru_api_key || ''}
+                                            onChange={(e) => handleChange('welpru_api_key' as any, e.target.value || null)}
+                                            autoComplete="off"
+                                        />
+                                        <p className="text-xs text-gray-400 mt-1.5">API Key จะถูกเก็บในฐานข้อมูลและใช้แทน Environment Variable โดยอัตโนมัติ</p>
+                                    </div>
+
+                                    {/* Setup Guide */}
+                                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                                        <h4 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                                            <span className="text-base">📋</span>วิธีขอ API Key จาก WeLPRU
+                                        </h4>
+                                        <ol className="space-y-2 text-sm text-blue-800">
+                                            <li className="flex gap-2">
+                                                <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center font-bold">1</span>
+                                                <span>ไปที่เมนู <strong>"ขอใช้ระบบแจ้งเตือน"</strong> ในแพลตฟอร์ม WeLPRU แล้วกดปุ่ม <strong>"ขอเพิ่มระบบใหม่"</strong></span>
+                                            </li>
+                                            <li className="flex gap-2">
+                                                <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center font-bold">2</span>
+                                                <span>รอแอดมินอนุมัติ (สถานะจะเปลี่ยนเป็น <strong>"อนุมัติแล้ว"</strong>)</span>
+                                            </li>
+                                            <li className="flex gap-2">
+                                                <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center font-bold">3</span>
+                                                <span>กดปุ่ม <strong>"สร้าง API Key"</strong> แล้วนำ Key มาวางในช่องด้านบน</span>
+                                            </li>
+                                        </ol>
+                                        <div className="mt-3 pt-3 border-t border-blue-200">
+                                            <p className="text-xs text-blue-700">Endpoint: <code className="bg-blue-100 px-1 py-0.5 rounded text-xs">https://api.lpruhub.com/api</code></p>
+                                            <p className="text-xs text-blue-700 mt-1">Header: <code className="bg-blue-100 px-1 py-0.5 rounded text-xs">X-API-Key: &lt;your_key&gt;</code></p>
+                                        </div>
+                                    </div>
+
+                                    {/* Error Codes Reference */}
+                                    <div className="bg-gray-50 rounded-xl p-4">
+                                        <h4 className="text-sm font-semibold text-gray-700 mb-2">รหัสข้อผิดพลาด (Error Codes)</h4>
+                                        <div className="grid grid-cols-2 gap-1 text-xs">
+                                            {[
+                                                { code: '200 OK', desc: 'ส่งสำเร็จ (Group Broadcast)', color: 'text-green-600' },
+                                                { code: '202 Accepted', desc: 'รับแล้ว กำลังส่ง (Individual)', color: 'text-green-600' },
+                                                { code: '400 Bad Request', desc: 'JSON ไม่ถูกต้อง', color: 'text-red-500' },
+                                                { code: '401 Unauthorized', desc: 'ไม่ได้แนบ API Key', color: 'text-red-500' },
+                                                { code: '403 Forbidden', desc: 'API Key ผิด หรือถูกระงับ', color: 'text-red-500' },
+                                                { code: '404 Not Found', desc: 'ไม่พบผู้ใช้', color: 'text-orange-500' },
+                                            ].map(({ code, desc, color }) => (
+                                                <div key={code} className="flex gap-1">
+                                                    <code className={`font-mono ${color} whitespace-nowrap`}>{code}</code>
+                                                    <span className="text-gray-500">— {desc}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             </section>
 

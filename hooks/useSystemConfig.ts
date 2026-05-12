@@ -131,6 +131,7 @@ function getDefaultConfig(): SystemConfig {
         archive_notifications_after_days: 90,
         last_archived_at: null,
         notification_settings: null,
+        welpru_api_key: null,
     } as SystemConfig
 }
 
