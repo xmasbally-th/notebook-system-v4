@@ -1,8 +1,9 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { sendDiscordNotification } from '@/lib/notifications'
 import { revalidatePath } from 'next/cache'
+import { sendDiscordNotification } from '@/lib/notifications'
+import { notifyAndLog } from '@/lib/serverNotify'
 import { formatThaiDate, formatThaiTime, formatThaiDateTime } from '@/lib/formatThaiDate'
 import { parseReservationFormData } from '@/lib/schemas'
 import { validateBooking, getInitialStatus, isStaffOrAdmin } from '@/lib/domain'
@@ -137,44 +138,6 @@ export async function submitReservationRequest(formData: FormData) {
     return { success: true, reservationId: insertedReservation.id }
 }
 
-// Server-side function to log staff activity
-async function logStaffActivityServer(
-    supabase: any,
-    entry: {
-        staffId: string
-        staffRole: 'staff' | 'admin'
-        actionType: string
-        targetType: string
-        targetId: string
-        targetUserId?: string
-        isSelfAction?: boolean
-        details?: Record<string, any>
-    }
-): Promise<boolean> {
-    try {
-        const { error } = await supabase
-            .from('staff_activity_log')
-            .insert({
-                staff_id: entry.staffId,
-                staff_role: entry.staffRole,
-                action_type: entry.actionType,
-                target_type: entry.targetType,
-                target_id: entry.targetId,
-                target_user_id: entry.targetUserId || null,
-                is_self_action: entry.isSelfAction || false,
-                details: entry.details || {}
-            })
-
-        if (error) {
-            console.error('[logStaffActivityServer] Error:', error)
-            return false
-        }
-        return true
-    } catch (error) {
-        console.error('[logStaffActivityServer] Exception:', error)
-        return false
-    }
-}
 
 /**
  * Server Action: Convert reservation to loan
@@ -279,56 +242,51 @@ export async function convertReservationToLoanAction(
             return { success: false, error: 'ไม่สามารถอัปเดตสถานะอุปกรณ์ได้' }
         }
 
-        // 6. Log staff activity
-        await logStaffActivityServer(supabase, {
-            staffId: user.id,
-            staffRole: profile.role as 'staff' | 'admin',
-            actionType: 'convert_to_loan',
-            targetType: 'reservation',
-            targetId: reservationId,
-            targetUserId: reservation.user_id,
-            isSelfAction: reservation.user_id === user.id,
-            details: { loan_id: loanId }
-        })
-
-        // 7. Send Discord notification (🔴 Fix #2)
-        try {
-            // Fetch borrower profile for notification
-            const { data: borrowerProfile } = await (supabase as any)
+        // 6. Log staff activity + Notify (parallel)
+        const borrowerProfile2 = await (async () => {
+            const { data } = await (supabase as any)
                 .from('profiles')
-                .select('first_name, last_name, email, departments(name)')
+                .select('first_name, last_name, email, user_id, departments(name)')
                 .eq('id', reservation.user_id)
                 .single()
+            return data
+        })()
 
-            const borrowerName = borrowerProfile
-                ? `${borrowerProfile.first_name || ''} ${borrowerProfile.last_name || ''}`.trim()
-                : 'ไม่ทราบ'
-            const dept = borrowerProfile?.departments?.name || '-'
-            const staffName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
-            const equipmentName = reservation.equipment?.name || 'ไม่ทราบ'
-            const equipmentNumber = reservation.equipment?.equipment_number || '-'
+        const borrowerName = borrowerProfile2
+            ? `${borrowerProfile2.first_name || ''} ${borrowerProfile2.last_name || ''}`.trim()
+            : 'ไม่ทราบ'
+        const dept = borrowerProfile2?.departments?.name || '-'
+        const staffName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+        const equipmentName = reservation.equipment?.name || 'ไม่ทราบ'
+        const equipmentNumber = reservation.equipment?.equipment_number || '-'
+        const studentWelpruId = borrowerProfile2?.user_id
 
-            const message = `
-**🔄 แปลงการจองเป็นการยืม**
-
-👤 **ผู้ยืม:** ${borrowerName}
-🏢 **หน่วยงาน:** ${dept}
-
-📦 **อุปกรณ์:** ${equipmentName}
-🔖 **รหัส:** #${equipmentNumber}
-
-📅 **วันที่รับ:** ${formatThaiDate(reservation.start_date)}
-📅 **วันที่คืน:** ${formatThaiDate(reservation.end_date)}
-
-👨‍💼 **ดำเนินการโดย:** ${staffName}
-✅ **สถานะ:** อนุมัติอัตโนมัติ (จากการจอง)
-            `.trim()
-
-            await sendDiscordNotification(message, 'loan')
-        } catch (notifyError) {
-            console.error('[convertReservationToLoan] Notification failed:', notifyError)
-            // Don't fail the action if notification fails
-        }
+        await notifyAndLog({
+            eventKey: 'reservation_converted',
+            discordMessage:
+                `🔄 **แปลงการจองเป็นการยืม**\n\n` +
+                `👤 **ผู้ยืม:** ${borrowerName}\n` +
+                `🏢 **หน่วยงาน:** ${dept}\n\n` +
+                `📦 **อุปกรณ์:** ${equipmentName}\n` +
+                `🔖 **รหัส:** #${equipmentNumber}\n\n` +
+                `📅 **วันที่รับ:** ${formatThaiDate(reservation.start_date)}\n` +
+                `📅 **วันที่คืน:** ${formatThaiDate(reservation.end_date)}\n\n` +
+                `👨‍💼 **ดำเนินการโดย:** ${staffName}\n` +
+                `✅ **สถานะ:** อนุมัติอัตโนมัติ (จากการจอง)`,
+            discordType: 'loan',
+            welpruUserIds: studentWelpruId ? [studentWelpruId] : [],
+            welpruVariables: { equipment: equipmentName, borrower: borrowerName },
+            activity: {
+                staffId: user.id,
+                staffRole: profile.role as 'staff' | 'admin',
+                actionType: 'convert_to_loan',
+                targetType: 'reservation',
+                targetId: reservationId,
+                targetUserId: reservation.user_id,
+                isSelfAction: reservation.user_id === user.id,
+                details: { loan_id: loanId },
+            },
+        })
 
         // 8. Revalidate paths
         revalidatePath('/my-reservations')

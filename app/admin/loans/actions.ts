@@ -7,7 +7,8 @@ import {
     bulkLoanActionSchema,
     processReturnSchema,
 } from '@/lib/schemas/loanSchema'
-import { sendWeLPRUNotification } from '@/lib/notifications'
+import { notifyAndLog } from '@/lib/serverNotify'
+import { formatThaiDate } from '@/lib/formatThaiDate'
 
 // ─── Queries (used by Server Component) ──────────────────────────────────────
 
@@ -98,23 +99,55 @@ export async function approveLoanRequests(loanIds: string[]) {
         .in('id', parsed.data.loanIds)
         .select(`
             id,
-            equipment:equipment_id(name),
-            profiles:user_id(user_id)
+            user_id,
+            start_date,
+            end_date,
+            equipment:equipment_id(name, equipment_number),
+            profiles:user_id(user_id, first_name, last_name)
         `)
 
     if (error) return { error: error.message }
 
+    // 4. Get staff role for activity log
+    const { data: staffProfile } = await adminClient
+        .from('profiles')
+        .select('role')
+        .eq('id', auth.user!.id)
+        .single()
+    const staffRole = (staffProfile?.role as 'staff' | 'admin') ?? 'staff'
+
+    // 5. Notify + Log for each approved loan (parallel per loan)
     if (updatedLoans && updatedLoans.length > 0) {
-        for (const loan of updatedLoans as any[]) {
-            const studentId = loan.profiles?.user_id
-            if (studentId) {
-                await sendWeLPRUNotification({
-                    userIds: [studentId],
-                    title: 'คำขอยืมอุปกรณ์ได้รับการอนุมัติ',
-                    body: `คำขอยืมอุปกรณ์ ${loan.equipment?.name || ''} ของคุณได้รับการอนุมัติแล้ว กรุณาติดต่อรับอุปกรณ์ตามเวลาที่กำหนด`
+        await Promise.allSettled(
+            (updatedLoans as any[]).map(async (loan) => {
+                const equipmentName = loan.equipment?.name || ''
+                const equipmentNumber = loan.equipment?.equipment_number || ''
+                const borrowerName = `${loan.profiles?.first_name || ''} ${loan.profiles?.last_name || ''}`.trim()
+                const studentId = loan.profiles?.user_id
+
+                await notifyAndLog({
+                    eventKey: 'loan_approved',
+                    discordMessage:
+                        `✅ **อนุมัติคำขอยืม (Admin)**\n\n` +
+                        `📦 **อุปกรณ์:** ${equipmentName} (${equipmentNumber})\n` +
+                        `👤 **ผู้ยืม:** ${borrowerName}\n` +
+                        `📅 **วันที่:** ${formatThaiDate(loan.start_date)} - ${formatThaiDate(loan.end_date)}\n` +
+                        `👑 **อนุมัติโดย:** Admin`,
+                    discordType: 'loan',
+                    welpruUserIds: studentId ? [studentId] : [],
+                    welpruVariables: { equipment: equipmentName, borrower: borrowerName },
+                    activity: {
+                        staffId: auth.user!.id,
+                        staffRole,
+                        actionType: 'approve_loan',
+                        targetType: 'loan',
+                        targetId: loan.id,
+                        targetUserId: loan.user_id,
+                        isSelfAction: loan.user_id === auth.user!.id,
+                    },
                 })
-            }
-        }
+            })
+        )
     }
 
     revalidatePath('/admin/loans')
@@ -143,23 +176,52 @@ export async function rejectLoanRequests(loanIds: string[]) {
         .in('id', parsed.data.loanIds)
         .select(`
             id,
-            equipment:equipment_id(name),
-            profiles:user_id(user_id)
+            user_id,
+            equipment:equipment_id(name, equipment_number),
+            profiles:user_id(user_id, first_name, last_name)
         `)
 
     if (error) return { error: error.message }
 
+    // 4. Get staff role
+    const { data: staffProfile } = await adminClient
+        .from('profiles')
+        .select('role')
+        .eq('id', auth.user!.id)
+        .single()
+    const staffRole = (staffProfile?.role as 'staff' | 'admin') ?? 'staff'
+
+    // 5. Notify + Log for each rejected loan (parallel)
     if (updatedLoans && updatedLoans.length > 0) {
-        for (const loan of updatedLoans as any[]) {
-            const studentId = loan.profiles?.user_id
-            if (studentId) {
-                await sendWeLPRUNotification({
-                    userIds: [studentId],
-                    title: 'คำขอยืมอุปกรณ์ถูกปฏิเสธ',
-                    body: `คำขอยืมอุปกรณ์ ${loan.equipment?.name || ''} ของคุณไม่ได้รับการอนุมัติ กรุณาติดต่อเจ้าหน้าที่สำหรับข้อมูลเพิ่มเติม`
+        await Promise.allSettled(
+            (updatedLoans as any[]).map(async (loan) => {
+                const equipmentName = loan.equipment?.name || ''
+                const equipmentNumber = loan.equipment?.equipment_number || ''
+                const borrowerName = `${loan.profiles?.first_name || ''} ${loan.profiles?.last_name || ''}`.trim()
+                const studentId = loan.profiles?.user_id
+
+                await notifyAndLog({
+                    eventKey: 'loan_rejected',
+                    discordMessage:
+                        `❌ **ปฏิเสธคำขอยืม (Admin)**\n\n` +
+                        `📦 **อุปกรณ์:** ${equipmentName} (${equipmentNumber})\n` +
+                        `👤 **ผู้ยืม:** ${borrowerName}\n` +
+                        `👑 **ดำเนินการโดย:** Admin`,
+                    discordType: 'loan',
+                    welpruUserIds: studentId ? [studentId] : [],
+                    welpruVariables: { equipment: equipmentName, borrower: borrowerName },
+                    activity: {
+                        staffId: auth.user!.id,
+                        staffRole,
+                        actionType: 'reject_loan',
+                        targetType: 'loan',
+                        targetId: loan.id,
+                        targetUserId: loan.user_id,
+                        isSelfAction: loan.user_id === auth.user!.id,
+                    },
                 })
-            }
-        }
+            })
+        )
     }
 
     revalidatePath('/admin/loans')
@@ -201,22 +263,13 @@ export async function processReturn(
         .eq('id', parsed.data.loanId)
         .select(`
             id,
-            equipment:equipment_id(name),
-            profiles:user_id(user_id)
+            user_id,
+            equipment:equipment_id(name, equipment_number),
+            profiles:user_id(user_id, first_name, last_name)
         `)
         .single()
 
     if (loanError) return { error: loanError.message }
-
-    const profileData = updatedLoan as any
-    const studentId = profileData?.profiles?.user_id
-    if (studentId) {
-        await sendWeLPRUNotification({
-            userIds: [studentId],
-            title: 'คืนอุปกรณ์เสร็จสิ้น',
-            body: `บันทึกการรับคืนอุปกรณ์ ${profileData?.equipment?.name || ''} เรียบร้อยแล้ว ขอบคุณที่ใช้บริการ`
-        })
-    }
 
     // 4. Update equipment status
     const newEquipmentStatus = parsed.data.condition === 'good' ? 'active' : 'maintenance'
@@ -229,6 +282,46 @@ export async function processReturn(
         console.warn('[processReturn] equipment status update failed:', equipError.message)
         // ไม่ return error เพราะ loan ถูกบันทึกสำเร็จแล้ว
     }
+
+    // 5. Get staff role
+    const { data: staffProfile } = await adminClient
+        .from('profiles')
+        .select('role')
+        .eq('id', auth.user!.id)
+        .single()
+    const staffRole = (staffProfile?.role as 'staff' | 'admin') ?? 'staff'
+
+    // 6. Notify + Log (parallel)
+    const loanData = updatedLoan as any
+    const equipmentName = loanData?.equipment?.name || ''
+    const equipmentNumber = loanData?.equipment?.equipment_number || ''
+    const borrowerName = `${loanData?.profiles?.first_name || ''} ${loanData?.profiles?.last_name || ''}`.trim()
+    const studentId = loanData?.profiles?.user_id
+    const conditionLabel = parsed.data.condition === 'good' ? 'ปกติ' : parsed.data.condition === 'damaged' ? 'ชำรุด' : 'อุปกรณ์ไม่ครบ'
+
+    await notifyAndLog({
+        eventKey: 'loan_returned',
+        discordMessage:
+            `${parsed.data.condition === 'good' ? '✅' : '⚠️'} **คืนอุปกรณ์ (Admin)**\n\n` +
+            `📦 **อุปกรณ์:** ${equipmentName} (${equipmentNumber})\n` +
+            `👤 **ผู้ยืม:** ${borrowerName}\n` +
+            `🛠 **สภาพ:** ${conditionLabel}\n` +
+            `${notes ? `📝 **หมายเหตุ:** ${notes}\n` : ''}` +
+            `👑 **บันทึกโดย:** Admin`,
+        discordType: parsed.data.condition === 'good' ? 'loan' : 'maintenance',
+        welpruUserIds: studentId ? [studentId] : [],
+        welpruVariables: { equipment: equipmentName, borrower: borrowerName },
+        activity: {
+            staffId: auth.user!.id,
+            staffRole,
+            actionType: 'mark_returned',
+            targetType: 'loan',
+            targetId: parsed.data.loanId,
+            targetUserId: loanData?.user_id,
+            isSelfAction: loanData?.user_id === auth.user!.id,
+            details: { condition: parsed.data.condition, notes: parsed.data.notes },
+        },
+    })
 
     revalidatePath('/admin/loans')
     revalidatePath('/admin')

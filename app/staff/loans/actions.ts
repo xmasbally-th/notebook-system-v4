@@ -2,49 +2,9 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { sendDiscordNotification } from '@/lib/notifications'
-import type { ActionType } from '@/lib/staffActivityLog'
+import { notifyAndLog } from '@/lib/serverNotify'
 import { loanActionSchema, rejectLoanSchema } from '@/lib/schemas'
 import { requireStaff } from '@/lib/auth-guard'
-
-// Server-side function to log staff activity
-async function logStaffActivityServer(
-    supabase: any,
-    entry: {
-        staffId: string
-        staffRole: 'staff' | 'admin'
-        actionType: ActionType
-        targetType: 'loan' | 'reservation' | 'notification' | 'special_loan' | 'evaluation'
-        targetId: string
-        targetUserId?: string
-        isSelfAction?: boolean
-        details?: Record<string, any>
-    }
-): Promise<boolean> {
-    try {
-        const { error } = await supabase
-            .from('staff_activity_log')
-            .insert({
-                staff_id: entry.staffId,
-                staff_role: entry.staffRole,
-                action_type: entry.actionType,
-                target_type: entry.targetType,
-                target_id: entry.targetId,
-                target_user_id: entry.targetUserId || null,
-                is_self_action: entry.isSelfAction || false,
-                details: entry.details || {}
-            })
-
-        if (error) {
-            console.error('[logStaffActivityServer] Error:', error)
-            return false
-        }
-        return true
-    } catch (error) {
-        console.error('[logStaffActivityServer] Exception:', error)
-        return false
-    }
-}
 
 export async function approveLoan(loanId: string) {
     // Validate input with Zod
@@ -135,31 +95,33 @@ export async function approveLoan(loanId: string) {
 
         console.log('[approveLoan] Loan updated successfully:', loan.id)
 
-        // 3. Send Discord Notification
+        // 3. Notify + Log (parallel: Discord + WeLPRU + Activity Log)
         const equipmentName = loan.equipment?.name || 'Unknown Equipment'
         const equipmentNumber = loan.equipment?.equipment_number || 'No Number'
         const borrowerName = `${loan.profiles?.first_name || ''} ${loan.profiles?.last_name || ''}`.trim() || 'Unknown User'
+        const studentWelpruId = (loan.profiles as any)?.user_id
 
-        console.log('[approveLoan] Sending Discord notification...')
-        await sendDiscordNotification(
-            `✅ **อนุมัติคำขอยืม (Approved)**\n\n` +
-            `📦 **อุปกรณ์:** ${equipmentName} (${equipmentNumber})\n` +
-            `👤 **ผู้ยืม:** ${borrowerName}\n` +
-            `📅 **วันที่:** ${new Date(loan.start_date).toLocaleDateString('th-TH')} - ${new Date(loan.end_date).toLocaleDateString('th-TH')}\n` +
-            `👮 **อนุมัติโดย:** Staff`,
-            'loan'
-        )
-
-        // 4. Log staff activity
-        console.log('[approveLoan] Logging staff activity...')
-        await logStaffActivityServer(supabase, {
-            staffId: user.id,
-            staffRole: profile.role as 'staff' | 'admin',
-            actionType: 'approve_loan',
-            targetType: 'loan',
-            targetId: loanId,
-            targetUserId: loan.user_id,
-            isSelfAction: loan.user_id === user.id
+        console.log('[approveLoan] Sending notifications + logging activity...')
+        await notifyAndLog({
+            eventKey: 'loan_approved',
+            discordMessage:
+                `✅ **อนุมัติคำขอยืม (Approved)**\n\n` +
+                `📦 **อุปกรณ์:** ${equipmentName} (${equipmentNumber})\n` +
+                `👤 **ผู้ยืม:** ${borrowerName}\n` +
+                `📅 **วันที่:** ${new Date(loan.start_date).toLocaleDateString('th-TH')} - ${new Date(loan.end_date).toLocaleDateString('th-TH')}\n` +
+                `👮 **อนุมัติโดย:** Staff`,
+            discordType: 'loan',
+            welpruUserIds: studentWelpruId ? [studentWelpruId] : [],
+            welpruVariables: { equipment: equipmentName, borrower: borrowerName },
+            activity: {
+                staffId: user.id,
+                staffRole: profile.role as 'staff' | 'admin',
+                actionType: 'approve_loan',
+                targetType: 'loan',
+                targetId: loanId,
+                targetUserId: loan.user_id,
+                isSelfAction: loan.user_id === user.id,
+            },
         })
 
         // 5. Revalidate paths
@@ -251,30 +213,33 @@ export async function rejectLoan(loanId: string, reason: string) {
             throw new Error('Loan not found or already processed')
         }
 
-        // 2.5 Send Discord Notification (Added)
+        // 2.5 Notify + Log (parallel: Discord + WeLPRU + Activity Log)
         const equipmentName = loan.equipment?.name || 'Unknown Equipment'
         const equipmentNumber = loan.equipment?.equipment_number || 'No Number'
         const borrowerName = `${loan.profiles?.first_name || ''} ${loan.profiles?.last_name || ''}`.trim() || 'Unknown User'
+        const studentWelpruId = (loan.profiles as any)?.user_id
 
-        await sendDiscordNotification(
-            `❌ **คำขอยืมถูกปฏิเสธ (Rejected)**\n\n` +
-            `📦 **อุปกรณ์:** ${equipmentName} (${equipmentNumber})\n` +
-            `👤 **ผู้ยืม:** ${borrowerName}\n` +
-            `💬 **เหตุผล:** ${reason}\n` +
-            `👮 **ดำเนินการโดย:** Staff`,
-            'loan'
-        )
-
-        // 3. Log staff activity
-        await logStaffActivityServer(supabase, {
-            staffId: user.id,
-            staffRole: profile.role as 'staff' | 'admin',
-            actionType: 'reject_loan',
-            targetType: 'loan',
-            targetId: loanId,
-            targetUserId: loan.user_id,
-            isSelfAction: loan.user_id === user.id,
-            details: { reason }
+        await notifyAndLog({
+            eventKey: 'loan_rejected',
+            discordMessage:
+                `❌ **คำขอยืมถูกปฏิเสธ (Rejected)**\n\n` +
+                `📦 **อุปกรณ์:** ${equipmentName} (${equipmentNumber})\n` +
+                `👤 **ผู้ยืม:** ${borrowerName}\n` +
+                `💬 **เหตุผล:** ${reason}\n` +
+                `👮 **ดำเนินการโดย:** Staff`,
+            discordType: 'loan',
+            welpruUserIds: studentWelpruId ? [studentWelpruId] : [],
+            welpruVariables: { equipment: equipmentName, borrower: borrowerName, reason },
+            activity: {
+                staffId: user.id,
+                staffRole: profile.role as 'staff' | 'admin',
+                actionType: 'reject_loan',
+                targetType: 'loan',
+                targetId: loanId,
+                targetUserId: loan.user_id,
+                isSelfAction: loan.user_id === user.id,
+                details: { reason },
+            },
         })
 
         // 4. Revalidate paths

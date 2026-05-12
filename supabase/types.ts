@@ -353,6 +353,7 @@ export interface Database {
                     document_template_url: string | null
                     support_auto_reply_enabled: boolean
                     support_auto_reply_message: string | null
+                    notification_settings: Json | null
                     updated_at: string
                 }
                 Insert: {
@@ -379,6 +380,7 @@ export interface Database {
                     document_template_url?: string | null
                     support_auto_reply_enabled?: boolean
                     support_auto_reply_message?: string | null
+                    notification_settings?: Json | null
                     updated_at?: string
                 }
                 Update: {
@@ -405,6 +407,7 @@ export interface Database {
                     document_template_url?: string | null
                     support_auto_reply_enabled?: boolean
                     support_auto_reply_message?: string | null
+                    notification_settings?: Json | null
                     updated_at?: string
                 }
             }

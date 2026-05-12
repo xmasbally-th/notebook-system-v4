@@ -1,6 +1,7 @@
 // Special Loans API Library
 import { getSupabaseCredentials } from './supabase-helpers'
 import { logStaffActivity, ActionType } from './staffActivityLog'
+import { notifyAndLog } from './serverNotify'
 
 export interface SpecialLoan {
     id: string
@@ -166,20 +167,31 @@ export async function createSpecialLoan(
             )
         }
 
-        // Log activity
-        await logStaffActivity({
-            staffId: admin.id,
-            staffRole: 'admin',
-            actionType: 'create_special_loan' as ActionType,
-            targetType: 'special_loan' as any,
-            targetId: id,
-            targetUserId: input.borrowerId,
-            details: {
-                equipment_type: input.equipmentTypeName,
-                quantity: input.quantity,
-                loan_date: input.loanDate,
-                return_date: input.returnDate
-            }
+        // Log activity + Notify Discord (parallel)
+        await notifyAndLog({
+            eventKey: 'special_loan_created',
+            discordMessage:
+                `📦 **ยืมพิเศษ — สร้างใหม่**\n\n` +
+                `👤 **ผู้ยืม:** ${input.borrowerName || input.externalBorrowerName || 'ไม่ระบุ'}\n` +
+                `📦 **อุปกรณ์:** ${input.equipmentTypeName} (จำนวน ${input.quantity})\n` +
+                `🔢 **รหัส:** ${input.equipmentNumbers.join(', ')}\n` +
+                `📅 **ยืม:** ${input.loanDate} → ${input.returnDate}\n` +
+                `📝 **วัตถุประสงค์:** ${input.purpose}`,
+            discordType: 'loan',
+            activity: {
+                staffId: admin.id,
+                staffRole: 'admin',
+                actionType: 'create_special_loan' as ActionType,
+                targetType: 'special_loan',
+                targetId: id,
+                targetUserId: input.borrowerId ?? null,
+                details: {
+                    equipment_type: input.equipmentTypeName,
+                    quantity: input.quantity,
+                    loan_date: input.loanDate,
+                    return_date: input.returnDate,
+                },
+            },
         })
 
         return { success: true, id }
@@ -355,13 +367,19 @@ export async function completeSpecialLoan(
             )
         }
 
-        // Log activity
-        await logStaffActivity({
-            staffId: admin.id,
-            staffRole: 'admin',
-            actionType: 'complete_special_loan' as ActionType,
-            targetType: 'special_loan' as any,
-            targetId: id
+        // Log activity + Notify (parallel)
+        await notifyAndLog({
+            eventKey: 'special_loan_completed',
+            discordMessage:
+                `✅ **ยืมพิเศษ — คืนเรียบร้อย**\n\n🆔 ID: ${id}`,
+            discordType: 'loan',
+            activity: {
+                staffId: admin.id,
+                staffRole: 'admin',
+                actionType: 'complete_special_loan' as ActionType,
+                targetType: 'special_loan',
+                targetId: id,
+            },
         })
 
         return { success: true }
@@ -432,6 +450,21 @@ export async function cancelSpecialLoan(
                 }
             )
         }
+
+        // Log activity + Notify (parallel)
+        await notifyAndLog({
+            eventKey: 'special_loan_cancelled',
+            discordMessage:
+                `🟡 **ยืมพิเศษ — ยกเลิก**\n\n🆔 ID: ${id}`,
+            discordType: 'loan',
+            activity: {
+                staffId: admin.id,
+                staffRole: 'admin',
+                actionType: 'cancel_special_loan' as ActionType,
+                targetType: 'special_loan',
+                targetId: id,
+            },
+        })
 
         return { success: true }
     } catch (error) {

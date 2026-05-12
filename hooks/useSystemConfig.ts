@@ -130,6 +130,7 @@ function getDefaultConfig(): SystemConfig {
         archive_support_after_days: 180,
         archive_notifications_after_days: 90,
         last_archived_at: null,
+        notification_settings: null,
     } as SystemConfig
 }
 
