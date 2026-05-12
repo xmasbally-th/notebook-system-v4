@@ -32,10 +32,24 @@ export default function RulesSection() {
 
     if (isLoading) {
         return (
-            <section className="py-16 bg-white">
+            <section className="py-10 bg-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-center py-12">
-                        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                    <div className="text-center mb-8">
+                        <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">กฎระเบียบการยืม</h2>
+                        <p className="mt-2 text-base text-gray-500 max-w-2xl mx-auto">
+                            กรุณาปฏิบัติตามกฎระเบียบเพื่อให้บริการยืม-คืนเป็นไปอย่างราบรื่น
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[1, 2, 3].map((i) => (
+                            <div key={i} className="p-5 bg-gray-50 rounded-xl border border-gray-100">
+                                <div className="mb-3 w-10 h-10 bg-gray-200 rounded-lg animate-pulse"></div>
+                                <div className="h-5 w-24 bg-gray-200 rounded mb-2 animate-pulse"></div>
+                                <div className="h-4 w-full bg-gray-100 rounded animate-pulse"></div>
+                                <div className="h-4 w-2/3 bg-gray-100 rounded mt-1 animate-pulse"></div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </section>

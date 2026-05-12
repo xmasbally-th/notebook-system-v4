@@ -6,9 +6,12 @@ export default function SystemStatusBadge() {
     const { data: config, isLoading } = useSystemConfig()
 
     if (isLoading) return (
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white text-sm font-medium mb-4 animate-pulse">
-            <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
-            กำลังตรวจสอบสถานะ...
+        <div className="flex flex-col items-center">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full text-white text-sm font-medium mb-2 animate-pulse">
+                <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+                กำลังตรวจสอบสถานะ...
+            </div>
+            <span className="text-xs text-transparent mb-4">placeholder</span>
         </div>
     )
 
