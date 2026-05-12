@@ -165,7 +165,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
                     setTimeout(() => {
                         console.warn('AuthGuard: auth.getUser() timed out')
                         resolve({ data: { user: null }, error: null })
-                    }, 30000) // 30s timeout
+                    }, 5000) // 5s timeout
                 })
 
                 const authPromise = client.auth.getUser()
@@ -246,16 +246,16 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         const isSetupPath = matchesPath(SETUP_PATHS)
         const isEquipmentPath = pathname.startsWith('/equipment')
 
-        // Skip checks for public paths and equipment pages
-        if (isPublicPath || isEquipmentPath) return
-
-        // If not authenticated and not on public path, redirect to login
-        if (authState === 'unauthenticated' && !isPublicPath) {
-            handleRedirect('/login')
-            return
+        // 1. Unauthenticated users handling
+        if (authState === 'unauthenticated') {
+            if (!isPublicPath && !isEquipmentPath) {
+                // Protect private routes
+                handleRedirect('/login')
+            }
+            return // Allow browsing public/equipment paths if not logged in
         }
 
-        // If authenticated, check profile
+        // 2. Authenticated users handling
         if (authState === 'authenticated' && profile) {
             const isProfileComplete = profile.first_name && profile.last_name && profile.phone_number
             const isPending = profile.status === 'pending'
@@ -278,8 +278,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
                 return
             }
 
-            // If approved and on pending page, redirect to home
-            if (isApproved && isPendingPath) {
+            // If approved and on pending/setup page, redirect to home
+            if (isApproved && (isPendingPath || isSetupPath)) {
                 handleRedirect('/')
                 return
             }
@@ -296,7 +296,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
                 return
             }
 
-            // Role-based home page redirect
+            // Role-based home page auto-redirect (only when on exactly '/')
             if (isApproved && pathname === '/') {
                 if (isAdmin) {
                     handleRedirect('/admin')
@@ -306,6 +306,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
                     return
                 }
             }
+            
+            // Allow them to stay on any other public/equipment paths (e.g. /equipment)
         }
     }, [authState, profile, pathname, matchesPath, handleRedirect])
 
