@@ -26,7 +26,6 @@ import {
 import { updateUserStatus, updateUserRole, updateMultipleUserStatus, updateUserProfile, deleteUser } from './actions'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/toast'
-import { supabase } from '@/lib/supabase/client'
 import Pagination from '@/components/ui/Pagination'
 
 
@@ -65,7 +64,7 @@ const userTypeLabels: Record<string, string> = {
     staff: 'บุคลากร'
 }
 
-export default function UserTable({ users }: { users: User[] }) {
+export default function UserTable({ users, departments }: { users: User[], departments: Department[] }) {
     const router = useRouter()
     const toast = useToast()
     const [loading, setLoading] = useState<string | null>(null)
@@ -90,24 +89,7 @@ export default function UserTable({ users }: { users: User[] }) {
         department_id: '' as string | null,
         user_id: '' as string | null
     })
-    const [departments, setDepartments] = useState<Department[]>([])
     const [editLoading, setEditLoading] = useState(false)
-
-    // Fetch departments for edit form
-    useEffect(() => {
-        const fetchDepartments = async () => {
-            const { data, error } = await supabase
-                .from('departments')
-                .select('id, name, is_active')
-                .eq('is_active', true)
-                .order('name')
-
-            if (!error && data) {
-                setDepartments(data)
-            }
-        }
-        fetchDepartments()
-    }, [])
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1)

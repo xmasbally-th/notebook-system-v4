@@ -23,6 +23,11 @@ export async function updateUserStatus(userId: string, newStatus: 'approved' | '
     const auth = await requireAdmin()
     if (auth.error) return { error: auth.error }
 
+    // Prevent self-status modification
+    if (userId === auth.user!.id) {
+        return { error: 'ไม่สามารถเปลี่ยนสถานะบัญชีของตัวเองได้' }
+    }
+
     const adminClient = createAdminClient()
 
     // 3. Update Status
@@ -35,10 +40,14 @@ export async function updateUserStatus(userId: string, newStatus: 'approved' | '
 
     if (error) return { error: error.message }
 
-    // 4. Send Email if Approved
+    // 4. Send Email if Approved (catch errors to prevent blocking the status update)
     if (newStatus === 'approved' && updatedUser) {
         const fullName = `${updatedUser.title || ''}${updatedUser.first_name} ${updatedUser.last_name || ''}`.trim()
-        await sendApprovalEmail(updatedUser.email, fullName)
+        try {
+            await sendApprovalEmail(updatedUser.email, fullName)
+        } catch (emailError) {
+            console.error(`Failed to send approval email to ${updatedUser.email}:`, emailError)
+        }
     }
 
     revalidatePath('/admin/users')
@@ -55,6 +64,11 @@ export async function updateUserRole(userId: string, newRole: 'admin' | 'staff' 
     // 2. Check Admin Permission
     const auth = await requireAdmin()
     if (auth.error) return { error: auth.error }
+
+    // Prevent self-role modification
+    if (userId === auth.user!.id) {
+        return { error: 'ไม่สามารถเปลี่ยนสิทธิ์การเข้าถึงของตัวเองได้' }
+    }
 
     const adminClient = createAdminClient()
 
@@ -84,6 +98,11 @@ export async function updateMultipleUserStatus(
     // 2. Check Admin Permission
     const auth = await requireAdmin()
     if (auth.error) return { error: auth.error }
+
+    // Prevent self-status modification in bulk update
+    if (userIds.includes(auth.user!.id)) {
+        return { error: 'ไม่สามารถเปลี่ยนสถานะบัญชีของตัวเองในรายการกลุ่มได้' }
+    }
 
     const adminClient = createAdminClient()
 

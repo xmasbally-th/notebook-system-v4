@@ -45,15 +45,25 @@ function TableSkeleton() {
 async function UsersContent() {
     const supabase = await createClient()
 
-    // Fetch user list (Auth and Admin check is already handled by app/admin/layout.tsx)
-    const { data: users, error } = await supabase
-        .from('profiles' as any)
-        .select('id, email, first_name, last_name, title, role, status, user_type, phone_number, avatar_url, created_at, department_id, user_id, departments(name)')
-        .order('created_at', { ascending: false })
+    // Fetch user list and active departments in parallel (Auth and Admin check is already handled by app/admin/layout.tsx)
+    const [usersRes, deptsRes] = await Promise.all([
+        supabase
+            .from('profiles' as any)
+            .select('id, email, first_name, last_name, title, role, status, user_type, phone_number, avatar_url, created_at, department_id, user_id, departments(name)')
+            .order('created_at', { ascending: false }),
+        supabase
+            .from('departments' as any)
+            .select('id, name, is_active')
+            .eq('is_active', true)
+            .order('name')
+    ])
 
-    if (error) {
-        return <div className="p-8 text-red-500">Error loading users: {error.message}</div>
+    if (usersRes.error) {
+        return <div className="p-8 text-red-500">Error loading users: {usersRes.error.message}</div>
     }
+
+    const users = usersRes.data
+    const departments = deptsRes.data || []
 
     // Calculate stats
     const pendingCount = users?.filter((u: any) => u.status === 'pending').length || 0
@@ -111,7 +121,7 @@ async function UsersContent() {
                 </div>
             </div>
 
-            <UserTable users={users || []} />
+            <UserTable users={users || []} departments={departments} />
         </>
     )
 }
