@@ -21,13 +21,16 @@ export type ActionType =
     | 'complete_special_loan'
     | 'cancel_special_loan'
     | 'edit_reservation'
+    | 'create_equipment'
+    | 'update_equipment'
+    | 'delete_equipment'
 
 
 export interface ActivityLogEntry {
     staffId: string
     staffRole: 'staff' | 'admin'
     actionType: ActionType
-    targetType: 'loan' | 'reservation' | 'notification' | 'special_loan' | 'evaluation'
+    targetType: 'loan' | 'reservation' | 'notification' | 'special_loan' | 'evaluation' | 'equipment'
     targetId: string
     targetUserId?: string
     isSelfAction?: boolean
@@ -117,7 +120,10 @@ export function getActionTypeLabel(actionType: ActionType): string {
         'create_special_loan': 'สร้างยืมพิเศษ',
         'complete_special_loan': 'บันทึกคืนยืมพิเศษ',
         'cancel_special_loan': 'ยกเลิกยืมพิเศษ',
-        'edit_reservation': 'แก้ไขการจอง'
+        'edit_reservation': 'แก้ไขการจอง',
+        'create_equipment': 'เพิ่มอุปกรณ์ใหม่',
+        'update_equipment': 'แก้ไขข้อมูลอุปกรณ์',
+        'delete_equipment': 'ลบอุปกรณ์'
     }
     return labels[actionType] || actionType
 }
@@ -145,7 +151,10 @@ export function getActionTypeIcon(actionType: ActionType): string {
         'create_special_loan': '📋',
         'complete_special_loan': '✅',
         'cancel_special_loan': '🚫',
-        'edit_reservation': '✏️'
+        'edit_reservation': '✏️',
+        'create_equipment': '➕',
+        'update_equipment': '✏️',
+        'delete_equipment': '🗑️'
     }
     return icons[actionType] || '📝'
 }

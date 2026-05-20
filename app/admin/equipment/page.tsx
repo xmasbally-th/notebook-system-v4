@@ -1,17 +1,19 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSupabaseCredentials, getSupabaseBrowserClient } from '@/lib/supabase-helpers'
+import { getSupabaseCredentials } from '@/lib/supabase-helpers'
 import { Database } from '@/supabase/types'
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import {
     Plus, Edit, Trash2, Search, Package,
     CheckCircle, Users, Wrench, Archive,
-    AlertTriangle, Filter, ChevronDown, Copy, Layers
+    AlertTriangle, Filter, Copy, Layers,
+    Calendar
 } from 'lucide-react'
 import BatchAddModal from '@/components/admin/BatchAddModal'
+import { getPaginatedEquipment, deleteEquipmentAction } from './actions'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 type EquipmentType = Database['public']['Tables']['equipment_types']['Row']
@@ -19,6 +21,7 @@ type EquipmentType = Database['public']['Tables']['equipment_types']['Row']
 const STATUS_CONFIG = {
     ready: { label: 'พร้อมใช้งาน', color: 'bg-green-100 text-green-700', icon: CheckCircle },
     borrowed: { label: 'ถูกยืม', color: 'bg-blue-100 text-blue-700', icon: Users },
+    reserved: { label: 'ถูกจอง', color: 'bg-purple-100 text-purple-700', icon: Calendar },
     maintenance: { label: 'ซ่อมบำรุง', color: 'bg-yellow-100 text-yellow-700', icon: Wrench },
     retired: { label: 'เลิกใช้งาน', color: 'bg-gray-100 text-gray-600', icon: Archive },
     // Legacy statuses for compatibility
@@ -36,30 +39,20 @@ export default function AdminEquipmentList() {
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
 
-    // Fetch equipment with type relation using direct fetch
-    const { data: equipment, isLoading } = useQuery({
-        queryKey: ['equipment'],
+    // Fetch equipment with type relation using server action paginated query
+    const { data: queryResult, isLoading } = useQuery({
+        queryKey: ['equipment', currentPage, pageSize, searchTerm, selectedStatus, selectedType],
         staleTime: 30000,
         queryFn: async () => {
-            const { url, key } = getSupabaseCredentials()
-            if (!url || !key) return []
-
-            // Get user's access token for RLS
-            const { createBrowserClient } = await import('@supabase/ssr')
-            const client = createBrowserClient(url, key)
-            const { data: { session } } = await client.auth.getSession()
-
-            const response = await fetch(
-                `${url}/rest/v1/equipment?select=*,equipment_types(id,name,icon)&order=created_at.desc`,
-                {
-                    headers: {
-                        'apikey': key,
-                        'Authorization': `Bearer ${session?.access_token || key}`
-                    }
-                }
-            )
-            if (!response.ok) return []
-            return response.json() as Promise<(Equipment & { equipment_types?: EquipmentType })[]>
+            const res = await getPaginatedEquipment({
+                page: currentPage,
+                pageSize,
+                search: searchTerm,
+                status: selectedStatus,
+                type: selectedType
+            })
+            if ('error' in res) throw new Error(res.error || 'โหลดข้อมูลล้มเหลว')
+            return res
         }
     })
 
@@ -90,28 +83,11 @@ export default function AdminEquipmentList() {
         }
     })
 
-    // Delete mutation using direct fetch with user auth
+    // Delete mutation using server action
     const deleteMutation = useMutation({
         mutationFn: async (id: string) => {
-            const { url, key } = getSupabaseCredentials()
-
-            // Get user's access token for RLS
-            const { createBrowserClient } = await import('@supabase/ssr')
-            const client = createBrowserClient(url, key)
-            const { data: { session } } = await client.auth.getSession()
-
-            if (!session?.access_token) {
-                throw new Error('กรุณาเข้าสู่ระบบก่อน')
-            }
-
-            const response = await fetch(`${url}/rest/v1/equipment?id=eq.${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'apikey': key,
-                    'Authorization': `Bearer ${session.access_token}`
-                }
-            })
-            if (!response.ok) throw new Error('Failed to delete')
+            const res = await deleteEquipmentAction(id)
+            if (res.error) throw new Error(res.error)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['equipment'] })
@@ -119,49 +95,12 @@ export default function AdminEquipmentList() {
         }
     })
 
-    // Filter and search
-    const filteredItems = useMemo(() => {
-        if (!equipment) return []
-
-        return equipment.filter(item => {
-            // Get status from status_new or status
-            const itemStatus = (item as any).status_new || item.status
-
-            // Search filter
-            const searchLower = searchTerm.toLowerCase()
-            const matchesSearch = !searchTerm ||
-                item.name.toLowerCase().includes(searchLower) ||
-                item.equipment_number.toLowerCase().includes(searchLower) ||
-                ((item as any).brand || '').toLowerCase().includes(searchLower) ||
-                ((item as any).model || '').toLowerCase().includes(searchLower)
-
-            // Status filter
-            const matchesStatus = selectedStatus === 'all' || itemStatus === selectedStatus
-
-            // Type filter
-            const matchesType = selectedType === 'all' || (item as any).equipment_type_id === selectedType
-
-            return matchesSearch && matchesStatus && matchesType
-        })
-    }, [equipment, searchTerm, selectedStatus, selectedType])
-
-    // Pagination
-    const totalPages = Math.ceil(filteredItems.length / pageSize)
-    const paginatedItems = filteredItems.slice(
-        (currentPage - 1) * pageSize,
-        currentPage * pageSize
-    )
+    const paginatedItems = queryResult?.items || []
+    const totalCount = queryResult?.count || 0
+    const totalPages = Math.ceil(totalCount / pageSize)
 
     // Stats
-    const stats = useMemo(() => {
-        if (!equipment) return { total: 0, ready: 0, borrowed: 0, maintenance: 0 }
-        return {
-            total: equipment.length,
-            ready: equipment.filter(e => ((e as any).status_new || e.status) === 'ready' || ((e as any).status_new || e.status) === 'active').length,
-            borrowed: equipment.filter(e => ((e as any).status_new || e.status) === 'borrowed').length,
-            maintenance: equipment.filter(e => ((e as any).status_new || e.status) === 'maintenance').length,
-        }
-    }, [equipment])
+    const stats = queryResult?.stats || { total: 0, ready: 0, borrowed: 0, reserved: 0, maintenance: 0, retired: 0 }
 
     const handleDelete = async (id: string) => {
         try {
@@ -179,8 +118,9 @@ export default function AdminEquipmentList() {
     return (
         <>
             <AdminPageHeader title="จัดการอุปกรณ์" subtitle="เพิ่ม แก้ไข และจัดการอุปกรณ์ทั้งหมด"/>
+            
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
                 <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-blue-50 rounded-lg">
@@ -205,6 +145,17 @@ export default function AdminEquipmentList() {
                 </div>
                 <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
                     <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-50 rounded-lg">
+                            <Calendar className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-purple-600">{stats.reserved || 0}</p>
+                            <p className="text-xs text-gray-500">ถูกจอง</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+                    <div className="flex items-center gap-3">
                         <div className="p-2 bg-blue-50 rounded-lg">
                             <Users className="w-5 h-5 text-blue-600" />
                         </div>
@@ -222,6 +173,17 @@ export default function AdminEquipmentList() {
                         <div>
                             <p className="text-2xl font-bold text-yellow-600">{stats.maintenance}</p>
                             <p className="text-xs text-gray-500">ซ่อมบำรุง</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-gray-50 rounded-lg">
+                            <Archive className="w-5 h-5 text-gray-600" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-gray-600">{stats.retired || 0}</p>
+                            <p className="text-xs text-gray-500">เลิกใช้งาน</p>
                         </div>
                     </div>
                 </div>
@@ -287,6 +249,7 @@ export default function AdminEquipmentList() {
                         >
                             <option value="all">ทุกสถานะ</option>
                             <option value="ready">พร้อมใช้งาน</option>
+                            <option value="reserved">ถูกจอง</option>
                             <option value="borrowed">ถูกยืม</option>
                             <option value="maintenance">ซ่อมบำรุง</option>
                             <option value="retired">เลิกใช้งาน</option>
@@ -334,7 +297,7 @@ export default function AdminEquipmentList() {
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {paginatedItems.map((item) => {
-                                        const itemStatus = ((item as any).status_new || item.status) as keyof typeof STATUS_CONFIG
+                                        const itemStatus = item.status as keyof typeof STATUS_CONFIG
                                         const statusConfig = STATUS_CONFIG[itemStatus] || STATUS_CONFIG.ready
                                         const StatusIcon = statusConfig.icon
 
@@ -350,7 +313,7 @@ export default function AdminEquipmentList() {
                                                                     className="h-12 w-12 object-cover"
                                                                 />
                                                             ) : (
-                                                                <div className="h-12 w-12 flex items-center justify-center text-2xl">
+                                                                <div className="h-12 w-12 flex items-center justify-center text-2xl bg-gray-50">
                                                                     {(item as any).equipment_types?.icon || '📦'}
                                                                 </div>
                                                             )}
@@ -411,7 +374,7 @@ export default function AdminEquipmentList() {
                         {/* Mobile Cards */}
                         <div className="lg:hidden p-4 space-y-3">
                             {paginatedItems.map((item) => {
-                                const itemStatus = ((item as any).status_new || item.status) as keyof typeof STATUS_CONFIG
+                                const itemStatus = item.status as keyof typeof STATUS_CONFIG
                                 const statusConfig = STATUS_CONFIG[itemStatus] || STATUS_CONFIG.ready
                                 const StatusIcon = statusConfig.icon
 
@@ -486,7 +449,7 @@ export default function AdminEquipmentList() {
                 )}
 
                 {/* Pagination */}
-                {filteredItems.length > 0 && (
+                {totalCount > 0 && (
                     <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                             <span>แสดง</span>
@@ -503,7 +466,7 @@ export default function AdminEquipmentList() {
                                 <option value={50}>50</option>
                                 <option value={100}>100</option>
                             </select>
-                            <span>รายการ | {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, filteredItems.length)} จาก {filteredItems.length}</span>
+                            <span>รายการ | {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, totalCount)} จาก {totalCount}</span>
                         </div>
                         <div className="flex gap-2">
                             <button

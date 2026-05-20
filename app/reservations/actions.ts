@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendDiscordNotification } from '@/lib/notifications'
 import { notifyAndLog } from '@/lib/serverNotify'
@@ -226,7 +226,8 @@ export async function convertReservationToLoanAction(
         }
 
         // 5. Update equipment status to borrowed (🔴 Fix #1 — check error)
-        const { error: equipmentUpdateError } = await (supabase as any)
+        const adminClient = createAdminClient()
+        const { error: equipmentUpdateError } = await adminClient
             .from('equipment')
             .update({ status: 'borrowed' })
             .eq('id', reservation.equipment_id)

@@ -41,7 +41,7 @@ interface ActivityEntry {
     staffId: string
     staffRole: 'staff' | 'admin'
     actionType: ActionType
-    targetType: 'loan' | 'reservation' | 'notification' | 'special_loan' | 'evaluation'
+    targetType: 'loan' | 'reservation' | 'notification' | 'special_loan' | 'evaluation' | 'equipment'
     targetId: string
     targetUserId?: string | null
     isSelfAction?: boolean

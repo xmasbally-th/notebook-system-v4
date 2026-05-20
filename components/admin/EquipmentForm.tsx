@@ -9,6 +9,7 @@ import Link from 'next/link'
 import ImageUpload from '@/components/ui/ImageUpload'
 import { useEquipmentTypes } from '@/hooks/useEquipmentTypes'
 import { useDuplicateCheck } from '@/hooks/useDuplicateCheck'
+import { createEquipmentAction, updateEquipmentAction } from '@/app/admin/equipment/actions'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 type EquipmentInsert = Database['public']['Tables']['equipment']['Insert']
@@ -29,6 +30,7 @@ interface EquipmentFormProps {
 
 const STATUS_OPTIONS = [
     { value: 'ready', label: 'พร้อมใช้งาน', color: 'bg-green-100 text-green-700' },
+    { value: 'reserved', label: 'ถูกจอง', color: 'bg-purple-100 text-purple-700' },
     { value: 'borrowed', label: 'ถูกยืม', color: 'bg-blue-100 text-blue-700' },
     { value: 'maintenance', label: 'ซ่อมบำรุง', color: 'bg-yellow-100 text-yellow-700' },
     { value: 'retired', label: 'เลิกใช้งาน', color: 'bg-gray-100 text-gray-600' },
@@ -122,75 +124,25 @@ export default function EquipmentForm({ initialData, isEditing = false, cloneFro
 
     const mutation = useMutation({
         mutationFn: async (data: EquipmentInsert) => {
-            const { url, key } = getSupabaseCredentials()
-            if (!url || !key) throw new Error('Supabase credentials not available')
-
-            // Get user's access token for RLS authentication
-            const { createBrowserClient } = await import('@supabase/ssr')
-            const client = createBrowserClient(url, key)
-            const { data: { session } } = await client.auth.getSession()
-
-            if (!session?.access_token) {
-                throw new Error('กรุณาเข้าสู่ระบบก่อน')
-            }
-
-            // Map new status values to old enum values for the 'status' column
-            // Old enum: 'active', 'maintenance', 'retired', 'lost'
-            // New enum: 'ready', 'borrowed', 'maintenance', 'retired'
-            const statusForOldColumn = (status: string) => {
-                if (status === 'ready' || status === 'borrowed') return 'active'
-                if (status === 'maintenance') return 'maintenance'
-                if (status === 'retired') return 'retired'
-                return 'active'
-            }
-
-            const currentStatus = data.status || 'ready'
-
-            // Prepare data for upsert
-            const submitData = {
+            const input = {
                 name: data.name,
                 equipment_number: data.equipment_number,
                 brand: (data as any).brand || null,
                 model: (data as any).model || null,
                 equipment_type_id: (data as any).equipment_type_id || null,
-                status: statusForOldColumn(currentStatus), // Old column uses 'active' instead of 'ready'
-                status_new: currentStatus, // New column uses 'ready', 'borrowed', etc.
-                location: data.location || {},
-                specifications: data.specifications || {},
-                images: data.images || [],
+                status: (data.status as any) || 'ready',
+                location: (data.location as any) || null,
+                specifications: (data.specifications as any) || null,
+                images: (data.images as string[]) || [],
                 is_active: data.is_active ?? true,
             }
 
-            // Use user's access token in Authorization header for RLS
-            const authHeaders = {
-                'apikey': key,
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-            }
-
             if (isEditing && initialData) {
-                const response = await fetch(`${url}/rest/v1/equipment?id=eq.${initialData.id}`, {
-                    method: 'PATCH',
-                    headers: authHeaders,
-                    body: JSON.stringify(submitData)
-                })
-                if (!response.ok) {
-                    const errorText = await response.text()
-                    console.error('[EquipmentForm] Update error:', errorText)
-                    throw new Error(errorText || 'Failed to update equipment')
-                }
+                const res = await updateEquipmentAction(initialData.id, input)
+                if (res.error) throw new Error(res.error)
             } else {
-                const response = await fetch(`${url}/rest/v1/equipment`, {
-                    method: 'POST',
-                    headers: authHeaders,
-                    body: JSON.stringify(submitData)
-                })
-                if (!response.ok) {
-                    const errorText = await response.text()
-                    console.error('[EquipmentForm] Insert error:', errorText)
-                    throw new Error(errorText || 'Failed to create equipment')
-                }
+                const res = await createEquipmentAction(input)
+                if (res.error) throw new Error(res.error)
             }
         },
         onSuccess: () => {

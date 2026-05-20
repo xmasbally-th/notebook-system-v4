@@ -75,7 +75,7 @@ export async function approveLoanRequests(loanIds: string[]) {
 
     const adminClient = createAdminClient()
 
-    // 2.5 Concurrency Check: Ensure all requested equipment is still 'active'
+    // 2.5 Concurrency Check: Ensure all requested equipment is still 'ready'
     const { data: requestedLoans, error: checkError } = await adminClient
         .from('loanRequests')
         .select(`
@@ -86,7 +86,7 @@ export async function approveLoanRequests(loanIds: string[]) {
 
     if (checkError) return { error: checkError.message }
 
-    const unavailableItems = requestedLoans?.filter((loan: any) => loan.equipment?.status !== 'active')
+    const unavailableItems = requestedLoans?.filter((loan: any) => loan.equipment?.status !== 'ready')
     if (unavailableItems && unavailableItems.length > 0) {
         const names = unavailableItems.map((l: any) => l.equipment?.name).join(', ')
         return { error: `ไม่สามารถอนุมัติได้: อุปกรณ์ต่อไปนี้ไม่ว่างแล้ว (${names})` }
@@ -272,7 +272,7 @@ export async function processReturn(
     if (loanError) return { error: loanError.message }
 
     // 4. Update equipment status
-    const newEquipmentStatus = parsed.data.condition === 'good' ? 'active' : 'maintenance'
+    const newEquipmentStatus = parsed.data.condition === 'good' ? 'ready' : 'maintenance'
     const { error: equipError } = await adminClient
         .from('equipment')
         .update({ status: newEquipmentStatus })
