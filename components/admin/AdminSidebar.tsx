@@ -22,7 +22,6 @@ import {
     BarChart3,
     FileStack,
     MessageSquare,
-    MessageCircle,
     BookOpen
 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
@@ -41,7 +40,6 @@ function getSupabaseClient() {
 
 const menuItems = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/admin/support', label: 'แชทกับผู้ใช้', icon: MessageCircle },
     { href: '/admin/users', label: 'จัดการผู้ใช้', icon: Users },
     { href: '/admin/equipment', label: 'จัดการอุปกรณ์', icon: Package },
     { href: '/admin/equipment-types', label: 'ประเภทอุปกรณ์', icon: Tag },

@@ -15,10 +15,7 @@ import {
     fetchNotificationsPreview,
     hardDeleteNotifications,
     getNotificationTypeOptions,
-    NotificationDeleteResult,
-    fetchSupportChatsPreview,
-    hardDeleteSupportChats,
-    SupportChatDeleteResult
+    NotificationDeleteResult
 } from '@/lib/dataManagement'
 import { logStaffActivity } from '@/lib/staffActivityLog'
 
@@ -51,8 +48,7 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
         { value: 'reservations' as DataType, label: 'รายการจอง', icon: Calendar },
         { value: 'equipment' as DataType, label: 'ข้อมูลอุปกรณ์', icon: Package },
         { value: 'notifications' as DataType, label: 'การแจ้งเตือน', icon: Bell },
-        { value: 'evaluations' as DataType, label: 'ข้อมูลการประเมิน', icon: Star },
-        { value: 'support_chats' as DataType, label: 'การสนทนา', icon: MessageSquare }
+        { value: 'evaluations' as DataType, label: 'ข้อมูลการประเมิน', icon: Star }
     ]
 
     const statusOptions = dataType === 'notifications'
@@ -64,7 +60,7 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
     const notificationTypeOptions = getNotificationTypeOptions()
 
     const handlePreview = useCallback(async () => {
-        if (dataType !== 'notifications' && dataType !== 'evaluations' && dataType !== 'support_chats' && selectedStatuses.length === 0) {
+        if (dataType !== 'notifications' && dataType !== 'evaluations' && selectedStatuses.length === 0) {
             setError('กรุณาเลือกสถานะอย่างน้อย 1 รายการ')
             return
         }
@@ -77,8 +73,6 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
             let data: PreviewData
             if (dataType === 'notifications') {
                 data = await fetchNotificationsPreview(dateRange, selectedStatuses, selectedNotificationTypes)
-            } else if (dataType === 'support_chats') {
-                data = await fetchSupportChatsPreview(dateRange, selectedStatuses)
             } else {
                 data = await fetchDeletePreview(dataType, dateRange, selectedStatuses)
             }
@@ -102,14 +96,11 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
         setError(null)
 
         try {
-            let result: DeleteResult | NotificationDeleteResult | SupportChatDeleteResult
+            let result: DeleteResult | NotificationDeleteResult
 
             if (dataType === 'notifications') {
                 // Hard delete for notifications (no backup)
                 result = await hardDeleteNotifications(selectedIds)
-            } else if (dataType === 'support_chats') {
-                // Hard delete for support chats (with messages)
-                result = await hardDeleteSupportChats(selectedIds)
             } else {
                 // Soft delete for other data types
                 result = await softDeleteData(selectedIds, dataType)
@@ -181,22 +172,15 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
     return (
         <div className="space-y-6">
             {/* Warning */}
-            <div className={`rounded-xl p-4 ${dataType === 'notifications' || dataType === 'support_chats' ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'}`}>
+            <div className={`rounded-xl p-4 ${dataType === 'notifications' ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'}`}>
                 <div className="flex items-start gap-3">
-                    <AlertTriangle className={`w-6 h-6 flex-shrink-0 mt-0.5 ${dataType === 'notifications' || dataType === 'support_chats' ? 'text-red-600' : 'text-yellow-600'}`} />
+                    <AlertTriangle className={`w-6 h-6 flex-shrink-0 mt-0.5 ${dataType === 'notifications' ? 'text-red-600' : 'text-yellow-600'}`} />
                     <div>
                         {dataType === 'notifications' ? (
                             <>
                                 <h3 className="font-semibold text-red-900 mb-1">🔔 การลบการแจ้งเตือน (Hard Delete)</h3>
                                 <p className="text-sm text-red-700">
                                     การแจ้งเตือนจะถูกลบถาวร ไม่สามารถกู้คืนได้
-                                </p>
-                            </>
-                        ) : dataType === 'support_chats' ? (
-                            <>
-                                <h3 className="font-semibold text-red-900 mb-1">💬 การลบการสนทนา (Hard Delete)</h3>
-                                <p className="text-sm text-red-700">
-                                    Ticket และข้อความทั้งหมดจะถูกลบถาวร ไม่สามารถกู้คืนได้
                                 </p>
                             </>
                         ) : (
@@ -207,7 +191,7 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
                                 </p>
                             </>
                         )}
-                        <p className={`text-xs mt-1 ${dataType === 'notifications' || dataType === 'support_chats' ? 'text-red-600' : 'text-yellow-600'}`}>
+                        <p className={`text-xs mt-1 ${dataType === 'notifications' ? 'text-red-600' : 'text-yellow-600'}`}>
                             จำกัด {RATE_LIMITS.delete.maxRecords} รายการต่อครั้ง
                         </p>
                     </div>
@@ -230,8 +214,6 @@ export default function DeleteTab({ userId }: DeleteTabProps) {
                                         setSelectedStatuses([])
                                     } else if (option.value === 'notifications') {
                                         setSelectedStatuses(['read'])
-                                    } else if (option.value === 'support_chats') {
-                                        setSelectedStatuses(['open', 'closed'])  // Show all tickets by default
                                     } else {
                                         setSelectedStatuses(['returned', 'cancelled'])
                                     }

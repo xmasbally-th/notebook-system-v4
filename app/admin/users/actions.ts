@@ -226,7 +226,6 @@ export async function deleteUser(userId: string) {
         adminClient.from('reservations').update({ completed_by: null }).eq('completed_by', userId),
         adminClient.from('special_loan_requests').update({ created_by: null }).eq('created_by', userId),
         adminClient.from('special_loan_requests').update({ approved_by: null }).eq('approved_by', userId),
-        adminClient.from('support_messages').update({ sender_id: null }).eq('sender_id', userId),
         adminClient.from('data_backups').update({ created_by: null }).eq('created_by', userId),
         adminClient.from('staff_activity_log').update({ staff_id: null }).eq('staff_id', userId),
         adminClient.from('staff_activity_log').update({ target_user_id: null }).eq('target_user_id', userId)
@@ -237,8 +236,7 @@ export async function deleteUser(userId: string) {
         adminClient.from('loanRequests').delete().eq('user_id', userId),
         adminClient.from('reservations').delete().eq('user_id', userId),
         adminClient.from('notifications').delete().eq('user_id', userId),
-        adminClient.from('evaluations').delete().eq('user_id', userId),
-        adminClient.from('support_tickets').delete().eq('user_id', userId)
+        adminClient.from('evaluations').delete().eq('user_id', userId)
     ])
 
     // 7. Finally delete the user profile and auth user

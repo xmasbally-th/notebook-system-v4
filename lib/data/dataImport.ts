@@ -99,8 +99,7 @@ export async function validateImportData(
         reservations: ['user_id', 'equipment_id', 'start_date', 'end_date'],
         equipment: ['equipment_number', 'name'],
         notifications: ['user_id', 'type', 'title'],
-        evaluations: ['loan_id', 'user_id', 'rating'],
-        support_chats: ['user_id', 'status']  // Support tickets require user_id and status
+        evaluations: ['loan_id', 'user_id', 'rating']
     }
 
     const required = requiredFields[dataType]

@@ -10,7 +10,6 @@ export default function ArchiveTab() {
     const updateMutation = useUpdateSystemConfig()
 
     const [archiveEnabled, setArchiveEnabled] = useState<boolean>(() => config?.archive_enabled ?? false)
-    const [archiveSupportDays, setArchiveSupportDays] = useState<number>(() => config?.archive_support_after_days ?? 180)
     const [archiveNotifDays, setArchiveNotifDays] = useState<number>(() => config?.archive_notifications_after_days ?? 90)
     const [isDirty, setIsDirty] = useState(false)
 
@@ -20,13 +19,11 @@ export default function ArchiveTab() {
 
     // Sync from loaded config (when it arrives)
     const configEnabled = config?.archive_enabled ?? false
-    const configSupportDays = config?.archive_support_after_days ?? 180
     const configNotifDays = config?.archive_notifications_after_days ?? 90
 
     const handleSavePolicy = () => {
         updateMutation.mutate({
             archive_enabled: archiveEnabled,
-            archive_support_after_days: archiveSupportDays,
             archive_notifications_after_days: archiveNotifDays,
         } as any, {
             onSuccess: () => {
@@ -57,7 +54,7 @@ export default function ArchiveTab() {
                 <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-red-700">
                     <p className="font-semibold mb-1">⚠️ Auto-Archive (Hard Delete)</p>
-                    <p>ข้อมูลที่ถูก Archive จะ<strong>ถูกลบถาวร</strong> ไม่สามารถกู้คืนได้ — จำกัดเฉพาะ ticket ที่ปิดแล้ว และ notification เก่า</p>
+                    <p>ข้อมูลที่ถูก Archive จะ<strong>ถูกลบถาวร</strong> ไม่สามารถกู้คืนได้ — จำกัดเฉพาะการแจ้งเตือนเก่า</p>
                 </div>
             </div>
 
@@ -85,26 +82,7 @@ export default function ArchiveTab() {
                 </div>
 
                 {/* Retention Days */}
-                <div className="grid sm:grid-cols-2 gap-3">
-                    <div className="p-3 bg-white rounded-lg border border-gray-200">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Support Chat (Closed Tickets)
-                        </label>
-                        <p className="text-xs text-gray-400 mb-2">ลบ ticket ที่ปิดแล้ว และข้อความทั้งหมด</p>
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="number"
-                                min={30}
-                                max={3650}
-                                value={archiveSupportDays}
-                                onChange={(e) => { setArchiveSupportDays(parseInt(e.target.value) || 180); setIsDirty(true) }}
-                                className="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-center text-sm focus:ring-2 focus:ring-amber-500"
-                            />
-                            <span className="text-sm text-gray-600">วัน</span>
-                            <span className="text-xs text-gray-400">(~{Math.round(archiveSupportDays / 30)} เดือน)</span>
-                        </div>
-                    </div>
-
+                <div className="grid sm:grid-cols-1 gap-3">
                     <div className="p-3 bg-white rounded-lg border border-gray-200">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             การแจ้งเตือน (Notifications)
@@ -148,8 +126,6 @@ export default function ArchiveTab() {
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
                 <p className="font-medium text-amber-900 mb-2">สิ่งที่จะถูกลบเมื่อรัน Archive:</p>
                 <ul className="space-y-1 text-amber-800">
-                    <li>✅ Support Ticket ที่ปิดแล้ว และไม่ได้อัปเดตนานกว่า <strong>{archiveSupportDays} วัน</strong></li>
-                    <li>✅ ข้อความทั้งหมดใน Ticket เหล่านั้น (CASCADE)</li>
                     <li>✅ Notification ทุกรายการที่เก่ากว่า <strong>{archiveNotifDays} วัน</strong></li>
                     <li className="text-amber-600">❌ ไม่ลบข้อมูลการยืม-คืน, อุปกรณ์, หรือผู้ใช้</li>
                 </ul>
@@ -171,7 +147,6 @@ export default function ArchiveTab() {
                         Archive เสร็จสมบูรณ์
                     </div>
                     <ul className="space-y-1 text-green-700">
-                        <li>✅ ลบ Ticket: <strong>{archiveResult.deleted_tickets}</strong> รายการ</li>
                         <li>✅ ลบ Notification: <strong>{archiveResult.deleted_notifications}</strong> รายการ</li>
                     </ul>
                 </div>

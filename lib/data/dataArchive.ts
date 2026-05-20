@@ -9,7 +9,6 @@
 import { createClient } from '@/lib/supabase/server'
 
 export interface ArchiveResult {
-    deleted_tickets: number
     deleted_notifications: number
     archived_at: string
 }
@@ -17,7 +16,6 @@ export interface ArchiveResult {
 /**
  * Run the auto-archive process based on retention settings in system_config.
  * Deletes:
- *   - Closed support tickets (+ messages via CASCADE) older than archive_support_after_days
  *   - Notifications older than archive_notifications_after_days
  */
 export async function runAutoArchiveAction(): Promise<ArchiveResult> {

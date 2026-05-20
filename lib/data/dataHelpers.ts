@@ -8,7 +8,7 @@ import { getSupabaseCredentials } from '../supabase-helpers'
 // Types
 // ============================================
 
-export type DataType = 'loans' | 'reservations' | 'equipment' | 'notifications' | 'evaluations' | 'support_chats'
+export type DataType = 'loans' | 'reservations' | 'equipment' | 'notifications' | 'evaluations'
 export type ExportFormat = 'csv' | 'json'
 
 export interface DateRange {
@@ -54,7 +54,6 @@ export function getTableName(dataType: DataType): string {
         case 'equipment': return 'equipment'
         case 'notifications': return 'notifications'
         case 'evaluations': return 'evaluations'
-        case 'support_chats': return 'support_tickets'
     }
 }
 
@@ -65,7 +64,6 @@ export function getDataTypeLabel(dataType: DataType): string {
         case 'equipment': return 'ข้อมูลอุปกรณ์'
         case 'notifications': return 'การแจ้งเตือน'
         case 'evaluations': return 'ข้อมูลการประเมิน'
-        case 'support_chats': return 'การสนทนา'
     }
 }
 
@@ -103,11 +101,6 @@ export function getStatusOptions(dataType: DataType): { value: string; label: st
             ]
         case 'evaluations':
             return [] // No status column in evaluations table
-        case 'support_chats':
-            return [
-                { value: 'open', label: 'เปิดอยู่' },
-                { value: 'closed', label: 'ปิดแล้ว' }
-            ]
     }
 }
 

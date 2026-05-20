@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 }
 
 // P4: Lazy loaded via client component wrapper (ssr:false requires Client Component in Next.js 16)
-import { SupportButton, DebugConsole } from '@/components/providers/LazyComponents'
+import { DebugConsole } from '@/components/providers/LazyComponents'
 
 import QueryProvider from '@/components/providers/QueryProvider'
 import AuthGuard from '@/components/auth/AuthGuard'
@@ -66,7 +66,6 @@ export default function RootLayout({
                         <QueryProvider>
                             <AuthGuard>
                                 {children}
-                                <SupportButton />
                             </AuthGuard>
                         </QueryProvider>
                     </ErrorBoundary>

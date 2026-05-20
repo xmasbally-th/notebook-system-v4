@@ -9,7 +9,6 @@ type _SystemConfigUpdateBase = Database['public']['Tables']['system_config']['Up
 // Extended with new archive columns (added via migration 20260302)
 type ArchiveFields = {
     archive_enabled: boolean | null
-    archive_support_after_days: number | null
     archive_notifications_after_days: number | null
     last_archived_at: string | null
 }
@@ -125,9 +124,8 @@ function getDefaultConfig(): SystemConfig {
         discord_webhook_maintenance: null,
         evaluation_cutoff_date: null,
         support_auto_reply_enabled: true,
-        support_auto_reply_message: 'สวัสดีครับ🙏 ฝากข้อความไว้ เจ้าหน้าที่จะตอบกลับโดยเร็วที่สุด...',
+        support_auto_reply_message: null,
         archive_enabled: false,
-        archive_support_after_days: 180,
         archive_notifications_after_days: 90,
         last_archived_at: null,
         notification_settings: null,
