@@ -175,6 +175,7 @@ export interface ReportData {
     todayLoans: number
     userStats: UserStats[]
     departments: string[]
+    departmentStats: { department: string; loans: number; reservations: number; total: number }[]
     staffActivity: StaffActivityStats
     monthlyStats: MonthlyStats[]
     equipmentTypes: EquipmentType[]
@@ -206,6 +207,13 @@ export function useReportData(dateRange: DateRange) {
             const today = new Date()
             today.setHours(0, 0, 0, 0)
 
+            // Calculate date for 6 months historical monthly trend chart
+            const sixMonthsAgo = new Date()
+            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5)
+            sixMonthsAgo.setDate(1)
+            sixMonthsAgo.setHours(0, 0, 0, 0)
+            const sixMonthsAgoISO = sixMonthsAgo.toISOString()
+
             // Parallel fetch all data
             const results = await Promise.all([
                 // Loans in date range
@@ -223,12 +231,16 @@ export function useReportData(dateRange: DateRange) {
                 // All equipment types
                 fetch(`${url}/rest/v1/equipment_types?select=id,name,icon&order=name.asc`, { headers }),
                 // Special loans in date range
-                fetch(`${url}/rest/v1/special_loan_requests?select=id,borrower_id,borrower_name,external_borrower_org,equipment_type_name,quantity,equipment_numbers,loan_date,return_date,purpose,status,returned_at,created_at&created_at=gte.${fromDate}&created_at=lte.${toDate}&order=created_at.desc`, { headers })
+                fetch(`${url}/rest/v1/special_loan_requests?select=id,borrower_id,borrower_name,external_borrower_org,equipment_type_name,quantity,equipment_numbers,loan_date,return_date,purpose,status,returned_at,created_at&created_at=gte.${fromDate}&created_at=lte.${toDate}&order=created_at.desc`, { headers }),
+                // Historical loans for monthly stats (6 months)
+                fetch(`${url}/rest/v1/loanRequests?select=id,status,created_at,end_date,returned_at&created_at=gte.${sixMonthsAgoISO}`, { headers }),
+                // Historical reservations for monthly stats (6 months)
+                fetch(`${url}/rest/v1/reservations?select=id,status,created_at&created_at=gte.${sixMonthsAgoISO}`, { headers })
             ])
 
-            const [loansRes, reservationsRes, equipmentRes, overdueRes, profilesRes, staffActivityRes, equipmentTypesRes, specialLoansRes] = results
+            const [loansRes, reservationsRes, equipmentRes, overdueRes, profilesRes, staffActivityRes, equipmentTypesRes, specialLoansRes, monthlyLoansRes, monthlyReservationsRes] = results
 
-            const [loans, reservations, equipment, rawOverdueLoans, profiles, staffActivityLog, equipmentTypes, specialLoansRaw] = await Promise.all([
+            const [loans, reservations, equipment, rawOverdueLoans, profiles, staffActivityLog, equipmentTypes, specialLoansRaw, monthlyLoans, monthlyReservations] = await Promise.all([
                 loansRes.json(),
                 reservationsRes.json(),
                 equipmentRes.json(),
@@ -236,13 +248,18 @@ export function useReportData(dateRange: DateRange) {
                 profilesRes.json(),
                 staffActivityRes.json(),
                 equipmentTypesRes.json(),
-                specialLoansRes.json()
+                specialLoansRes.json(),
+                monthlyLoansRes.json(),
+                monthlyReservationsRes.json()
             ])
 
-            // Filter overdue loans accurately using return_time
+            // Filter overdue loans accurately using return_time & date range constraints (due date <= toDate)
             const now = new Date()
             const overdueLoans = Array.isArray(rawOverdueLoans)
-                ? rawOverdueLoans.filter((loan: any) => now > getDueDate(loan.end_date, loan.return_time))
+                ? rawOverdueLoans.filter((loan: any) => {
+                    const dueDate = getDueDate(loan.end_date, loan.return_time)
+                    return now > dueDate && dueDate <= dateRange.to
+                })
                 : []
 
             // Process special loan stats
@@ -276,9 +293,9 @@ export function useReportData(dateRange: DateRange) {
             const equipmentStats = calculateEquipmentStats(equipment)
             const popularEquipment = calculatePopularEquipment(loans, reservations, equipment)
             const overdueItems = formatOverdueItems(overdueLoans)
-            const { userStats, departments } = calculateUserStats(profiles, loans, reservations, overdueLoans)
+            const { userStats, departments, departmentStats } = calculateUserStats(profiles, loans, reservations, overdueLoans)
             const staffActivity = processStaffActivityLog(staffActivityLog, profiles)
-            const monthlyStats = calculateMonthlyStats(loans, reservations)
+            const monthlyStats = calculateMonthlyStats(monthlyLoans, monthlyReservations)
 
             // Count today's loans
             const todayLoans = Array.isArray(loans)
@@ -301,6 +318,7 @@ export function useReportData(dateRange: DateRange) {
                 todayLoans,
                 userStats,
                 departments,
+                departmentStats,
                 staffActivity,
                 monthlyStats,
                 equipmentTypes: Array.isArray(equipmentTypes) ? equipmentTypes : [],

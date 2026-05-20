@@ -17,6 +17,7 @@ export default function UsersTab({ data, isLoading }: UsersTabProps) {
     const [userDeptFilter, setUserDeptFilter] = useState<string>('all')
     const [userSortKey, setUserSortKey] = useState<UserSortKey>('loan_count')
     const [userSortAsc, setUserSortAsc] = useState<boolean>(false)
+    const [showActiveOnly, setShowActiveOnly] = useState<boolean>(true)
 
     // Filter and sort users
     const filteredUsers = useMemo(() => {
@@ -25,6 +26,11 @@ export default function UsersTab({ data, isLoading }: UsersTabProps) {
         // Filter by department
         if (userDeptFilter !== 'all') {
             users = users.filter(u => u.department === userDeptFilter)
+        }
+
+        // Filter inactive users
+        if (showActiveOnly) {
+            users = users.filter(u => u.total_activity > 0 || u.overdue_count > 0)
         }
 
         // Sort
@@ -62,7 +68,7 @@ export default function UsersTab({ data, isLoading }: UsersTabProps) {
             }
             return userSortAsc ? aVal - (bVal as number) : (bVal as number) - aVal
         })
-    }, [data?.userStats, userDeptFilter, userSortKey, userSortAsc])
+    }, [data?.userStats, userDeptFilter, showActiveOnly, userSortKey, userSortAsc])
 
     // Export user stats to CSV
     const exportUserStatsCSV = () => {
@@ -86,42 +92,58 @@ export default function UsersTab({ data, isLoading }: UsersTabProps) {
     return (
         <div className="space-y-6">
             {/* Filters */}
-            <div className="flex flex-wrap gap-4 items-center">
-                {/* Department Filter */}
-                <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600">สาขาวิชา:</label>
-                    <select
-                        value={userDeptFilter}
-                        onChange={(e) => setUserDeptFilter(e.target.value)}
-                        className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                        <option value="all">ทั้งหมด</option>
-                        {(data?.departments ?? []).map((dept) => (
-                            <option key={dept} value={dept}>{dept}</option>
-                        ))}
-                    </select>
+            <div className="flex flex-wrap gap-4 items-center justify-between bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                <div className="flex flex-wrap gap-4 items-center">
+                    {/* Department Filter */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-gray-600">สาขาวิชา:</label>
+                        <select
+                            value={userDeptFilter}
+                            onChange={(e) => setUserDeptFilter(e.target.value)}
+                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                        >
+                            <option value="all">ทั้งหมด</option>
+                            {(data?.departments ?? []).map((dept) => (
+                                <option key={dept} value={dept}>{dept}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Sort By */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-gray-600">เรียงตาม:</label>
+                        <select
+                            value={userSortKey}
+                            onChange={(e) => setUserSortKey(e.target.value as UserSortKey)}
+                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                        >
+                            <option value="loan_count">จำนวนครั้งที่ยืม</option>
+                            <option value="total_activity">รวมกิจกรรม</option>
+                            <option value="overdue_count">เกินกำหนด</option>
+                            <option value="name">ชื่อ</option>
+                            <option value="department">สาขาวิชา</option>
+                        </select>
+                        <button
+                            onClick={() => setUserSortAsc(!userSortAsc)}
+                            className="px-3 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors font-medium text-gray-700 bg-white"
+                        >
+                            {userSortAsc ? '↑ น้อย-มาก' : '↓ มาก-น้อย'}
+                        </button>
+                    </div>
                 </div>
 
-                {/* Sort By */}
-                <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600">เรียงตาม:</label>
-                    <select
-                        value={userSortKey}
-                        onChange={(e) => setUserSortKey(e.target.value as UserSortKey)}
-                        className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                        <option value="loan_count">จำนวนครั้งที่ยืม</option>
-                        <option value="total_activity">รวมกิจกรรม</option>
-                        <option value="overdue_count">เกินกำหนด</option>
-                        <option value="name">ชื่อ</option>
-                        <option value="department">สาขาวิชา</option>
-                    </select>
-                    <button
-                        onClick={() => setUserSortAsc(!userSortAsc)}
-                        className="px-3 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 transition-colors"
-                    >
-                        {userSortAsc ? '↑ น้อย-มาก' : '↓ มาก-น้อย'}
-                    </button>
+                {/* Active Only Filter Toggle */}
+                <div className="flex items-center">
+                    <label className="relative inline-flex items-center cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            checked={showActiveOnly}
+                            onChange={(e) => setShowActiveOnly(e.target.checked)}
+                            className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                        <span className="ml-2.5 text-sm font-medium text-gray-700">แสดงเฉพาะผู้ใช้ที่มีความเคลื่อนไหว</span>
+                    </label>
                 </div>
             </div>
 

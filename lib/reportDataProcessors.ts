@@ -185,7 +185,11 @@ export function calculateUserStats(
     loans: any[],
     reservations: any[],
     overdueLoans: any[]
-): { userStats: UserStats[], departments: string[] } {
+): {
+    userStats: UserStats[]
+    departments: string[]
+    departmentStats: { department: string; loans: number; reservations: number; total: number }[]
+} {
     // Count activities per user
     const userLoanCounts: Record<string, number> = {}
     const userReservationCounts: Record<string, number> = {}
@@ -256,7 +260,21 @@ export function calculateUserStats(
 
     const departments = Array.from(new Set(userStats.map(u => u.department))).filter(Boolean).sort()
 
-    return { userStats, departments }
+    // Aggregate stats by department
+    const departmentStatsMap: Record<string, { department: string; loans: number; reservations: number; total: number }> = {}
+    userStats.forEach(user => {
+        const dept = user.department || 'ไม่ระบุ'
+        if (!departmentStatsMap[dept]) {
+            departmentStatsMap[dept] = { department: dept, loans: 0, reservations: 0, total: 0 }
+        }
+        departmentStatsMap[dept].loans += user.loan_count
+        departmentStatsMap[dept].reservations += user.reservation_count
+        departmentStatsMap[dept].total += user.total_activity
+    })
+    const departmentStats = Object.values(departmentStatsMap)
+        .sort((a, b) => b.total - a.total)
+
+    return { userStats, departments, departmentStats }
 }
 
 /**
@@ -382,7 +400,7 @@ export function calculateMonthlyStats(loans: any[], reservations: any[]): Monthl
     if (Array.isArray(loans)) {
         loans.forEach((loan: any) => {
             const date = new Date(loan.created_at)
-            const monthKey = `${date.getFullYear()}-${date.getMonth()}`
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`
             const monthLabel = `${THAI_MONTHS[date.getMonth()]} ${date.getFullYear() + 543 - 2500}`
 
             if (!monthlyData[monthKey]) {
@@ -405,7 +423,7 @@ export function calculateMonthlyStats(loans: any[], reservations: any[]): Monthl
     if (Array.isArray(reservations)) {
         reservations.forEach((res: any) => {
             const date = new Date(res.created_at)
-            const monthKey = `${date.getFullYear()}-${date.getMonth()}`
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`
             const monthLabel = `${THAI_MONTHS[date.getMonth()]} ${date.getFullYear() + 543 - 2500}`
 
             if (!monthlyData[monthKey]) {
@@ -426,7 +444,7 @@ export function calculateMonthlyStats(loans: any[], reservations: any[]): Monthl
     if (Array.isArray(loans)) {
         loans.forEach((loan: any) => {
             const date = new Date(loan.created_at)
-            const monthKey = `${date.getFullYear()}-${date.getMonth()}`
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`
 
             if (monthlyData[monthKey]) {
                 const dueDate = getDueDate(loan.end_date, loan.return_time)

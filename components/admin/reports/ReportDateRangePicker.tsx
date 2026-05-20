@@ -15,6 +15,24 @@ interface ReportDateRangePickerProps {
     onChange: (range: DateRange) => void
 }
 
+const toLocalDateString = (date: Date): string => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+}
+
+const parseLocalDateString = (dateStr: string, isEnd = false): Date => {
+    const [year, month, day] = dateStr.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
+    if (isEnd) {
+        date.setHours(23, 59, 59, 999)
+    } else {
+        date.setHours(0, 0, 0, 0)
+    }
+    return date
+}
+
 export default function ReportDateRangePicker({ value, onChange }: ReportDateRangePickerProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [activePreset, setActivePreset] = useState<string>('30 วันล่าสุด')
@@ -73,25 +91,28 @@ export default function ReportDateRangePicker({ value, onChange }: ReportDateRan
                         <div className="space-y-2">
                             <input
                                 type="date"
-                                value={value.from.toISOString().split('T')[0]}
+                                value={toLocalDateString(value.from)}
                                 onChange={(e) => {
-                                    const newFrom = new Date(e.target.value)
-                                    if (!isNaN(newFrom.getTime())) {
-                                        setActivePreset('กำหนดเอง')
-                                        onChange({ from: newFrom, to: value.to })
+                                    if (e.target.value) {
+                                        const newFrom = parseLocalDateString(e.target.value, false)
+                                        if (!isNaN(newFrom.getTime())) {
+                                            setActivePreset('กำหนดเอง')
+                                            onChange({ from: newFrom, to: value.to })
+                                        }
                                     }
                                 }}
                                 className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
                             <input
                                 type="date"
-                                value={value.to.toISOString().split('T')[0]}
+                                value={toLocalDateString(value.to)}
                                 onChange={(e) => {
-                                    const newTo = new Date(e.target.value)
-                                    newTo.setHours(23, 59, 59, 999)
-                                    if (!isNaN(newTo.getTime())) {
-                                        setActivePreset('กำหนดเอง')
-                                        onChange({ from: value.from, to: newTo })
+                                    if (e.target.value) {
+                                        const newTo = parseLocalDateString(e.target.value, true)
+                                        if (!isNaN(newTo.getTime())) {
+                                            setActivePreset('กำหนดเอง')
+                                            onChange({ from: value.from, to: newTo })
+                                        }
                                     }
                                 }}
                                 className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
