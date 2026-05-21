@@ -9,8 +9,7 @@ import {
     Calendar, Search, ClipboardCheck
 } from 'lucide-react'
 import { useToast } from '@/components/ui/toast'
-import { notifyReturn } from '@/app/notifications/actions'
-import { logStaffActivity } from '@/lib/staffActivityLog'
+import { returnLoan } from './actions'
 
 type ConditionType = 'good' | 'damaged' | 'missing_parts'
 
@@ -57,111 +56,25 @@ export default function StaffReturnsPage() {
 
     // Process return mutation
     const processReturnMutation = useMutation({
-        mutationFn: async ({ loanId, equipmentId, condition, notes, loanUserId }: {
+        mutationFn: async ({ loanId, equipmentId, condition, notes }: {
             loanId: string,
             equipmentId: string,
             condition: ConditionType,
             notes: string,
             loanUserId: string
         }) => {
-            const { url, key } = getSupabaseCredentials()
-
-            const { createBrowserClient } = await import('@supabase/ssr')
-            const client = createBrowserClient(url, key)
-            const { data: { session } } = await client.auth.getSession()
-
-            if (!session?.access_token || !session.user) {
-                throw new Error('กรุณาเข้าสู่ระบบก่อน')
-            }
-
-            // Get user's role for staff activity log
-            const profileResponse = await fetch(
-                `${url}/rest/v1/profiles?id=eq.${session.user.id}&select=role`,
-                {
-                    headers: {
-                        'apikey': key,
-                        'Authorization': `Bearer ${session.access_token}`
-                    }
-                }
-            )
-            const profiles = profileResponse.ok ? await profileResponse.json() : []
-            const staffRole = profiles[0]?.role || 'staff'
-
-            // Step 1: Update loan status to returned (core fields only)
-            const loanResponse = await fetch(`${url}/rest/v1/loanRequests?id=eq.${loanId}`, {
-                method: 'PATCH',
-                headers: {
-                    'apikey': key,
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=minimal'
-                },
-                body: JSON.stringify({
-                    status: 'returned',
-                    returned_at: new Date().toISOString(),
-                })
+            const result = await returnLoan({
+                loanId,
+                equipmentId,
+                condition,
+                notes: notes || undefined
             })
-
-            if (!loanResponse.ok) {
-                const errText = await loanResponse.text()
-                console.error('[Return] PATCH status failed:', loanResponse.status, errText)
-                throw new Error(`Failed to update loan status: ${errText}`)
+            if (!result.success) {
+                throw new Error(result.error || 'เกิดข้อผิดพลาดในการดำเนินการ')
             }
-
-            // Step 2: Try to update optional return detail fields (may not exist in older DB)
-            try {
-                const detailResponse = await fetch(`${url}/rest/v1/loanRequests?id=eq.${loanId}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'apikey': key,
-                        'Authorization': `Bearer ${session.access_token}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=minimal'
-                    },
-                    body: JSON.stringify({
-                        return_condition: condition,
-                        return_notes: notes || null
-                    })
-                })
-                if (!detailResponse.ok) {
-                    console.warn('[Return] Could not save return details (columns may not exist yet)')
-                }
-            } catch {
-                console.warn('[Return] Skipped return detail fields')
-            }
-
-
-            // Update equipment status back to ready (if not damaged)
-            const newStatus = condition === 'good' ? 'ready' : 'maintenance'
-            const equipmentResponse = await fetch(`${url}/rest/v1/equipment?id=eq.${equipmentId}`, {
-                method: 'PATCH',
-                headers: {
-                    'apikey': key,
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ status: newStatus })
-            })
-
-            if (!equipmentResponse.ok) {
-                console.warn('Failed to update equipment status')
-            }
-
-            // Log staff activity
-            await logStaffActivity({
-                staffId: session.user.id,
-                staffRole: staffRole as 'staff' | 'admin',
-                actionType: 'mark_returned',
-                targetType: 'loan',
-                targetId: loanId,
-                targetUserId: loanUserId,
-                isSelfAction: loanUserId === session.user.id,
-                details: { condition, notes: notes || undefined }
-            })
-
             return { condition }
         },
-        onSuccess: ({ condition }, variables) => {
+        onSuccess: ({ condition }) => {
             queryClient.invalidateQueries({ queryKey: ['staff-active-loans'] })
             queryClient.invalidateQueries({ queryKey: ['staff-dashboard-stats'] })
             setShowReturnModal(false)
@@ -174,13 +87,9 @@ export default function StaffReturnsPage() {
             } else {
                 toast.warning('บันทึกการคืนแล้ว - อุปกรณ์ถูกส่งซ่อมบำรุง')
             }
-
-            // Fire and forget notification
-            // variables = { loanId, equipmentId, condition, notes }
-            notifyReturn(variables.loanId, variables.condition, variables.notes)
         },
-        onError: () => {
-            toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่')
+        onError: (error: any) => {
+            toast.error(error.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่')
         }
     })
 
