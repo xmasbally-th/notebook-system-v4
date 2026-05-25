@@ -2,7 +2,6 @@
  * Data Export Functions
  */
 
-import { getSupabaseCredentials } from '../supabase-helpers'
 import { formatThaiDate } from '../formatThaiDate'
 import {
     DataType,
@@ -10,308 +9,40 @@ import {
     DateRange,
     PreviewData,
     RATE_LIMITS,
-    getAccessToken,
     getTableName,
     getDataTypeLabel
 } from './dataHelpers'
+import { exportSystemDataServer, ExportOptions } from '../../app/admin/data-management/actions'
 
-export interface ExportOptions {
-    dataType: DataType
-    format: ExportFormat
-    dateRange: DateRange
-    includeRelated?: boolean
-    statusFilter?: string[]
-}
+export type { ExportOptions }
 
 export async function fetchExportData(options: ExportOptions): Promise<PreviewData> {
-    const { url, key } = getSupabaseCredentials()
-    const token = await getAccessToken()
-
-    if (!url || !key || !token) {
-        throw new Error('Missing credentials')
+    const res = await exportSystemDataServer(options)
+    if ('error' in res && res.error) {
+        throw new Error(res.error)
     }
 
-    const headers = {
-        'apikey': key,
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-    }
-
-    const tableName = getTableName(options.dataType)
-    const fromDate = options.dateRange.from.toISOString()
-    const toDate = options.dateRange.to.toISOString()
-
-    let endpoint = `${url}/rest/v1/${tableName}?select=*`
-
-    // Add date filter
-    if (options.dataType !== 'equipment') {
-        endpoint += `&created_at=gte.${fromDate}&created_at=lte.${toDate}`
-    }
-
-    // Add status filter if provided (exclude evaluations as it has no status column)
-    if (options.dataType !== 'evaluations' && options.statusFilter && options.statusFilter.length > 0) {
-        const statusList = options.statusFilter.join(',')
-        endpoint += `&status=in.(${statusList})`
-    }
-
-    const response = await fetch(endpoint, { headers })
-    if (!response.ok) {
-        throw new Error(`Failed to fetch data: ${response.status}`)
-    }
-
-    let records = await response.json()
-    if (!Array.isArray(records)) records = []
-
-    // Manually fetch related data if requested (to avoid foreign key issues)
-    if (options.includeRelated && records.length > 0) {
-        if (options.dataType === 'loans' || options.dataType === 'reservations') {
-            // Fetch Profiles
-            const userIds = Array.from(new Set(records.map((r: any) => r.user_id).filter(Boolean))) as string[]
-            let profilesMap = new Map()
-
-            if (userIds.length > 0) {
-                const profilesRes = await fetch(
-                    `${url}/rest/v1/profiles?id=in.(${userIds.join(',')})&select=id,first_name,last_name,email`,
-                    { headers }
-                )
-                if (profilesRes.ok) {
-                    const profiles = await profilesRes.json()
-                    profiles.forEach((p: any) => profilesMap.set(p.id, p))
-                }
-            }
-
-            // Fetch Equipment
-            const equipmentIds = Array.from(new Set(records.map((r: any) => r.equipment_id).filter(Boolean))) as string[]
-            let equipmentMap = new Map()
-
-            if (equipmentIds.length > 0) {
-                const equipmentRes = await fetch(
-                    `${url}/rest/v1/equipment?id=in.(${equipmentIds.join(',')})&select=id,name,equipment_number`,
-                    { headers }
-                )
-                if (equipmentRes.ok) {
-                    const equipment = await equipmentRes.json()
-                    equipment.forEach((e: any) => equipmentMap.set(e.id, e))
-                }
-            }
-
-            // Merge Data
-            records = records.map((r: any) => ({
-                ...r,
-                profiles: profilesMap.get(r.user_id) || null,
-                equipment: equipmentMap.get(r.equipment_id) || null
-            }))
-        } else if (options.dataType === 'evaluations') {
-            // Fetch Profiles
-            const userIds = Array.from(new Set(records.map((r: any) => r.user_id).filter(Boolean))) as string[]
-            let profilesMap = new Map()
-
-            if (userIds.length > 0) {
-                const profilesRes = await fetch(
-                    `${url}/rest/v1/profiles?id=in.(${userIds.join(',')})&select=id,first_name,last_name,email`,
-                    { headers }
-                )
-                if (profilesRes.ok) {
-                    const profiles = await profilesRes.json()
-                    profiles.forEach((p: any) => profilesMap.set(p.id, p))
-                }
-            }
-
-            // Fetch Loans
-            const loanIds = Array.from(new Set(records.map((r: any) => r.loan_id).filter(Boolean))) as string[]
-            let loanMap = new Map()
-            let equipmentMap = new Map()
-
-            if (loanIds.length > 0) {
-                const loansRes = await fetch(
-                    `${url}/rest/v1/loanRequests?id=in.(${loanIds.join(',')})&select=id,start_date,end_date,equipment_id`,
-                    { headers }
-                )
-                if (loansRes.ok) {
-                    const loans = await loansRes.json()
-                    loans.forEach((l: any) => loanMap.set(l.id, l))
-
-                    // Fetch Equipment from active loans
-                    const equipmentIds = Array.from(new Set(loans.map((l: any) => l.equipment_id).filter(Boolean))) as string[]
-                    if (equipmentIds.length > 0) {
-                        const equipmentRes = await fetch(
-                            `${url}/rest/v1/equipment?id=in.(${equipmentIds.join(',')})&select=id,name,equipment_number`,
-                            { headers }
-                        )
-                        if (equipmentRes.ok) {
-                            const equipment = await equipmentRes.json()
-                            equipment.forEach((e: any) => equipmentMap.set(e.id, e))
-                        }
-                    }
-                }
-            }
-
-            // Merge Data
-            records = records.map((r: any) => {
-                const loan = loanMap.get(r.loan_id)
-                const equipmentId = loan?.equipment_id
-
-                return {
-                    ...r,
-                    profiles: profilesMap.get(r.user_id) || null,
-                    loan: loan || null,
-                    equipment: equipmentId ? equipmentMap.get(equipmentId) : null
-                }
-            })
-        }
-    }
-
-    // Get column names from first record
+    const records = res.records || []
     const columns = records.length > 0 ? Object.keys(records[0]) : []
 
     return {
-        total: records.length,
+        total: res.total || 0,
         sample: records.slice(0, 10),
         columns
     }
 }
 
 export async function exportData(options: ExportOptions): Promise<Blob> {
-    const { url, key } = getSupabaseCredentials()
-    const token = await getAccessToken()
-
-    if (!url || !key || !token) {
-        throw new Error('Missing credentials')
+    const res = await exportSystemDataServer(options)
+    if ('error' in res && res.error) {
+        throw new Error(res.error)
     }
 
-    const headers = {
-        'apikey': key,
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-    }
-
-    const tableName = getTableName(options.dataType)
-    const fromDate = options.dateRange.from.toISOString()
-    const toDate = options.dateRange.to.toISOString()
-
-    let endpoint = `${url}/rest/v1/${tableName}?select=*`
-
-    // Add date filter
-    if (options.dataType !== 'equipment') {
-        endpoint += `&created_at=gte.${fromDate}&created_at=lte.${toDate}`
-    }
-
-    // Add status filter (exclude evaluations)
-    if (options.dataType !== 'evaluations' && options.statusFilter && options.statusFilter.length > 0) {
-        const statusList = options.statusFilter.join(',')
-        endpoint += `&status=in.(${statusList})`
-    }
-
-    const response = await fetch(endpoint, { headers })
-    if (!response.ok) {
-        throw new Error(`Failed to fetch data: ${response.status}`)
-    }
-
-    let records = await response.json()
-    if (!Array.isArray(records)) records = []
+    const records = res.records || []
 
     // Check rate limit
     if (records.length > RATE_LIMITS.export.maxRecords) {
         throw new Error(`จำนวนข้อมูลเกิน ${RATE_LIMITS.export.maxRecords} รายการ กรุณาเลือกช่วงวันที่น้อยลง`)
-    }
-
-    // Manually fetch related data if requested
-    if (options.includeRelated && records.length > 0) {
-        if (options.dataType === 'loans' || options.dataType === 'reservations') {
-            // Fetch Profiles
-            const userIds = Array.from(new Set(records.map((r: any) => r.user_id).filter(Boolean))) as string[]
-            let profilesMap = new Map()
-
-            if (userIds.length > 0) {
-                const profilesRes = await fetch(
-                    `${url}/rest/v1/profiles?id=in.(${userIds.join(',')})&select=id,first_name,last_name,email`,
-                    { headers }
-                )
-                if (profilesRes.ok) {
-                    const profiles = await profilesRes.json()
-                    profiles.forEach((p: any) => profilesMap.set(p.id, p))
-                }
-            }
-
-            // Fetch Equipment
-            const equipmentIds = Array.from(new Set(records.map((r: any) => r.equipment_id).filter(Boolean))) as string[]
-            let equipmentMap = new Map()
-
-            if (equipmentIds.length > 0) {
-                const equipmentRes = await fetch(
-                    `${url}/rest/v1/equipment?id=in.(${equipmentIds.join(',')})&select=id,name,equipment_number`,
-                    { headers }
-                )
-                if (equipmentRes.ok) {
-                    const equipment = await equipmentRes.json()
-                    equipment.forEach((e: any) => equipmentMap.set(e.id, e))
-                }
-            }
-
-            // Merge Data
-            records = records.map((r: any) => ({
-                ...r,
-                profiles: profilesMap.get(r.user_id) || null,
-                equipment: equipmentMap.get(r.equipment_id) || null
-            }))
-        } else if (options.dataType === 'evaluations') {
-            // Fetch Profiles
-            const userIds = Array.from(new Set(records.map((r: any) => r.user_id).filter(Boolean))) as string[]
-            let profilesMap = new Map()
-
-            if (userIds.length > 0) {
-                const profilesRes = await fetch(
-                    `${url}/rest/v1/profiles?id=in.(${userIds.join(',')})&select=id,first_name,last_name,email`,
-                    { headers }
-                )
-                if (profilesRes.ok) {
-                    const profiles = await profilesRes.json()
-                    profiles.forEach((p: any) => profilesMap.set(p.id, p))
-                }
-            }
-
-            // Fetch Loans
-            const loanIds = Array.from(new Set(records.map((r: any) => r.loan_id).filter(Boolean))) as string[]
-            let loanMap = new Map()
-            let equipmentMap = new Map()
-
-            if (loanIds.length > 0) {
-                const loansRes = await fetch(
-                    `${url}/rest/v1/loanRequests?id=in.(${loanIds.join(',')})&select=id,start_date,end_date,equipment_id`,
-                    { headers }
-                )
-                if (loansRes.ok) {
-                    const loans = await loansRes.json()
-                    loans.forEach((l: any) => loanMap.set(l.id, l))
-
-                    // Fetch Equipment from active loans
-                    const equipmentIds = Array.from(new Set(loans.map((l: any) => l.equipment_id).filter(Boolean))) as string[]
-                    if (equipmentIds.length > 0) {
-                        const equipmentRes = await fetch(
-                            `${url}/rest/v1/equipment?id=in.(${equipmentIds.join(',')})&select=id,name,equipment_number`,
-                            { headers }
-                        )
-                        if (equipmentRes.ok) {
-                            const equipment = await equipmentRes.json()
-                            equipment.forEach((e: any) => equipmentMap.set(e.id, e))
-                        }
-                    }
-                }
-            }
-
-            // Merge Data
-            records = records.map((r: any) => {
-                const loan = loanMap.get(r.loan_id)
-                const equipmentId = loan?.equipment_id
-
-                return {
-                    ...r,
-                    profiles: profilesMap.get(r.user_id) || null,
-                    loan: loan || null,
-                    equipment: equipmentId ? equipmentMap.get(equipmentId) : null
-                }
-            })
-        }
     }
 
     if (options.format === 'json') {

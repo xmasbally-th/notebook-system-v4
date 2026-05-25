@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import { Upload, FileSpreadsheet, Calendar, Package, AlertCircle, CheckCircle } from 'lucide-react'
+import { Upload, FileSpreadsheet, Calendar, Package, AlertCircle, CheckCircle, Download } from 'lucide-react'
 import {
     DataType,
     parseImportFile,
@@ -110,17 +110,54 @@ export default function ImportTab({ userId }: ImportTabProps) {
         }
     }
 
+    const downloadCSVTemplate = () => {
+        let headers = ''
+        let filename = ''
+        if (dataType === 'loans') {
+            headers = 'user_id,equipment_id,start_date,end_date,status,purpose,notes'
+            filename = 'template_loans.csv'
+        } else if (dataType === 'reservations') {
+            headers = 'user_id,equipment_id,start_date,end_date,status'
+            filename = 'template_reservations.csv'
+        } else if (dataType === 'equipment') {
+            headers = 'equipment_number,name,brand,model,serial_number,status'
+            filename = 'template_equipment.csv'
+        }
+
+        if (!headers) return
+
+        const BOM = '\uFEFF'
+        const blob = new Blob([BOM + headers], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+    }
+
     return (
         <div className="space-y-6">
             {/* Instructions */}
-            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-                <h3 className="font-semibold text-purple-900 mb-1">📥 นำเข้าข้อมูล</h3>
-                <p className="text-sm text-purple-700">
-                    อัปโหลดไฟล์ CSV หรือ JSON เพื่อนำเข้าข้อมูล ระบบจะตรวจสอบความถูกต้องก่อนนำเข้า
-                </p>
-                <p className="text-xs text-purple-600 mt-1">
-                    ⚠️ จำกัด {RATE_LIMITS.import.maxRecords} รายการต่อครั้ง
-                </p>
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h3 className="font-semibold text-purple-900 mb-1">📥 นำเข้าข้อมูล</h3>
+                    <p className="text-sm text-purple-700">
+                        อัปโหลดไฟล์ CSV หรือ JSON เพื่อนำเข้าข้อมูล ระบบจะตรวจสอบความถูกต้องก่อนนำเข้า
+                    </p>
+                    <p className="text-xs text-purple-600 mt-1">
+                        ⚠️ จำกัด {RATE_LIMITS.import.maxRecords} รายการต่อครั้ง
+                    </p>
+                </div>
+                <button
+                    onClick={downloadCSVTemplate}
+                    className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-sm self-start sm:self-center"
+                >
+                    <Download className="w-3.5 h-3.5" />
+                    ดาวน์โหลดเทมเพลต CSV
+                </button>
             </div>
 
             {/* Data Type Selection */}
