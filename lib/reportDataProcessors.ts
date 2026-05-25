@@ -119,12 +119,12 @@ export function calculatePopularEquipment(loans: any[], reservations: any[], equ
         })
     }
 
-    // Count reservations as well (Issue #2 fix)
+    // Count reservations as well (Issue #2 fix - only count approved to avoid double counting with completed loans)
     if (Array.isArray(reservations)) {
         reservations.forEach((res: any) => {
             if (!res.equipment_id) return
-            // Only count reservations that were approved or completed
-            if (res.status !== 'approved' && res.status !== 'completed') return
+            // Only count active reservations that are approved (completed are already counted as loans)
+            if (res.status !== 'approved') return
             if (!equipmentUsage[res.equipment_id]) {
                 const eq = Array.isArray(equipment) ? equipment.find((e: any) => e.id === res.equipment_id) : null
                 equipmentUsage[res.equipment_id] = { equipment: eq, loans: 0, returned: 0, reservations: 0 }
