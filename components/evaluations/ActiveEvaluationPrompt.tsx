@@ -20,13 +20,15 @@ export default function ActiveEvaluationPrompt() {
             const { data: { session } } = await supabase.auth.getSession()
             if (!session) return
 
-            // Get cutoff date from system_config
-            const { data: config } = await supabase
-                .from('system_config')
-                .select('evaluation_cutoff_date')
-                .single()
+            // Get cutoff date from system_config via RPC to bypass RLS lockout
+            const { data: cutoffDateRaw, error: configError } = await supabase
+                .rpc('get_evaluation_cutoff_date')
 
-            const cutoffDate = (config as any)?.evaluation_cutoff_date || new Date().toISOString().split('T')[0]
+            if (configError) {
+                console.error('[ActiveEvaluationPrompt] Error fetching cutoff date via RPC:', configError)
+            }
+
+            const cutoffDate = cutoffDateRaw || new Date().toISOString().split('T')[0]
 
             // Fetch returned loans that might not be evaluated
             let query = supabase

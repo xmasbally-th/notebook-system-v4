@@ -207,13 +207,15 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 const { data: { session } } = await supabase.auth.getSession()
                 if (!session) return
 
-                // Get cutoff date
-                const { data: config } = await supabase
-                    .from('system_config')
-                    .select('evaluation_cutoff_date')
-                    .single()
+                // Get cutoff date via RPC to bypass RLS lockout
+                const { data: cutoffDateRaw, error: configError } = await supabase
+                    .rpc('get_evaluation_cutoff_date')
 
-                const cutoffDate = (config as any)?.evaluation_cutoff_date || new Date().toISOString().split('T')[0]
+                if (configError) {
+                    console.error('[CartDrawer] Error fetching cutoff date via RPC:', configError)
+                }
+
+                const cutoffDate = cutoffDateRaw || new Date().toISOString().split('T')[0]
 
                 const { data: returnedLoans } = await supabase
                     .from('loanRequests')

@@ -73,9 +73,26 @@ export function useSystemConfig() {
                 const { data, error } = result
 
                 if (error) {
-                    console.error('[useSystemConfig] Supabase error:', error.message)
-                    // Return default config instead of throwing
-                    return getDefaultConfig()
+                    console.warn('[useSystemConfig] Direct query failed, trying secure RPC fallback...', error.message)
+                    
+                    // Try loading safe public config via RPC
+                    const { data: rpcData, error: rpcError } = await supabase
+                        .rpc('get_public_system_config')
+                    
+                    if (rpcError) {
+                        console.error('[useSystemConfig] RPC fallback failed:', rpcError.message)
+                        return getDefaultConfig()
+                    }
+                    
+                    if (!rpcData) {
+                        return getDefaultConfig()
+                    }
+                    
+                    // Merge RPC data with default config to ensure all fields exist
+                    return {
+                        ...getDefaultConfig(),
+                        ...(rpcData as any)
+                    }
                 }
 
                 if (!data) {
