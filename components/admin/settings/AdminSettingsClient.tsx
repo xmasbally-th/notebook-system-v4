@@ -27,7 +27,9 @@ import {
     Image as ImageIcon,
     X,
     Palette,
-    Check
+    Check,
+    Eye,
+    EyeOff
 } from 'lucide-react'
 import { Database } from '@/supabase/types'
 import { useTheme, themeInfo, type Theme } from '@/components/providers/ThemeContext'
@@ -88,8 +90,44 @@ export default function AdminSettingsClient({ initialConfig, initialEquipmentTyp
     const [templateUrl, setTemplateUrl] = useState<string | null>(null)
     const [isUploadingTemplate, setIsUploadingTemplate] = useState(false)
 
+    // Secret fields visibility toggle state
+    const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({})
+
+    const toggleSecretVisibility = (key: string) => {
+        setShowSecrets(prev => ({ ...prev, [key]: !prev[key] }))
+    }
+
+    const handleCopyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text)
+        alert(`คัดลอก "${text}" เรียบร้อยแล้ว`)
+    }
+
+    // Validate operating hours and lunch break times
+    const timeError = (() => {
+        const opTimeStart = formData.opening_time || ''
+        const opTimeEnd = formData.closing_time || ''
+        const breakStart = formData.break_start_time || ''
+        const breakEnd = formData.break_end_time || ''
+
+        if (opTimeStart && opTimeEnd && opTimeStart >= opTimeEnd) {
+            return 'เวลาเปิดทำการต้องมาก่อนเวลาปิดทำการ'
+        }
+        if (breakStart && breakEnd && breakStart >= breakEnd) {
+            return 'เวลาเริ่มพักกลางวันต้องมาก่อนเวลาสิ้นสุดพักกลางวัน'
+        }
+        if (breakStart && opTimeStart && breakStart < opTimeStart) {
+            return 'เวลาเริ่มพักกลางวันต้องอยู่หลังเวลาเปิดทำการ'
+        }
+        if (breakEnd && opTimeEnd && breakEnd > opTimeEnd) {
+            return 'เวลาสิ้นสุดพักกลางวันต้องอยู่ก่อนเวลาปิดทำการ'
+        }
+        return null
+    })()
+
     useEffect(() => {
-        // Use either live config or initialConfig from server
+        // Only synchronize database config if the user has not modified the form yet
+        if (isDirty) return
+
         const activeConfig = config || initialConfig
         if (activeConfig) {
             setFormData({
@@ -119,7 +157,7 @@ export default function AdminSettingsClient({ initialConfig, initialEquipmentTyp
             setLogoUrl(activeConfig.document_logo_url || null)
             setTemplateUrl(activeConfig.document_template_url || null)
         }
-    }, [config, initialConfig])
+    }, [config, initialConfig, isDirty])
 
     const handleChange = (field: keyof SystemConfigUpdate, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }))
@@ -362,11 +400,17 @@ export default function AdminSettingsClient({ initialConfig, initialEquipmentTyp
             <AdminPageHeader title="ตั้งค่าระบบ" subtitle="จัดการการตั้งค่าระบบยืม-คืนอุปกรณ์"/>
             {/* Sticky Save Button */}
             {isDirty && (
-                <div className="fixed bottom-4 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-6 z-50 animate-slide-in">
+                <div className="fixed bottom-4 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-6 z-50 animate-slide-in flex flex-col items-center gap-2">
+                    {timeError && (
+                        <div className="bg-red-600 text-white text-xs px-3 py-1.5 rounded-lg shadow-md flex items-center gap-1 font-medium">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            <span>{timeError}</span>
+                        </div>
+                    )}
                     <button
                         onClick={handleSave}
-                        disabled={updateMutation.isPending}
-                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-xl disabled:opacity-50 transition-all"
+                        disabled={updateMutation.isPending || !!timeError}
+                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-xl disabled:opacity-50 disabled:bg-gray-400 transition-all"
                     >
                         {updateMutation.isPending ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
@@ -553,6 +597,12 @@ export default function AdminSettingsClient({ initialConfig, initialEquipmentTyp
                     {/* Hours Tab */}
                     {activeTab === 'hours' && (
                         <>
+                            {timeError && (
+                                <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl flex items-center gap-3 animate-pulse mb-6">
+                                    <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                                    <span className="text-sm font-medium">{timeError}</span>
+                                </div>
+                            )}
                             {/* Operating Hours */}
                             <section className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm">
                                 <div className="flex items-center gap-3 mb-5">
@@ -752,14 +802,27 @@ export default function AdminSettingsClient({ initialConfig, initialEquipmentTyp
                                                 </span>
                                             )}
                                         </label>
-                                        <input
-                                            type="password"
-                                            placeholder="วาง API Key ที่ได้รับจาก WeLPRU ที่นี่..."
-                                            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                                            value={(formData as any).welpru_api_key || ''}
-                                            onChange={(e) => handleChange('welpru_api_key' as any, e.target.value || null)}
-                                            autoComplete="off"
-                                        />
+                                        <div className="relative">
+                                            <input
+                                                type={showSecrets['welpru_api_key'] ? 'text' : 'password'}
+                                                placeholder="วาง API Key ที่ได้รับจาก WeLPRU ที่นี่..."
+                                                className="w-full pl-4 pr-10 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                                                value={(formData as any).welpru_api_key || ''}
+                                                onChange={(e) => handleChange('welpru_api_key' as any, e.target.value || null)}
+                                                autoComplete="off"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleSecretVisibility('welpru_api_key')}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                            >
+                                                {showSecrets['welpru_api_key'] ? (
+                                                    <EyeOff className="w-4 h-4" />
+                                                ) : (
+                                                    <Eye className="w-4 h-4" />
+                                                )}
+                                            </button>
+                                        </div>
                                         <p className="text-xs text-gray-400 mt-1.5">API Key จะถูกเก็บในฐานข้อมูลและใช้แทน Environment Variable โดยอัตโนมัติ</p>
                                     </div>
 
@@ -826,13 +889,26 @@ export default function AdminSettingsClient({ initialConfig, initialEquipmentTyp
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Webhook URL</label>
-                                    <input
-                                        type="url"
-                                        placeholder="https://discord.com/api/webhooks/..."
-                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 font-mono text-sm"
-                                        value={formData.discord_webhook_url || ''}
-                                        onChange={(e) => handleChange('discord_webhook_url', e.target.value)}
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            type={showSecrets['discord_webhook_url'] ? 'text' : 'password'}
+                                            placeholder="https://discord.com/api/webhooks/..."
+                                            className="w-full pl-4 pr-10 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 font-mono text-sm"
+                                            value={formData.discord_webhook_url || ''}
+                                            onChange={(e) => handleChange('discord_webhook_url', e.target.value)}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleSecretVisibility('discord_webhook_url')}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                        >
+                                            {showSecrets['discord_webhook_url'] ? (
+                                                <EyeOff className="w-4 h-4" />
+                                            ) : (
+                                                <Eye className="w-4 h-4" />
+                                            )}
+                                        </button>
+                                    </div>
                                     <p className="text-xs text-gray-400 mt-1.5">การแจ้งเตือนทั่วไปและการยืมคืน (General & Loans)</p>
                                 </div>
 
@@ -842,35 +918,74 @@ export default function AdminSettingsClient({ initialConfig, initialEquipmentTyp
                                     <div className="space-y-4">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1.5">ระบบสมัครสมาชิก (Authentication)</label>
-                                            <input
-                                                type="url"
-                                                placeholder="https://discord.com/api/webhooks/..."
-                                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 font-mono text-sm"
-                                                value={formData.discord_webhook_auth || ''}
-                                                onChange={(e) => handleChange('discord_webhook_auth', e.target.value)}
-                                            />
+                                            <div className="relative">
+                                                <input
+                                                    type={showSecrets['discord_webhook_auth'] ? 'text' : 'password'}
+                                                    placeholder="https://discord.com/api/webhooks/..."
+                                                    className="w-full pl-4 pr-10 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 font-mono text-sm"
+                                                    value={formData.discord_webhook_auth || ''}
+                                                    onChange={(e) => handleChange('discord_webhook_auth', e.target.value)}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleSecretVisibility('discord_webhook_auth')}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                                >
+                                                    {showSecrets['discord_webhook_auth'] ? (
+                                                        <EyeOff className="w-4 h-4" />
+                                                    ) : (
+                                                        <Eye className="w-4 h-4" />
+                                                    )}
+                                                </button>
+                                            </div>
                                         </div>
 
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1.5">ระบบจอง (Reservations)</label>
-                                            <input
-                                                type="url"
-                                                placeholder="https://discord.com/api/webhooks/..."
-                                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 font-mono text-sm"
-                                                value={formData.discord_webhook_reservations || ''}
-                                                onChange={(e) => handleChange('discord_webhook_reservations', e.target.value)}
-                                            />
+                                            <div className="relative">
+                                                <input
+                                                    type={showSecrets['discord_webhook_reservations'] ? 'text' : 'password'}
+                                                    placeholder="https://discord.com/api/webhooks/..."
+                                                    className="w-full pl-4 pr-10 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 font-mono text-sm"
+                                                    value={formData.discord_webhook_reservations || ''}
+                                                    onChange={(e) => handleChange('discord_webhook_reservations', e.target.value)}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleSecretVisibility('discord_webhook_reservations')}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                                >
+                                                    {showSecrets['discord_webhook_reservations'] ? (
+                                                        <EyeOff className="w-4 h-4" />
+                                                    ) : (
+                                                        <Eye className="w-4 h-4" />
+                                                    )}
+                                                </button>
+                                            </div>
                                         </div>
 
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1.5">แจ้งเตือนข้อผิดพลาด/บำรุงรักษา (Maintenance/Errors)</label>
-                                            <input
-                                                type="url"
-                                                placeholder="https://discord.com/api/webhooks/..."
-                                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 font-mono text-sm"
-                                                value={formData.discord_webhook_maintenance || ''}
-                                                onChange={(e) => handleChange('discord_webhook_maintenance', e.target.value)}
-                                            />
+                                            <div className="relative">
+                                                <input
+                                                    type={showSecrets['discord_webhook_maintenance'] ? 'text' : 'password'}
+                                                    placeholder="https://discord.com/api/webhooks/..."
+                                                    className="w-full pl-4 pr-10 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 font-mono text-sm"
+                                                    value={formData.discord_webhook_maintenance || ''}
+                                                    onChange={(e) => handleChange('discord_webhook_maintenance', e.target.value)}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleSecretVisibility('discord_webhook_maintenance')}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                                >
+                                                    {showSecrets['discord_webhook_maintenance'] ? (
+                                                        <EyeOff className="w-4 h-4" />
+                                                    ) : (
+                                                        <Eye className="w-4 h-4" />
+                                                    )}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -896,9 +1011,15 @@ export default function AdminSettingsClient({ initialConfig, initialEquipmentTyp
                                         color="orange"
                                     />
                                     <div>
-                                        <label className="block text-sm font-medium text-orange-800 mb-1.5">ข้อความประกาศ</label>
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <label className="block text-sm font-medium text-orange-800">ข้อความประกาศ</label>
+                                            <span className={`text-xs ${((formData.announcement_message || '').length > 500) ? 'text-red-650 font-bold' : 'text-orange-700'}`}>
+                                                {(formData.announcement_message || '').length}/500
+                                            </span>
+                                        </div>
                                         <textarea
                                             rows={3}
+                                            maxLength={500}
                                             className="w-full px-4 py-2.5 border border-orange-200 rounded-xl focus:ring-2 focus:ring-orange-500 bg-white"
                                             placeholder="เช่น ระบบจะปิดปรับปรุงในวันอาทิตย์..."
                                             value={formData.announcement_message || ''}
@@ -1064,16 +1185,27 @@ export default function AdminSettingsClient({ initialConfig, initialEquipmentTyp
                                     </div>
 
                                     <div className="bg-indigo-50 p-4 rounded-xl">
-                                        <p className="text-sm font-medium text-indigo-900 mb-2">Placeholder ที่รองรับ:</p>
+                                        <p className="text-sm font-medium text-indigo-900 mb-2">Placeholder ที่รองรับ (คลิกเพื่อคัดลอก):</p>
                                         <div className="grid grid-cols-2 gap-2 text-xs text-indigo-700">
-                                            <code>{'{borrower_name}'}</code>
-                                            <code>{'{borrower_phone}'}</code>
-                                            <code>{'{equipment_type}'}</code>
-                                            <code>{'{quantity}'}</code>
-                                            <code>{'{loan_date}'}</code>
-                                            <code>{'{return_date}'}</code>
-                                            <code>{'{purpose}'}</code>
-                                            <code>{'{today_date}'}</code>
+                                            {[
+                                                '{borrower_name}',
+                                                '{borrower_phone}',
+                                                '{equipment_type}',
+                                                '{quantity}',
+                                                '{loan_date}',
+                                                '{return_date}',
+                                                '{purpose}',
+                                                '{today_date}'
+                                            ].map(placeholder => (
+                                                <code
+                                                    key={placeholder}
+                                                    onClick={() => handleCopyToClipboard(placeholder)}
+                                                    className="cursor-pointer hover:bg-indigo-100 p-1.5 rounded transition-colors text-center border border-indigo-200/50 bg-white font-mono"
+                                                    title="คลิกเพื่อคัดลอก"
+                                                >
+                                                    {placeholder}
+                                                </code>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>

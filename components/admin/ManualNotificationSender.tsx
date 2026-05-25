@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Send, Users, User, AlertCircle, CheckCircle2, Loader2, Plus, X, Search } from 'lucide-react'
 import { sendManualNotification } from '@/app/admin/settings/actions'
 import { supabase } from '@/lib/supabase/client'
@@ -17,24 +17,34 @@ export default function ManualNotificationSender() {
     
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+    const [debouncedSearch, setDebouncedSearch] = useState('')
+    const [showConfirmModal, setShowConfirmModal] = useState(false)
 
-    // User search query
+    // Debounce user search input to prevent query flooding
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(userSearch)
+        }, 300)
+        return () => clearTimeout(handler)
+    }, [userSearch])
+
+    // User search query (triggered by debounced search term)
     const { data: searchUsers, isLoading: searchLoading } = useQuery({
-        queryKey: ['search-users-notify', userSearch],
+        queryKey: ['search-users-notify', debouncedSearch],
         queryFn: async () => {
-            if (!userSearch.trim()) return []
+            if (!debouncedSearch.trim()) return []
             
             const { data, error } = await supabase
                 .from('profiles')
                 .select('id, user_id, first_name, last_name, email, avatar_url')
                 .eq('status', 'approved')
-                .or(`first_name.ilike.%${userSearch}%,last_name.ilike.%${userSearch}%,email.ilike.%${userSearch}%,user_id.ilike.%${userSearch}%`)
+                .or(`first_name.ilike.${debouncedSearch}%,last_name.ilike.${debouncedSearch}%,email.ilike.${debouncedSearch}%,user_id.ilike.${debouncedSearch}%`)
                 .limit(10)
 
             if (error) throw error
             return data
         },
-        enabled: type === 'individual'
+        enabled: type === 'individual' && !!debouncedSearch.trim()
     })
 
     const handleAddUser = (user: any) => {
@@ -48,8 +58,7 @@ export default function ManualNotificationSender() {
         setSelectedUsers(selectedUsers.filter(u => u.id !== id))
     }
 
-
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         setStatus(null)
 
@@ -58,11 +67,29 @@ export default function ManualNotificationSender() {
             return
         }
 
+        if (title.length > 65) {
+            setStatus({ type: 'error', message: 'หัวข้อการแจ้งเตือนต้องไม่เกิน 65 ตัวอักษร' })
+            return
+        }
+
+        if (body.length > 240) {
+            setStatus({ type: 'error', message: 'รายละเอียดการแจ้งเตือนต้องไม่เกิน 240 ตัวอักษร' })
+            return
+        }
+
         if (type === 'individual' && selectedUsers.length === 0) {
             setStatus({ type: 'error', message: 'กรุณาเลือกผู้รับอย่างน้อย 1 คน' })
             return
         }
 
+        if (type === 'group') {
+            setShowConfirmModal(true)
+        } else {
+            executeNotificationSend()
+        }
+    }
+
+    const executeNotificationSend = async () => {
         setIsSubmitting(true)
         try {
             const result = await sendManualNotification({
@@ -253,10 +280,14 @@ export default function ManualNotificationSender() {
                 {/* Content */}
                 <div className="space-y-4 pt-4 border-t border-gray-100">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">หัวข้อการแจ้งเตือน <span className="text-red-500">*</span></label>
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="block text-sm font-medium text-gray-700">หัวข้อการแจ้งเตือน <span className="text-red-500">*</span></label>
+                            <span className={`text-xs ${(title.length > 65) ? 'text-red-500 font-bold' : 'text-gray-400'}`}>{title.length}/65</span>
+                        </div>
                         <input
                             type="text"
                             required
+                            maxLength={65}
                             placeholder="เช่น ประกาศสำคัญจากระบบ..."
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
@@ -264,10 +295,14 @@ export default function ManualNotificationSender() {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">รายละเอียด <span className="text-red-500">*</span></label>
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="block text-sm font-medium text-gray-700">รายละเอียด <span className="text-red-500">*</span></label>
+                            <span className={`text-xs ${(body.length > 240) ? 'text-red-500 font-bold' : 'text-gray-400'}`}>{body.length}/240</span>
+                        </div>
                         <textarea
                             required
                             rows={3}
+                            maxLength={240}
                             placeholder="พิมพ์ข้อความที่ต้องการแจ้งให้ผู้ใช้ทราบ..."
                             value={body}
                             onChange={(e) => setBody(e.target.value)}
@@ -310,6 +345,40 @@ export default function ManualNotificationSender() {
                     </button>
                 </div>
             </form>
+
+            {/* Confirmation Modal for Group Broadcasting */}
+            {showConfirmModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[100] animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl border border-gray-100 animate-in scale-in duration-200">
+                        <div className="flex items-center gap-3 text-red-500 mb-4">
+                            <AlertCircle className="w-8 h-8 flex-shrink-0" />
+                            <h3 className="text-lg font-semibold text-gray-900">ยืนยันการส่งแจ้งเตือนกลุ่ม?</h3>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-6 font-normal">
+                            คุณกำลังจะส่งข้อความแจ้งเตือนถึงผู้ใช้ทั้งหมดในกลุ่ม <strong className="text-gray-900">"{targetGroup === 'all' ? 'ผู้ใช้ทุกคน' : targetGroup === 'student' ? 'นักศึกษา' : 'บุคลากร'}"</strong> ข้อความนี้จะถูกส่งไปยังแอปพลิเคชัน WeLPRU ทันที กรุณาตรวจสอบความถูกต้องของหัวข้อและรายละเอียดก่อนกดส่ง
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmModal(false)}
+                                className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 text-sm font-medium transition-colors"
+                            >
+                                ยกเลิก
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowConfirmModal(false)
+                                    executeNotificationSend()
+                                }}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 text-sm font-medium transition-colors"
+                            >
+                                ยืนยันการส่ง
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

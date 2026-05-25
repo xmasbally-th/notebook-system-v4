@@ -53,53 +53,32 @@ export function useSystemConfig() {
         retryDelay: 1000,
         queryFn: async (): Promise<SystemConfig> => {
             try {
-                const timeoutMs = 10000 // Reduced to 10s timeout for faster fallback
-
-                const timeoutPromise = new Promise<{ data: null, error: Error }>((resolve) => {
-                    setTimeout(() => {
-                        console.warn('[useSystemConfig] Query timed out after', timeoutMs, 'ms, using default config')
-                        // Return error object instead of rejecting - prevents throwing
-                        resolve({ data: null, error: new Error('Query timeout') })
-                    }, timeoutMs)
-                })
-
-                const queryPromise = supabase
-                    .from('system_config')
-                    .select('*')
-                    .single()
-
-                // Use Promise.race to handle timeout
-                const result = await Promise.race([queryPromise, timeoutPromise]) as { data: SystemConfig | null, error: any }
-                const { data, error } = result
-
-                if (error) {
-                    console.warn('[useSystemConfig] Direct query failed, trying secure RPC fallback...', error.message)
-                    
-                    // Try loading safe public config via RPC
-                    const { data: rpcData, error: rpcError } = await supabase
-                        .rpc('get_public_system_config')
-                    
-                    if (rpcError) {
-                        console.error('[useSystemConfig] RPC fallback failed:', rpcError.message)
-                        return getDefaultConfig()
-                    }
-                    
-                    if (!rpcData) {
-                        return getDefaultConfig()
-                    }
-                    
-                    // Merge RPC data with default config to ensure all fields exist
-                    return {
-                        ...getDefaultConfig(),
-                        ...(rpcData as any)
-                    }
+                // 1. Try loading settings via admin server action (masked secrets)
+                const { getSystemConfigForAdmin } = await import('@/app/admin/settings/actions')
+                const res = await getSystemConfigForAdmin()
+                
+                if (res.success && res.data) {
+                    return res.data as SystemConfig
                 }
 
-                if (!data) {
+                // 2. Fallback for normal users: load safe public config via RPC
+                const { data: rpcData, error: rpcError } = await supabase
+                    .rpc('get_public_system_config')
+                
+                if (rpcError) {
+                    console.error('[useSystemConfig] RPC fallback failed:', rpcError.message)
                     return getDefaultConfig()
                 }
-
-                return data
+                
+                if (!rpcData) {
+                    return getDefaultConfig()
+                }
+                
+                // Merge RPC data with default config to ensure all fields exist
+                return {
+                    ...getDefaultConfig(),
+                    ...(rpcData as any)
+                }
             } catch (err: any) {
                 console.error('[useSystemConfig] Exception:', err?.message || err)
                 // Always return default config on any error
@@ -155,18 +134,16 @@ export function useUpdateSystemConfig() {
 
     return useMutation({
         mutationFn: async (updates: SystemConfigUpdate) => {
-            const { data, error } = await (supabase as any)
-                .from('system_config')
-                .update(updates)
-                .eq('id', 1) // Always update the singleton row
-                .select()
-                .single()
-
-            if (error) throw error
-            return data
+            const { updateSystemConfigAction } = await import('@/app/admin/settings/actions')
+            const res = await updateSystemConfigAction(updates)
+            if (!res.success) {
+                throw new Error(res.error || 'Failed to update configuration')
+            }
+            return res.data
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['system_config'] })
         }
     })
 }
+
