@@ -301,16 +301,16 @@ export function useReportData(dateRange: DateRange) {
 
     // 9. Historical loans query
     const historicalLoansQuery = useQuery({
-        queryKey: ['report-historical-loans', sixMonthsAgoISO, toDate],
+        queryKey: ['report-historical-loans', fromDate, toDate],
         staleTime: 60000,
-        queryFn: () => fetchSupabase<any[]>(`loanRequests?select=id,status,created_at,end_date,returned_at,user_id,equipment_id&created_at=gte.${sixMonthsAgoISO}&created_at=lte.${toDate}`)
+        queryFn: () => fetchSupabase<any[]>(`loanRequests?select=id,status,created_at,end_date,returned_at,user_id,equipment_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`)
     })
 
     // 10. Historical reservations query
     const historicalReservationsQuery = useQuery({
-        queryKey: ['report-historical-reservations', sixMonthsAgoISO, toDate],
+        queryKey: ['report-historical-reservations', fromDate, toDate],
         staleTime: 60000,
-        queryFn: () => fetchSupabase<any[]>(`reservations?select=id,status,created_at,user_id,equipment_id&created_at=gte.${sixMonthsAgoISO}&created_at=lte.${toDate}`)
+        queryFn: () => fetchSupabase<any[]>(`reservations?select=id,status,created_at,user_id,equipment_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`)
     })
 
     const isLoading = loansQuery.isLoading ||

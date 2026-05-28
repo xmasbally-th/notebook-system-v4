@@ -26,6 +26,24 @@ import {
 
 type TabType = 'overview' | 'loans' | 'equipment' | 'reservations' | 'users' | 'activity' | 'monthly'
 
+const toLocalDateString = (date: Date): string => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+}
+
+const parseLocalDateString = (dateStr: string, isEnd = false): Date => {
+    const [year, month, day] = dateStr.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
+    if (isEnd) {
+        date.setHours(23, 59, 59, 999)
+    } else {
+        date.setHours(0, 0, 0, 0)
+    }
+    return date
+}
+
 export default function AdminReportsPage() {
     // Default to last 30 days
     const [dateRange, setDateRange] = useState<DateRange>(() => {
@@ -55,11 +73,45 @@ export default function AdminReportsPage() {
         <>
             <AdminPageHeader title="รายงาน" subtitle="รายงานและสถิติการใช้งานระบบ"/>
             {/* Header with Date Range and Export */}
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm mb-6 flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
                     <ReportPDFExport data={data} dateRange={dateRange} isLoading={isLoading} />
                 </div>
-                <ReportDateRangePicker value={dateRange} onChange={setDateRange} />
+                
+                <div className="flex flex-wrap items-center gap-3">
+                    <ReportDateRangePicker value={dateRange} onChange={setDateRange} />
+                    
+                    <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 shadow-sm">
+                        <span className="font-semibold text-gray-500 text-xs">ตั้งแต่วันที่:</span>
+                        <input
+                            type="date"
+                            value={toLocalDateString(dateRange.from)}
+                            onChange={(e) => {
+                                if (e.target.value) {
+                                    const fromDate = parseLocalDateString(e.target.value, false)
+                                    if (!isNaN(fromDate.getTime())) {
+                                        setDateRange({ from: fromDate, to: dateRange.to })
+                                    }
+                                }
+                            }}
+                            className="bg-white border border-gray-200 rounded-lg px-2.5 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium text-gray-700"
+                        />
+                        <span className="text-gray-400">ถึง</span>
+                        <input
+                            type="date"
+                            value={toLocalDateString(dateRange.to)}
+                            onChange={(e) => {
+                                if (e.target.value) {
+                                    const toDate = parseLocalDateString(e.target.value, true)
+                                    if (!isNaN(toDate.getTime())) {
+                                        setDateRange({ from: dateRange.from, to: toDate })
+                                    }
+                                }
+                            }}
+                            className="bg-white border border-gray-200 rounded-lg px-2.5 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium text-gray-700"
+                        />
+                    </div>
+                </div>
             </div>
 
             {/* Tab Navigation */}

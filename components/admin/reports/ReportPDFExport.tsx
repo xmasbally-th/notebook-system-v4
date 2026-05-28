@@ -390,6 +390,37 @@ function generatePrintableHTML(data: ReportData, dateRange: { from: Date; to: Da
         </div>
     </div>
     
+    <!-- Monthly Stats Summary -->
+    ${data.monthlyStats && data.monthlyStats.length > 0 ? `
+    <div class="section">
+        <div class="section-title">📅 สรุปการใช้งานรายเดือน</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>เดือน</th>
+                    <th class="text-center">การยืม (ครั้ง)</th>
+                    <th class="text-center">การจอง (ครั้ง)</th>
+                    <th class="text-center">คืนแล้ว (ครั้ง)</th>
+                    <th class="text-center">เกินกำหนด/คืนสาย (ครั้ง)</th>
+                    <th class="text-center">รวมการใช้งาน (ครั้ง)</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.monthlyStats.map(stat => `
+                    <tr>
+                        <td class="text-bold">${stat.month}</td>
+                        <td class="text-center text-blue">${stat.loans}</td>
+                        <td class="text-center text-purple">${stat.reservations}</td>
+                        <td class="text-center text-green">${stat.returned}</td>
+                        <td class="text-center text-red">${stat.overdue}</td>
+                        <td class="text-center text-bold">${stat.loans + stat.reservations}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </div>
+    ` : ''}
+    
     <!-- Equipment Stats -->
     <div class="section">
         <div class="section-title">📦 สถิติอุปกรณ์</div>
