@@ -156,12 +156,28 @@ export interface StaffActivityStats {
     dailyActivity: { date: string; count: number }[]
 }
 
+export interface MonthlyStatsDetail {
+    id: string
+    type: 'loan' | 'reservation'
+    date: string
+    user_name: string
+    department: string
+    equipment_name: string
+    equipment_number: string
+    status: string
+}
+
 export interface MonthlyStats {
     month: string
+    monthKey: string
     loans: number
     reservations: number
     returned: number
     overdue: number
+    equipmentTypeUsage: { name: string; icon: string; count: number }[]
+    popularEquipment: { id: string; name: string; equipment_number: string; count: number }[]
+    departmentUsage: { department: string; count: number }[]
+    details: MonthlyStatsDetail[]
 }
 
 export interface SpecialLoanItem {
@@ -287,14 +303,14 @@ export function useReportData(dateRange: DateRange) {
     const historicalLoansQuery = useQuery({
         queryKey: ['report-historical-loans', sixMonthsAgoISO, toDate],
         staleTime: 60000,
-        queryFn: () => fetchSupabase<any[]>(`loanRequests?select=id,status,created_at,end_date,returned_at&created_at=gte.${sixMonthsAgoISO}&created_at=lte.${toDate}`)
+        queryFn: () => fetchSupabase<any[]>(`loanRequests?select=id,status,created_at,end_date,returned_at,user_id,equipment_id&created_at=gte.${sixMonthsAgoISO}&created_at=lte.${toDate}`)
     })
 
     // 10. Historical reservations query
     const historicalReservationsQuery = useQuery({
         queryKey: ['report-historical-reservations', sixMonthsAgoISO, toDate],
         staleTime: 60000,
-        queryFn: () => fetchSupabase<any[]>(`reservations?select=id,status,created_at&created_at=gte.${sixMonthsAgoISO}&created_at=lte.${toDate}`)
+        queryFn: () => fetchSupabase<any[]>(`reservations?select=id,status,created_at,user_id,equipment_id&created_at=gte.${sixMonthsAgoISO}&created_at=lte.${toDate}`)
     })
 
     const isLoading = loansQuery.isLoading ||
@@ -388,7 +404,7 @@ export function useReportData(dateRange: DateRange) {
         const overdueItems = formatOverdueItems(overdueLoans)
         const { userStats, departments, departmentStats } = calculateUserStats(profiles, loans, reservations, overdueLoans)
         const staffActivity = processStaffActivityLog(staffActivityLog, profiles)
-        const monthlyStats = calculateMonthlyStats(monthlyLoans, monthlyReservations)
+        const monthlyStats = calculateMonthlyStats(monthlyLoans, monthlyReservations, equipment, profiles, equipmentTypes)
 
         // Count today's loans
         const todayLoans = Array.isArray(loans)

@@ -391,77 +391,203 @@ export function processStaffActivityLog(activityLog: any[], profiles: any[] = []
     }
 }
 
-/**
- * Calculate monthly statistics from loan and reservation data
- */
-export function calculateMonthlyStats(loans: any[], reservations: any[]): MonthlyStats[] {
+export function calculateMonthlyStats(
+    loans: any[],
+    reservations: any[],
+    equipment: any[] = [],
+    profiles: any[] = [],
+    equipmentTypes: any[] = []
+): MonthlyStats[] {
     const monthlyData: Record<string, MonthlyStats> = {}
+
+    // Maps for fast lookup
+    const equipmentMap = new Map<string, any>()
+    if (Array.isArray(equipment)) {
+        equipment.forEach(e => equipmentMap.set(e.id, e))
+    }
+
+    const profileMap = new Map<string, any>()
+    if (Array.isArray(profiles)) {
+        profiles.forEach(p => profileMap.set(p.id, p))
+    }
+
+    const eqTypeMap = new Map<string, any>()
+    if (Array.isArray(equipmentTypes)) {
+        equipmentTypes.forEach(t => eqTypeMap.set(t.id, t))
+    }
+
+    const getDepartmentName = (dept: any): string => {
+        if (!dept) return 'ไม่ระบุ'
+        if (typeof dept === 'string') return dept
+        if (typeof dept === 'object') {
+            return dept.name || dept.label || dept.th || 'ไม่ระบุ'
+        }
+        return 'ไม่ระบุ'
+    }
+
+    const initMonth = (monthKey: string, monthLabel: string) => {
+        if (!monthlyData[monthKey]) {
+            monthlyData[monthKey] = {
+                month: monthLabel,
+                monthKey: monthKey,
+                loans: 0,
+                reservations: 0,
+                returned: 0,
+                overdue: 0,
+                equipmentTypeUsage: [],
+                popularEquipment: [],
+                departmentUsage: [],
+                details: []
+            }
+        }
+    }
+
+    // Helper to get monthKey and monthLabel
+    const getMonthInfo = (createdAtStr: string) => {
+        const date = new Date(createdAtStr)
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`
+        const monthLabel = `${THAI_MONTHS[date.getMonth()]} ${date.getFullYear() + 543 - 2500}`
+        return { monthKey, monthLabel }
+    }
 
     if (Array.isArray(loans)) {
         loans.forEach((loan: any) => {
-            const date = new Date(loan.created_at)
-            const monthKey = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`
-            const monthLabel = `${THAI_MONTHS[date.getMonth()]} ${date.getFullYear() + 543 - 2500}`
-
-            if (!monthlyData[monthKey]) {
-                monthlyData[monthKey] = {
-                    month: monthLabel,
-                    loans: 0,
-                    reservations: 0,
-                    returned: 0,
-                    overdue: 0
-                }
-            }
+            const { monthKey, monthLabel } = getMonthInfo(loan.created_at)
+            initMonth(monthKey, monthLabel)
 
             monthlyData[monthKey].loans++
             if (loan.status === 'returned') {
                 monthlyData[monthKey].returned++
             }
+
+            // Calculate overdue
+            const dueDate = getDueDate(loan.end_date, loan.return_time)
+            const returnedAt = loan.returned_at ? new Date(loan.returned_at) : null
+            const now = new Date()
+            if (returnedAt && returnedAt > dueDate) {
+                monthlyData[monthKey].overdue++
+            } else if (!returnedAt && loan.status === 'approved' && now > dueDate) {
+                monthlyData[monthKey].overdue++
+            }
+
+            // Create detail item
+            const eq = loan.equipment_id ? equipmentMap.get(loan.equipment_id) : null
+            const profile = loan.user_id ? profileMap.get(loan.user_id) : null
+            const dept = profile ? getDepartmentName(profile.department) : 'ไม่ระบุ'
+
+            monthlyData[monthKey].details.push({
+                id: loan.id,
+                type: 'loan',
+                date: loan.created_at,
+                user_name: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'ไม่ทราบ',
+                department: dept,
+                equipment_name: eq?.name || 'ไม่ระบุ',
+                equipment_number: eq?.equipment_number || '-',
+                status: loan.status
+            })
         })
     }
 
     if (Array.isArray(reservations)) {
         reservations.forEach((res: any) => {
-            const date = new Date(res.created_at)
-            const monthKey = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`
-            const monthLabel = `${THAI_MONTHS[date.getMonth()]} ${date.getFullYear() + 543 - 2500}`
-
-            if (!monthlyData[monthKey]) {
-                monthlyData[monthKey] = {
-                    month: monthLabel,
-                    loans: 0,
-                    reservations: 0,
-                    returned: 0,
-                    overdue: 0
-                }
-            }
+            const { monthKey, monthLabel } = getMonthInfo(res.created_at)
+            initMonth(monthKey, monthLabel)
 
             monthlyData[monthKey].reservations++
+
+            // Create detail item
+            const eq = res.equipment_id ? equipmentMap.get(res.equipment_id) : null
+            const profile = res.user_id ? profileMap.get(res.user_id) : null
+            const dept = profile ? getDepartmentName(profile.department) : 'ไม่ระบุ'
+
+            monthlyData[monthKey].details.push({
+                id: res.id,
+                type: 'reservation',
+                date: res.created_at,
+                user_name: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'ไม่ทราบ',
+                department: dept,
+                equipment_name: eq?.name || 'ไม่ระบุ',
+                equipment_number: eq?.equipment_number || '-',
+                status: res.status
+            })
         })
     }
 
-    // Calculate overdue for each month based on loans
-    if (Array.isArray(loans)) {
-        loans.forEach((loan: any) => {
-            const date = new Date(loan.created_at)
-            const monthKey = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`
+    // Now post-process each month to calculate breakdowns
+    Object.keys(monthlyData).forEach(monthKey => {
+        const month = monthlyData[monthKey]
 
-            if (monthlyData[monthKey]) {
-                const dueDate = getDueDate(loan.end_date, loan.return_time)
-                const returnedAt = loan.returned_at ? new Date(loan.returned_at) : null
-                const now = new Date()
+        // Sort details by date descending
+        month.details.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-                // Check if late return or currently overdue
-                if (returnedAt && returnedAt > dueDate) {
-                    // Returned late
-                    monthlyData[monthKey].overdue++
-                } else if (!returnedAt && loan.status === 'approved' && now > dueDate) {
-                    // Currently overdue
-                    monthlyData[monthKey].overdue++
+        // Calculate equipment type usage
+        const eqTypeUsageMap = new Map<string, number>()
+        const popularEqMap = new Map<string, { name: string; equipment_number: string; count: number }>()
+        const deptUsageMap = new Map<string, number>()
+
+        // Analyze details
+        month.details.forEach(item => {
+            // Count department usage
+            if (item.department) {
+                deptUsageMap.set(item.department, (deptUsageMap.get(item.department) || 0) + 1)
+            }
+
+            // Find the loan/reservation raw item to check equipment
+            const originalItem = item.type === 'loan' 
+                ? loans.find(l => l.id === item.id)
+                : reservations.find(r => r.id === item.id)
+
+            if (originalItem?.equipment_id) {
+                const eq = equipmentMap.get(originalItem.equipment_id)
+                if (eq) {
+                    // Popular equipment count
+                    const eqKey = originalItem.equipment_id
+                    const currentPop = popularEqMap.get(eqKey) || { name: eq.name, equipment_number: eq.equipment_number, count: 0 }
+                    currentPop.count++
+                    popularEqMap.set(eqKey, currentPop)
+
+                    // Equipment type usage count
+                    if (eq.equipment_type_id) {
+                        const typeInfo = eqTypeMap.get(eq.equipment_type_id)
+                        const typeName = typeInfo?.name || 'อื่นๆ'
+                        eqTypeUsageMap.set(typeName, (eqTypeUsageMap.get(typeName) || 0) + 1)
+                    }
                 }
             }
         })
-    }
+
+        // Format equipmentTypeUsage
+        month.equipmentTypeUsage = Array.from(eqTypeUsageMap.entries())
+            .map(([name, count]) => {
+                // Find icon
+                const typeObj = equipmentTypes.find(t => t.name === name)
+                return {
+                    name,
+                    icon: typeObj?.icon || '📦',
+                    count
+                }
+            })
+            .sort((a, b) => b.count - a.count)
+
+        // Format popularEquipment
+        month.popularEquipment = Array.from(popularEqMap.entries())
+            .map(([id, val]) => ({
+                id,
+                name: val.name,
+                equipment_number: val.equipment_number,
+                count: val.count
+            }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5)
+
+        // Format departmentUsage
+        month.departmentUsage = Array.from(deptUsageMap.entries())
+            .map(([department, count]) => ({
+                department,
+                count
+            }))
+            .sort((a, b) => b.count - a.count)
+    })
 
     return Object.entries(monthlyData)
         .sort((a, b) => a[0].localeCompare(b[0]))
