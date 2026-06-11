@@ -166,3 +166,73 @@ ${notes ? `📝 **หมายเหตุ:** ${notes}` : ''}
         console.error('Error notifying return:', error)
     }
 }
+
+// Notify Overdue Loan Reminder
+export async function notifyOverdueLoan(loanId: string, daysOverdue: number) {
+    try {
+        const supabase = await createClient()
+
+        // Fetch loan details
+        const { data: loan } = await supabase
+            .from('loanRequests')
+            .select('*, profiles(id, first_name, last_name, email, phone_number, user_id), equipment(name, equipment_number)')
+            .eq('id', loanId)
+            .single()
+
+        if (!loan) {
+            return { success: false, error: 'ไม่พบรายการยืมค้างส่ง' }
+        }
+
+        const profile = loan.profiles as any
+        const equipment = loan.equipment as any
+        const fullName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim()
+        const equipmentName = equipment?.name || 'อุปกรณ์'
+        const equipmentNumber = equipment?.equipment_number || 'ไม่ระบุ'
+        const studentWelpruId = profile?.user_id // LPUR ID if exists
+        
+        // 1. Create System Notification for User in DB
+        const { error: notifError } = await supabase
+            .from('notifications')
+            .insert({
+                user_id: profile.id,
+                type: 'loan_overdue',
+                title: 'แจ้งเตือน: เลยกำหนดคืนอุปกรณ์ ⚠️',
+                message: `อุปกรณ์ ${equipmentName} (${equipmentNumber}) เลยกำหนดส่งคืนมาแล้ว ${daysOverdue} วัน กรุณานำส่งคืนที่เคาน์เตอร์บริการโดยด่วนที่สุด`,
+                related_entity_id: loanId
+            })
+            
+        if (notifError) {
+            console.error('Error creating database notification:', notifError.message)
+        }
+
+        // 2. WeLPRU & Discord notification using notifyAndLog helper
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
+        const discordMessage = `
+⚠️ **แจ้งเตือนเลยกำหนดส่งคืน (Overdue Loan Reminder)**
+
+👤 **ผู้ยืม:** ${fullName}
+📧 **อีเมล:** ${profile?.email || '-'}
+📦 **อุปกรณ์:** ${equipmentName} (${equipmentNumber})
+📅 **กำหนดคืนเดิม:** ${formatThaiDate(loan.end_date)}
+⏰ **เลยกำหนดสะสม:** \`${daysOverdue} วัน\`
+
+🔗 [ตรวจสอบประวัติยืมคืน](${appUrl}/my-loans)
+        `.trim()
+
+        const { notifyAndLog } = await import('@/lib/serverNotify')
+        await notifyAndLog({
+            discordMessage,
+            discordType: 'loan',
+            welpruUserIds: studentWelpruId ? [studentWelpruId] : [],
+            welpruTitle: 'แจ้งเตือนเลยกำหนดส่งคืนอุปกรณ์ ⚠️',
+            welpruBody: `คอมพิวเตอร์ ${equipmentName} เลยกำหนดส่งคืนมาแล้ว ${daysOverdue} วัน กรุณานำมาคืนโดยด่วน`,
+        })
+
+        return { success: true }
+    } catch (error: any) {
+        console.error('Error notifying overdue loan:', error)
+        return { success: false, error: error.message }
+    }
+}
+

@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { requireAdmin } from '@/lib/auth-guard'
 import { sendApprovalEmail } from '@/lib/email'
+import { sendDiscordNotification, sendWeLPRUNotification } from '@/lib/notifications'
 import { revalidatePath } from 'next/cache'
 import {
     updateUserStatusSchema,
@@ -12,9 +13,13 @@ import {
     uuidSchema
 } from '@/lib/schemas'
 
-export async function updateUserStatus(userId: string, newStatus: 'approved' | 'rejected' | 'pending') {
+export async function updateUserStatus(
+    userId: string,
+    newStatus: 'approved' | 'rejected' | 'pending',
+    rejectReason?: string
+) {
     // 1. Zod Validation
-    const parsed = updateUserStatusSchema.safeParse({ userId, newStatus })
+    const parsed = updateUserStatusSchema.safeParse({ userId, newStatus, rejectReason })
     if (!parsed.success) {
         return { error: parsed.error.issues[0]?.message || 'ข้อมูลไม่ถูกต้อง' }
     }
@@ -30,23 +35,32 @@ export async function updateUserStatus(userId: string, newStatus: 'approved' | '
 
     const adminClient = createAdminClient()
 
-    // 3. Update Status
+    // 3. Update Status and Rejection Reason
+    const updates = {
+        status: newStatus,
+        reject_reason: newStatus === 'rejected' ? (rejectReason || null) : null
+    }
+
     const { error, data: updatedUser } = await adminClient
         .from('profiles')
-        .update({ status: newStatus })
+        .update(updates)
         .eq('id', userId)
         .select('email, first_name, last_name, title')
         .single()
 
     if (error) return { error: error.message }
 
-    // 4. Send Email if Approved (catch errors to prevent blocking the status update)
-    if (newStatus === 'approved' && updatedUser) {
+    // 4. Send Notifications (Email, Discord, WeLPRU)
+    if (updatedUser) {
         const fullName = `${updatedUser.title || ''}${updatedUser.first_name} ${updatedUser.last_name || ''}`.trim()
-        try {
-            await sendApprovalEmail(updatedUser.email, fullName)
-        } catch (emailError) {
-            console.error(`Failed to send approval email to ${updatedUser.email}:`, emailError)
+        
+        if (newStatus === 'approved') {
+            try { await sendApprovalEmail(updatedUser.email, fullName) } catch (e) { console.error(e) }
+            try { await sendDiscordNotification(`✅ **บัญชีได้รับการอนุมัติ**\nผู้ใช้: ${fullName} (${updatedUser.email})\nโดย: ${auth.user?.email || 'Admin'}`, 'auth') } catch (e) { console.error(e) }
+            try { await sendWeLPRUNotification({ userIds: [userId], title: 'บัญชีได้รับการอนุมัติ 🎉', body: 'บัญชีของคุณผ่านการอนุมัติ คุณสามารถเริ่มใช้งานฟีเจอร์ยืมและจองอุปกรณ์ได้ทันที' }) } catch (e) { console.error(e) }
+        } else if (newStatus === 'rejected') {
+            try { await sendDiscordNotification(`❌ **บัญชีถูกปฏิเสธ**\nผู้ใช้: ${fullName} (${updatedUser.email})\nโดย: ${auth.user?.email || 'Admin'}`, 'auth') } catch (e) { console.error(e) }
+            try { await sendWeLPRUNotification({ userIds: [userId], title: 'บัญชีไม่ผ่านการอนุมัติ ❌', body: 'บัญชีของคุณไม่ผ่านการอนุมัติสิทธิ์การใช้งาน กรุณาติดต่อผู้ดูแลระบบ' }) } catch (e) { console.error(e) }
         }
     }
 
@@ -106,9 +120,9 @@ export async function updateMultipleUserStatus(
 
     const adminClient = createAdminClient()
 
-    // 3. Get users for email notification
+    // 3. Get users for email/discord notification
     let usersToNotify: any[] = []
-    if (newStatus === 'approved') {
+    if (newStatus === 'approved' || newStatus === 'rejected') {
         const { data } = await adminClient
             .from('profiles')
             .select('id, email, first_name, last_name, title')
@@ -125,13 +139,31 @@ export async function updateMultipleUserStatus(
 
     if (error) return { error: error.message }
 
-    // 5. Send Approval Emails (if approved)
-    if (newStatus === 'approved' && usersToNotify.length > 0) {
-        const emailPromises = usersToNotify.map(u => {
-            const fullName = `${u.title || ''}${u.first_name} ${u.last_name || ''}`.trim()
-            return sendApprovalEmail(u.email, fullName)
-        })
-        await Promise.allSettled(emailPromises)
+    // 5. Send Notifications
+    if (usersToNotify.length > 0) {
+        if (newStatus === 'approved') {
+            // Email
+            const emailPromises = usersToNotify.map(u => {
+                const fullName = `${u.title || ''}${u.first_name} ${u.last_name || ''}`.trim()
+                return sendApprovalEmail(u.email, fullName)
+            })
+            await Promise.allSettled(emailPromises)
+            
+            // Discord & WeLPRU
+            try {
+                const names = usersToNotify.map(u => `${u.first_name} ${u.last_name || ''}`).join(', ')
+                await sendDiscordNotification(`✅ **อนุมัติบัญชีกลุ่ม (${usersToNotify.length} คน)**\nผู้ใช้: ${names}\nโดย: ${auth.user?.email || 'Admin'}`, 'auth')
+                const ids = usersToNotify.map(u => u.id)
+                await sendWeLPRUNotification({ userIds: ids, title: 'บัญชีได้รับการอนุมัติ 🎉', body: 'บัญชีของคุณผ่านการอนุมัติ คุณสามารถเริ่มใช้งานฟีเจอร์ยืมและจองอุปกรณ์ได้ทันที' })
+            } catch (e) { console.error(e) }
+        } else if (newStatus === 'rejected') {
+            try {
+                const names = usersToNotify.map(u => `${u.first_name} ${u.last_name || ''}`).join(', ')
+                await sendDiscordNotification(`❌ **ปฏิเสธบัญชีกลุ่ม (${usersToNotify.length} คน)**\nผู้ใช้: ${names}\nโดย: ${auth.user?.email || 'Admin'}`, 'auth')
+                const ids = usersToNotify.map(u => u.id)
+                await sendWeLPRUNotification({ userIds: ids, title: 'บัญชีไม่ผ่านการอนุมัติ ❌', body: 'บัญชีของคุณไม่ผ่านการอนุมัติสิทธิ์การใช้งาน กรุณาติดต่อผู้ดูแลระบบ' })
+            } catch (e) { console.error(e) }
+        }
     }
 
     revalidatePath('/admin/users')

@@ -319,52 +319,23 @@ export async function completeSpecialLoan(
     if (!accessToken) return { success: false, error: 'กรุณาเข้าสู่ระบบ' }
 
     try {
-        // Fetch the special loan to get equipment_ids before marking as returned
-        const loanFetchResponse = await fetch(
-            `${url}/rest/v1/special_loan_requests?id=eq.${id}&select=equipment_ids`,
-            {
-                headers: {
-                    'apikey': key,
-                    'Authorization': `Bearer ${accessToken}`
-                }
-            }
-        )
-        const loanData = loanFetchResponse.ok ? await loanFetchResponse.json() : []
-        const equipmentIds: string[] = loanData[0]?.equipment_ids || []
-
-        const response = await fetch(`${url}/rest/v1/special_loan_requests?id=eq.${id}`, {
-            method: 'PATCH',
+        const response = await fetch(`${url}/rest/v1/rpc/complete_special_loan`, {
+            method: 'POST',
             headers: {
                 'apikey': key,
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                status: 'returned',
-                returned_at: new Date().toISOString(),
-                returned_by: admin.id,
-                updated_at: new Date().toISOString()
+                p_loan_id: id,
+                p_admin_id: admin.id
             })
         })
 
         if (!response.ok) {
+            const errText = await response.text()
+            console.error('[completeSpecialLoan] Error:', errText)
             return { success: false, error: 'ไม่สามารถบันทึกการคืนได้' }
-        }
-
-        // Reset equipment status back to 'ready'
-        if (equipmentIds.length > 0) {
-            await fetch(
-                `${url}/rest/v1/equipment?id=in.(${equipmentIds.join(',')})`,
-                {
-                    method: 'PATCH',
-                    headers: {
-                        'apikey': key,
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ status: 'ready' })
-                }
-            )
         }
 
         // Log activity + Notify (parallel)
@@ -405,50 +376,22 @@ export async function cancelSpecialLoan(
     if (!accessToken) return { success: false, error: 'กรุณาเข้าสู่ระบบ' }
 
     try {
-        // Fetch the special loan to get equipment_ids before cancelling
-        const loanFetchResponse = await fetch(
-            `${url}/rest/v1/special_loan_requests?id=eq.${id}&select=equipment_ids`,
-            {
-                headers: {
-                    'apikey': key,
-                    'Authorization': `Bearer ${accessToken}`
-                }
-            }
-        )
-        const loanData = loanFetchResponse.ok ? await loanFetchResponse.json() : []
-        const equipmentIds: string[] = loanData[0]?.equipment_ids || []
-
-        const response = await fetch(`${url}/rest/v1/special_loan_requests?id=eq.${id}`, {
-            method: 'PATCH',
+        const response = await fetch(`${url}/rest/v1/rpc/cancel_special_loan`, {
+            method: 'POST',
             headers: {
                 'apikey': key,
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                status: 'cancelled',
-                updated_at: new Date().toISOString()
+                p_loan_id: id
             })
         })
 
         if (!response.ok) {
+            const errText = await response.text()
+            console.error('[cancelSpecialLoan] Error:', errText)
             return { success: false, error: 'ไม่สามารถยกเลิกได้' }
-        }
-
-        // Reset equipment status back to 'ready'
-        if (equipmentIds.length > 0) {
-            await fetch(
-                `${url}/rest/v1/equipment?id=in.(${equipmentIds.join(',')})`,
-                {
-                    method: 'PATCH',
-                    headers: {
-                        'apikey': key,
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ status: 'ready' })
-                }
-            )
         }
 
         // Log activity + Notify (parallel)

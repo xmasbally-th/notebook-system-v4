@@ -78,6 +78,8 @@ export async function completeRegistrationAction(
         user_type: userType,
         department_id: departmentId,
         user_id: profileUserId,
+        status: 'pending' as const, // Reset status to pending for review
+        reject_reason: null, // Clear any previous rejection reason
         updated_at: new Date().toISOString(),
     }
 

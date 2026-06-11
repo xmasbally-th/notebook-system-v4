@@ -102,13 +102,86 @@ export default function EquipmentTypesPage() {
             {/* Table */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 {isLoading ? (
-                    <div className="p-8 text-center text-gray-500">กำลังโหลด...</div>
+                    <div className="animate-pulse space-y-4">
+                        {/* Desktop Table Skeleton */}
+                        <div className="hidden lg:block">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ไอคอน</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ชื่อประเภท</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">คำอธิบาย</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {[...Array(4)].map((_, i) => (
+                                        <tr key={i}>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="h-4 w-32 bg-gray-200 rounded"></div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="h-4 w-48 bg-gray-200 rounded"></div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="h-6 w-20 bg-gray-200 rounded-full"></div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <div className="h-8 w-8 bg-gray-200 rounded-lg"></div>
+                                                    <div className="h-8 w-8 bg-gray-200 rounded-lg"></div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        {/* Mobile Cards Skeleton */}
+                        <div className="lg:hidden p-4 space-y-3">
+                            {[...Array(4)].map((_, i) => (
+                                <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-3">
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-12 h-12 bg-gray-200 rounded-lg flex-shrink-0"></div>
+                                        <div className="flex-1 space-y-2">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="space-y-1.5 flex-1">
+                                                    <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
+                                                    <div className="h-3 w-1/2 bg-gray-200 rounded"></div>
+                                                </div>
+                                                <div className="h-5 w-12 bg-gray-200 rounded-full flex-shrink-0"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 justify-end pt-2 border-t border-gray-100">
+                                        <div className="h-8 w-8 bg-gray-200 rounded-lg"></div>
+                                        <div className="h-8 w-8 bg-gray-200 rounded-lg"></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 ) : typesList.length === 0 ? (
-                    <div className="p-8 text-center text-gray-500">
-                        <Tag className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                        <p>ยังไม่มีประเภทอุปกรณ์</p>
-                        <Link href="/admin/equipment-types/new" className="text-blue-600 hover:underline text-sm mt-2 inline-block">
-                            + เพิ่มประเภทแรก
+                    <div className="p-16 text-center bg-white rounded-2xl border border-gray-200/60 shadow-sm max-w-lg mx-auto my-8">
+                        <div className="relative w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-violet-50 rounded-full animate-ping opacity-20 duration-1000"></div>
+                            <div className="absolute inset-0 bg-violet-50 rounded-full"></div>
+                            <div className="absolute inset-2 bg-violet-100/40 rounded-full"></div>
+                            <Tag className="w-9 h-9 text-violet-600 relative z-10 drop-shadow-sm" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">ยังไม่มีประเภทพัสดุอุปกรณ์</h3>
+                        <p className="text-sm text-gray-500 max-w-sm mx-auto mb-6">
+                            ยังไม่มีการบันทึกข้อมูลหมวดหมู่หรือประเภทครุภัณฑ์เข้ามาในระบบ ณ ขณะนี้
+                        </p>
+                        <Link
+                            href="/admin/equipment-types/new"
+                            className="px-5 py-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-750 hover:to-fuchsia-750 text-white text-sm font-medium rounded-xl transition-all shadow-sm hover:shadow hover:scale-[1.01] inline-block"
+                        >
+                            + สร้างประเภทอุปกรณ์เครื่องแรก
                         </Link>
                     </div>
                 ) : (

@@ -290,13 +290,13 @@ export async function deleteEquipmentAction(id: string) {
         return { error: 'ไม่พบข้อมูลอุปกรณ์' }
     }
 
-    if (item.status === 'borrowed') {
-        return { error: 'ไม่สามารถลบอุปกรณ์ได้ เนื่องจากกำลังถูกยืมใช้งานอยู่' }
+    if (item.status === 'borrowed' || item.status === 'reserved') {
+        return { error: 'ไม่สามารถลบอุปกรณ์ได้ เนื่องจากกำลังถูกยืมหรือจองอยู่' }
     }
 
     const { error } = await adminClient
         .from('equipment')
-        .delete()
+        .update({ is_active: false, status: 'retired' })
         .eq('id', id)
 
     if (error) {

@@ -135,7 +135,6 @@ export default function BatchAddModal({ isOpen, onClose }: BatchAddModalProps) {
                     model: model.trim() || null,
                     equipment_type_id: equipmentTypeId || null,
                     status: 'ready',
-                    status_new: 'ready',
                     location: { building: building.trim(), room: room.trim() },
                     specifications: {},
                     images: [],

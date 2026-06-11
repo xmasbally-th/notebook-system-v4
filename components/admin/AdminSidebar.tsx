@@ -29,6 +29,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import Image from 'next/image'
 import { useSystemConfig } from '@/hooks/useSystemConfig'
+import ThemeToggle from '@/components/ThemeToggle'
 
 // Get Supabase client for auth operations
 function getSupabaseClient() {
@@ -162,7 +163,8 @@ export default function AdminSidebar() {
                 </nav>
 
                 {/* Footer */}
-                <div className="p-3 border-t border-blue-600/50">
+                <div className="p-3 border-t border-blue-600/50 space-y-1">
+                    <ThemeToggle showLabel={!isCollapsed} variant="sidebar" className="w-full justify-start" />
                     <Link
                         href="/profile"
                         onClick={() => setIsMobileOpen(false)}

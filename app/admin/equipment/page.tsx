@@ -257,13 +257,89 @@ export default function AdminEquipmentList() {
                     </div>
                 </div>
 
-                {/* Loading & Empty States */}
                 {isLoading ? (
-                    <div className="p-8 text-center text-gray-500">กำลังโหลด...</div>
+                    <div className="animate-pulse space-y-4">
+                        {/* Desktop Table Skeleton */}
+                        <div className="hidden lg:block overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-sm">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">อุปกรณ์</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ยี่ห้อ/รุ่น</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ประเภท</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะ</th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {[...Array(5)].map((_, i) => (
+                                        <tr key={i}>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-10 w-10 bg-gray-200 rounded-lg"></div>
+                                                    <div className="space-y-2">
+                                                        <div className="h-4 w-32 bg-gray-200 rounded"></div>
+                                                        <div className="h-3 w-24 bg-gray-200 rounded"></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="h-4 w-28 bg-gray-200 rounded"></div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="h-6 w-20 bg-gray-200 rounded-full"></div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <div className="inline-flex gap-2">
+                                                    <div className="h-8 w-14 bg-gray-200 rounded-lg"></div>
+                                                    <div className="h-8 w-14 bg-gray-200 rounded-lg"></div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        {/* Mobile List Skeleton */}
+                        <div className="lg:hidden space-y-3">
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm space-y-3">
+                                    <div className="flex items-start gap-3">
+                                        <div className="h-16 w-16 bg-gray-200 rounded-lg flex-shrink-0"></div>
+                                        <div className="flex-1 space-y-2">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="space-y-1.5 flex-1">
+                                                    <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
+                                                    <div className="h-3 w-1/2 bg-gray-200 rounded"></div>
+                                                </div>
+                                                <div className="h-5 w-16 bg-gray-200 rounded-full flex-shrink-0"></div>
+                                            </div>
+                                            <div className="h-3 w-1/3 bg-gray-200 rounded"></div>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 pt-2 border-t border-gray-100">
+                                        <div className="h-9 w-12 bg-gray-200 rounded-lg"></div>
+                                        <div className="h-9 flex-1 bg-gray-200 rounded-lg"></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 ) : paginatedItems.length === 0 ? (
-                    <div className="p-12 text-center">
-                        <Package className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                        <p className="text-gray-500">ไม่พบอุปกรณ์ที่ค้นหา</p>
+                    <div className="p-16 text-center bg-white rounded-2xl border border-gray-200/60 shadow-sm max-w-lg mx-auto my-8">
+                        <div className="relative w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-blue-50 rounded-full animate-ping opacity-20 duration-1000"></div>
+                            <div className="absolute inset-0 bg-blue-50 rounded-full"></div>
+                            <div className="absolute inset-2 bg-blue-100/40 rounded-full"></div>
+                            <Package className="w-9 h-9 text-blue-600 relative z-10 drop-shadow-sm" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">ไม่พบครุภัณฑ์อุปกรณ์</h3>
+                        <p className="text-sm text-gray-500 max-w-sm mx-auto mb-6">
+                            ขออภัยด้วยครับ ไม่พบข้อมูลอุปกรณ์ที่ตรงกับเงื่อนไขการค้นหาหรือตัวกรองในขณะนี้
+                        </p>
                         {searchTerm || selectedStatus !== 'all' || selectedType !== 'all' ? (
                             <button
                                 onClick={() => {
@@ -271,13 +347,16 @@ export default function AdminEquipmentList() {
                                     setSelectedStatus('all')
                                     setSelectedType('all')
                                 }}
-                                className="text-blue-600 hover:underline text-sm mt-2"
+                                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-750 hover:to-indigo-750 text-white text-sm font-medium rounded-xl transition-all shadow-sm hover:shadow hover:scale-[1.01]"
                             >
-                                ล้างตัวกรอง
+                                ล้างตัวกรองทั้งหมด
                             </button>
                         ) : (
-                            <Link href="/admin/equipment/new" className="text-blue-600 hover:underline text-sm mt-2 inline-block">
-                                + เพิ่มอุปกรณ์แรก
+                            <Link
+                                href="/admin/equipment/new"
+                                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-750 hover:to-indigo-750 text-white text-sm font-medium rounded-xl transition-all shadow-sm hover:shadow hover:scale-[1.01] inline-block"
+                            >
+                                + เพิ่มอุปกรณ์เครื่องแรก
                             </Link>
                         )}
                     </div>

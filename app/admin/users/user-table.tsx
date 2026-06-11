@@ -180,11 +180,19 @@ export default function UserTable({ users, departments }: { users: User[], depar
             rejected: 'ปฏิเสธ',
             pending: 'เปลี่ยนเป็นรออนุมัติ'
         }
-        if (!confirm(`ต้องการ${statusLabels[status]}ผู้ใช้นี้หรือไม่?`)) return
+        
+        let rejectReason = ''
+        if (status === 'rejected') {
+            const reason = prompt('กรุณากรอกสาเหตุที่ปฏิเสธการอนุมัติบัญชีนี้ (ไม่บังคับ):')
+            if (reason === null) return // User cancelled
+            rejectReason = reason.trim()
+        } else {
+            if (!confirm(`ต้องการ${statusLabels[status]}ผู้ใช้นี้หรือไม่?`)) return
+        }
 
         setLoading(userId)
         try {
-            await updateUserStatus(userId, status)
+            await updateUserStatus(userId, status, rejectReason || undefined)
             router.refresh()
             toast.success(`${statusLabels[status]}ผู้ใช้เรียบร้อยแล้ว`)
         } catch (error: any) {

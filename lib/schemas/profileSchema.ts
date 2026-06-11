@@ -35,6 +35,7 @@ export const updateUserStatusSchema = z.object({
     newStatus: z.enum(['approved', 'rejected', 'pending'], {
         message: 'สถานะไม่ถูกต้อง',
     }),
+    rejectReason: z.string().trim().optional().nullable(),
 })
 
 // Schema สำหรับเปลี่ยนบทบาทผู้ใช้

@@ -304,6 +304,16 @@ export default function EvaluationsPage() {
 
     const totalPending = pendingEvaluations?.length || 0
 
+    // Compute star distribution counts
+    const starDistribution = useMemo(() => {
+        const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+        filteredEvaluations.forEach((e: any) => {
+            const r = Math.min(Math.max(Math.round(e.rating), 1), 5) as 1 | 2 | 3 | 4 | 5
+            counts[r]++
+        })
+        return counts
+    }, [filteredEvaluations])
+
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
             <AdminPageHeader title="ผลการประเมินการใช้งาน" subtitle="ดูคะแนนความพึงพอใจและข้อเสนอแนะจากผู้ใช้ระบบ"/>
@@ -411,44 +421,82 @@ export default function EvaluationsPage() {
                 />
             )}
 
-            {/* Section Averages + Scoring Info */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-                    <h4 className="font-bold text-gray-800 mb-3 text-sm flex items-center gap-2 border-b border-gray-100 pb-2">
-                        <SlidersHorizontal className="w-4 h-4 text-blue-500" />
-                        คะแนนเฉลี่ยแยกตามด้าน
-                    </h4>
-                    <div className="space-y-3.5">
-                        {[
-                            { key: 'system', label: 'ด้านระบบปฏิบัติการ (System)' },
-                            { key: 'service', label: 'ด้านการให้บริการ (Service)' },
-                            { key: 'equipment', label: 'ด้านอุปกรณ์ (Equipment)' },
-                        ].map(({ key, label }) => {
-                            const avg = stats.sectionAvgs?.[key]
-                                ? (stats.sectionAvgs[key].sum / stats.sectionAvgs[key].count)
-                                : 0
-                            return (
-                                <div key={key} className="space-y-1">
-                                    <div className="flex justify-between items-center text-xs font-semibold text-gray-600">
-                                        <span>{label}</span>
-                                        <span className="text-gray-900 bg-amber-50 px-2 py-0.5 rounded text-amber-700 font-bold border border-amber-100">
-                                            {avg ? avg.toFixed(2) : '-'} / 5.0
-                                        </span>
+            {/* Section Averages + Star Distribution + Scoring Info */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* 1. คะแนนเฉลี่ยแยกตามด้าน */}
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex flex-col justify-between">
+                    <div>
+                        <h4 className="font-bold text-gray-800 mb-3 text-sm flex items-center gap-2 border-b border-gray-100 pb-2">
+                            <SlidersHorizontal className="w-4 h-4 text-blue-500" />
+                            คะแนนเฉลี่ยแยกตามด้าน
+                        </h4>
+                        <div className="space-y-3.5">
+                            {[
+                                { key: 'system', label: 'ด้านระบบปฏิบัติการ (System)' },
+                                { key: 'service', label: 'ด้านการให้บริการ (Service)' },
+                                { key: 'equipment', label: 'ด้านอุปกรณ์ (Equipment)' },
+                            ].map(({ key, label }) => {
+                                const avg = stats.sectionAvgs?.[key]
+                                    ? (stats.sectionAvgs[key].sum / stats.sectionAvgs[key].count)
+                                    : 0
+                                return (
+                                    <div key={key} className="space-y-1">
+                                        <div className="flex justify-between items-center text-xs font-semibold text-gray-600">
+                                            <span>{label}</span>
+                                            <span className="text-gray-900 bg-amber-50 px-2 py-0.5 rounded text-amber-700 font-bold border border-amber-100">
+                                                {avg ? avg.toFixed(2) : '-'} / 5.0
+                                            </span>
+                                        </div>
+                                        <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden border border-gray-200/20">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-amber-400 to-yellow-400 rounded-full transition-all duration-500"
+                                                style={{ width: `${(avg / 5) * 100}%` }}
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden border border-gray-200/20">
-                                        <div
-                                            className="h-full bg-gradient-to-r from-amber-400 to-yellow-400 rounded-full transition-all duration-500"
-                                            style={{ width: `${(avg / 5) * 100}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            )
-                        })}
+                                )
+                            })}
+                        </div>
                     </div>
                 </div>
 
-                {/* Scoring Info */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                {/* 2. การกระจายตัวของระดับดาว (Amazon-style Review Bars) */}
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex flex-col justify-between">
+                    <div>
+                        <h4 className="font-bold text-gray-800 mb-3 text-sm flex items-center gap-2 border-b border-gray-100 pb-2">
+                            <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                            การกระจายตัวของระดับดาว
+                        </h4>
+                        <div className="space-y-2">
+                            {[5, 4, 3, 2, 1].map((stars) => {
+                                const count = starDistribution[stars as 1|2|3|4|5] || 0
+                                const total = filteredEvaluations.length || 1
+                                const percentage = (count / total) * 100
+                                return (
+                                    <div key={stars} className="flex items-center gap-3 text-xs font-semibold text-gray-600">
+                                        <span className="w-10 whitespace-nowrap">{stars} ดาว</span>
+                                        <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden border border-gray-200/20">
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-500 bg-gradient-to-r ${
+                                                    stars === 5 ? 'from-emerald-400 to-green-500' :
+                                                    stars === 4 ? 'from-green-400 to-lime-500' :
+                                                    stars === 3 ? 'from-yellow-400 to-amber-500' :
+                                                    stars === 2 ? 'from-orange-400 to-orange-500' :
+                                                    'from-red-400 to-rose-500'
+                                                }`}
+                                                style={{ width: `${percentage}%` }}
+                                            />
+                                        </div>
+                                        <span className="w-12 text-right text-gray-400">{count} รีวิว</span>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. หลักการคำนวณและรายละเอียดข้อคําถาม */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col justify-between">
                     <button
                         onClick={() => setShowScoringInfo(!showScoringInfo)}
                         className="w-full p-5 flex items-center justify-between text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors bg-blue-50/30"
@@ -459,44 +507,34 @@ export default function EvaluationsPage() {
                         </div>
                         {showScoringInfo ? <ChevronUp className="w-4.5 h-4.5" /> : <ChevronDown className="w-4.5 h-4.5" />}
                     </button>
-                    {showScoringInfo && (
-                        <div className="p-5 text-xs text-slate-600 space-y-3 border-t border-blue-50/50 bg-white">
-                            <p>แบบประเมินมี <strong>3 ด้าน รวมทั้งหมด 10 ข้อคําถาม</strong> (คะแนน 1-5 ⭐ ในแต่ละข้อ):</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                                    <p className="font-semibold text-slate-800 mb-1">🖥 ระบบ (3 ข้อ)</p>
-                                    <ul className="list-disc pl-3.5 space-y-0.5 text-slate-500">
-                                        <li>ออกแบบและใช้งานง่าย</li>
-                                        <li>ความครบถ้วนข้อมูล</li>
-                                        <li>เสถียรภาพและรวดเร็ว</li>
-                                    </ul>
+                    <div className="flex-1 p-5 text-xs text-slate-650 space-y-3 bg-white overflow-y-auto max-h-[160px] scrollbar-thin">
+                        {showScoringInfo ? (
+                            <>
+                                <p>แบบประเมินมี <strong>3 ด้าน รวมทั้งหมด 10 ข้อคําถาม</strong> (คะแนน 1-5 ⭐):</p>
+                                <div className="space-y-2">
+                                    <div>
+                                        <p className="font-bold text-slate-800">🖥 ระบบ (3 ข้อ):</p>
+                                        <p className="text-slate-500 pl-2">ออกแบบง่าย, ข้อมูลครบ, เสถียรภาพ</p>
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-slate-800">🤝 บริการ (4 ข้อ):</p>
+                                        <p className="text-slate-500 pl-2">ความเร็วรับ-คืน, กฎชัดเจน, สุภาพ, การติดต่อ</p>
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-slate-800">📦 อุปกรณ์ (3 ข้อ):</p>
+                                        <p className="text-slate-500 pl-2">สะอาด, พร้อมใช้, มีความหลากหลาย</p>
+                                    </div>
                                 </div>
-                                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                                    <p className="font-semibold text-slate-800 mb-1">🤝 บริการ (4 ข้อ)</p>
-                                    <ul className="list-disc pl-3.5 space-y-0.5 text-slate-500">
-                                        <li>ความเร็วรับ-คืน</li>
-                                        <li>ความชัดเจนของกฎ</li>
-                                        <li>ความสุภาพเจ้าหน้าที่</li>
-                                        <li>การแจ้งเตือนและการติดต่อ</li>
-                                    </ul>
-                                </div>
-                                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                                    <p className="font-semibold text-slate-800 mb-1">📦 อุปกรณ์ (3 ข้อ)</p>
-                                    <ul className="list-disc pl-3.5 space-y-0.5 text-slate-500">
-                                        <li>ความสะอาดภายนอก</li>
-                                        <li>ความพร้อมใช้งาน</li>
-                                        <li>ความหลากหลาย</li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div className="bg-blue-50/60 p-3 rounded-xl border border-blue-100/50 text-blue-900 flex items-start gap-2">
+                            </>
+                        ) : (
+                            <div className="bg-blue-50/60 p-3 rounded-xl border border-blue-100/50 text-blue-900 flex items-start gap-2 h-full">
                                 <Info className="w-4 h-4 text-blue-700 flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <strong>หลักการปัดเศษ:</strong> คะแนนเฉลี่ยรวมในแต่ละรายการ คำนวณจากค่าเฉลี่ยของทั้ง 10 ข้อ จากนั้นจะถูกปัดเศษตามหลักทศนิยมทางสถิติออกมาเป็นจํานวนเต็ม (1-5) เพื่อแสดงผลหน้าดาวรวม
+                                <div className="text-[11px] leading-relaxed">
+                                    <strong>หลักการปัดเศษ:</strong> คะแนนเฉลี่ยรวมในแต่ละรายการ คำนวณจากค่าเฉลี่ยของทั้ง 10 ข้อ จากนั้นจะถูกปัดเศษตามหลักทศนิยมทางสถิติออกมาเป็นดาวรวม
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -602,143 +640,145 @@ export default function EvaluationsPage() {
                 </div>
 
                 {activeTab === 'completed' ? (
-                    /* ========== COMPLETED EVALUATIONS TAB ========== */
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50/80">
-                                <tr>
-                                    <th className="px-6 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">วันที่ประเมิน</th>
-                                    <th className="px-6 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">ผู้ประเมิน</th>
-                                    <th className="px-6 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">อุปกรณ์</th>
-                                    <th className="px-6 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">คะแนนเฉลี่ย</th>
-                                    <th className="px-6 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">ข้อเสนอแนะเพิ่มเติม</th>
-                                    <th className="px-6 py-3.5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-[50px]"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {isLoading ? (
-                                    <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-400">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                                                <span>กำลังโหลดข้อมูลการประเมิน...</span>
+                    /* ========== COMPLETED EVALUATIONS TAB (PREMIUM REVIEW CARDS) ========== */
+                    <div className="space-y-4 p-4 md:p-6 bg-gray-50/30">
+                        {isLoading ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-pulse">
+                                {[...Array(4)].map((_, i) => (
+                                    <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4 shadow-sm">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-gray-200"></div>
+                                            <div className="space-y-2 flex-1">
+                                                <div className="h-4 w-1/3 bg-gray-200 rounded"></div>
+                                                <div className="h-3 w-1/4 bg-gray-200 rounded"></div>
                                             </div>
-                                        </td>
-                                    </tr>
-                                ) : filteredEvaluations.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-450 italic">
-                                            ไม่พบข้อมูลการประเมินในช่วงเวลานี้
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    paginatedEvaluations.map((item: any) => (
-                                        <Fragment key={item.id}>
-                                            <tr className={`hover:bg-blue-50/20 transition-colors ${expandedRows.includes(item.id) ? 'bg-blue-50/10' : ''}`}>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-medium">
+                                            <div className="w-12 h-6 bg-gray-200 rounded-full"></div>
+                                        </div>
+                                        <div className="h-12 bg-gray-50 rounded-xl"></div>
+                                        <div className="flex justify-between items-center pt-2">
+                                            <div className="h-3 w-20 bg-gray-200 rounded"></div>
+                                            <div className="h-3 w-24 bg-gray-200 rounded"></div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : filteredEvaluations.length === 0 ? (
+                            <div className="py-16 text-center bg-white rounded-2xl border border-gray-250/60 shadow-sm max-w-lg mx-auto my-8 w-full">
+                                <div className="relative w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                                    <div className="absolute inset-0 bg-blue-50 rounded-full animate-ping opacity-20 duration-1000"></div>
+                                    <div className="absolute inset-0 bg-blue-50 rounded-full"></div>
+                                    <div className="absolute inset-2 bg-blue-100/40 rounded-full"></div>
+                                    <MessageSquare className="w-9 h-9 text-blue-600 relative z-10 drop-shadow-sm" />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">ไม่พบประวัติผลการประเมิน</h3>
+                                <p className="text-sm text-gray-500 max-w-sm mx-auto">
+                                    ยังไม่มีข้อมูลหรือผลการประเมินความพึงพอใจในช่วงเวลาหรือตัวกรองที่เลือกในขณะนี้
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                {paginatedEvaluations.map((item: any) => {
+                                    const ratingBg = item.rating >= 4 ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : item.rating >= 3 ? 'bg-amber-50 border-amber-100 text-amber-800' : 'bg-rose-50 border-rose-100 text-rose-800'
+                                    const isExpanded = expandedRows.includes(item.id)
+
+                                    return (
+                                        <div 
+                                            key={item.id} 
+                                            className={`bg-white rounded-2xl border transition-all duration-200 shadow-sm hover:shadow-md overflow-hidden flex flex-col justify-between ${
+                                                isExpanded ? 'ring-2 ring-blue-500 border-transparent bg-blue-50/5' : 'border-gray-200'
+                                            }`}
+                                        >
+                                            {/* Card Top: User Info & Date */}
+                                            <div className="p-5 pb-3 flex justify-between items-start gap-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0">
+                                                        {item.profiles?.first_name?.[0] || 'U'}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <h4 className="text-sm font-bold text-gray-900 leading-tight truncate">
+                                                            {item.profiles?.first_name} {item.profiles?.last_name}
+                                                        </h4>
+                                                        <p className="text-xs text-gray-400 mt-0.5 truncate">{item.profiles?.email}</p>
+                                                    </div>
+                                                </div>
+                                                <span className="text-[10px] text-gray-450 font-medium bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-100 whitespace-nowrap">
                                                     {formatDate(item.created_at)}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center">
-                                                        <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm mr-3">
-                                                            {item.profiles?.first_name?.[0] || 'U'}
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-sm font-semibold text-gray-900 leading-4">
-                                                                {item.profiles?.first_name} {item.profiles?.last_name}
-                                                            </div>
-                                                            <div className="text-xs text-gray-400 mt-1">{item.profiles?.email}</div>
-                                                        </div>
+                                                </span>
+                                            </div>
+
+                                            {/* Card Middle: Equipment Info & Rating */}
+                                            <div className="px-5 pb-3">
+                                                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center justify-between gap-4">
+                                                    <div className="min-w-0">
+                                                        <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">อุปกรณ์ที่ยืม</p>
+                                                        <p className="text-xs font-bold text-slate-700 truncate mt-0.5">{item.loanRequests?.equipment?.name}</p>
+                                                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">#{item.loanRequests?.equipment?.equipment_number}</p>
                                                     </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm font-semibold text-gray-800">{item.loanRequests?.equipment?.name}</div>
-                                                    <div className="text-xs text-slate-400 font-mono mt-1">#{item.loanRequests?.equipment?.equipment_number}</div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <div className="flex items-center bg-gray-50 px-2 py-1 rounded-xl border border-gray-200">
-                                                            <Star className={`w-4.5 h-4.5 mr-1 ${item.rating >= 4 ? 'text-emerald-500 fill-emerald-500' : item.rating >= 3 ? 'text-amber-500 fill-amber-500' : 'text-rose-500 fill-rose-500'}`} />
-                                                            <span className="text-sm font-bold text-gray-800">{item.rating}</span>
-                                                        </div>
+                                                    <div className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-extrabold flex-shrink-0 ${ratingBg}`}>
+                                                        <Star className="w-3.5 h-3.5 fill-current" />
+                                                        <span>{item.rating}.0</span>
                                                     </div>
-                                                </td>
-                                                <td className="px-6 py-4 max-w-[240px]">
-                                                    {item.suggestions ? (
-                                                        <p className="text-sm text-slate-600 truncate italic" title={item.suggestions}>
+                                                </div>
+                                            </div>
+
+                                            {/* Card Suggestions */}
+                                            {item.suggestions && (
+                                                <div className="px-5 pb-4">
+                                                    <div className="bg-slate-50/50 border border-slate-200/40 rounded-xl p-3">
+                                                        <p className="text-[10px] font-semibold text-slate-400">ข้อเสนอแนะ:</p>
+                                                        <p className="text-xs text-slate-600 italic mt-1 leading-relaxed">
                                                             "{item.suggestions}"
                                                         </p>
-                                                    ) : (
-                                                        <span className="text-sm text-gray-300">-</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4 text-right text-sm font-medium">
-                                                    <button
-                                                        onClick={() => toggleExpand(item.id)}
-                                                        className="text-blue-600 hover:text-blue-800 p-1.5 rounded-full hover:bg-blue-100/50 transition-colors"
-                                                    >
-                                                        {expandedRows.includes(item.id) ? (
-                                                            <ChevronUp className="w-5 h-5" />
-                                                        ) : (
-                                                            <ChevronDown className="w-5 h-5" />
-                                                        )}
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                            {expandedRows.includes(item.id) && (
-                                                <tr className="bg-slate-50/50 border-l-4 border-blue-500">
-                                                    <td colSpan={6} className="px-6 py-5">
-                                                        <div className="space-y-4">
-                                                            {/* Criteria Details Cards */}
-                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                                {[
-                                                                    { category: 'system', title: 'ระบบปฏิบัติการ (System)', color: 'from-blue-500 to-indigo-500' },
-                                                                    { category: 'service', title: 'การให้บริการ (Service)', color: 'from-amber-500 to-yellow-500' },
-                                                                    { category: 'equipment', title: 'อุปกรณ์ที่ให้บริการ (Equipment)', color: 'from-emerald-500 to-teal-500' }
-                                                                ].map((section) => {
-                                                                    const scores = item.details?.[section.category] || {}
-                                                                    return (
-                                                                        <div key={section.category} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3.5">
-                                                                            <h5 className={`font-bold text-xs text-gray-800 pb-1.5 border-b border-gray-100 flex items-center gap-2`}>
-                                                                                <span className={`w-2.5 h-2.5 rounded-full bg-gradient-to-tr ${section.color}`} />
-                                                                                {section.title}
-                                                                            </h5>
-                                                                            <ul className="space-y-2.5">
-                                                                                {Object.entries(scores).map(([k, score]: [string, any]) => (
-                                                                                    <li key={k} className="flex justify-between items-center text-xs text-gray-600">
-                                                                                        <span className="capitalize">{k}</span>
-                                                                                        <div className="flex items-center gap-1 font-bold text-gray-800 bg-gray-50 px-2 py-0.5 rounded border border-gray-100">
-                                                                                            <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
-                                                                                            {score}
-                                                                                        </div>
-                                                                                    </li>
-                                                                                ))}
-                                                                            </ul>
-                                                                        </div>
-                                                                    )
-                                                                })}
-                                                            </div>
-                                                            
-                                                            {/* Additional Suggestions */}
-                                                            {item.suggestions && (
-                                                                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                                                                    <h5 className="font-bold text-xs text-gray-800 mb-1">ข้อเสนอแนะเพิ่มเติมเพื่อปรับปรุงระบบ</h5>
-                                                                    <p className="text-sm text-slate-600 italic">"{item.suggestions}"</p>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                </tr>
+                                                    </div>
+                                                </div>
                                             )}
-                                        </Fragment>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+
+                                            {/* Card Bottom: Toggle details & details view */}
+                                            <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-3 flex flex-col gap-3">
+                                                <button
+                                                    onClick={() => toggleExpand(item.id)}
+                                                    className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
+                                                >
+                                                    <span>{isExpanded ? 'ซ่อนคะแนนประเมินรายข้อ' : 'แสดงคะแนนประเมินรายข้อ'}</span>
+                                                    {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                                </button>
+
+                                                {isExpanded && (
+                                                    <div className="space-y-3 pt-2 animate-in slide-in-from-top-2 duration-200">
+                                                        <div className="grid grid-cols-3 gap-2">
+                                                            {[
+                                                                { category: 'system', title: 'ระบบ (System)' },
+                                                                { category: 'service', title: 'บริการ (Service)' },
+                                                                { category: 'equipment', title: 'อุปกรณ์ (Equip)' }
+                                                            ].map((section) => {
+                                                                const scores = item.details?.[section.category] || {}
+                                                                const categorySum = Object.values(scores).reduce((acc: number, cur: any) => acc + cur, 0) as number
+                                                                const categoryCount = Object.values(scores).length || 1
+                                                                const categoryAvg = categorySum / categoryCount
+
+                                                                return (
+                                                                    <div key={section.category} className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-sm space-y-1.5 text-center">
+                                                                        <span className="text-[9px] font-bold text-gray-500 block truncate">{section.title}</span>
+                                                                        <div className="flex items-center justify-center gap-1 font-extrabold text-xs text-gray-800 bg-gray-50 py-0.5 rounded-lg border border-gray-100">
+                                                                            <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                                                                            {categoryAvg ? categoryAvg.toFixed(1) : '-'}
+                                                                        </div>
+                                                                    </div>
+                                                                )
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
 
                         {/* Completed Evaluations Pagination */}
                         {!isLoading && totalPages > 1 && (
-                            <div className="bg-white px-6 py-4 flex items-center justify-between border-t border-gray-250">
+                            <div className="bg-white px-6 py-4 flex items-center justify-between border border-gray-200 rounded-2xl shadow-sm mt-4">
                                 <div className="text-xs font-semibold text-gray-500">
                                     แสดง {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredEvaluations.length)} จาก {filteredEvaluations.length} รายการ
                                 </div>
@@ -773,44 +813,187 @@ export default function EvaluationsPage() {
                             </div>
                         )}
                     </div>
-                ) : (
-                    /* ========== PENDING EVALUATIONS TAB ========== */
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-orange-50/50">
-                                <tr>
-                                    <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">ผู้ยืม</th>
-                                    <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">อุปกรณ์</th>
-                                    <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">วันที่ยืม</th>
-                                    <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">วันที่คืน</th>
-                                    <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">เกินกำหนด</th>
-                                    <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">สถานะข้อกำหนด</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {pendingLoading ? (
-                                    <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-400">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-                                                <span>กำลังโหลดข้อมูลค้างประเมิน...</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : displayedPending.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={6} className="px-6 py-14 text-center">
-                                            <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-2.5" />
-                                            <p className="text-sm font-semibold text-gray-600">
-                                                {pendingFilter === 'mandatory'
-                                                    ? 'ไม่มีรายการบังคับประเมินคงค้างแล้ว 🎉'
-                                                    : 'ผู้ใช้ทุกคนประเมินผลการใช้งานครบถ้วนแล้ว 🎉'
-                                                }
-                                            </p>
-                                        </td>
-                                    </tr>
                                 ) : (
-                                    paginatedPending.map((loan: any) => {
+                    /* ========== PENDING EVALUATIONS TAB ========== */
+                    <div>
+                        {pendingLoading ? (
+                            <>
+                                {/* Desktop Skeleton Table */}
+                                <div className="hidden md:block overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-sm">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-orange-50/50">
+                                            <tr>
+                                                <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">ผู้ยืม</th>
+                                                <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">อุปกรณ์</th>
+                                                <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">วันที่ยืม</th>
+                                                <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">วันที่คืน</th>
+                                                <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">เกินกำหนด</th>
+                                                <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">สถานะข้อกำหนด</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {[...Array(4)].map((_, i) => (
+                                                <tr key={i} className="animate-pulse">
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0"></div>
+                                                            <div className="space-y-1.5 flex-1">
+                                                                <div className="h-4 w-28 bg-gray-200 rounded"></div>
+                                                                <div className="h-3 w-36 bg-gray-200 rounded"></div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="space-y-1.5">
+                                                            <div className="h-4 w-32 bg-gray-200 rounded"></div>
+                                                            <div className="h-3 w-20 bg-gray-200 rounded text-xs font-mono"></div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="h-6 w-16 bg-gray-200 rounded-full"></div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="h-6 w-24 bg-gray-200 rounded-full"></div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {/* Mobile Skeleton List */}
+                                <div className="md:hidden space-y-3">
+                                    {[...Array(4)].map((_, i) => (
+                                        <div key={i} className="bg-white rounded-xl p-4 border border-gray-150 shadow-sm space-y-3 animate-pulse">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0"></div>
+                                                <div className="space-y-1.5 flex-1">
+                                                    <div className="h-4 w-28 bg-gray-200 rounded"></div>
+                                                    <div className="h-3 w-36 bg-gray-200 rounded"></div>
+                                                </div>
+                                            </div>
+                                            <div className="bg-slate-50 rounded-lg p-2.5 space-y-1.5">
+                                                <div className="h-4 w-32 bg-gray-200 rounded"></div>
+                                                <div className="h-3 w-24 bg-gray-200 rounded"></div>
+                                            </div>
+                                            <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                                                <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                                                <div className="h-6 w-24 bg-gray-200 rounded-full"></div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        ) : displayedPending.length === 0 ? (
+                            /* Premium Empty State Banner */
+                            <div className="p-16 text-center bg-white rounded-2xl border border-gray-200/60 shadow-sm max-w-lg mx-auto my-8">
+                                <div className="relative w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                                    <div className="absolute inset-0 bg-emerald-50 rounded-full animate-ping opacity-20 duration-1000"></div>
+                                    <div className="absolute inset-0 bg-emerald-50 rounded-full"></div>
+                                    <div className="absolute inset-2 bg-emerald-100/40 rounded-full"></div>
+                                    <CheckCircle className="w-9 h-9 text-emerald-600 relative z-10 drop-shadow-sm" />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">
+                                    {pendingFilter === 'mandatory'
+                                        ? 'ไม่มีรายการบังคับประเมินคงค้างแล้ว 🎉'
+                                        : 'การประเมินเสร็จสมบูรณ์ครบถ้วน 🎉'
+                                    }
+                                </h3>
+                                <p className="text-sm text-gray-500 max-w-sm mx-auto">
+                                    {pendingFilter === 'mandatory'
+                                        ? 'ผู้ใช้งานที่คืนเครื่องภายใน 7 วันทำการได้ส่งแบบประเมินครบถ้วนแล้ว'
+                                        : 'ธุรกรรมการยืม-คืนอุปกรณ์โน้ตบุ๊คทั้งหมดได้รับการประเมินความพึงพอใจแล้ว'
+                                    }
+                                </p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Desktop Table */}
+                                <div className="hidden md:block overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-sm">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-orange-50/50">
+                                            <tr>
+                                                <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">ผู้ยืม</th>
+                                                <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">อุปกรณ์</th>
+                                                <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">วันที่ยืม</th>
+                                                <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">วันที่คืน</th>
+                                                <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">เกินกำหนด</th>
+                                                <th className="px-6 py-3.5 text-left text-xs font-bold text-orange-800 uppercase tracking-wider">สถานะข้อกำหนด</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {paginatedPending.map((loan: any) => {
+                                                const daysSinceReturn = Math.floor(
+                                                    (Date.now() - new Date(loan.updated_at).getTime()) / (1000 * 60 * 60 * 24)
+                                                )
+                                                const returnedDate = loan.updated_at?.split('T')[0] || ''
+                                                const isMandatory = returnedDate >= cutoffDate
+                                                const isOverdue = isMandatory && daysSinceReturn > 3
+
+                                                return (
+                                                    <tr key={loan.id} className={`hover:bg-orange-50/10 transition-colors ${isOverdue ? 'bg-rose-50/30' : !isMandatory ? 'bg-gray-50/20' : ''}`}>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="flex items-center">
+                                                                <div className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-sm shadow-sm mr-3 ${isMandatory ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-500'}`}>
+                                                                    {loan.profiles?.first_name?.[0] || 'U'}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-sm font-semibold text-gray-900 leading-4">
+                                                                        {loan.profiles?.first_name} {loan.profiles?.last_name}
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-400 mt-1">{loan.profiles?.email}</div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="text-sm font-semibold text-gray-800">{loan.equipment?.name}</div>
+                                                            <div className="text-xs text-slate-400 font-mono mt-1">#{loan.equipment?.equipment_number}</div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-medium">
+                                                            {formatDateShort(loan.start_date)}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-medium">
+                                                            {formatDateShort(loan.updated_at)}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${isOverdue
+                                                                ? 'bg-rose-100 text-rose-700 border border-rose-200/50'
+                                                                : daysSinceReturn >= 1
+                                                                    ? 'bg-amber-100 text-amber-700 border border-amber-200/50'
+                                                                    : 'bg-slate-100 text-slate-600 border border-slate-200/50'
+                                                                }`}>
+                                                                <Clock className="w-3.5 h-3.5" />
+                                                                {daysSinceReturn === 0 ? 'วันนี้' : `${daysSinceReturn} วัน`}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            {isMandatory ? (
+                                                                <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-orange-100 text-orange-700 border border-orange-200/40">
+                                                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                                                    บังคับก่อนทำรายการใหม่
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200/40">
+                                                                    <Archive className="w-3.5 h-3.5" />
+                                                                    ข้อมูลย้อนหลัง (ไม่บังคับ)
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Mobile Cards List */}
+                                <div className="md:hidden space-y-3">
+                                    {paginatedPending.map((loan: any) => {
                                         const daysSinceReturn = Math.floor(
                                             (Date.now() - new Date(loan.updated_at).getTime()) / (1000 * 60 * 60 * 24)
                                         )
@@ -819,64 +1002,81 @@ export default function EvaluationsPage() {
                                         const isOverdue = isMandatory && daysSinceReturn > 3
 
                                         return (
-                                            <tr key={loan.id} className={`hover:bg-orange-50/10 transition-colors ${isOverdue ? 'bg-rose-50/30' : !isMandatory ? 'bg-gray-50/20' : ''}`}>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center">
-                                                        <div className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-sm shadow-sm mr-3 ${isMandatory ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-500'}`}>
-                                                            {loan.profiles?.first_name?.[0] || 'U'}
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-sm font-semibold text-gray-900 leading-4">
-                                                                {loan.profiles?.first_name} {loan.profiles?.last_name}
-                                                            </div>
-                                                            <div className="text-xs text-gray-400 mt-1">{loan.profiles?.email}</div>
-                                                        </div>
+                                            <div
+                                                key={loan.id}
+                                                className={`bg-white rounded-xl p-4 border shadow-sm space-y-3 transition-colors ${
+                                                    isOverdue
+                                                        ? 'border-red-200 bg-rose-50/20'
+                                                        : !isMandatory
+                                                            ? 'border-gray-150 bg-gray-50/20'
+                                                            : 'border-gray-200'
+                                                }`}
+                                            >
+                                                <div className="flex items-center">
+                                                    <div className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-sm shadow-sm mr-3 flex-shrink-0 ${
+                                                        isMandatory ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-500'
+                                                    }`}>
+                                                        {loan.profiles?.first_name?.[0] || 'U'}
                                                     </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm font-semibold text-gray-800">{loan.equipment?.name}</div>
-                                                    <div className="text-xs text-slate-400 font-mono mt-1">#{loan.equipment?.equipment_number}</div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-medium">
-                                                    {formatDateShort(loan.start_date)}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-medium">
-                                                    {formatDateShort(loan.updated_at)}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${isOverdue
-                                                        ? 'bg-rose-100 text-rose-700 border border-rose-200/50'
-                                                        : daysSinceReturn >= 1
-                                                            ? 'bg-amber-100 text-amber-700 border border-amber-200/50'
-                                                            : 'bg-slate-100 text-slate-600 border border-slate-200/50'
-                                                        }`}>
+                                                    <div className="min-w-0">
+                                                        <div className="text-sm font-semibold text-gray-900 truncate">
+                                                            {loan.profiles?.first_name} {loan.profiles?.last_name}
+                                                        </div>
+                                                        <div className="text-xs text-gray-450 truncate mt-0.5">{loan.profiles?.email}</div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="bg-slate-50 border border-slate-100 rounded-lg p-2.5">
+                                                    <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">อุปกรณ์ที่คืน</div>
+                                                    <div className="text-sm font-semibold text-gray-800 truncate mt-0.5">{loan.equipment?.name}</div>
+                                                    <div className="text-xs text-slate-400 font-mono mt-0.5">#{loan.equipment?.equipment_number}</div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 font-medium">
+                                                    <div>
+                                                        <span className="text-slate-400 block mb-0.5">วันที่ยืม</span>
+                                                        <span>{formatDateShort(loan.start_date)}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-400 block mb-0.5">วันที่คืน</span>
+                                                        <span>{formatDateShort(loan.updated_at)}</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between pt-2.5 border-t border-gray-100 gap-2 flex-wrap">
+                                                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                                                        isOverdue
+                                                            ? 'bg-rose-100 text-rose-700 border border-rose-200/50'
+                                                            : daysSinceReturn >= 1
+                                                                ? 'bg-amber-100 text-amber-700 border border-amber-200/50'
+                                                                : 'bg-slate-100 text-slate-600 border border-slate-200/50'
+                                                    }`}>
                                                         <Clock className="w-3.5 h-3.5" />
                                                         {daysSinceReturn === 0 ? 'วันนี้' : `${daysSinceReturn} วัน`}
                                                     </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
+
                                                     {isMandatory ? (
-                                                        <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-orange-100 text-orange-700 border border-orange-200/40">
-                                                            <AlertTriangle className="w-3.5 h-3.5" />
-                                                            บังคับก่อนทำรายการใหม่
+                                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200/40">
+                                                            <AlertTriangle className="w-3 h-3" />
+                                                            บังคับก่อนเริ่มใหม่
                                                         </span>
                                                     ) : (
-                                                        <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200/40">
+                                                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200/40">
                                                             <Archive className="w-3.5 h-3.5" />
-                                                            ข้อมูลย้อนหลัง (ไม่บังคับ)
+                                                            ไม่บังคับ
                                                         </span>
                                                     )}
-                                                </td>
-                                            </tr>
+                                                </div>
+                                            </div>
                                         )
-                                    })
-                                )}
-                            </tbody>
-                        </table>
+                                    })}
+                                </div>
+                            </>
+                        )}
 
                         {/* Pending Pagination */}
                         {!pendingLoading && pendingTotalPages > 1 && (
-                            <div className="bg-white px-6 py-4 flex items-center justify-between border-t border-gray-250">
+                            <div className="bg-white px-6 py-4 flex items-center justify-between border border-gray-200 rounded-xl shadow-sm mt-4">
                                 <div className="text-xs font-semibold text-gray-500">
                                     แสดง {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, displayedPending.length)} จาก {displayedPending.length} รายการ
                                 </div>

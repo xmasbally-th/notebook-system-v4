@@ -175,11 +175,40 @@ export default function StaffReturnsPage() {
                 </div>
 
                 {isLoading ? (
-                    <div className="p-8 text-center text-gray-500">กำลังโหลด...</div>
+                    <div className="divide-y divide-gray-100 animate-pulse">
+                        {[...Array(3)].map((_, i) => (
+                            <div key={i} className="p-5 space-y-4">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-20 h-20 bg-gray-200 rounded-xl flex-shrink-0"></div>
+                                    <div className="flex-1 space-y-2.5">
+                                        <div className="h-5 w-2/3 bg-gray-200 rounded"></div>
+                                        <div className="h-6 w-28 bg-gray-200 rounded-md"></div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-gray-200"></div>
+                                    <div className="h-4 w-40 bg-gray-200 rounded"></div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-gray-200"></div>
+                                    <div className="h-4 w-48 bg-gray-200 rounded"></div>
+                                </div>
+                                <div className="h-10 w-24 bg-gray-200 rounded-lg"></div>
+                            </div>
+                        ))}
+                    </div>
                 ) : filteredLoans.length === 0 ? (
-                    <div className="p-12 text-center">
-                        <RotateCcw className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                        <p className="text-gray-500">ไม่มีอุปกรณ์ที่กำลังยืมอยู่</p>
+                    <div className="p-16 text-center bg-white rounded-2xl border border-gray-200/60 shadow-sm max-w-lg mx-auto my-8">
+                        <div className="relative w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-blue-50 rounded-full animate-ping opacity-20 duration-1000"></div>
+                            <div className="absolute inset-0 bg-blue-50 rounded-full"></div>
+                            <div className="absolute inset-2 bg-blue-100/40 rounded-full"></div>
+                            <RotateCcw className="w-9 h-9 text-blue-600 relative z-10 drop-shadow-sm" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">ไม่มีครุภัณฑ์อุปกรณ์ที่กำลังถูกยืม</h3>
+                        <p className="text-sm text-gray-500 max-w-sm mx-auto">
+                            ในขณะนี้ยังไม่มีอุปกรณ์โน้ตบุ๊คหรือครุภัณฑ์ชิ้นใดที่มีสถานะกำลังถูกยืมใช้งานในระบบให้บริการยืมคืน
+                        </p>
                     </div>
                 ) : (
                     <div className="divide-y divide-gray-100">

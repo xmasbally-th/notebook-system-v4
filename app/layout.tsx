@@ -43,6 +43,10 @@ try {
     if (t === 'classic' || t === 'playful') {
         document.documentElement.setAttribute('data-theme', t);
     }
+    var d = localStorage.getItem('notebook-system-dark');
+    if (d === 'true') {
+        document.documentElement.classList.add('dark');
+    }
 } catch(e) {}
 `
 

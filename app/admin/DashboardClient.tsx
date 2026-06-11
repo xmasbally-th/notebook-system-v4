@@ -79,8 +79,8 @@ export default function DashboardClient({ initialStats }: { initialStats: Dashbo
             value: stats.equipment,
             icon: Package,
             color: 'bg-blue-500',
-            bgColor: 'bg-blue-50',
-            textColor: 'text-blue-600',
+            bgColor: 'bg-blue-50 dark:bg-blue-950/30',
+            textColor: 'text-blue-600 dark:text-blue-400',
             href: '/admin/equipment'
         },
         {
@@ -88,8 +88,8 @@ export default function DashboardClient({ initialStats }: { initialStats: Dashbo
             value: stats.pendingUsers,
             icon: Users,
             color: 'bg-orange-500',
-            bgColor: 'bg-orange-50',
-            textColor: 'text-orange-600',
+            bgColor: 'bg-orange-50 dark:bg-orange-950/30',
+            textColor: 'text-orange-600 dark:text-orange-400',
             href: '/admin/users',
             urgent: stats.pendingUsers > 0
         },
@@ -98,8 +98,8 @@ export default function DashboardClient({ initialStats }: { initialStats: Dashbo
             value: stats.pendingLoans,
             icon: ClipboardList,
             color: 'bg-purple-500',
-            bgColor: 'bg-purple-50',
-            textColor: 'text-purple-600',
+            bgColor: 'bg-purple-50 dark:bg-purple-950/30',
+            textColor: 'text-purple-600 dark:text-purple-400',
             href: '/admin/loans',
             urgent: stats.pendingLoans > 0
         },
@@ -108,8 +108,8 @@ export default function DashboardClient({ initialStats }: { initialStats: Dashbo
             value: stats.activeLoans,
             icon: TrendingUp,
             color: 'bg-green-500',
-            bgColor: 'bg-green-50',
-            textColor: 'text-green-600',
+            bgColor: 'bg-green-50 dark:bg-green-950/30',
+            textColor: 'text-green-600 dark:text-green-400',
             href: '/admin/loans'
         }
     ]
@@ -137,9 +137,9 @@ export default function DashboardClient({ initialStats }: { initialStats: Dashbo
                             key={stat.label}
                             href={stat.href}
                             className={`
-                                relative overflow-hidden bg-white p-5 rounded-2xl shadow-sm border border-gray-100
-                                hover:shadow-md hover:border-gray-200 transition-all group
-                                ${stat.urgent ? 'ring-2 ring-orange-400 ring-offset-2' : ''}
+                                relative overflow-hidden bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800
+                                hover:shadow-md hover:border-gray-200 dark:hover:border-slate-700 transition-all group
+                                ${stat.urgent ? 'ring-2 ring-orange-400 ring-offset-2 dark:ring-offset-slate-950' : ''}
                             `}
                         >
                             {stat.urgent && (
@@ -152,7 +152,7 @@ export default function DashboardClient({ initialStats }: { initialStats: Dashbo
                             )}
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <p className="text-sm text-gray-500 font-medium">{stat.label}</p>
+                                    <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">{stat.label}</p>
                                     <p className={`text-3xl font-bold mt-1 ${stat.textColor}`}>
                                         {stat.value}
                                     </p>
@@ -161,7 +161,7 @@ export default function DashboardClient({ initialStats }: { initialStats: Dashbo
                                     <Icon className={`w-6 h-6 ${stat.textColor}`} />
                                 </div>
                             </div>
-                            <div className="mt-4 flex items-center text-sm text-gray-500 group-hover:text-blue-600 transition-colors">
+                            <div className="mt-4 flex items-center text-sm text-gray-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                                 <span>ดูรายละเอียด</span>
                                 <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                             </div>
@@ -173,8 +173,8 @@ export default function DashboardClient({ initialStats }: { initialStats: Dashbo
             {/* Quick Actions & Status */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Quick Actions */}
-                <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">ดำเนินการด่วน</h2>
+                <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4">ดำเนินการด่วน</h2>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {quickActions.map((action) => {
                             const Icon = action.icon
@@ -196,33 +196,33 @@ export default function DashboardClient({ initialStats }: { initialStats: Dashbo
                 </div>
 
                 {/* System Status */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">สถานะระบบ</h2>
+                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-6">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4">สถานะระบบ</h2>
                     <div className="space-y-3">
-                        <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl">
+                        <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/30 rounded-xl">
                             <div className="flex items-center gap-2">
-                                <CheckCircle2 className="w-5 h-5 text-green-600" />
-                                <span className="text-sm font-medium text-green-800">ระบบยืม-คืน</span>
+                                <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                <span className="text-sm font-medium text-green-800 dark:text-green-200">ระบบยืม-คืน</span>
                             </div>
-                            <span className="text-xs font-medium px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                            <span className="text-xs font-medium px-2 py-1 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-full">
                                 เปิดใช้งาน
                             </span>
                         </div>
-                        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
+                        <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/30 rounded-xl">
                             <div className="flex items-center gap-2">
-                                <Clock className="w-5 h-5 text-blue-600" />
-                                <span className="text-sm font-medium text-blue-800">เวลาทำการ</span>
+                                <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                <span className="text-sm font-medium text-blue-800 dark:text-blue-200">เวลาทำการ</span>
                             </div>
-                            <span className="text-xs font-medium text-blue-700">
+                            <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
                                 08:30 - 16:30
                             </span>
                         </div>
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                        <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800/50 rounded-xl">
                             <div className="flex items-center gap-2">
-                                <Users className="w-5 h-5 text-gray-600" />
-                                <span className="text-sm font-medium text-gray-800">ผู้ใช้ทั้งหมด</span>
+                                <Users className="w-5 h-5 text-gray-600 dark:text-slate-400" />
+                                <span className="text-sm font-medium text-gray-800 dark:text-slate-200">ผู้ใช้ทั้งหมด</span>
                             </div>
-                            <span className="text-xs font-medium text-gray-700">
+                            <span className="text-xs font-medium text-gray-700 dark:text-slate-300">
                                 {stats.totalUsers} คน
                             </span>
                         </div>

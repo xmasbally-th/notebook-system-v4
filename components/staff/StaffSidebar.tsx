@@ -20,6 +20,7 @@ import {
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import ThemeToggle from '@/components/ThemeToggle'
 
 // Get Supabase client for auth operations
 function getSupabaseClient() {
@@ -134,7 +135,8 @@ export default function StaffSidebar() {
                 </nav>
 
                 {/* Footer */}
-                <div className="p-3 border-t border-teal-500/50">
+                <div className="p-3 border-t border-teal-500/50 space-y-1">
+                    <ThemeToggle showLabel={!isCollapsed} variant="sidebar" className="w-full justify-start" />
                     <Link
                         href="/profile"
                         onClick={() => setIsMobileOpen(false)}

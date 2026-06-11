@@ -177,8 +177,13 @@ export default function MyLoansClient({ loans, reservations, evaluationCutoffDat
                                                             <div className="flex items-center gap-2">
                                                                 <h3 className="font-semibold text-gray-900 truncate">{equipment?.name || 'ไม่ระบุอุปกรณ์'}</h3>
                                                                 {isReturned && !isEvaluated && (
-                                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${isMandatoryEval ? 'bg-orange-100 text-orange-800 animate-pulse' : 'bg-gray-100 text-gray-600'}`}>
-                                                                        {isMandatoryEval ? 'รอการประเมิน' : 'ประเมินได้'}
+                                                                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                                                        isMandatoryEval
+                                                                            ? 'bg-amber-50 border-amber-250 text-amber-700 animate-pulse'
+                                                                            : 'bg-gray-50 border-gray-200 text-gray-500'
+                                                                    }`}>
+                                                                        <span className={`w-1.5 h-1.5 rounded-full ${isMandatoryEval ? 'bg-amber-500' : 'bg-gray-400'}`} />
+                                                                        {isMandatoryEval ? 'รอการประเมิน (บังคับ)' : 'ประเมินผลการใช้งาน'}
                                                                     </span>
                                                                 )}
                                                             </div>
@@ -208,19 +213,28 @@ export default function MyLoansClient({ loans, reservations, evaluationCutoffDat
                                                         {isReturned && (
                                                             <div className="mt-2 sm:mt-0">
                                                                 {isEvaluated ? (
-                                                                    <div className="flex items-center gap-1 text-yellow-500 font-medium text-sm">
+                                                                    <div className="flex items-center gap-1.5 text-amber-500 font-semibold text-sm bg-amber-50/50 px-2.5 py-1 rounded-xl border border-amber-100/30">
                                                                         <Star className="w-4 h-4 fill-current" />
                                                                         <span>{rating}/5</span>
-                                                                        <span className="text-gray-400 text-xs ml-1">(ประเมินแล้ว)</span>
+                                                                        <span className="text-gray-400 text-xs font-normal">(ประเมินแล้ว)</span>
                                                                     </div>
                                                                 ) : (
-                                                                    <button
-                                                                        onClick={() => handleEvaluate(item)}
-                                                                        className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors shadow-sm ${isMandatoryEval ? 'bg-yellow-500 hover:bg-yellow-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'}`}
-                                                                    >
-                                                                        <Star className="w-3 h-3" />
-                                                                        {isMandatoryEval ? 'ประเมินความพึงพอใจ' : 'ประเมินย้อนหลัง'}
-                                                                    </button>
+                                                                    <div className="relative inline-block">
+                                                                        {isMandatoryEval && (
+                                                                            <span className="absolute -inset-0.5 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-400 opacity-75 blur animate-pulse" />
+                                                                        )}
+                                                                        <button
+                                                                            onClick={() => handleEvaluate(item)}
+                                                                            className={`relative flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 shadow-sm ${
+                                                                                isMandatoryEval
+                                                                                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white transform hover:scale-[1.03]'
+                                                                                    : 'bg-gray-50 hover:bg-gray-105 text-gray-700 border border-gray-250'
+                                                                            }`}
+                                                                        >
+                                                                            <Star className={`w-3.5 h-3.5 ${isMandatoryEval ? 'fill-white text-white' : 'text-gray-400'}`} />
+                                                                            <span>{isMandatoryEval ? 'ประเมินความพึงพอใจ' : 'ประเมินย้อนหลัง'}</span>
+                                                                        </button>
+                                                                    </div>
                                                                 )}
                                                             </div>
                                                         )}

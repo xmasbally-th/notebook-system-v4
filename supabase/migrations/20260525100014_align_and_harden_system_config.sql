@@ -20,6 +20,13 @@ BEGIN
     END IF;
 END $$;
 
+ALTER TABLE public.system_config ADD COLUMN IF NOT EXISTS loan_limits_by_type JSONB;
+ALTER TABLE public.system_config ADD COLUMN IF NOT EXISTS opening_time TIME;
+ALTER TABLE public.system_config ADD COLUMN IF NOT EXISTS closing_time TIME;
+ALTER TABLE public.system_config ADD COLUMN IF NOT EXISTS break_start_time TIME;
+ALTER TABLE public.system_config ADD COLUMN IF NOT EXISTS break_end_time TIME;
+ALTER TABLE public.system_config ADD COLUMN IF NOT EXISTS closed_dates JSONB;
+
 -- 2. Consolidate separate rows (e.g. from legacy seeds) into id = 1
 DO $$
 DECLARE
@@ -55,9 +62,7 @@ BEGIN
         EXECUTE 'SELECT value FROM public.system_config WHERE key = ''loan_limits'' LIMIT 1'
         INTO v_limits;
 
-        EXECUTE 'SELECT support_auto_reply_enabled, support_auto_reply_message 
-                 FROM public.system_config WHERE key = ''support_settings'' LIMIT 1'
-        INTO v_support_enabled, v_support_msg;
+
     END IF;
 
     -- Ensure we have at least one row
@@ -83,18 +88,19 @@ BEGIN
             reservation_expiry_minutes = COALESCE(v_expiry, reservation_expiry_minutes, 5),
             max_reservations_per_user = COALESCE(v_max_res, max_reservations_per_user, 3),
             discord_notifications_enabled = COALESCE(v_discord_enabled, discord_notifications_enabled, false),
-            loan_limits_by_type = COALESCE(v_limits, loan_limits_by_type, '{"student": {"max_days": 3, "max_items": 1}, "lecturer": {"max_days": 7, "max_items": 3}, "staff": {"max_days": 5, "max_items": 2}}'::jsonb),
-            support_auto_reply_enabled = COALESCE(v_support_enabled, support_auto_reply_enabled, true),
-            support_auto_reply_message = COALESCE(v_support_msg, support_auto_reply_message)
+            loan_limits_by_type = COALESCE(v_limits, loan_limits_by_type, '{"student": {"max_days": 3, "max_items": 1}, "lecturer": {"max_days": 7, "max_items": 3}, "staff": {"max_days": 5, "max_items": 2}}'::jsonb)
         WHERE id = 1;
-
-        -- Drop key and value columns if they exist as they are no longer used
-        ALTER TABLE public.system_config DROP COLUMN IF EXISTS key;
-        ALTER TABLE public.system_config DROP COLUMN IF EXISTS value;
     END IF;
 
     -- Remove any other config rows
     DELETE FROM public.system_config WHERE id != 1;
+END $$;
+
+-- Drop key and value columns if they exist as they are no longer used
+DO $$
+BEGIN
+    ALTER TABLE public.system_config DROP COLUMN IF EXISTS key;
+    ALTER TABLE public.system_config DROP COLUMN IF EXISTS value;
 END $$;
 
 -- 3. Harden RLS Policies
@@ -110,6 +116,4 @@ DROP POLICY IF EXISTS "Admins update config" ON public.system_config;
 CREATE POLICY "system_config_admin_all" ON public.system_config
     FOR ALL USING (get_my_role() = 'admin');
 
--- Ensure RPC is correctly defined and granted
-GRANT EXECUTE ON FUNCTION public.get_public_system_config() TO authenticated;
-GRANT EXECUTE ON FUNCTION public.get_public_system_config() TO anon;
+

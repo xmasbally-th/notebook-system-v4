@@ -300,4 +300,4 @@ CREATE INDEX IF NOT EXISTS idx_staff_activity_staff_id ON staff_activity_log(sta
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_tickets_user ON support_tickets(user_id);
 CREATE INDEX IF NOT EXISTS idx_messages_ticket ON support_messages(ticket_id, created_at ASC);
-CREATE GIN INDEX IF NOT EXISTS idx_special_loans_equipment_ids ON special_loan_requests(equipment_ids);
+CREATE INDEX IF NOT EXISTS idx_special_loans_equipment_ids ON special_loan_requests USING GIN (equipment_ids);

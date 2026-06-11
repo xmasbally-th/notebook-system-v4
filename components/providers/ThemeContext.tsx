@@ -8,20 +8,23 @@ interface ThemeContextType {
     theme: Theme
     setTheme: (theme: Theme) => void
     toggleTheme: () => void
+    isDark: boolean
+    toggleDark: () => void
 }
 
 const ThemeContext = createContext<ThemeContextType>({
     theme: 'playful',
     setTheme: () => { },
     toggleTheme: () => { },
+    isDark: false,
+    toggleDark: () => { },
 })
 
 const THEME_STORAGE_KEY = 'notebook-system-theme'
+const DARK_STORAGE_KEY = 'notebook-system-dark'
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [theme, setThemeState] = useState<Theme>(() => {
-        // SSR-safe: default to 'playful', inline script in layout.tsx
-        // already sets data-theme before paint so there's no flash
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null
             if (saved === 'classic' || saved === 'playful') return saved
@@ -29,11 +32,29 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         return 'playful'
     })
 
-    // Sync theme to DOM + localStorage whenever it changes
+    const [isDark, setIsDarkState] = useState<boolean>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem(DARK_STORAGE_KEY)
+            return saved === 'true'
+        }
+        return false
+    })
+
+    // Sync style theme (data-theme)
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme)
         localStorage.setItem(THEME_STORAGE_KEY, theme)
     }, [theme])
+
+    // Sync dark mode class
+    useEffect(() => {
+        if (isDark) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+        localStorage.setItem(DARK_STORAGE_KEY, String(isDark))
+    }, [isDark])
 
     const setTheme = useCallback((newTheme: Theme) => {
         setThemeState(newTheme)
@@ -43,9 +64,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setThemeState(prev => prev === 'playful' ? 'classic' : 'playful')
     }, [])
 
-    // Always render children immediately — no blocking!
+    const toggleDark = useCallback(() => {
+        setIsDarkState(prev => !prev)
+    }, [])
+
     return (
-        <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
+        <ThemeContext.Provider value={{ theme, setTheme, toggleTheme, isDark, toggleDark }}>
             {children}
         </ThemeContext.Provider>
     )

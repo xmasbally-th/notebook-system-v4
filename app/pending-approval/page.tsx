@@ -41,19 +41,20 @@ export default function PendingApprovalPage() {
                 }
 
                 const { data: { user } } = await client.auth.getUser()
+                const { data: { session } } = await client.auth.getSession()
 
                 if (!user) {
                     router.replace('/login')
                     return
                 }
 
-                // Get profile using direct fetch
+                // Get profile using direct fetch with user's access token
                 const response = await fetch(
                     `${url}/rest/v1/profiles?id=eq.${user.id}&select=*,departments(name)`,
                     {
                         headers: {
                             'apikey': key,
-                            'Authorization': `Bearer ${key}`
+                            'Authorization': `Bearer ${session?.access_token || key}`
                         }
                     }
                 )
@@ -209,13 +210,18 @@ export default function PendingApprovalPage() {
                         <div className="text-center mb-8">
                             {isRejected ? (
                                 <>
-                                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                                    <h2 className="text-2xl font-bold text-red-600 mb-2">
                                         บัญชีถูกปฏิเสธ
                                     </h2>
-                                    <p className="text-gray-500">
-                                        บัญชีของคุณถูกปฏิเสธการเข้าใช้งาน<br />
-                                        กรุณาติดต่อเจ้าหน้าที่เพื่อสอบถามข้อมูลเพิ่มเติม
+                                    <p className="text-gray-500 mb-4">
+                                        บัญชีของคุณถูกปฏิเสธการเข้าใช้งาน
                                     </p>
+                                    {profile?.reject_reason && (
+                                        <div className="mt-2 p-3 bg-red-50 border border-red-150 rounded-xl text-red-700 text-sm text-left">
+                                            <span className="font-semibold block mb-1">❌ สาเหตุการปฏิเสธ:</span>
+                                            {profile.reject_reason}
+                                        </div>
+                                    )}
                                 </>
                             ) : (
                                 <>
@@ -291,15 +297,27 @@ export default function PendingApprovalPage() {
 
                         {/* Action Buttons */}
                         <div className="flex flex-col gap-3">
-                            <button
-                                onClick={() => window.location.reload()}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
-                            >
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                                ตรวจสอบสถานะอีกครั้ง
-                            </button>
+                            {isRejected ? (
+                                <Link
+                                    href="/register/complete-profile"
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-xl transition-colors text-center shadow-sm"
+                                >
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    แก้ไขข้อมูลโปรไฟล์เพื่อยื่นเรื่องใหม่
+                                </Link>
+                            ) : (
+                                <button
+                                    onClick={() => window.location.reload()}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
+                                >
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                    ตรวจสอบสถานะอีกครั้ง
+                                </button>
+                            )}
 
                             <button
                                 onClick={handleLogout}

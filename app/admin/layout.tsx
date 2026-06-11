@@ -34,26 +34,26 @@ export default async function AdminRootLayout({
 
     // 3. Render the persistent layout shell
     return (
-        <div className="min-h-screen bg-gray-50 flex">
+        <div className="min-h-screen bg-(--background) text-(--foreground) flex transition-colors duration-300">
             {/* Persistent Sidebar */}
             <AdminSidebar />
 
             {/* Main Content Area */}
             <div className="flex-1 lg:pl-64 flex flex-col min-h-screen transition-all duration-300 w-full overflow-hidden">
                 {/* Persistent Top Header */}
-                <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
+                <header className="sticky top-0 z-30 bg-(--card-bg) border-b border-(--border) shadow-sm flex-shrink-0 transition-colors duration-300">
                     <div className="flex items-center justify-end px-4 sm:px-6 py-4 lg:px-8">
                         <div className="flex items-center gap-3 sm:gap-4">
-                            <Suspense fallback={<div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse" />}>
+                            <Suspense fallback={<div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 animate-pulse" />}>
                                 <AdminNotificationBell isAdmin={true} />
                             </Suspense>
                             <div className="hidden sm:flex items-center gap-2 text-sm">
-                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <span className="text-blue-600 font-semibold">
+                                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-950/50 rounded-full flex items-center justify-center">
+                                    <span className="text-blue-600 dark:text-blue-400 font-semibold">
                                         {profile?.first_name?.charAt(0) || 'A'}
                                     </span>
                                 </div>
-                                <span className="text-gray-700 font-medium whitespace-nowrap">
+                                <span className="text-gray-700 dark:text-slate-300 font-medium whitespace-nowrap">
                                     {profile?.first_name} {profile?.last_name}
                                 </span>
                             </div>

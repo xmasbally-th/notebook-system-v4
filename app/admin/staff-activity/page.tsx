@@ -61,9 +61,12 @@ export default function AdminStaffActivityPage() {
                             เจ้าหน้าที่
                         </label>
                         <select
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm bg-white"
                             value={staffFilter}
-                            onChange={(e) => setStaffFilter(e.target.value)}
+                            onChange={(e) => {
+                                setStaffFilter(e.target.value)
+                                setCurrentPage(1)
+                            }}
                         >
                             <option value="">ทั้งหมด</option>
                             {staffList?.map((staff: any) => (
@@ -81,9 +84,12 @@ export default function AdminStaffActivityPage() {
                             ประเภท
                         </label>
                         <select
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm bg-white"
                             value={actionFilter}
-                            onChange={(e) => setActionFilter(e.target.value)}
+                            onChange={(e) => {
+                                setActionFilter(e.target.value)
+                                setCurrentPage(1)
+                            }}
                         >
                             <option value="">ทั้งหมด</option>
                             {actionTypes.map((type) => (
@@ -104,7 +110,10 @@ export default function AdminStaffActivityPage() {
                             type="date"
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                             value={dateRange.start}
-                            onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                            onChange={(e) => {
+                                setDateRange(prev => ({ ...prev, start: e.target.value }))
+                                setCurrentPage(1)
+                            }}
                         />
                     </div>
                     <div>
@@ -116,7 +125,10 @@ export default function AdminStaffActivityPage() {
                             type="date"
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                             value={dateRange.end}
-                            onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                            onChange={(e) => {
+                                setDateRange(prev => ({ ...prev, end: e.target.value }))
+                                setCurrentPage(1)
+                            }}
                         />
                     </div>
                 </div>
@@ -125,8 +137,71 @@ export default function AdminStaffActivityPage() {
             {/* Activity Log Table */}
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 {isLoading ? (
-                    <div className="flex items-center justify-center py-20">
-                        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                    <div className="animate-pulse">
+                        {/* Desktop Skeleton Table */}
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">วันที่/เวลา</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">เจ้าหน้าที่</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">การดำเนินการ</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ประเภท</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">หมายเหตุ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {[...Array(5)].map((_, i) => (
+                                        <tr key={i}>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="h-4 w-28 bg-gray-200 rounded mb-1.5"></div>
+                                                <div className="h-3.5 w-16 bg-gray-200 rounded"></div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0"></div>
+                                                    <div className="space-y-1.5 flex-1">
+                                                        <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                                                        <div className="h-3 w-16 bg-gray-200 rounded"></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="h-5 w-28 bg-gray-200 rounded-lg"></div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="h-5.5 w-12 bg-gray-200 rounded-full"></div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="h-4 w-36 bg-gray-200 rounded"></div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        {/* Mobile Skeleton List */}
+                        <div className="md:hidden divide-y divide-gray-100">
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className="p-4 space-y-3 animate-pulse">
+                                    <div className="flex justify-between items-center">
+                                        <div className="h-6 w-28 bg-gray-200 rounded-lg"></div>
+                                        <div className="space-y-1.5 text-right">
+                                            <div className="h-3 w-20 bg-gray-200 rounded"></div>
+                                            <div className="h-3 w-12 bg-gray-200 rounded"></div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0"></div>
+                                        <div className="space-y-1.5 flex-1">
+                                            <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                                            <div className="h-3 w-16 bg-gray-200 rounded"></div>
+                                        </div>
+                                    </div>
+                                    <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 ) : error ? (
                     <div className="p-12 text-center">
@@ -140,7 +215,8 @@ export default function AdminStaffActivityPage() {
                     </div>
                 ) : (
                     <>
-                        <div className="overflow-x-auto">
+                        {/* Desktop Table */}
+                        <div className="hidden md:block overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-gray-50">
                                     <tr>
@@ -215,6 +291,71 @@ export default function AdminStaffActivityPage() {
                             </table>
                         </div>
 
+                        {/* Mobile Cards List */}
+                        <div className="md:hidden divide-y divide-gray-150">
+                            {paginatedLogs.map((log: any) => {
+                                const isActionSuccess = ['approve_loan', 'approve_reservation', 'mark_returned', 'mark_ready', 'convert_to_loan'].includes(log.action_type)
+                                const isActionDanger = ['reject_loan', 'reject_reservation', 'cancel_reservation'].includes(log.action_type)
+                                
+                                const actionBadgeColor = isActionSuccess 
+                                    ? 'bg-green-50 text-green-750 border-green-200/50' 
+                                    : isActionDanger 
+                                        ? 'bg-rose-50 text-rose-750 border-rose-200/50' 
+                                        : 'bg-blue-50 text-blue-750 border-blue-200/50'
+
+                                return (
+                                    <div key={log.id} className="p-4 space-y-3 hover:bg-gray-50/30 transition-colors">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2 py-0.5 rounded-lg border ${actionBadgeColor}`}>
+                                                <span>{getActionTypeIcon(log.action_type)}</span>
+                                                <span>{getActionTypeLabel(log.action_type)}</span>
+                                            </span>
+                                            <div className="text-right flex-shrink-0">
+                                                <div className="text-[11px] font-bold text-gray-800">{formatThaiDate(log.created_at)}</div>
+                                                <div className="text-[10px] text-gray-500 mt-0.5">{formatTime(log.created_at)}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center font-bold text-xs text-gray-500 shadow-sm flex-shrink-0">
+                                                {log.profiles?.first_name?.[0] || 'U'}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="text-xs font-semibold text-gray-800">
+                                                    {log.profiles?.first_name} {log.profiles?.last_name}
+                                                </div>
+                                                <div className="text-[10px] text-gray-450 mt-0.5 flex items-center gap-1.5">
+                                                    <span>{log.staff_role === 'admin' ? '👑 Admin' : '👤 Staff'}</span>
+                                                    {log.is_self_action && (
+                                                        <span className="px-1.5 py-0.5 text-[9px] font-bold bg-orange-100 text-orange-700 rounded-full">
+                                                            ตัวเอง
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 text-[10px] text-gray-500 font-medium">
+                                            <span>
+                                                ประเภทพัสดุ: {' '}
+                                                <span className={`px-2 py-0.5 rounded-full font-bold ${
+                                                    log.target_type === 'loan' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'
+                                                }`}>
+                                                    {log.target_type === 'loan' ? 'ยืม' : 'จอง'}
+                                                </span>
+                                            </span>
+                                        </div>
+
+                                        {(log.details?.reason || log.details?.note) && (
+                                            <div className="bg-slate-50 border border-slate-100 rounded-lg p-2.5 text-xs text-slate-600 italic">
+                                                "{log.details?.reason || log.details?.note}"
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+
                         {/* Pagination */}
                         {totalItems > 0 && (
                             <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -226,7 +367,7 @@ export default function AdminStaffActivityPage() {
                                             setPageSize(Number(e.target.value))
                                             setCurrentPage(1)
                                         }}
-                                        className="border border-gray-300 rounded-lg px-2 py-1 text-sm"
+                                        className="border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white"
                                     >
                                         <option value={10}>10</option>
                                         <option value={25}>25</option>

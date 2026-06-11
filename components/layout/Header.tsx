@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState, useTransition } from 'react'
 import UserNotificationBell from '@/components/ui/UserNotificationBell'
 import { useSystemConfig } from '@/hooks/useSystemConfig'
+import ThemeToggle from '@/components/ThemeToggle'
 
 // Get Supabase client for auth operations
 function getSupabaseClient() {
@@ -49,7 +50,7 @@ export default function Header() {
     }
 
     return (
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <header className="bg-white dark:bg-slate-950 border-b border-gray-200 dark:border-slate-800 sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
                     {/* Logo & Brand */}
@@ -62,7 +63,7 @@ export default function Header() {
                                     fill
                                     className="object-contain"
                                     unoptimized
-                                />
+                                    />
                             </div>
                         ) : (
                             <div className="p-2 bg-blue-600 rounded-lg shadow-sm">
@@ -70,47 +71,48 @@ export default function Header() {
                             </div>
                         )}
                         <div className="flex flex-col">
-                            <span className="text-sm font-bold text-gray-900 leading-tight">ระบบยืม-คืนพัสดุฯ</span>
-                            <span className="text-[10px] text-gray-500 font-medium">คณะวิทยาการจัดการ มรภ.ลำปาง</span>
+                            <span className="text-sm font-bold text-gray-900 dark:text-slate-100 leading-tight">ระบบยืม-คืนพัสดุฯ</span>
+                            <span className="text-[10px] text-gray-500 dark:text-slate-400 font-medium">คณะวิทยาการจัดการ มรภ.ลำปาง</span>
                         </div>
                     </Link>
 
                     {/* Desktop Navigation */}
                     <div className="hidden md:flex items-center gap-4">
+                        <ThemeToggle />
                         {user ? (
                             <div className="flex items-center gap-3">
                                 <UserNotificationBell userId={user.id} accessToken={accessToken || undefined} />
                                 <Link
                                     href="/equipment"
-                                    className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                                    className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-900 transition-colors"
                                 >
                                     <Monitor className="w-4 h-4" aria-hidden="true" />
                                     อุปกรณ์
                                 </Link>
                                 <Link
                                     href="/my-loans"
-                                    className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                                    className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-900 transition-colors"
                                 >
                                     <Package className="w-4 h-4" aria-hidden="true" />
                                     การยืมและจอง
                                 </Link>
                                 <Link
                                     href="/user-guide"
-                                    className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                                    className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-900 transition-colors"
                                 >
                                     <HelpCircle className="w-4 h-4" aria-hidden="true" />
                                     คู่มือ
                                 </Link>
                                 <Link
                                     href="/profile"
-                                    className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                                    className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-900 transition-colors"
                                 >
                                     <User className="w-4 h-4" aria-hidden="true" />
                                     Profile
                                 </Link>
                                 <button
                                     onClick={handleSignOut}
-                                    className="flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 px-3 py-2 rounded-lg hover:bg-red-50 transition-colors"
+                                    className="flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
                                 >
                                     <LogOut className="w-4 h-4" aria-hidden="true" />
                                     <span>Sign Out</span>
@@ -129,7 +131,7 @@ export default function Header() {
 
                     {/* Mobile Menu Button */}
                     <button
-                        className="md:hidden p-2 text-gray-600 hover:text-gray-900 z-50 relative"
+                        className="md:hidden p-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white z-50 relative"
                         onClick={() => startTransition(() => setIsMenuOpen(!isMenuOpen))}
                         aria-label={isMenuOpen ? "ปิดเมนู" : "เปิดเมนู"}
                         aria-expanded={isMenuOpen}
@@ -141,18 +143,23 @@ export default function Header() {
 
             {/* Mobile Navigation Drawer */}
             {isMenuOpen && (
-                <div className="fixed inset-0 bg-white z-40 md:hidden pt-20 px-4 animate-in slide-in-from-top-10 fade-in duration-200">
+                <div className="fixed inset-0 bg-white dark:bg-slate-950 z-40 md:hidden pt-20 px-4 animate-in slide-in-from-top-10 fade-in duration-200">
                     <div className="flex flex-col gap-4">
+                        {/* Theme Toggle for Mobile */}
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-800">
+                            <span className="text-sm font-medium text-gray-700 dark:text-slate-300">สลับธีมมืด/สว่าง</span>
+                            <ThemeToggle showLabel />
+                        </div>
                         {user ? (
                             <>
-                                <div className="py-4 border-b border-gray-100">
-                                    <p className="text-sm text-gray-500 mb-1">Signed in as</p>
-                                    <p className="font-medium text-gray-900 truncate">{user.email}</p>
+                                <div className="py-4 border-b border-gray-100 dark:border-slate-800">
+                                    <p className="text-sm text-gray-500 dark:text-slate-400 mb-1">Signed in as</p>
+                                    <p className="font-medium text-gray-900 dark:text-white truncate">{user.email}</p>
                                 </div>
                                 <Link
                                     href="/equipment"
                                     onClick={() => setIsMenuOpen(false)}
-                                    className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 text-blue-900 font-medium"
+                                    className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-950/45 text-blue-900 dark:text-blue-200 font-medium"
                                 >
                                     <Monitor className="w-5 h-5" aria-hidden="true" />
                                     อุปกรณ์
@@ -160,7 +167,7 @@ export default function Header() {
                                 <Link
                                     href="/my-loans"
                                     onClick={() => setIsMenuOpen(false)}
-                                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 text-gray-900 font-medium"
+                                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 font-medium"
                                 >
                                     <Package className="w-5 h-5" aria-hidden="true" />
                                     การยืมและจอง
@@ -168,7 +175,7 @@ export default function Header() {
                                 <Link
                                     href="/user-guide"
                                     onClick={() => setIsMenuOpen(false)}
-                                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 text-gray-900 font-medium"
+                                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 font-medium"
                                 >
                                     <HelpCircle className="w-5 h-5" aria-hidden="true" />
                                     คู่มือการใช้งาน
@@ -176,14 +183,14 @@ export default function Header() {
                                 <Link
                                     href="/profile"
                                     onClick={() => setIsMenuOpen(false)}
-                                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 text-gray-900 font-medium"
+                                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 font-medium"
                                 >
                                     <User className="w-5 h-5" aria-hidden="true" />
                                     โปรไฟล์
                                 </Link>
                                 <button
                                     onClick={handleSignOut}
-                                    className="flex items-center gap-3 p-3 rounded-xl bg-red-50 text-red-600 font-medium w-full text-left"
+                                    className="flex items-center gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 font-medium w-full text-left"
                                 >
                                     <LogOut className="w-5 h-5" aria-hidden="true" />
                                     Sign Out
