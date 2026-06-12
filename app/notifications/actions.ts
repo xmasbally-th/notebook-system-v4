@@ -131,7 +131,7 @@ export async function notifyReturn(loanId: string, condition: string, notes?: st
 
         const { data: loan } = await supabase
             .from('loanRequests')
-            .select('*, profiles(first_name, last_name, email), equipment(name, equipment_number)')
+            .select('*, profiles!fk_loanrequests_profiles(first_name, last_name, email), equipment(name, equipment_number)')
             .eq('id', loanId)
             .single()
 
@@ -175,7 +175,7 @@ export async function notifyOverdueLoan(loanId: string, daysOverdue: number) {
         // Fetch loan details
         const { data: loan } = await supabase
             .from('loanRequests')
-            .select('*, profiles(id, first_name, last_name, email, phone_number, user_id), equipment(name, equipment_number)')
+            .select('*, profiles!fk_loanrequests_profiles(id, first_name, last_name, email, phone_number, user_id), equipment(name, equipment_number)')
             .eq('id', loanId)
             .single()
 

@@ -81,7 +81,7 @@ export async function approveLoan(loanId: string) {
             })
             .eq('id', loanId)
             // Select relations for notification message
-            .select('*, equipment(name, equipment_number), profiles(first_name, last_name)')
+            .select('*, equipment(name, equipment_number), profiles!fk_loanrequests_profiles(first_name, last_name)')
             .single()
 
         if (error) {
@@ -202,7 +202,7 @@ export async function rejectLoan(loanId: string, reason: string) {
             })
             .eq('id', loanId)
             .eq('status', 'pending') // Only reject pending loans
-            .select('*, equipment(name, equipment_number), profiles(first_name, last_name)')
+            .select('*, equipment(name, equipment_number), profiles!fk_loanrequests_profiles(first_name, last_name)')
             .single()
 
         if (error) {

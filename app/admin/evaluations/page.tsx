@@ -108,7 +108,7 @@ export default function EvaluationsPage() {
                     start_date,
                     end_date,
                     return_time,
-                    profiles:user_id(id, first_name, last_name, email, avatar_url, user_type),
+                    profiles!fk_loanrequests_profiles(id, first_name, last_name, email, avatar_url, user_type),
                     equipment:equipment_id(name, equipment_number),
                     evaluations(id)
                 `)

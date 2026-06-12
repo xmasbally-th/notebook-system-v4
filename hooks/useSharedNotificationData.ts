@@ -68,7 +68,7 @@ export function useSharedNotificationData(): SharedNotificationData {
             if (payload.eventType === 'INSERT') {
                 const { data, error } = await supabase
                     .from('loanRequests')
-                    .select('*,equipment(id,name,equipment_number),profiles(first_name,last_name,email)')
+                    .select('*,equipment(id,name,equipment_number),profiles!fk_loanrequests_profiles(first_name,last_name,email)')
                     .eq('id', payload.new.id)
                     .single() as { data: LoanRequest | null, error: any }
 
@@ -156,7 +156,7 @@ export function useSharedNotificationData(): SharedNotificationData {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('loanRequests')
-                .select('*,equipment(id,name,equipment_number),profiles(first_name,last_name,email)')
+                .select('*,equipment(id,name,equipment_number),profiles!fk_loanrequests_profiles(first_name,last_name,email)')
                 .order('created_at', { ascending: false })
 
                 .limit(100) // Optimization: Limit initial fetch

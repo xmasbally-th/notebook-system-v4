@@ -1,0 +1,119 @@
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
+
+// Public routes that don't require authentication
+const PUBLIC_ROUTES = ['/login', '/register', '/auth']
+
+// Routes that require admin role
+const ADMIN_ROUTES = ['/admin']
+
+// Routes that require staff or admin role
+const STAFF_ROUTES = ['/staff']
+
+// Routes that require an approved user status
+const APPROVED_ROUTES = ['/equipment', '/my-loans', '/my-reservations', '/notifications', '/profile']
+
+export async function middleware(request: NextRequest) {
+    let supabaseResponse = NextResponse.next({
+        request,
+    })
+
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                getAll() {
+                    return request.cookies.getAll()
+                },
+                setAll(cookiesToSet) {
+                    cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+                    supabaseResponse = NextResponse.next({
+                        request,
+                    })
+                    cookiesToSet.forEach(({ name, value, options }) =>
+                        supabaseResponse.cookies.set(name, value, options)
+                    )
+                },
+            },
+        }
+    )
+
+    // Refresh session if expired
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    const url = request.nextUrl.clone()
+    const path = url.pathname
+
+    // Allow static assets, images, API routes
+    if (path.startsWith('/_next') || path.startsWith('/api') || path.includes('.')) {
+        return supabaseResponse
+    }
+
+    const isPublicRoute = PUBLIC_ROUTES.some(route => path === route || path.startsWith(`${route}/`))
+    
+    // If not logged in and not on a public route, redirect to login
+    if (!user && !isPublicRoute && path !== '/') {
+        url.pathname = '/login'
+        url.searchParams.set('next', path)
+        return NextResponse.redirect(url)
+    }
+
+    // If logged in, we need to check role and status for protected routes
+    if (user) {
+        // We fetch the profile once to check status and role
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role, status')
+            .eq('id', user.id)
+            .single()
+
+        const status = profile?.status
+        const role = profile?.role
+
+        // 1. Check if user is trying to access approved routes but is not approved
+        const requiresApprovedStatus = APPROVED_ROUTES.some(route => path === route || path.startsWith(`${route}/`))
+        
+        // Profile page itself is in APPROVED_ROUTES, but rejected users might need to view it if we change logic later.
+        // For now, if status is not 'approved' and trying to access an approved route, redirect to pending.
+        if (requiresApprovedStatus && status !== 'approved' && path !== '/profile') {
+            url.pathname = '/pending-approval'
+            return NextResponse.redirect(url)
+        }
+
+        // 2. Check Admin routes
+        const isAdminRoute = ADMIN_ROUTES.some(route => path === route || path.startsWith(`${route}/`))
+        if (isAdminRoute && (status !== 'approved' || role !== 'admin')) {
+            url.pathname = '/'
+            return NextResponse.redirect(url)
+        }
+
+        // 3. Check Staff routes
+        const isStaffRoute = STAFF_ROUTES.some(route => path === route || path.startsWith(`${route}/`))
+        if (isStaffRoute && (status !== 'approved' || (role !== 'staff' && role !== 'admin'))) {
+            url.pathname = '/'
+            return NextResponse.redirect(url)
+        }
+        
+        // 4. Redirect away from pending page if already approved
+        if (path === '/pending-approval' && status === 'approved') {
+            url.pathname = '/'
+            return NextResponse.redirect(url)
+        }
+    }
+
+    return supabaseResponse
+}
+
+export const config = {
+    matcher: [
+        /*
+         * Match all request paths except for the ones starting with:
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico (favicon file)
+         * Feel free to modify this pattern to include more paths.
+         */
+        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    ],
+}

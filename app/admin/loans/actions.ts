@@ -22,13 +22,13 @@ export async function getLoanRequests() {
     const [activeRes, histRes] = await Promise.all([
         adminClient
             .from('loanRequests')
-            .select('*, profiles(first_name,last_name,email,avatar_url), equipment(name,equipment_number,images)')
+            .select('*, profiles!fk_loanrequests_profiles(first_name,last_name,email,avatar_url), equipment(name,equipment_number,images)')
             .in('status', ['pending', 'approved'])
             .order('created_at', { ascending: false })
             .limit(80),
         adminClient
             .from('loanRequests')
-            .select('*, profiles(first_name,last_name,email,avatar_url), equipment(name,equipment_number,images)')
+            .select('*, profiles!fk_loanrequests_profiles(first_name,last_name,email,avatar_url), equipment(name,equipment_number,images)')
             .in('status', ['rejected', 'returned'])
             .order('created_at', { ascending: false })
             .limit(70),
@@ -48,7 +48,7 @@ export async function getActiveLoans() {
     // idx_loan_requests_approved partial index covers status='approved' + end_date sort
     const { data, error } = await adminClient
         .from('loanRequests')
-        .select('*, profiles(first_name,last_name,email,phone_number,avatar_url), equipment(id,name,equipment_number,images)')
+        .select('*, profiles!fk_loanrequests_profiles(first_name,last_name,email,phone_number,avatar_url), equipment(id,name,equipment_number,images)')
         .eq('status', 'approved')
         .order('end_date', { ascending: true })
         .limit(200)
@@ -103,7 +103,7 @@ export async function approveLoanRequests(loanIds: string[]) {
             start_date,
             end_date,
             equipment:equipment_id(name, equipment_number),
-            profiles:user_id(user_id, first_name, last_name)
+            profiles!fk_loanrequests_profiles(user_id, first_name, last_name)
         `)
 
     if (error) return { error: error.message }
@@ -178,7 +178,7 @@ export async function rejectLoanRequests(loanIds: string[]) {
             id,
             user_id,
             equipment:equipment_id(name, equipment_number),
-            profiles:user_id(user_id, first_name, last_name)
+            profiles!fk_loanrequests_profiles(user_id, first_name, last_name)
         `)
 
     if (error) return { error: error.message }
@@ -265,7 +265,7 @@ export async function processReturn(
             id,
             user_id,
             equipment:equipment_id(name, equipment_number),
-            profiles:user_id(user_id, first_name, last_name)
+            profiles!fk_loanrequests_profiles(user_id, first_name, last_name)
         `)
         .single()
 

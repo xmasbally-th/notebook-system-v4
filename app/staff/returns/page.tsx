@@ -41,7 +41,7 @@ export default function StaffReturnsPage() {
             const { data: { session } } = await client.auth.getSession()
 
             const response = await fetch(
-                `${url}/rest/v1/loanRequests?status=eq.approved&select=*,profiles(first_name,last_name,email,phone_number),equipment(id,name,equipment_number,images)&order=end_date.asc`,
+                `${url}/rest/v1/loanRequests?status=eq.approved&select=*,profiles!fk_loanrequests_profiles(first_name,last_name,email,phone_number),equipment(id,name,equipment_number,images)&order=end_date.asc`,
                 {
                     headers: {
                         'apikey': key,

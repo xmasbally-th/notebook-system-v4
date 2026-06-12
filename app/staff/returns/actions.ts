@@ -38,7 +38,7 @@ export async function returnLoan(formData: {
         // Fetch loan details including borrower name & equipment info
         const { data: loan, error: loanFetchError } = await supabase
             .from('loanRequests')
-            .select('*, equipment(name, equipment_number), profiles(first_name, last_name, user_id)')
+            .select('*, equipment(name, equipment_number), profiles!fk_loanrequests_profiles(first_name, last_name, user_id)')
             .eq('id', loanId)
             .single()
 

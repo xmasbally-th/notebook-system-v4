@@ -83,7 +83,7 @@ function BorrowHistoryModal({
             const { data: { session } } = await supabase.auth.getSession()
             if (!session) throw new Error('Not authenticated')
 
-            let query = `${url}/rest/v1/loanRequests?select=id,status,created_at,end_date,returned_at,profiles:user_id(first_name,last_name,email,avatar_url)&equipment_id=eq.${equipment.id}&status=in.(approved,returned)&order=created_at.desc`
+            let query = `${url}/rest/v1/loanRequests?select=id,status,created_at,end_date,returned_at,profiles!fk_loanrequests_profiles(first_name,last_name,email,avatar_url)&equipment_id=eq.${equipment.id}&status=in.(approved,returned)&order=created_at.desc`
 
             if (dateRange) {
                 query += `&created_at=gte.${dateRange.from.toISOString()}&created_at=lte.${dateRange.to.toISOString()}`

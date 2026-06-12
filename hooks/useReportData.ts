@@ -268,7 +268,7 @@ export function useReportData(dateRange: DateRange) {
     const overdueQuery = useQuery({
         queryKey: ['report-overdue-raw'],
         staleTime: 60000,
-        queryFn: () => fetchSupabase<any[]>(`loanRequests?select=id,end_date,return_time,user_id,equipment_id,profiles:user_id(first_name,last_name,email),equipment:equipment_id(name,equipment_number)&status=eq.approved`)
+        queryFn: () => fetchSupabase<any[]>(`loanRequests?select=id,end_date,return_time,user_id,equipment_id,profiles!fk_loanrequests_profiles(first_name,last_name,email),equipment:equipment_id(name,equipment_number)&status=eq.approved`)
     })
 
     // 5. Profiles query (unfiltered, longer staleTime)

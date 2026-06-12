@@ -67,7 +67,7 @@ export async function getRecentActivity(): Promise<RecentActivityItem[]> {
 
         const { data, error } = await supabase
             .from('loanRequests')
-            .select('id, status, updated_at, profiles(first_name, last_name), equipment(name)')
+            .select('id, status, updated_at, profiles!fk_loanrequests_profiles(first_name, last_name), equipment(name)')
             .order('updated_at', { ascending: false })
             .limit(10)
 
