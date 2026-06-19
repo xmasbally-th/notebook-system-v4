@@ -137,17 +137,38 @@ export default function EvaluationsPage() {
 
         const sectionAvgs = evaluations.reduce((acc: any, curr: any) => {
             const details = curr.details || {}
-            const addScores = (category: string) => {
-                const cat = details[category] || {}
-                Object.values(cat).forEach((score: any) => {
+            if (details.system_overall !== undefined) {
+                // New flat format (5 questions)
+                const addScore = (category: string, score: number) => {
                     if (!acc[category]) acc[category] = { sum: 0, count: 0 }
-                    acc[category].sum += score
-                    acc[category].count++
-                })
+                    if (score > 0) {
+                        acc[category].sum += score
+                        acc[category].count++
+                    }
+                }
+                addScore('system', details.system_overall || 0)
+                
+                // service combines speed and staff
+                addScore('service', details.service_speed || 0)
+                addScore('service', details.service_staff || 0)
+                
+                addScore('equipment', details.equipment_quality || 0)
+            } else {
+                // Old nested format (10 questions)
+                const addScores = (category: string) => {
+                    const cat = details[category] || {}
+                    Object.values(cat).forEach((score: any) => {
+                        if (!acc[category]) acc[category] = { sum: 0, count: 0 }
+                        if (score > 0) {
+                            acc[category].sum += score
+                            acc[category].count++
+                        }
+                    })
+                }
+                addScores('system')
+                addScores('service')
+                addScores('equipment')
             }
-            addScores('system')
-            addScores('service')
-            addScores('equipment')
             return acc
         }, {})
 
@@ -510,19 +531,23 @@ export default function EvaluationsPage() {
                     <div className="flex-1 p-5 text-xs text-slate-650 space-y-3 bg-white overflow-y-auto max-h-[160px] scrollbar-thin">
                         {showScoringInfo ? (
                             <>
-                                <p>แบบประเมินมี <strong>3 ด้าน รวมทั้งหมด 10 ข้อคําถาม</strong> (คะแนน 1-5 ⭐):</p>
+                                <p>แบบประเมินมี <strong>รวมทั้งหมด 5 ข้อคําถามหลัก</strong> (คะแนน 1-5 ⭐):</p>
                                 <div className="space-y-2">
                                     <div>
-                                        <p className="font-bold text-slate-800">🖥 ระบบ (3 ข้อ):</p>
-                                        <p className="text-slate-500 pl-2">ออกแบบง่าย, ข้อมูลครบ, เสถียรภาพ</p>
+                                        <p className="font-bold text-slate-800">🖥 ระบบ:</p>
+                                        <p className="text-slate-500 pl-2">ความง่าย ความเสถียร และความครบถ้วนของข้อมูล</p>
                                     </div>
                                     <div>
-                                        <p className="font-bold text-slate-800">🤝 บริการ (4 ข้อ):</p>
-                                        <p className="text-slate-500 pl-2">ความเร็วรับ-คืน, กฎชัดเจน, สุภาพ, การติดต่อ</p>
+                                        <p className="font-bold text-slate-800">🤝 บริการ:</p>
+                                        <p className="text-slate-500 pl-2">ความรวดเร็วในการรับ-คืน, การให้บริการของเจ้าหน้าที่</p>
                                     </div>
                                     <div>
-                                        <p className="font-bold text-slate-800">📦 อุปกรณ์ (3 ข้อ):</p>
-                                        <p className="text-slate-500 pl-2">สะอาด, พร้อมใช้, มีความหลากหลาย</p>
+                                        <p className="font-bold text-slate-800">📦 อุปกรณ์:</p>
+                                        <p className="text-slate-500 pl-2">สภาพและคุณภาพความพร้อมใช้งานของอุปกรณ์</p>
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-slate-800">⭐ ภาพรวม:</p>
+                                        <p className="text-slate-500 pl-2">ความพึงพอใจโดยรวม</p>
                                     </div>
                                 </div>
                             </>
@@ -530,7 +555,7 @@ export default function EvaluationsPage() {
                             <div className="bg-blue-50/60 p-3 rounded-xl border border-blue-100/50 text-blue-900 flex items-start gap-2 h-full">
                                 <Info className="w-4 h-4 text-blue-700 flex-shrink-0 mt-0.5" />
                                 <div className="text-[11px] leading-relaxed">
-                                    <strong>หลักการปัดเศษ:</strong> คะแนนเฉลี่ยรวมในแต่ละรายการ คำนวณจากค่าเฉลี่ยของทั้ง 10 ข้อ จากนั้นจะถูกปัดเศษตามหลักทศนิยมทางสถิติออกมาเป็นดาวรวม
+                                    <strong>หลักการปัดเศษ:</strong> คะแนนเฉลี่ยรวมในแต่ละรายการ คำนวณจากค่าเฉลี่ยของทุกข้อ จากนั้นจะถูกปัดเศษตามหลักทศนิยมทางสถิติออกมาเป็นดาวรวม
                                 </div>
                             </div>
                         )}
@@ -751,10 +776,26 @@ export default function EvaluationsPage() {
                                                                 { category: 'service', title: 'บริการ (Service)' },
                                                                 { category: 'equipment', title: 'อุปกรณ์ (Equip)' }
                                                             ].map((section) => {
-                                                                const scores = item.details?.[section.category] || {}
-                                                                const categorySum = Object.values(scores).reduce((acc: number, cur: any) => acc + cur, 0) as number
-                                                                const categoryCount = Object.values(scores).length || 1
-                                                                const categoryAvg = categorySum / categoryCount
+                                                                let categoryAvg = 0
+                                                                
+                                                                if (item.details?.system_overall !== undefined) {
+                                                                    // New flat format
+                                                                    if (section.category === 'system') {
+                                                                        categoryAvg = item.details.system_overall || 0
+                                                                    } else if (section.category === 'service') {
+                                                                        const scores = [item.details.service_speed, item.details.service_staff].filter(s => s > 0)
+                                                                        categoryAvg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0
+                                                                    } else if (section.category === 'equipment') {
+                                                                        categoryAvg = item.details.equipment_quality || 0
+                                                                    }
+                                                                } else {
+                                                                    // Old nested format
+                                                                    const scores = item.details?.[section.category] || {}
+                                                                    const values = Object.values(scores).filter((s: any) => typeof s === 'number' && s > 0) as number[]
+                                                                    const categorySum = values.reduce((acc: number, cur: number) => acc + cur, 0)
+                                                                    const categoryCount = values.length || 1
+                                                                    categoryAvg = categorySum / categoryCount
+                                                                }
 
                                                                 return (
                                                                     <div key={section.category} className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-sm space-y-1.5 text-center">

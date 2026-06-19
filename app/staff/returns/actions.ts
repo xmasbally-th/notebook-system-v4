@@ -101,6 +101,8 @@ export async function returnLoan(formData: {
             discordType: 'loan',
             welpruUserIds: studentWelpruId ? [studentWelpruId] : [],
             welpruVariables: { equipment: equipmentName, borrower: borrowerName, condition: condition === 'good' ? 'ดี' : 'ชำรุด/ขาดชิ้นส่วน/สูญหาย' },
+            welpruTitle: '🙏 ช่วยประเมินการใช้งานหน่อยนะ!',
+            welpruBody: `คุณคืน ${equipmentName} เรียบร้อยแล้ว — กดประเมินผลการใช้งานได้เลยที่ระบบยืมคืน ใช้เวลาไม่ถึง 1 นาที`,
             activity: {
                 staffId: user.id,
                 staffRole: profile.role as 'staff' | 'admin',
