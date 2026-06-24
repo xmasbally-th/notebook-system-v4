@@ -95,7 +95,7 @@ export default function ManualNotificationSender() {
             const result = await sendManualNotification({
                 type,
                 targetGroup: type === 'group' ? targetGroup : undefined,
-                userIds: type === 'individual' ? selectedUsers.map(u => u.id) : undefined,
+                userIds: type === 'individual' ? selectedUsers.map(u => u.user_id).filter(Boolean) : undefined,
                 title,
                 body,
                 link: link.trim() || undefined
