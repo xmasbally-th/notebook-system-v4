@@ -118,6 +118,7 @@ export async function approveLoanRequests(loanIds: string[]) {
 
     // 5. Notify + Log for each approved loan (parallel per loan)
     if (updatedLoans && updatedLoans.length > 0) {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
         await Promise.allSettled(
             (updatedLoans as any[]).map(async (loan) => {
                 const equipmentName = loan.equipment?.name || ''
@@ -132,10 +133,12 @@ export async function approveLoanRequests(loanIds: string[]) {
                         `📦 **อุปกรณ์:** ${equipmentName} (${equipmentNumber})\n` +
                         `👤 **ผู้ยืม:** ${borrowerName}\n` +
                         `📅 **วันที่:** ${formatThaiDate(loan.start_date)} - ${formatThaiDate(loan.end_date)}\n` +
-                        `👑 **อนุมัติโดย:** Admin`,
+                        `👑 **อนุมัติโดย:** Admin\n` +
+                        `🔗 [ดูรายการยืมของฉัน](${appUrl}/my-loans)`,
                     discordType: 'loan',
                     welpruUserIds: studentId ? [studentId] : [],
                     welpruVariables: { equipment: equipmentName, borrower: borrowerName },
+                    welpruLink: `${appUrl}/my-loans`,
                     activity: {
                         staffId: auth.user!.id,
                         staffRole,
@@ -298,6 +301,7 @@ export async function processReturn(
     const borrowerName = `${loanData?.profiles?.first_name || ''} ${loanData?.profiles?.last_name || ''}`.trim()
     const studentId = loanData?.profiles?.user_id
     const conditionLabel = parsed.data.condition === 'good' ? 'ปกติ' : parsed.data.condition === 'damaged' ? 'ชำรุด' : 'อุปกรณ์ไม่ครบ'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
     await notifyAndLog({
         eventKey: 'loan_returned',
@@ -307,10 +311,12 @@ export async function processReturn(
             `👤 **ผู้ยืม:** ${borrowerName}\n` +
             `🛠 **สภาพ:** ${conditionLabel}\n` +
             `${notes ? `📝 **หมายเหตุ:** ${notes}\n` : ''}` +
-            `👑 **บันทึกโดย:** Admin`,
+            `👑 **บันทึกโดย:** Admin\n` +
+            `🔗 [ดูรายการยืมของฉัน](${appUrl}/my-loans)`,
         discordType: parsed.data.condition === 'good' ? 'loan' : 'maintenance',
         welpruUserIds: studentId ? [studentId] : [],
         welpruVariables: { equipment: equipmentName, borrower: borrowerName },
+        welpruLink: `${appUrl}/my-loans`,
         activity: {
             staffId: auth.user!.id,
             staffRole,

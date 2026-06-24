@@ -146,7 +146,7 @@ export async function sendWeLPRUNotification(params: WeLPRUDirectMessageParams):
                 .select('welpru_notifications_enabled, welpru_api_key')
                 .eq('id', 1)
                 .single()
-        if (!(config as any)?.welpru_notifications_enabled) return { success: false, error: 'WeLPRU notifications are disabled in settings' }
+            if (!(config as any)?.welpru_notifications_enabled) return { success: false, error: 'WeLPRU notifications are disabled in settings' }
             apiKey = (config as any)?.welpru_api_key || null
         }
         if (!apiKey) apiKey = process.env.WELPRU_API_KEY || null
@@ -160,31 +160,45 @@ export async function sendWeLPRUNotification(params: WeLPRUDirectMessageParams):
             return { success: false, error: 'No user IDs provided' }
         }
 
-        const payload = {
-            user_ids: params.userIds,
-            title: params.title,
-            body: params.body,
-            ...(params.link && { link: params.link }),
-            ...(params.data && { data: params.data }),
+        // WeLPRU API requires `user_id` as a singular string (one request per user)
+        const results = await Promise.allSettled(
+            params.userIds.map((uid) => {
+                const payload = {
+                    user_id: uid,
+                    title: params.title,
+                    body: params.body,
+                    ...(params.link && { link: params.link }),
+                    ...(params.data && { data: params.data }),
+                }
+                return fetch(`${WELPRU_API_URL}/notify/user`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey!,
+                    },
+                    body: JSON.stringify(payload),
+                }).then(async (res) => {
+                    if (!res.ok) {
+                        const errText = await res.text()
+                        console.error(`[WeLPRU] API returned ${res.status} for user ${uid}: ${errText}`)
+                        throw new Error(`API Error: ${res.status} ${errText}`)
+                    }
+                    return res
+                })
+            })
+        )
+
+        const failed = results.filter((r) => r.status === 'rejected')
+        if (failed.length > 0) {
+            const firstErr = (failed[0] as PromiseRejectedResult).reason?.message || 'Unknown error'
+            if (failed.length === params.userIds.length) {
+                return { success: false, error: firstErr }
+            }
+            // Partial success — log but don't fail entirely
+            console.warn(`[WeLPRU] ${failed.length}/${params.userIds.length} notifications failed.`)
         }
 
-        const res = await fetch(`${WELPRU_API_URL}/notify/user`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-API-Key': apiKey,
-            },
-            body: JSON.stringify(payload),
-        })
-
-        if (!res.ok) {
-            const errText = await res.text()
-            console.error(`[WeLPRU] API returned ${res.status}: ${errText}`)
-            return { success: false, error: `API Error: ${res.status} ${errText}` }
-        }
-
-        // 202 Accepted expected for direct messaging
-        console.log(`[WeLPRU] Successfully queued notification for ${params.userIds.length} users.`)
+        console.log(`[WeLPRU] Successfully queued notification for ${params.userIds.length - failed.length}/${params.userIds.length} users.`)
         return { success: true }
     } catch (error: any) {
         // Fail gracefully

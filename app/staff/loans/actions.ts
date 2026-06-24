@@ -100,6 +100,7 @@ export async function approveLoan(loanId: string) {
         const equipmentNumber = loan.equipment?.equipment_number || 'No Number'
         const borrowerName = `${loan.profiles?.first_name || ''} ${loan.profiles?.last_name || ''}`.trim() || 'Unknown User'
         const studentWelpruId = (loan.profiles as any)?.user_id
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
         console.log('[approveLoan] Sending notifications + logging activity...')
         await notifyAndLog({
@@ -109,10 +110,12 @@ export async function approveLoan(loanId: string) {
                 `📦 **อุปกรณ์:** ${equipmentName} (${equipmentNumber})\n` +
                 `👤 **ผู้ยืม:** ${borrowerName}\n` +
                 `📅 **วันที่:** ${new Date(loan.start_date).toLocaleDateString('th-TH')} - ${new Date(loan.end_date).toLocaleDateString('th-TH')}\n` +
-                `👮 **อนุมัติโดย:** Staff`,
+                `👮 **อนุมัติโดย:** Staff\n` +
+                `🔗 [ดูรายการยืมของฉัน](${appUrl}/my-loans)`,
             discordType: 'loan',
             welpruUserIds: studentWelpruId ? [studentWelpruId] : [],
             welpruVariables: { equipment: equipmentName, borrower: borrowerName },
+            welpruLink: `${appUrl}/my-loans`,
             activity: {
                 staffId: user.id,
                 staffRole: profile.role as 'staff' | 'admin',
@@ -218,6 +221,7 @@ export async function rejectLoan(loanId: string, reason: string) {
         const equipmentNumber = loan.equipment?.equipment_number || 'No Number'
         const borrowerName = `${loan.profiles?.first_name || ''} ${loan.profiles?.last_name || ''}`.trim() || 'Unknown User'
         const studentWelpruId = (loan.profiles as any)?.user_id
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
         await notifyAndLog({
             eventKey: 'loan_rejected',
@@ -226,10 +230,12 @@ export async function rejectLoan(loanId: string, reason: string) {
                 `📦 **อุปกรณ์:** ${equipmentName} (${equipmentNumber})\n` +
                 `👤 **ผู้ยืม:** ${borrowerName}\n` +
                 `💬 **เหตุผล:** ${reason}\n` +
-                `👮 **ดำเนินการโดย:** Staff`,
+                `👮 **ดำเนินการโดย:** Staff\n` +
+                `🔗 [ดูรายการยืมของฉัน](${appUrl}/my-loans)`,
             discordType: 'loan',
             welpruUserIds: studentWelpruId ? [studentWelpruId] : [],
             welpruVariables: { equipment: equipmentName, borrower: borrowerName, reason },
+            welpruLink: `${appUrl}/my-loans`,
             activity: {
                 staffId: user.id,
                 staffRole: profile.role as 'staff' | 'admin',

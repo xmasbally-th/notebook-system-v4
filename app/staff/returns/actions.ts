@@ -86,6 +86,7 @@ export async function returnLoan(formData: {
         const equipmentNumber = loan.equipment?.equipment_number || 'No Number'
         const borrowerName = `${loan.profiles?.first_name || ''} ${loan.profiles?.last_name || ''}`.trim() || 'Unknown User'
         const studentWelpruId = (loan.profiles as any)?.user_id
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
         const staffName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Staff'
 
@@ -97,12 +98,14 @@ export async function returnLoan(formData: {
                 `👤 **ผู้ยืม:** ${borrowerName}\n` +
                 `🔧 **สภาพส่งคืน:** ${condition === 'good' ? '🟢 ดี' : condition === 'damaged' ? '🟡 ชำรุด' : condition === 'missing_parts' ? '🟠 ขาดชิ้นส่วน' : '🔴 สูญหาย'}\n` +
                 `💬 **หมายเหตุ:** ${notes || '-'}\n` +
-                `👮 **ผู้รับคืน:** ${staffName} (${profile.role})`,
+                `👮 **ผู้รับคืน:** ${staffName} (${profile.role})\n` +
+                `🔗 [ประเมินการใช้งานได้เลย](${appUrl}/my-loans)`,
             discordType: 'loan',
             welpruUserIds: studentWelpruId ? [studentWelpruId] : [],
             welpruVariables: { equipment: equipmentName, borrower: borrowerName, condition: condition === 'good' ? 'ดี' : 'ชำรุด/ขาดชิ้นส่วน/สูญหาย' },
             welpruTitle: '🙏 ช่วยประเมินการใช้งานหน่อยนะ!',
             welpruBody: `คุณคืน ${equipmentName} เรียบร้อยแล้ว — กดประเมินผลการใช้งานได้เลยที่ระบบยืมคืน ใช้เวลาไม่ถึง 1 นาที`,
+            welpruLink: `${appUrl}/my-loans`,
             activity: {
                 staffId: user.id,
                 staffRole: profile.role as 'staff' | 'admin',

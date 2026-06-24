@@ -227,6 +227,7 @@ export async function notifyOverdueLoan(loanId: string, daysOverdue: number) {
             welpruUserIds: studentWelpruId ? [studentWelpruId] : [],
             welpruTitle: 'แจ้งเตือนเลยกำหนดส่งคืนอุปกรณ์ ⚠️',
             welpruBody: `คอมพิวเตอร์ ${equipmentName} เลยกำหนดส่งคืนมาแล้ว ${daysOverdue} วัน กรุณานำมาคืนโดยด่วน`,
+            welpruLink: `${appUrl}/my-loans`,
         })
 
         return { success: true }

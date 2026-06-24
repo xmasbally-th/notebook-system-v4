@@ -63,6 +63,8 @@ interface NotifyAndLogParams {
     welpruTitle?: string
     /** Override template body (ignores system_config template) */
     welpruBody?: string
+    /** Deep-link URL sent with the WeLPRU push notification (opens in-app or browser) */
+    welpruLink?: string
     /** Staff activity log entry */
     activity?: ActivityEntry
 }
@@ -179,7 +181,12 @@ export async function notifyAndLog(params: NotifyAndLogParams): Promise<void> {
                 ?? (eventCfg.welpru_body ? applyTemplate(eventCfg.welpru_body, params.welpruVariables) : undefined)
 
             if (title && body) {
-                tasks.push(sendWeLPRUNotification({ userIds: params.welpruUserIds, title, body }))
+                tasks.push(sendWeLPRUNotification({
+                    userIds: params.welpruUserIds,
+                    title,
+                    body,
+                    ...(params.welpruLink && { link: params.welpruLink }),
+                }))
             }
         }
     }

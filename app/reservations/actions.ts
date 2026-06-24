@@ -261,6 +261,7 @@ export async function convertReservationToLoanAction(
         const equipmentName = reservation.equipment?.name || 'ไม่ทราบ'
         const equipmentNumber = reservation.equipment?.equipment_number || '-'
         const studentWelpruId = borrowerProfile2?.user_id
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
         await notifyAndLog({
             eventKey: 'reservation_converted',
@@ -273,10 +274,12 @@ export async function convertReservationToLoanAction(
                 `📅 **วันที่รับ:** ${formatThaiDate(reservation.start_date)}\n` +
                 `📅 **วันที่คืน:** ${formatThaiDate(reservation.end_date)}\n\n` +
                 `👨‍💼 **ดำเนินการโดย:** ${staffName}\n` +
-                `✅ **สถานะ:** อนุมัติอัตโนมัติ (จากการจอง)`,
+                `✅ **สถานะ:** อนุมัติอัตโนมัติ (จากการจอง)\n` +
+                `🔗 [ดูรายการยืมของฉัน](${appUrl}/my-loans)`,
             discordType: 'loan',
             welpruUserIds: studentWelpruId ? [studentWelpruId] : [],
             welpruVariables: { equipment: equipmentName, borrower: borrowerName },
+            welpruLink: `${appUrl}/my-loans`,
             activity: {
                 staffId: user.id,
                 staffRole: profile.role as 'staff' | 'admin',
