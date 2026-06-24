@@ -1,12 +1,83 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Send, Users, User, AlertCircle, CheckCircle2, Loader2, Plus, X, Search } from 'lucide-react'
+import { Send, Users, User, AlertCircle, CheckCircle2, Loader2, Plus, X, Search, Link } from 'lucide-react'
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://notebook-system-v4.vercel.app'
+
+const LINK_SHORTCUTS = [
+    { label: 'ไม่แนบลิงก์', value: '' },
+    { label: '📋 รายการยืมของฉัน', value: `${APP_URL}/my-loans` },
+    { label: '🖥️ หน้าอุปกรณ์', value: `${APP_URL}/equipment` },
+    { label: '📅 การจองของฉัน', value: `${APP_URL}/my-reservations` },
+    { label: '👤 โปรไฟล์', value: `${APP_URL}/profile` },
+    { label: '🏠 หน้าหลัก', value: `${APP_URL}/` },
+    { label: '✏️ กำหนดเอง...', value: 'custom' },
+]
 import { sendManualNotification } from '@/app/admin/settings/actions'
 import { supabase } from '@/lib/supabase/client'
 import { useQuery } from '@tanstack/react-query'
 
+function LinkPickerSection({ link, setLink }: { link: string; setLink: (v: string) => void }) {
+    const [mode, setMode] = useState<string>(() => {
+        if (!link) return ''
+        const match = LINK_SHORTCUTS.find(s => s.value === link && s.value !== 'custom' && s.value !== '')
+        return match ? link : 'custom'
+    })
+
+    const handleSelectChange = (value: string) => {
+        if (value === 'custom') {
+            setMode('custom')
+            setLink('')
+        } else {
+            setMode(value)
+            setLink(value)
+        }
+    }
+
+    const selectedOption = mode === 'custom' ? 'custom' : mode
+
+    return (
+        <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Link className="w-4 h-4 inline-block mr-1.5 text-indigo-500" />
+                ลิงก์เพิ่มเติม (ไม่บังคับ)
+            </label>
+            <select
+                value={selectedOption}
+                onChange={(e) => handleSelectChange(e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-sm"
+            >
+                {LINK_SHORTCUTS.map(s => (
+                    <option key={s.value || 'none'} value={s.value}>
+                        {s.label}
+                    </option>
+                ))}
+            </select>
+
+            {mode === 'custom' && (
+                <input
+                    type="url"
+                    placeholder="https://..."
+                    value={link}
+                    onChange={(e) => setLink(e.target.value)}
+                    className="w-full mt-2 px-4 py-2.5 border border-indigo-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                    autoFocus
+                />
+            )}
+
+            {link && mode !== 'custom' && (
+                <p className="text-xs text-gray-400 mt-1.5 truncate">
+                    🔗 {link}
+                </p>
+            )}
+            <p className="text-xs text-gray-400 mt-1">ผู้รับกดที่แจ้งเตือนแล้วจะถูกพาไปยังหน้าที่เลือก</p>
+        </div>
+    )
+}
+
 export default function ManualNotificationSender() {
+
     const [type, setType] = useState<'group' | 'individual'>('group')
     const [targetGroup, setTargetGroup] = useState<'all' | 'student' | 'personnel'>('all')
     const [selectedUsers, setSelectedUsers] = useState<any[]>([])
@@ -310,17 +381,7 @@ export default function ManualNotificationSender() {
                         />
                     </div>
                     {type === 'individual' && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">ลิงก์เพิ่มเติม (ไม่บังคับ)</label>
-                            <input
-                                type="url"
-                                placeholder="https://..."
-                                value={link}
-                                onChange={(e) => setLink(e.target.value)}
-                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">เฉพาะการส่งแบบรายบุคคลที่รองรับการเปิดลิงก์เมื่อกดดูแจ้งเตือน</p>
-                        </div>
+                        <LinkPickerSection link={link} setLink={setLink} />
                     )}
                 </div>
 
