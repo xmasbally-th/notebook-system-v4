@@ -114,6 +114,22 @@ export async function sendDiscordNotification(message: string, type: Notificatio
 
 const WELPRU_API_URL = 'https://api.lpruhub.com/api'
 
+// Helper for safe MSSQL limits
+function truncateText(text: string | undefined, maxLength: number): string | undefined {
+    if (!text) return text;
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength - 3) + '...';
+}
+
+function safeLink(link: string | undefined): string | undefined {
+    if (!link) return link;
+    if (link.length > 255) {
+        console.warn(`[WeLPRU] Link exceeds 255 chars, dropping link: ${link.substring(0, 50)}...`);
+        return undefined; // Drop link if it's too long instead of breaking it
+    }
+    return link;
+}
+
 export interface WeLPRUDirectMessageParams {
     userIds: string[]; // List of Student IDs or PIDs
     title: string;
@@ -161,13 +177,17 @@ export async function sendWeLPRUNotification(params: WeLPRUDirectMessageParams):
         }
 
         // WeLPRU API requires `user_id` as a singular string (one request per user)
+        const safeTitle = truncateText(params.title, 50);
+        const safeBody = truncateText(params.body, 250);
+        const validLink = safeLink(params.link);
+
         const results = await Promise.allSettled(
             params.userIds.map((uid) => {
                 const payload = {
                     user_id: uid,
-                    title: params.title,
-                    body: params.body,
-                    ...(params.link && { link: params.link }),
+                    title: safeTitle,
+                    body: safeBody,
+                    ...(validLink && { link: validLink }),
                     ...(params.data && { data: params.data }),
                 }
                 return fetch(`${WELPRU_API_URL}/notify/user`, {
@@ -233,10 +253,13 @@ export async function sendWeLPRUGroupBroadcast(params: WeLPRUGroupMessageParams)
             return { success: false, error: 'WeLPRU API Key not configured' }
         }
 
+        const safeTitle = truncateText(params.title, 50);
+        const safeBody = truncateText(params.body, 250);
+
         const payload = {
             target_group: params.targetGroup,
-            title: params.title,
-            body: params.body,
+            title: safeTitle,
+            body: safeBody,
             ...(params.data && { data: params.data }),
         }
 

@@ -21,6 +21,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "docxtemplater": "^3.67.6",
+    "dotenv": "^17.4.2",
     "file-saver": "^2.0.5",
     "lucide-react": "^0.562.0",
     "next": "^16.1.1",
