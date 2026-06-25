@@ -3,6 +3,7 @@
 import StaffLayout from '@/components/staff/StaffLayout'
 import Link from 'next/link'
 import {
+    Activity, Box, UserPlus, Edit, FileStack,
     LayoutDashboard, ClipboardList, CalendarPlus, RotateCcw,
     AlertTriangle, CheckCircle2, XCircle, Search, HelpCircle,
     ArrowRight, Clock, Users, FileText, Package, Printer

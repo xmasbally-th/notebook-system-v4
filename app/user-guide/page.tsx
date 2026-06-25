@@ -5,6 +5,7 @@ import Footer from '@/components/layout/Footer'
 import Link from 'next/link'
 import AuthGuard from '@/components/auth/AuthGuard'
 import {
+    Activity, Box, UserPlus, Edit, FileStack,
     Package, CalendarPlus, Clock, CheckCircle2, XCircle,
     Send, ArrowRight, Bookmark, AlertTriangle, Timer,
     Monitor, ClipboardList, ArrowLeft, HelpCircle, Search,
