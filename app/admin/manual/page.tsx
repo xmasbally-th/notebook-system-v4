@@ -35,7 +35,7 @@ export default function AdminManualPage() {
                             </div>
                             <p className="text-blue-100 leading-relaxed text-lg">
                                 คู่มือนี้ครอบคลุมทุกฟีเจอร์สำหรับ Admin ตั้งแต่การจัดการผู้ใช้, อุปกรณ์, การอนุมัติคำขอ,
-                                ดูรายงานสถิติ, ไปจนถึง Support Chat และการตั้งค่า Discord Webhook
+                                ดูรายงานสถิติ และการตั้งค่า Discord Webhook
                             </p>
                         </div>
                     </div>
@@ -46,8 +46,7 @@ export default function AdminManualPage() {
                     <QuickNavLink href="#users" icon={Users} label="ผู้ใช้งาน" color="indigo" />
                     <QuickNavLink href="#equipment" icon={Package} label="อุปกรณ์" color="orange" />
                     <QuickNavLink href="#loans" icon={ClipboardList} label="การยืม-คืน" color="green" />
-                    <QuickNavLink href="#reports" icon={BarChart3} label="รายงาน" color="purple" />
-                    <QuickNavLink href="#support" icon={MessageSquare} label="Support Chat" color="teal" />
+                    <QuickNavLink href="#reports" icon={BarChart3} label="รายงาน" color="purple" />
                     <QuickNavLink href="#welpru" icon={Bell} label="แจ้งเตือน" color="blue" />
                     <QuickNavLink href="#data" icon={Database} label="จัดการข้อมูล" color="amber" />
                     <QuickNavLink href="#settings" icon={Settings} label="ตั้งค่า" color="gray" />
@@ -198,38 +197,7 @@ export default function AdminManualPage() {
                                 </p>
                             </div>
                         </div>
-                    </Section>
-
-                    {/* 6. Support Chat */}
-                    <Section id="support" title="6. Support Chat (ระบบแชทกับผู้ใช้)" icon={MessageSquare} color="teal">
-                        <p className="mb-6 text-gray-600">
-                            Admin สามารถเปิดการสนทนาและส่งข้อความถึงผู้ใช้งานโดยตรงผ่านระบบ — ผู้ใช้จะเห็น Badge แจ้งเตือนทันที
-                        </p>
-                        <div className="space-y-4">
-                            <div className="bg-teal-50 border border-teal-100 rounded-lg p-5">
-                                <h4 className="font-semibold text-teal-900 mb-3 flex items-center gap-2">
-                                    <Plus className="w-5 h-5" /> ขั้นตอนเปิด Ticket ใหม่
-                                </h4>
-                                <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
-                                    <li>ไปที่ <strong>Admin → Support Chat</strong></li>
-                                    <li>คลิก <strong>"สร้าง Ticket ใหม่"</strong></li>
-                                    <li>เลือกผู้ใช้ที่ต้องการติดต่อ</li>
-                                    <li>พิมพ์ข้อความ → คลิก <strong>"ส่ง"</strong></li>
-                                    <li>ผู้ใช้จะเห็นไอคอนแจ้งเตือน (🔴 Badge) บนปุ่ม Support ในหน้าหลักทันที</li>
-                                </ol>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FeatureItem
-                                    title="ดูประวัติการสนทนา"
-                                    desc="คลิกที่ Ticket ในรายการเพื่อดูบริบทการสนทนาทั้งหมดและตอบกลับ"
-                                />
-                                <FeatureItem
-                                    title="Admin เป็นผู้เริ่มเสมอ"
-                                    desc="ผู้ใช้ทั่วไปไม่สามารถเปิด Ticket ใหม่เองได้ — เฉพาะ Admin เท่านั้นที่เริ่มบทสนทนาได้"
-                                />
-                            </div>
-                        </div>
-                    </Section>
+                    </Section>
 
                     {/* 7. WeLPRU Notifications */}
                     <Section id="welpru" title="7. ระบบแจ้งเตือน WeLPRU (Push Notifications)" icon={Bell} color="blue">
@@ -267,7 +235,7 @@ export default function AdminManualPage() {
                             />
                             <FeatureItem
                                 title="ลบข้อมูล (Hard Delete)"
-                                desc="ลบข้อมูลเก่าแบบ manual เลือกช่วงวันที่ ประเภท และยืนยันก่อนลบ — รองรับ: การยืม, การจอง, อุปกรณ์, แจ้งเตือน, ประเมิน, และการสนทนา"
+                                desc="ลบข้อมูลเก่าแบบ manual เลือกช่วงวันที่ ประเภท และยืนยันก่อนลบ — รองรับ: การยืม, การจอง, อุปกรณ์, แจ้งเตือน, ประเมิน"
                             />
                             <FeatureItem
                                 title="Auto-Archive"
@@ -276,8 +244,7 @@ export default function AdminManualPage() {
                         </div>
                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm">
                             <p className="font-semibold text-amber-900 mb-1">🗄️ Auto-Archive ลบอะไรบ้าง?</p>
-                            <ul className="text-amber-800 space-y-1">
-                                <li>✅ Support Ticket ที่ปิดแล้ว เก่ากว่าที่กำหนด (พร้อมข้อความทั้งหมด)</li>
+                            <ul className="text-amber-800 space-y-1">
                                 <li>✅ Notification ที่เก่ากว่าที่กำหนด</li>
                                 <li className="text-amber-600">❌ ไม่ลบข้อมูลการยืม-คืน, อุปกรณ์, หรือผู้ใช้</li>
                             </ul>
@@ -330,8 +297,7 @@ export default function AdminManualPage() {
                                     <p className="font-medium text-blue-900 text-sm mb-2">ทุกวัน</p>
                                     <ul className="text-xs text-blue-800 space-y-1">
                                         <li>✅ ดูคำขอยืมที่รอนุมัติ</li>
-                                        <li>✅ ตรวจสอบอุปกรณ์ค้างคืน</li>
-                                        <li>✅ ดู Support Chat ใหม่</li>
+                                        <li>✅ ตรวจสอบอุปกรณ์ค้างคืน</li>
                                     </ul>
                                 </div>
                                 <div className="bg-purple-50 border border-purple-100 rounded-lg p-4">
@@ -372,11 +338,15 @@ export default function AdminManualPage() {
                                     <div className="flex items-center min-w-max gap-4 text-sm font-medium">
                                         <WorkflowStep title="ลงทะเบียน" desc="กรอกข้อมูล" icon={UserPlus} color="blue" />
                                         <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                        <WorkflowStep title="กรอกโปรไฟล์" desc="เพิ่มข้อมูล" icon={Edit} color="indigo" />
+                                        <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
                                         <WorkflowStep title="รออนุมัติ" desc="Pending" icon={Clock} color="orange" />
                                         <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
                                         <div className="flex flex-col gap-4">
                                             <div className="flex items-center gap-4">
                                                 <WorkflowStep title="อนุมัติ" desc="ใช้งานระบบได้" icon={CheckCircle2} color="green" />
+                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                <WorkflowStep title="เสร็จสิ้น" desc="สำเร็จ" icon={CheckCircle2} color="teal" />
                                             </div>
                                             <div className="flex items-center gap-4">
                                                 <WorkflowStep title="ไม่อนุมัติ" desc="ระงับบัญชี" icon={XCircle} color="red" />
@@ -436,9 +406,13 @@ export default function AdminManualPage() {
                                                 <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
                                                 <WorkflowStep title="ถึงวันจอง" desc="มารับอุปกรณ์" icon={Box} color="indigo" />
                                                 <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
-                                                <WorkflowStep title="กำลังยืม" desc="ใช้งาน" icon={Activity} color="teal" />
+                                                <WorkflowStep title="พร้อมรับ" desc="กดรับอุปกรณ์" icon={Check} color="teal" />
                                                 <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
-                                                <WorkflowStep title="คืนอุปกรณ์" desc="สำเร็จ" icon={CheckCircle2} color="green" />
+                                                <WorkflowStep title="แปลงเป็นยืม" desc="สถานะยืม" icon={Activity} color="blue" />
+                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                <WorkflowStep title="คืนอุปกรณ์" desc="ตรวจสภาพ" icon={RotateCcw} color="orange" />
+                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                <WorkflowStep title="เสร็จสิ้น" desc="สำเร็จ" icon={CheckCircle2} color="green" />
                                             </div>
                                             <div className="flex items-center gap-4">
                                                 <WorkflowStep title="ปฏิเสธ" desc="ยกเลิกการจอง" icon={XCircle} color="red" />
