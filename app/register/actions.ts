@@ -67,10 +67,15 @@ export async function completeRegistrationAction(
 
     const { title, firstName, lastName, phone, userType, departmentId, userId: profileUserId } = parsed.data
 
-    // 4. Update Profile
-    const updates = {
-        id: user.id,
-        email: user.email,
+    // 4. Fetch current profile status
+    const { data: currentProfile } = await (supabase as any)
+        .from('profiles')
+        .select('status')
+        .eq('id', user.id)
+        .single()
+
+    // 5. Update Profile
+    const updates: any = {
         title,
         first_name: firstName,
         last_name: lastName,
@@ -78,14 +83,18 @@ export async function completeRegistrationAction(
         user_type: userType,
         department_id: departmentId,
         user_id: profileUserId,
-        status: 'pending' as const, // Reset status to pending for review
-        reject_reason: null, // Clear any previous rejection reason
         updated_at: new Date().toISOString(),
+    }
+
+    // Only reset to pending if they were rejected
+    if (currentProfile?.status === 'rejected') {
+        updates.status = 'pending'
+        updates.reject_reason = null
     }
 
     const { error: updateError } = await (supabase as any)
         .from('profiles')
-        .upsert(updates)
+        .update(updates)
         .eq('id', user.id)
 
     if (updateError) {
@@ -93,8 +102,10 @@ export async function completeRegistrationAction(
         return { error: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + updateError.message }
     }
 
-    // 6. Notify Admin
-    await notifyNewRegistration(user.id)
+    // 6. Notify Admin (only if they are actually becoming pending/newly submitted)
+    if (!currentProfile || currentProfile.status === 'pending' || currentProfile.status === 'rejected') {
+        await notifyNewRegistration(user.id)
+    }
 
     return { success: true }
 }

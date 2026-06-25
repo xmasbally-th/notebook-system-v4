@@ -268,20 +268,24 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             const isAdminPath = pathname.startsWith('/admin')
             const isStaffPath = pathname.startsWith('/staff')
 
-            // If profile incomplete, redirect to setup
-            if (!isProfileComplete && !isSetupPath && !isPendingPath) {
-                handleRedirect('/register/complete-profile')
+            // 1. If pending or rejected, redirect to pending-approval
+            if (isPending || isRejected) {
+                if (!isPendingPath) {
+                    handleRedirect('/pending-approval')
+                }
                 return
             }
 
-            // If pending or rejected (with complete profile), redirect to pending-approval
-            if ((isPending || isRejected) && isProfileComplete && !isPendingPath && !isSetupPath) {
-                handleRedirect('/pending-approval')
+            // 2. If approved but profile incomplete, redirect to setup
+            if (!isProfileComplete) {
+                if (!isSetupPath) {
+                    handleRedirect('/register/complete-profile')
+                }
                 return
             }
 
-            // If approved and on pending/setup page, redirect to home
-            if (isApproved && (isPendingPath || isSetupPath)) {
+            // 3. If approved and profile complete, but on pending/setup page, redirect to home
+            if (isApproved && isProfileComplete && (isPendingPath || isSetupPath)) {
                 handleRedirect('/')
                 return
             }
