@@ -191,6 +191,76 @@ export default function StaffManualPage() {
                             </div>
                         </div>
                     </Section>
+                
+                    {/* Workflows */}
+                    <Section id="workflows" title="6. ขั้นตอนการทำงานของระบบ (Workflows)" icon={Activity} color="teal">
+                        <div className="space-y-8">
+                            {/* Loan System */}
+                            <div>
+                                <h4 className="font-semibold text-teal-900 mb-4 flex items-center gap-2">
+                                    <ClipboardList className="w-5 h-5" />
+                                    ระบบยืม-คืน (Loan & Return)
+                                </h4>
+                                <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 overflow-x-auto">
+                                    <div className="flex items-center min-w-max gap-4 text-sm font-medium">
+                                        <WorkflowStep title="ผู้ใช้ส่งคำขอ" desc="ระบุวันคืน" icon={FileStack} color="indigo" />
+                                        <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                        <WorkflowStep title="รออนุมัติ" desc="Pending" icon={Clock} color="orange" />
+                                        <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                        <div className="flex flex-col gap-4">
+                                            <div className="flex items-center gap-4">
+                                                <WorkflowStep title="อนุมัติ" desc="รับอุปกรณ์" icon={CheckCircle2} color="green" />
+                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                <WorkflowStep title="กำลังยืม" desc="ใช้งาน" icon={Activity} color="teal" />
+                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                <WorkflowStep title="รับคืนอุปกรณ์" desc="ตรวจสภาพ" icon={RotateCcw} color="orange" />
+                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                <WorkflowStep title="เสร็จสิ้น" desc="อุปกรณ์ว่าง" icon={CheckCircle2} color="green" />
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <WorkflowStep title="ปฏิเสธ" desc="ไม่อนุมัติคำขอ" icon={XCircle} color="red" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Reservation System */}
+                            <div>
+                                <h4 className="font-semibold text-teal-900 mb-4 flex items-center gap-2">
+                                    <CalendarPlus className="w-5 h-5" />
+                                    ระบบจองล่วงหน้า (Reservation)
+                                </h4>
+                                <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 overflow-x-auto">
+                                    <div className="flex items-center min-w-max gap-4 text-sm font-medium">
+                                        <WorkflowStep title="ผู้ใช้จอง" desc="ระบุวันที่" icon={CalendarPlus} color="indigo" />
+                                        <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                        <WorkflowStep title="รออนุมัติ" desc="Pending" icon={Clock} color="orange" />
+                                        <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                        <div className="flex flex-col gap-4">
+                                            <div className="flex items-center gap-4">
+                                                <WorkflowStep title="อนุมัติ" desc="จองสำเร็จ" icon={CheckCircle2} color="green" />
+                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                <WorkflowStep title="ถึงวันจอง" desc="มารับอุปกรณ์" icon={Box} color="indigo" />
+                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                <WorkflowStep title="พร้อมรับ" desc="กดรับอุปกรณ์" icon={CheckCircle2} color="teal" />
+                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                <WorkflowStep title="แปลงเป็นยืม" desc="สถานะยืม" icon={Activity} color="blue" />
+                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                <WorkflowStep title="รับคืนอุปกรณ์" desc="ตรวจสภาพ" icon={RotateCcw} color="orange" />
+                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                <WorkflowStep title="เสร็จสิ้น" desc="สำเร็จ" icon={CheckCircle2} color="green" />
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <WorkflowStep title="ปฏิเสธ" desc="ยกเลิกการจอง" icon={XCircle} color="red" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </Section>
+
                 </div>
 
                 {/* Footer Help */}
@@ -299,6 +369,30 @@ function StatusCard({ status, label, desc }: { status: string; label: string; de
         <div className={`p-4 rounded-xl border ${styles[status]}`}>
             <span className="block font-bold mb-1">{label}</span>
             <span className="text-xs opacity-80">{desc}</span>
+        </div>
+    )
+}
+
+function WorkflowStep({ title, desc, icon: Icon, color }: { title: string; desc: string; icon: any; color: string }) {
+    const bgColors: Record<string, string> = {
+        blue: 'bg-blue-100 text-blue-700',
+        indigo: 'bg-indigo-100 text-indigo-700',
+        purple: 'bg-purple-100 text-purple-700',
+        green: 'bg-green-100 text-green-700',
+        red: 'bg-red-100 text-red-700',
+        teal: 'bg-teal-100 text-teal-700',
+        orange: 'bg-orange-100 text-orange-700',
+    }
+
+    return (
+        <div className="flex flex-col items-center text-center gap-2 w-28">
+            <div className={`p-3 rounded-full ${bgColors[color]}`}>
+                <Icon className="w-6 h-6" />
+            </div>
+            <div>
+                <div className="font-semibold text-gray-900 text-sm whitespace-nowrap">{title}</div>
+                <div className="text-xs text-gray-500 whitespace-nowrap">{desc}</div>
+            </div>
         </div>
     )
 }

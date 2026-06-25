@@ -73,9 +73,7 @@ export default function UserGuidePage() {
                                 <a href="#notifications" className="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-full text-sm hover:bg-yellow-100 transition-colors">
                                     การแจ้งเตือน
                                 </a>
-                                <a href="#support" className="px-3 py-1.5 bg-teal-50 text-teal-700 rounded-full text-sm hover:bg-teal-100 transition-colors">
-                                    Support Chat
-                                </a>
+                                
                                 <a href="#profile" className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors">
                                     โปรไฟล์
                                 </a>
@@ -419,38 +417,7 @@ export default function UserGuidePage() {
                             </div>
                         </section>
 
-                        {/* Support Chat Section */}
-                        <section id="support" className="mb-10 scroll-mt-24">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center">
-                                    <MessageSquare className="w-5 h-5 text-teal-600" />
-                                </div>
-                                <h2 className="text-xl font-bold text-gray-900">Support Chat (ติดต่อ Admin)</h2>
-                            </div>
-
-                            <div className="bg-white rounded-xl border border-gray-200 p-6">
-                                <p className="text-gray-600 mb-4">
-                                    หากมีข้อสงสัยหรือต้องการความช่วยเหลือ Admin สามารถส่งข้อความหาคุณโดยตรงผ่านระบบ
-                                </p>
-                                <div className="space-y-3">
-                                    <div className="flex items-start gap-3 p-3 bg-teal-50 rounded-lg">
-                                        <div className="w-6 h-6 bg-teal-200 rounded-full flex items-center justify-center text-xs font-bold text-teal-700 shrink-0">1</div>
-                                        <p className="text-sm text-teal-800">มองหาปุ่ม <strong>💬 Support</strong> ที่มุมล่างขวาของหน้าจอ</p>
-                                    </div>
-                                    <div className="flex items-start gap-3 p-3 bg-teal-50 rounded-lg">
-                                        <div className="w-6 h-6 bg-teal-200 rounded-full flex items-center justify-center text-xs font-bold text-teal-700 shrink-0">2</div>
-                                        <p className="text-sm text-teal-800">หากมีจุดสีแดง (🔴 Badge) แสดงว่ามีข้อความใหม่จาก Admin รอการอ่าน</p>
-                                    </div>
-                                    <div className="flex items-start gap-3 p-3 bg-teal-50 rounded-lg">
-                                        <div className="w-6 h-6 bg-teal-200 rounded-full flex items-center justify-center text-xs font-bold text-teal-700 shrink-0">3</div>
-                                        <p className="text-sm text-teal-800">คลิกปุ่ม Support → ดูข้อความ → ตอบกลับได้ทันที</p>
-                                    </div>
-                                </div>
-                                <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-500">
-                                    ℹ️ Admin เป็นผู้เริ่มการสนทนาเสมอ — ผู้ใช้ทั่วไปไม่สามารถเปิดแชทใหม่เองได้
-                                </div>
-                            </div>
-                        </section>
+                        
 
                         {/* Profile Management Section */}
                         <section id="profile" className="mb-10 scroll-mt-24">
@@ -480,6 +447,115 @@ export default function UserGuidePage() {
                                         <span className="text-sm text-gray-600">
                                             <strong>แก้ไขเองไม่ได้:</strong> อีเมล (ผูกกับ Google), Role, สถานะบัญชี — ต้องติดต่อ Admin
                                         </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        
+                        {/* Workflows */}
+                        <section id="workflows" className="mb-10 scroll-mt-24">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center">
+                                    <Activity className="w-5 h-5 text-teal-600" />
+                                </div>
+                                <h2 className="text-xl font-bold text-gray-900">ขั้นตอนการทำงานของระบบ</h2>
+                            </div>
+                            
+                            <div className="space-y-8 bg-white rounded-xl border border-gray-200 p-6">
+                                {/* Member System */}
+                                <div>
+                                    <h4 className="font-semibold text-teal-900 mb-4 flex items-center gap-2">
+                                        <UserPlus className="w-5 h-5" />
+                                        การสมัครสมาชิก
+                                    </h4>
+                                    <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 overflow-x-auto">
+                                        <div className="flex items-center min-w-max gap-4 text-sm font-medium">
+                                            <WorkflowStep title="ลงทะเบียน" desc="ล็อกอินด้วย Google" icon={UserPlus} color="blue" />
+                                            <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                            <WorkflowStep title="กรอกโปรไฟล์" desc="เพิ่มข้อมูลส่วนตัว" icon={Edit} color="indigo" />
+                                            <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                            <WorkflowStep title="รออนุมัติ" desc="Pending" icon={Clock} color="orange" />
+                                            <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                            <div className="flex flex-col gap-4">
+                                                <div className="flex items-center gap-4">
+                                                    <WorkflowStep title="อนุมัติ" desc="ใช้งานระบบได้" icon={CheckCircle2} color="green" />
+                                                    <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                    <WorkflowStep title="เสร็จสิ้น" desc="สำเร็จ" icon={CheckCircle2} color="teal" />
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <WorkflowStep title="ไม่อนุมัติ" desc="ระงับบัญชี" icon={XCircle} color="red" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Loan System */}
+                                <div>
+                                    <h4 className="font-semibold text-teal-900 mb-4 flex items-center gap-2">
+                                        <ClipboardList className="w-5 h-5" />
+                                        การยืม-คืนอุปกรณ์
+                                    </h4>
+                                    <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 overflow-x-auto">
+                                        <div className="flex items-center min-w-max gap-4 text-sm font-medium">
+                                            <WorkflowStep title="เลือกอุปกรณ์" desc="ลงตะกร้า" icon={Box} color="blue" />
+                                            <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                            <WorkflowStep title="ส่งคำขอ" desc="ระบุวันที่คืน" icon={FileStack} color="indigo" />
+                                            <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                            <WorkflowStep title="รออนุมัติ" desc="Pending" icon={Clock} color="orange" />
+                                            <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                            <div className="flex flex-col gap-4">
+                                                <div className="flex items-center gap-4">
+                                                    <WorkflowStep title="อนุมัติ" desc="ไปรับอุปกรณ์" icon={CheckCircle2} color="green" />
+                                                    <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                    <WorkflowStep title="กำลังยืม" desc="ใช้งาน" icon={Activity} color="teal" />
+                                                    <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                    <WorkflowStep title="คืนอุปกรณ์" desc="ส่งคืนเคาน์เตอร์" icon={RotateCcw} color="orange" />
+                                                    <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                    <WorkflowStep title="เสร็จสิ้น" desc="สถานะว่าง" icon={CheckCircle2} color="green" />
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <WorkflowStep title="ปฏิเสธ" desc="ยกเลิกคำขอ" icon={XCircle} color="red" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Reservation System */}
+                                <div>
+                                    <h4 className="font-semibold text-teal-900 mb-4 flex items-center gap-2">
+                                        <CalendarPlus className="w-5 h-5" />
+                                        การจองล่วงหน้า
+                                    </h4>
+                                    <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 overflow-x-auto">
+                                        <div className="flex items-center min-w-max gap-4 text-sm font-medium">
+                                            <WorkflowStep title="เลือกอุปกรณ์" desc="กดปุ่มจอง" icon={Box} color="blue" />
+                                            <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                            <WorkflowStep title="กรอกวันที่" desc="ระบุวันรับ-คืน" icon={CalendarPlus} color="indigo" />
+                                            <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                            <WorkflowStep title="รออนุมัติ" desc="Pending" icon={Clock} color="orange" />
+                                            <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                            <div className="flex flex-col gap-4">
+                                                <div className="flex items-center gap-4">
+                                                    <WorkflowStep title="อนุมัติ" desc="จองสำเร็จ" icon={CheckCircle2} color="green" />
+                                                    <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                    <WorkflowStep title="ถึงวันจอง" desc="มารับอุปกรณ์" icon={Box} color="indigo" />
+                                                    <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                    <WorkflowStep title="พร้อมรับ" desc="กดรับอุปกรณ์" icon={CheckCircle2} color="teal" />
+                                                    <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                    <WorkflowStep title="แปลงเป็นยืม" desc="สถานะยืม" icon={Activity} color="blue" />
+                                                    <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                    <WorkflowStep title="คืนอุปกรณ์" desc="ส่งคืนเคาน์เตอร์" icon={RotateCcw} color="orange" />
+                                                    <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                                                    <WorkflowStep title="เสร็จสิ้น" desc="สำเร็จ" icon={CheckCircle2} color="green" />
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <WorkflowStep title="ปฏิเสธ" desc="ยกเลิกการจอง" icon={XCircle} color="red" />
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -572,6 +648,30 @@ function StatusBadge({ icon, label, color, description }: {
                 {label}
             </span>
             <span className="text-sm text-gray-500">{description}</span>
+        </div>
+    )
+}
+
+function WorkflowStep({ title, desc, icon: Icon, color }: { title: string; desc: string; icon: any; color: string }) {
+    const bgColors: Record<string, string> = {
+        blue: 'bg-blue-100 text-blue-700',
+        indigo: 'bg-indigo-100 text-indigo-700',
+        purple: 'bg-purple-100 text-purple-700',
+        green: 'bg-green-100 text-green-700',
+        red: 'bg-red-100 text-red-700',
+        teal: 'bg-teal-100 text-teal-700',
+        orange: 'bg-orange-100 text-orange-700',
+    }
+
+    return (
+        <div className="flex flex-col items-center text-center gap-2 w-28">
+            <div className={`p-3 rounded-full ${bgColors[color]}`}>
+                <Icon className="w-6 h-6" />
+            </div>
+            <div>
+                <div className="font-semibold text-gray-900 text-sm whitespace-nowrap">{title}</div>
+                <div className="text-xs text-gray-500 whitespace-nowrap">{desc}</div>
+            </div>
         </div>
     )
 }
