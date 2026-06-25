@@ -94,7 +94,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
                         'apikey': key,
                         'Authorization': `Bearer ${key}`
                     },
-                    signal: controller.signal
+                    signal: controller.signal,
+                    cache: 'no-store'
                 }
             )
 
