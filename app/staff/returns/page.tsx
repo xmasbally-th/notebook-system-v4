@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSupabaseCredentials } from '@/lib/supabase-helpers'
 import { useState, useMemo } from 'react'
-import StaffLayout from '@/components/staff/StaffLayout'
+import StaffPageHeader from '@/components/staff/StaffPageHeader'
 import {
     RotateCcw, CheckCircle, AlertTriangle, User, Package,
     Calendar, Search, ClipboardCheck
@@ -151,7 +151,8 @@ export default function StaffReturnsPage() {
     }
 
     return (
-        <StaffLayout title="รับคืนอุปกรณ์" subtitle="ตรวจสอบสภาพและบันทึกการคืนอุปกรณ์">
+        <div className="space-y-6">
+            <StaffPageHeader title="รับคืนอุปกรณ์" subtitle="บันทึกการส่งคืนอุปกรณ์และตรวจสอบสภาพ" />
             {/* Search */}
             <div className="mb-6">
                 <div className="relative max-w-md">
@@ -395,6 +396,6 @@ export default function StaffReturnsPage() {
                     </div>
                 </div>
             )}
-        </StaffLayout>
+        </div>
     )
 }

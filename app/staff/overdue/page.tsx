@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSupabaseCredentials } from '@/lib/supabase-helpers'
 import { useState, useMemo } from 'react'
-import StaffLayout from '@/components/staff/StaffLayout'
+import StaffPageHeader from '@/components/staff/StaffPageHeader'
 import {
     AlertTriangle, Bell, User, Package,
     Calendar, Search, Phone, Mail, Clock, Loader2, CheckCircle
@@ -176,7 +176,8 @@ export default function StaffOverduePage() {
     }
 
     return (
-        <StaffLayout title="รายการค้างคืน" subtitle="ติดตามและแจ้งเตือนผู้ยืมที่เกินกำหนดคืน">
+        <div className="space-y-6">
+            <StaffPageHeader title="รายการค้างคืน" subtitle="ติดตามและจัดการอุปกรณ์ที่เลยกำหนดคืน" />
             {/* Stats Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
                 <div className="relative overflow-hidden bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl p-5 text-white shadow-md hover:shadow-lg transition-all duration-300 hover:translate-y-[-2px]">
@@ -423,6 +424,6 @@ export default function StaffOverduePage() {
                     </div>
                 )}
             </div>
-        </StaffLayout>
+        </div>
     )
 }

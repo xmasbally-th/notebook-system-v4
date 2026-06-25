@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import StaffLayout from '@/components/staff/StaffLayout'
+import StaffPageHeader from '@/components/staff/StaffPageHeader'
 import StaffDashboardClient from '@/components/staff/StaffDashboardClient'
 import StaffDashboardSkeleton from '@/components/staff/StaffDashboardSkeleton'
 import { getStaffDashboardStats, getRecentActivity } from '@/lib/data/staff-dashboard'
@@ -20,33 +20,17 @@ async function StaffDashboardData() {
 }
 
 export default async function StaffDashboard() {
-    const supabase = await createClient()
-
-    // 1. Auth check
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) redirect('/login')
-
-    // 2. Fetch only profile for the layout (don't block on stats)
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, role')
-        .eq('id', user.id)
-        .single()
-
-    // 3. Access check
-    if (!profile || !['staff', 'admin'].includes(profile.role)) {
-        redirect('/')
-    }
-
+    // Auth check is handled by layout.tsx
+    
     return (
-        <StaffLayout
-            title="Dashboard"
-            subtitle="ภาพรวมการยืม-คืนอุปกรณ์"
-            profile={profile}
-        >
+        <div className="space-y-6">
+            <StaffPageHeader
+                title="Dashboard"
+                subtitle="ภาพรวมการยืม-คืนอุปกรณ์"
+            />
             <Suspense fallback={<StaffDashboardSkeleton />}>
                 <StaffDashboardData />
             </Suspense>
-        </StaffLayout>
+        </div>
     )
 }

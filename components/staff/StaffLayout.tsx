@@ -12,8 +12,6 @@ interface ProfileData {
 
 interface StaffLayoutProps {
     children: React.ReactNode
-    title: string
-    subtitle?: string
     profile?: ProfileData | null
 }
 
@@ -22,7 +20,7 @@ interface StaffLayoutProps {
  * Receives profile as a prop (fetched on server) → no client-side auth waterfall.
  * StaffSidebar stays 'use client' for mobile toggle interactivity.
  */
-export default function StaffLayout({ children, title, subtitle, profile }: StaffLayoutProps) {
+export default function StaffLayout({ children, profile }: StaffLayoutProps) {
     const hasAccess = profile?.role && isStaffOrAbove(profile.role as Role)
 
     return (
@@ -32,15 +30,9 @@ export default function StaffLayout({ children, title, subtitle, profile }: Staf
             {/* Main Content Area */}
             <div className="lg:pl-64 transition-all duration-300">
                 {/* Top Header — renders immediately, no client waterfall */}
-                <header className="sticky top-0 z-30 bg-(--card-bg) border-b border-(--border) shadow-sm transition-colors duration-300">
-                    <div className="flex items-center justify-between px-6 py-4 lg:px-8">
-                        <div className="pl-12 lg:pl-0">
-                            <h1 className="text-xl lg:text-2xl font-bold text-(--foreground)">{title}</h1>
-                            {subtitle && (
-                                <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">{subtitle}</p>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-4">
+                <header className="sticky top-0 z-30 bg-(--card-bg) border-b border-(--border) shadow-sm flex-shrink-0 transition-colors duration-300">
+                    <div className="flex items-center justify-end px-4 sm:px-6 py-4 lg:px-8">
+                        <div className="flex items-center gap-3 sm:gap-4">
                             <Suspense fallback={<div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 animate-pulse" />}>
                                 <StaffNotificationBell isStaff={hasAccess || false} />
                             </Suspense>
@@ -66,7 +58,7 @@ export default function StaffLayout({ children, title, subtitle, profile }: Staf
                 </header>
 
                 {/* Page Content */}
-                <main className="p-6 lg:p-8">
+                <main className="p-4 sm:p-6 lg:p-8 flex-1 overflow-auto">
                     {children}
                 </main>
             </div>

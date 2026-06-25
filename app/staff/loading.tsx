@@ -1,19 +1,6 @@
 export default function StaffDashboardLoading() {
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Mirror StaffLayout structure: sidebar placeholder + main content */}
-            <div className="lg:pl-64">
-                {/* Header */}
-                <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
-                    <div className="flex items-center justify-between px-6 py-4 lg:px-8">
-                        <div className="pl-12 lg:pl-0 space-y-1.5">
-                            <div className="h-7 w-36 bg-gray-200 rounded-md animate-pulse" />
-                            <div className="h-4 w-52 bg-gray-100 rounded-md animate-pulse" />
-                        </div>
-                    </div>
-                </header>
-
-                <main className="p-6 lg:p-8">
+        <div className="space-y-6">
                     {/* Stat Cards Skeleton */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                         {Array.from({ length: 4 }).map((_, i) => (
@@ -71,8 +58,6 @@ export default function StaffDashboardLoading() {
                             ))}
                         </div>
                     </div>
-                </main>
-            </div>
         </div>
     )
 }

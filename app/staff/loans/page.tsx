@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSupabaseCredentials } from '@/lib/supabase-helpers'
 import { useState, useMemo } from 'react'
-import StaffLayout from '@/components/staff/StaffLayout'
+import StaffPageHeader from '@/components/staff/StaffPageHeader'
 import {
     ClipboardList, CheckCircle, XCircle, Clock,
     Search, AlertTriangle, User, Package,
@@ -211,7 +211,8 @@ export default function StaffLoansPage() {
     }
 
     return (
-        <StaffLayout title="จัดการคำขอยืม" subtitle="อนุมัติหรือปฏิเสธคำขอยืมอุปกรณ์">
+        <div className="space-y-6">
+            <StaffPageHeader title="จัดการคำขอยืม" subtitle="อนุมัติหรือปฏิเสธคำขอยืมอุปกรณ์" />
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
@@ -740,6 +741,6 @@ export default function StaffLoansPage() {
                     </div>
                 </div>
             )}
-        </StaffLayout>
+        </div>
     )
 }

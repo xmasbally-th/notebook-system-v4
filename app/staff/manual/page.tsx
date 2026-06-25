@@ -1,6 +1,6 @@
 'use client'
 
-import StaffLayout from '@/components/staff/StaffLayout'
+import StaffPageHeader from '@/components/staff/StaffPageHeader'
 import Link from 'next/link'
 import {
     Activity, Box, UserPlus, Edit, FileStack,
@@ -12,7 +12,11 @@ import React from 'react'
 
 export default function StaffManualPage() {
     return (
-        <StaffLayout title="คู่มือการใช้งาน (สำหรับเจ้าหน้าที่)" subtitle="แนะนำการใช้งานระบบสำหรับเจ้าหน้าที่ปฏิบัติการ (Staff) — Notebook System V5">
+        <div className="space-y-6">
+            <StaffPageHeader
+                title="คู่มือการใช้งาน (สำหรับเจ้าหน้าที่)"
+                subtitle="แนะนำการใช้งานระบบสำหรับเจ้าหน้าที่ปฏิบัติการ (Staff) — Notebook System V5"
+            />
             <div className="max-w-5xl mx-auto">
                 {/* Introduction */}
                 <div className="bg-gradient-to-r from-teal-600 to-teal-800 rounded-2xl p-8 mb-8 text-white shadow-lg">
@@ -270,7 +274,7 @@ export default function StaffManualPage() {
                     <p className="text-gray-400 text-sm">ติดต่อ Admin ผ่านระบบ หรือแจ้งโดยตรง — Notebook System V5 อัปเดตล่าสุด 2 เมษายน 2569</p>
                 </div>
             </div>
-        </StaffLayout>
+        </div>
     )
 }
 

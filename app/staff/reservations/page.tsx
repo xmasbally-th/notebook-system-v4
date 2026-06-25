@@ -10,7 +10,7 @@ import {
 } from '@/lib/reservations'
 import { convertReservationToLoanAction } from '@/app/reservations/actions'
 import { useState, useMemo } from 'react'
-import StaffLayout from '@/components/staff/StaffLayout'
+import StaffPageHeader from '@/components/staff/StaffPageHeader'
 import { formatThaiDate } from '@/lib/formatThaiDate'
 import { useToast } from '@/components/ui/toast'
 import { useQueryClient } from '@tanstack/react-query'
@@ -130,7 +130,8 @@ export default function StaffReservationsPage() {
     }
 
     return (
-        <StaffLayout title="จัดการการจอง" subtitle="อนุมัติ ปฏิเสธ และจัดการการจองล่วงหน้า">
+        <div className="space-y-6">
+            <StaffPageHeader title="จัดการการจองล่วงหน้า" subtitle="อนุมัติ ปฏิเสธ หรือแจ้งเตือนให้มารับอุปกรณ์" />
             {/* Stats Cards */}
             <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
@@ -362,6 +363,6 @@ export default function StaffReservationsPage() {
                     </div>
                 </div>
             )}
-        </StaffLayout>
+        </div>
     )
 }
