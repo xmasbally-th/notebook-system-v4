@@ -163,18 +163,20 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             }
 
             try {
-                // Add timeout to auth.getUser() to prevent hanging
-                const timeoutPromise = new Promise<{ data: { user: null }, error: null }>((resolve) => {
+                // Add timeout to auth.getSession() to prevent hanging
+                const timeoutPromise = new Promise<{ data: { session: any }, error: null }>((resolve) => {
                     setTimeout(() => {
-                        console.warn('AuthGuard: auth.getUser() timed out')
-                        resolve({ data: { user: null }, error: null })
+                        console.warn('AuthGuard: auth.getSession() timed out')
+                        resolve({ data: { session: null }, error: null })
                     }, 5000) // 5s timeout
                 })
 
-                const authPromise = client.auth.getUser()
-                const { data: { user } } = await Promise.race([authPromise, timeoutPromise])
+                const authPromise = client.auth.getSession()
+                const { data: { session } } = await Promise.race([authPromise, timeoutPromise])
 
                 if (!isMounted) return
+
+                const user = session?.user
 
                 if (user) {
                     setUserId(user.id)
