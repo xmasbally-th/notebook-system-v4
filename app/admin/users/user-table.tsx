@@ -192,7 +192,11 @@ export default function UserTable({ users, departments }: { users: User[], depar
 
         setLoading(userId)
         try {
-            await updateUserStatus(userId, status, rejectReason || undefined)
+            const result = await updateUserStatus(userId, status, rejectReason || undefined)
+            if (result?.error) {
+                toast.error(`เกิดข้อผิดพลาด: ${result.error}`)
+                return
+            }
             router.refresh()
             toast.success(`${statusLabels[status]}ผู้ใช้เรียบร้อยแล้ว`)
         } catch (error: any) {
@@ -238,7 +242,11 @@ export default function UserTable({ users, departments }: { users: User[], depar
 
         setBulkLoading(true)
         try {
-            await updateMultipleUserStatus(selectedIds, status)
+            const result = await updateMultipleUserStatus(selectedIds, status)
+            if (result?.error) {
+                toast.error(`เกิดข้อผิดพลาด: ${result.error}`)
+                return
+            }
             setSelectedUsers(new Set())
             router.refresh()
             const statusLabel = status === 'approved' ? 'อนุมัติ' : 'ปฏิเสธ'

@@ -33,9 +33,16 @@ export async function updateUserStatus(
         return { error: 'ไม่สามารถเปลี่ยนสถานะบัญชีของตัวเองได้' }
     }
 
-    const adminClient = createAdminClient()
+    // 3. Create admin client (requires SUPABASE_SERVICE_ROLE_KEY)
+    let adminClient
+    try {
+        adminClient = createAdminClient()
+    } catch (e: any) {
+        console.error('[updateUserStatus] createAdminClient failed:', e)
+        return { error: 'ไม่สามารถเชื่อมต่อฐานข้อมูลได้: กรุณาตั้งค่า SUPABASE_SERVICE_ROLE_KEY ในระบบ' }
+    }
 
-    // 3. Update Status and Rejection Reason
+    // 4. Update Status and Rejection Reason
     const updates = {
         status: newStatus,
         reject_reason: newStatus === 'rejected' ? (rejectReason || null) : null
@@ -118,9 +125,16 @@ export async function updateMultipleUserStatus(
         return { error: 'ไม่สามารถเปลี่ยนสถานะบัญชีของตัวเองในรายการกลุ่มได้' }
     }
 
-    const adminClient = createAdminClient()
+    // 3. Create admin client (requires SUPABASE_SERVICE_ROLE_KEY)
+    let adminClient
+    try {
+        adminClient = createAdminClient()
+    } catch (e: any) {
+        console.error('[updateMultipleUserStatus] createAdminClient failed:', e)
+        return { error: 'ไม่สามารถเชื่อมต่อฐานข้อมูลได้: กรุณาตั้งค่า SUPABASE_SERVICE_ROLE_KEY ในระบบ' }
+    }
 
-    // 3. Get users for email/discord notification
+    // 4. Get users for email/discord notification
     let usersToNotify: any[] = []
     if (newStatus === 'approved' || newStatus === 'rejected') {
         const { data } = await adminClient
