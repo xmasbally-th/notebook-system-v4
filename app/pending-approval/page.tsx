@@ -14,16 +14,6 @@ function getSupabaseClient() {
     return getSupabaseBrowserClient()
 }
 
-// Clear the AuthGuard in-memory profile cache so it re-fetches fresh data after approval
-function clearAuthGuardCache() {
-    try {
-        // Dispatch a custom event that AuthGuard can listen to, or
-        // simply reload the page to clear all in-memory state cleanly
-        // We use sessionStorage as a flag for the reload
-        sessionStorage.setItem('auth_cache_cleared', Date.now().toString())
-    } catch { /* ignore */ }
-}
-
 // Faster polling interval (15 seconds)
 const POLL_INTERVAL = 15000
 
@@ -39,7 +29,12 @@ export default function PendingApprovalPage() {
 
     // Check auth and profile status
     useEffect(() => {
+        let isMounted = true
+        let isRunning = false // prevent overlapping polls
+
         const checkStatus = async () => {
+            if (isRunning || !isMounted) return
+            isRunning = true
             setIsChecking(true)
             const client = getSupabaseClient()
             const { url, key } = getSupabaseCredentials()
@@ -52,6 +47,8 @@ export default function PendingApprovalPage() {
 
                 const { data: { user } } = await client.auth.getUser()
                 const { data: { session } } = await client.auth.getSession()
+
+                if (!isMounted) return
 
                 if (!user) {
                     router.replace('/login')
@@ -71,6 +68,8 @@ export default function PendingApprovalPage() {
                 const data = await response.json()
                 const profileData = data?.[0]
 
+                if (!isMounted) return
+
                 if (!profileData) {
                     router.replace('/register/complete-profile')
                     return
@@ -88,14 +87,12 @@ export default function PendingApprovalPage() {
                 }
                 previousStatusRef.current = profileData.status
 
-                // If already approved, clear cache and reload to home
+                // If approved: force full page reload to clear AuthGuard's in-memory cache.
+                // router.replace('/') alone would NOT clear the cache, causing a redirect loop.
                 if (profileData.status === 'approved') {
-                    clearAuthGuardCache()
                     setTimeout(() => {
-                        // Use window.location.replace to force a full page reload
-                        // This clears all in-memory AuthGuard cache and prevents redirect loop
                         window.location.replace('/')
-                    }, 1500) // Delay to show toast
+                    }, 1500) // delay to let toast render
                     return
                 }
 
@@ -103,7 +100,8 @@ export default function PendingApprovalPage() {
                 setProfile(profileData)
                 setLoading(false)
             } finally {
-                setIsChecking(false)
+                if (isMounted) setIsChecking(false)
+                isRunning = false
             }
         }
 
@@ -111,7 +109,10 @@ export default function PendingApprovalPage() {
 
         // Set up auto-refresh with faster interval
         const interval = setInterval(checkStatus, POLL_INTERVAL)
-        return () => clearInterval(interval)
+        return () => {
+            isMounted = false
+            clearInterval(interval)
+        }
     }, [router, toast])
 
     const handleLogout = async () => {
