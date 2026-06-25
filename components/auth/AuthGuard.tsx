@@ -17,8 +17,8 @@ type Profile = {
 
 type AuthState = 'loading' | 'authenticated' | 'unauthenticated'
 
-// Cache profile for 5 minutes
-const CACHE_DURATION = 5 * 60 * 1000
+// Cache profile for 30 seconds — short enough to reflect admin approval quickly
+const CACHE_DURATION = 30 * 1000
 
 // Routes that don't require profile check
 const PUBLIC_PATHS = [
@@ -67,11 +67,12 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         })
     }, [pathname])
 
-    // Fetch profile with caching using direct fetch
-    const fetchProfile = useCallback(async (uid: string): Promise<Profile | null> => {
-        // Check cache first
+    // Fetch profile with caching using direct fetch (uses user access token for correct RLS)
+    const fetchProfile = useCallback(async (uid: string, forceRefresh = false): Promise<Profile | null> => {
+        // Check cache first (unless forced refresh)
         const now = Date.now()
-        if (profileCacheRef.current &&
+        if (!forceRefresh &&
+            profileCacheRef.current &&
             profileCacheRef.current.data?.id === uid &&
             (now - profileCacheRef.current.timestamp) < CACHE_DURATION) {
             return profileCacheRef.current.data
@@ -80,6 +81,12 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         try {
             const { url, key } = getSupabaseCredentials()
             if (!url || !key) return null
+
+            // Get user's access token for correct RLS
+            const client = getSupabaseClient()
+            const accessToken = client
+                ? (await client.auth.getSession()).data.session?.access_token
+                : null
 
             // Add timeout with AbortController
             const controller = new AbortController()
@@ -90,7 +97,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
                 {
                     headers: {
                         'apikey': key,
-                        'Authorization': `Bearer ${key}`
+                        'Authorization': `Bearer ${accessToken || key}`
                     },
                     signal: controller.signal
                 }

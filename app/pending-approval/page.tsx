@@ -14,6 +14,16 @@ function getSupabaseClient() {
     return getSupabaseBrowserClient()
 }
 
+// Clear the AuthGuard in-memory profile cache so it re-fetches fresh data after approval
+function clearAuthGuardCache() {
+    try {
+        // Dispatch a custom event that AuthGuard can listen to, or
+        // simply reload the page to clear all in-memory state cleanly
+        // We use sessionStorage as a flag for the reload
+        sessionStorage.setItem('auth_cache_cleared', Date.now().toString())
+    } catch { /* ignore */ }
+}
+
 // Faster polling interval (15 seconds)
 const POLL_INTERVAL = 15000
 
@@ -78,10 +88,13 @@ export default function PendingApprovalPage() {
                 }
                 previousStatusRef.current = profileData.status
 
-                // If already approved, redirect to home
+                // If already approved, clear cache and reload to home
                 if (profileData.status === 'approved') {
+                    clearAuthGuardCache()
                     setTimeout(() => {
-                        router.replace('/')
+                        // Use window.location.replace to force a full page reload
+                        // This clears all in-memory AuthGuard cache and prevents redirect loop
+                        window.location.replace('/')
                     }, 1500) // Delay to show toast
                     return
                 }
