@@ -37,7 +37,9 @@ async function getAuthenticatedUser(): Promise<AuthGuardResult> {
     try {
         const supabase = await createClient()
 
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        const { data: { session }, error: authError } = await supabase.auth.getSession()
+        const user = session?.user
+
         if (authError || !user) {
             return { user: null, profile: null, error: 'Unauthorized: กรุณาเข้าสู่ระบบ' }
         }
