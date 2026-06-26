@@ -248,7 +248,6 @@ export async function convertReservationToLoanAction(
         console.log('[convertReservationToLoanAction] Reservation updated to completed')
 
         // 5. Update equipment status to borrowed (🔴 Fix #1 — check error)
-        const adminClient = createAdminClient()
         const { error: equipmentUpdateError } = await adminClient
             .from('equipment')
             .update({ status: 'borrowed' })
