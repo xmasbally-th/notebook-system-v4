@@ -192,6 +192,16 @@ export async function convertReservationToLoanAction(
     }
 
     try {
+        // [HOTFIX] Ensure the user's profile is 'approved' before creating the loan request.
+        // This prevents the 'USER_NOT_APPROVED' database trigger from rejecting the transaction
+        // for legacy users who were created before the auto-approve flow was introduced.
+        const adminClient = createAdminClient()
+        await adminClient
+            .from('profiles')
+            .update({ status: 'approved' })
+            .eq('id', reservation.user_id)
+            .eq('status', 'pending')
+
         // 3. Create loan request (auto-approved)
         const { data: loanData, error: loanError } = await (supabase as any)
             .from('loanRequests')

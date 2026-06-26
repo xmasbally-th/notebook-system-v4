@@ -86,6 +86,7 @@ export async function approveLoanRequests(loanIds: string[]) {
         .from('loanRequests')
         .select(`
             id,
+            user_id,
             equipment:equipment_id(id, status, name)
         `)
         .in('id', parsed.data.loanIds)
@@ -101,6 +102,18 @@ export async function approveLoanRequests(loanIds: string[]) {
         const names = unavailableItems.map((l: any) => l.equipment?.name).join(', ')
         console.log('[approveLoanRequests] Unavailable items found:', names)
         return { error: `ไม่สามารถอนุมัติได้: อุปกรณ์ต่อไปนี้ไม่ว่างแล้ว (${names})` }
+    }
+
+    // [HOTFIX] Ensure all borrowers' profiles are 'approved' before approving their loan requests.
+    // This prevents the 'USER_NOT_APPROVED' database trigger from rejecting the transaction
+    // for legacy users who were created before the auto-approve flow was introduced.
+    const userIds = requestedLoans?.map(l => l.user_id).filter(Boolean) || []
+    if (userIds.length > 0) {
+        await adminClient
+            .from('profiles')
+            .update({ status: 'approved' })
+            .in('id', userIds)
+            .eq('status', 'pending')
     }
 
     // 3. Update
