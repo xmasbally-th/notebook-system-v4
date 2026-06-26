@@ -63,15 +63,21 @@ export async function getActiveLoans() {
 // ─── Mutations (Server Actions) ───────────────────────────────────────────────
 
 export async function approveLoanRequests(loanIds: string[]) {
+    console.log('[approveLoanRequests] Start for loanIds:', loanIds)
     // 1. Zod Validation
     const parsed = bulkLoanActionSchema.safeParse({ loanIds })
     if (!parsed.success) {
+        console.log('[approveLoanRequests] Zod validation failed:', parsed.error)
         return { error: parsed.error.issues[0]?.message || 'ข้อมูลไม่ถูกต้อง' }
     }
 
     // 2. Auth Guard (ต้องการสิทธิ์ staff ขึ้นไป)
     const auth = await requireStaff()
-    if (auth.error) return { error: auth.error }
+    if (auth.error) {
+        console.log('[approveLoanRequests] Auth error:', auth.error)
+        return { error: auth.error }
+    }
+    console.log('[approveLoanRequests] Auth success:', auth.user?.id)
 
     const adminClient = createAdminClient()
 
@@ -84,11 +90,16 @@ export async function approveLoanRequests(loanIds: string[]) {
         `)
         .in('id', parsed.data.loanIds)
 
-    if (checkError) return { error: checkError.message }
+    if (checkError) {
+        console.error('[approveLoanRequests] Concurrency check error:', checkError)
+        return { error: checkError.message }
+    }
+    console.log('[approveLoanRequests] Concurrency check passed, found loans:', requestedLoans?.length)
 
     const unavailableItems = requestedLoans?.filter((loan: any) => loan.equipment?.status !== 'ready')
     if (unavailableItems && unavailableItems.length > 0) {
         const names = unavailableItems.map((l: any) => l.equipment?.name).join(', ')
+        console.log('[approveLoanRequests] Unavailable items found:', names)
         return { error: `ไม่สามารถอนุมัติได้: อุปกรณ์ต่อไปนี้ไม่ว่างแล้ว (${names})` }
     }
 

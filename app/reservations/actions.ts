@@ -150,11 +150,14 @@ export async function submitReservationRequest(formData: FormData) {
 export async function convertReservationToLoanAction(
     reservationId: string
 ): Promise<{ success: boolean; error?: string; loanId?: string }> {
+    console.log('[convertReservationToLoanAction] Start for reservation:', reservationId)
     // 1. Auth Guard — requires staff or admin
     const { user, error: authError } = await requireStaff()
     if (authError || !user) {
+        console.log('[convertReservationToLoanAction] Auth error:', authError)
         return { success: false, error: authError || 'ไม่มีสิทธิ์ดำเนินการ' }
     }
+    console.log('[convertReservationToLoanAction] User authenticated:', user.id)
 
     const supabase = await createClient()
 
@@ -166,8 +169,10 @@ export async function convertReservationToLoanAction(
         .single()
 
     if (!profile) {
+        console.log('[convertReservationToLoanAction] Profile not found')
         return { success: false, error: 'ไม่พบข้อมูลผู้ใช้' }
     }
+    console.log('[convertReservationToLoanAction] Profile fetched')
 
     // 2. Fetch reservation with equipment info — validate status (🟡 Fix #3)
     const { data: reservation, error: fetchError } = await (supabase as any)
@@ -177,8 +182,10 @@ export async function convertReservationToLoanAction(
         .single()
 
     if (fetchError || !reservation) {
+        console.log('[convertReservationToLoanAction] Reservation fetch error:', fetchError)
         return { success: false, error: 'ไม่พบข้อมูลการจอง' }
     }
+    console.log('[convertReservationToLoanAction] Reservation fetched, status:', reservation.status)
 
     if (reservation.status !== 'ready' && reservation.status !== 'approved') {
         return { success: false, error: `ไม่สามารถแปลงการจองได้ สถานะปัจจุบัน: ${reservation.status}` }
@@ -200,9 +207,10 @@ export async function convertReservationToLoanAction(
             .single()
 
         if (loanError || !loanData) {
-            console.error('[convertReservationToLoan] Loan creation error:', loanError)
+            console.error('[convertReservationToLoanAction] Loan creation error:', loanError)
             return { success: false, error: 'ไม่สามารถสร้างคำขอยืมได้' }
         }
+        console.log('[convertReservationToLoanAction] Loan created:', loanData.id)
 
         const loanId = loanData.id
 
@@ -219,11 +227,12 @@ export async function convertReservationToLoanAction(
             .eq('id', reservationId)
 
         if (reservationUpdateError) {
-            console.error('[convertReservationToLoan] Reservation update error:', reservationUpdateError)
+            console.error('[convertReservationToLoanAction] Reservation update error:', reservationUpdateError)
             // Rollback: delete the created loan
             await (supabase as any).from('loanRequests').delete().eq('id', loanId)
             return { success: false, error: 'ไม่สามารถอัปเดตสถานะการจองได้' }
         }
+        console.log('[convertReservationToLoanAction] Reservation updated to completed')
 
         // 5. Update equipment status to borrowed (🔴 Fix #1 — check error)
         const adminClient = createAdminClient()
@@ -233,7 +242,7 @@ export async function convertReservationToLoanAction(
             .eq('id', reservation.equipment_id)
 
         if (equipmentUpdateError) {
-            console.error('[convertReservationToLoan] Equipment update error:', equipmentUpdateError)
+            console.error('[convertReservationToLoanAction] Equipment update error:', equipmentUpdateError)
             // Rollback: revert reservation and delete loan
             await (supabase as any)
                 .from('reservations')
@@ -242,6 +251,7 @@ export async function convertReservationToLoanAction(
             await (supabase as any).from('loanRequests').delete().eq('id', loanId)
             return { success: false, error: 'ไม่สามารถอัปเดตสถานะอุปกรณ์ได้' }
         }
+        console.log('[convertReservationToLoanAction] Equipment updated to borrowed')
 
         // 6. Log staff activity + Notify (parallel)
         const borrowerProfile2 = await (async () => {
