@@ -208,7 +208,10 @@ export async function convertReservationToLoanAction(
 
         if (loanError || !loanData) {
             console.error('[convertReservationToLoanAction] Loan creation error:', loanError)
-            return { success: false, error: 'ไม่สามารถสร้างคำขอยืมได้' }
+            const errorMsg = loanError?.message?.includes('USER_NOT_APPROVED') 
+                ? 'ผู้ใช้นี้ยังไม่ได้รับการอนุมัติบัญชี (Profile is pending)'
+                : (loanError?.message || 'ไม่สามารถสร้างคำขอยืมได้')
+            return { success: false, error: errorMsg }
         }
         console.log('[convertReservationToLoanAction] Loan created:', loanData.id)
 
