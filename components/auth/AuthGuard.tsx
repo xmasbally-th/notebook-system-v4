@@ -156,52 +156,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         let isMounted = true
         const client = getSupabaseClient()
 
-        const checkAuth = async () => {
-            if (!client) {
-                setAuthState('unauthenticated')
-                return
-            }
-
-            try {
-                // Add timeout to auth.getSession() to prevent hanging
-                const timeoutPromise = new Promise<{ data: { session: any }, error: null }>((resolve) => {
-                    setTimeout(() => {
-                        console.warn('AuthGuard: auth.getSession() timed out')
-                        resolve({ data: { session: null }, error: null })
-                    }, 5000) // 5s timeout
-                })
-
-                const authPromise = client.auth.getSession()
-                const { data: { session } } = await Promise.race([authPromise, timeoutPromise])
-
-                if (!isMounted) return
-
-                const user = session?.user
-
-                if (user) {
-                    setUserId(user.id)
-                    setAuthState('authenticated')
-
-                    // Fetch profile
-                    const userProfile = await fetchProfile(user.id)
-                    if (isMounted) {
-                        setProfile(userProfile)
-                    }
-                } else {
-                    setUserId(null)
-                    setAuthState('unauthenticated')
-                    setProfile(null)
-                }
-            } catch (error) {
-                console.error('AuthGuard: Auth check error', error)
-                if (isMounted) {
-                    setAuthState('unauthenticated')
-                }
-            }
-        }
-
-        checkAuth()
-
         // Listen for auth changes
         if (client) {
             const { data: { subscription } } = client.auth.onAuthStateChange(
@@ -226,6 +180,11 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
                         if (isMounted) {
                             setProfile(userProfile)
                         }
+                    } else if (event === 'INITIAL_SESSION' && !session) {
+                        // If initial session check finishes and there's no session
+                        setUserId(null)
+                        setAuthState('unauthenticated')
+                        setProfile(null)
                     }
                 }
             )
