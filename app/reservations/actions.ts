@@ -202,7 +202,20 @@ export async function convertReservationToLoanAction(
             .eq('id', reservation.user_id)
             .eq('status', 'pending')
 
-        // 3. Create loan request (auto-approved)
+        // 3. Mark reservation as completed FIRST (to bypass overlap trigger)
+        // If we don't do this, the database trigger will see this 'ready' reservation
+        // and think the new loan request is overlapping with it!
+        const { error: preUpdateError } = await (supabase as any)
+            .from('reservations')
+            .update({ status: 'completed' })
+            .eq('id', reservationId)
+            
+        if (preUpdateError) {
+            console.error('[convertReservationToLoanAction] Pre-update error:', preUpdateError)
+            return { success: false, error: 'ไม่สามารถอัปเดตสถานะการจองเบื้องต้นได้' }
+        }
+
+        // 4. Create loan request (auto-approved)
         const { data: loanData, error: loanError } = await (supabase as any)
             .from('loanRequests')
             .insert({
@@ -218,6 +231,12 @@ export async function convertReservationToLoanAction(
 
         if (loanError || !loanData) {
             console.error('[convertReservationToLoanAction] Loan creation error:', loanError)
+            // Rollback reservation
+            await (supabase as any)
+                .from('reservations')
+                .update({ status: reservation.status })
+                .eq('id', reservationId)
+                
             const errorMsg = loanError?.message?.includes('USER_NOT_APPROVED') 
                 ? 'ผู้ใช้นี้ยังไม่ได้รับการอนุมัติบัญชี (Profile is pending)'
                 : (loanError?.message || 'ไม่สามารถสร้างคำขอยืมได้')
@@ -227,11 +246,10 @@ export async function convertReservationToLoanAction(
 
         const loanId = loanData.id
 
-        // 4. Update reservation status to completed (🔴 Fix #1 — check error)
+        // 5. Link loan_id to reservation and finalize it
         const { error: reservationUpdateError } = await (supabase as any)
             .from('reservations')
             .update({
-                status: 'completed',
                 loan_id: loanId,
                 completed_at: new Date().toISOString(),
                 completed_by: user.id,
@@ -241,11 +259,12 @@ export async function convertReservationToLoanAction(
 
         if (reservationUpdateError) {
             console.error('[convertReservationToLoanAction] Reservation update error:', reservationUpdateError)
-            // Rollback: delete the created loan
+            // Rollback: delete the created loan and revert reservation
             await (supabase as any).from('loanRequests').delete().eq('id', loanId)
-            return { success: false, error: 'ไม่สามารถอัปเดตสถานะการจองได้' }
+            await (supabase as any).from('reservations').update({ status: reservation.status }).eq('id', reservationId)
+            return { success: false, error: 'ไม่สามารถเชื่อมโยงคำขอยืมกับการจองได้' }
         }
-        console.log('[convertReservationToLoanAction] Reservation updated to completed')
+        console.log('[convertReservationToLoanAction] Reservation finalized with loanId')
 
         // 5. Update equipment status to borrowed (🔴 Fix #1 — check error)
         const { error: equipmentUpdateError } = await adminClient
