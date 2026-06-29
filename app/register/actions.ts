@@ -1,6 +1,7 @@
 'use server'
 
 import { sendDiscordNotification } from '@/lib/notifications'
+import { notifyAndLog } from '@/lib/serverNotify'
 import { createClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 import { parseRegistrationFormData } from '@/lib/schemas'
@@ -113,18 +114,18 @@ export async function completeRegistrationAction(
 export async function notifyNewRegistration(userId: string) {
     const supabase = await createClient()
 
-    // Fetch user details for the message
     const { data: profile } = await (supabase as any)
         .from('profiles')
-        .select('first_name, last_name, email, departments(name)')
+        .select('first_name, last_name, email, user_id, departments(name)')
         .eq('id', userId)
         .single()
 
     if (profile) {
         const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
         const dept = profile.departments?.name || 'N/A'
+        const userIdCode = profile.user_id || 'N/A'
 
-        const message = `
+        const discordMessage = `
 **🔔 New User Registration**
 **Name:** ${fullName}
 **Email:** ${profile.email}
@@ -132,6 +133,15 @@ export async function notifyNewRegistration(userId: string) {
 **Status:** Pending Approval
         `.trim()
 
-        await sendDiscordNotification(message, 'auth')
+        await notifyAndLog({
+            eventKey: 'new_registration',
+            discordMessage,
+            discordType: 'auth',
+            welpruVariables: {
+                name: fullName,
+                user_id: userIdCode,
+                department: dept,
+            },
+        })
     }
 }

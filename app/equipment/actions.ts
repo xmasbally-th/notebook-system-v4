@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { sendDiscordNotification } from '@/lib/notifications'
+import { notifyAndLog } from '@/lib/serverNotify'
 import { revalidatePath } from 'next/cache'
 import { formatThaiDate, formatThaiTime, formatThaiDateTime } from '@/lib/formatThaiDate'
 import { parseLoanFormData } from '@/lib/schemas'
@@ -196,7 +197,17 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
 ⏰ **เวลาที่คืน:** ${formattedReturnTime}
     `.trim()
 
-    await sendDiscordNotification(message, 'loan')
+    await notifyAndLog({
+        eventKey: 'new_loan_request',
+        discordMessage: message,
+        discordType: 'loan',
+        welpruVariables: {
+            borrower: fullName,
+            equipment: equipmentName,
+            start_date: formatThaiDate(startDate),
+            end_date: formatThaiDate(endDate),
+        },
+    })
 
     revalidatePath('/')
     revalidatePath('/my-loans')

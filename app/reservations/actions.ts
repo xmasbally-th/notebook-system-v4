@@ -98,7 +98,7 @@ export async function submitReservationRequest(formData: FormData) {
         return { error: 'ไม่สามารถสร้างการจองได้' }
     }
 
-    // 5. Notify Discord
+    // 5. Notify
     try {
         const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
         const dept = profile.departments?.name || '-'
@@ -126,11 +126,22 @@ export async function submitReservationRequest(formData: FormData) {
 🔗 [ตรวจสอบคำขอ](${appUrl}/admin/reservations)
         `.trim()
 
-        await sendDiscordNotification(message, 'reservation')
+        await notifyAndLog({
+            eventKey: 'new_reservation_request',
+            discordMessage: message,
+            discordType: 'reservation',
+            welpruVariables: {
+                reserver: fullName,
+                equipment: equipmentName,
+                start_date: formatThaiDate(startDate),
+                end_date: formatThaiDate(endDate),
+            },
+        })
     } catch (notifyError) {
         console.error('Notification failed:', notifyError)
         // Don't fail the request if notification fails
     }
+
 
     revalidatePath('/my-reservations')
     revalidatePath('/equipment')

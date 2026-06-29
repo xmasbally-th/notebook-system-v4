@@ -33,6 +33,9 @@ interface EventConfig {
     welpru?: boolean
     welpru_title?: string
     welpru_body?: string
+    admin_welpru?: boolean          // send WeLPRU push to admin recipients
+    admin_welpru_title?: string     // title for admin push (falls back to default)
+    admin_welpru_body?: string      // body for admin push (falls back to default)
 }
 
 type NotificationSettings = Record<NotificationEventKey, EventConfig>
@@ -100,6 +103,45 @@ async function getNotificationSettings(): Promise<Partial<NotificationSettings>>
         return (data?.notification_settings as Partial<NotificationSettings>) ?? {}
     } catch {
         return {}
+    }
+}
+
+/** Default admin notification messages per event */
+const ADMIN_EVENT_DEFAULTS: Partial<Record<NotificationEventKey, { title: string; body: string; link: string }>> = {
+    new_registration:       { title: '🔔 มีผู้สมัครสมาชิกใหม่',  body: '{name} ({user_id}) จาก{department} รออนุมัติบัญชีอยู่', link: '/admin/users' },
+    new_loan_request:       { title: '📦 มีคำขอยืมอุปกรณ์ใหม่',  body: '{borrower} ขอยืม {equipment} ตั้งแต่ {start_date} ถึง {end_date}', link: '/admin/loans' },
+    new_reservation_request:{ title: '📅 มีคำขอจองอุปกรณ์ใหม่',  body: '{reserver} ขอจอง {equipment} ตั้งแต่ {start_date} ถึง {end_date}', link: '/admin/reservations' },
+    loan_approved:          { title: '✅ อนุมัติการยืมแล้ว',       body: '{equipment} ของ {borrower} ได้รับการอนุมัติแล้ว', link: '/admin/loans' },
+    loan_rejected:          { title: '❌ ปฏิเสธคำขอยืมแล้ว',      body: 'คำขอยืม {equipment} ของ {borrower} ถูกปฏิเสธ', link: '/admin/loans' },
+    loan_returned:          { title: '🔄 คืนอุปกรณ์แล้ว',          body: '{borrower} คืน {equipment} เรียบร้อยแล้ว', link: '/admin/loans' },
+    reservation_approved:   { title: '✅ อนุมัติการจองแล้ว',       body: '{equipment} ของ {reserver} ได้รับการอนุมัติแล้ว', link: '/admin/reservations' },
+    reservation_rejected:   { title: '❌ ปฏิเสธคำขอจองแล้ว',      body: 'คำขอจอง {equipment} ของ {reserver} ถูกปฏิเสธ', link: '/admin/reservations' },
+    reservation_ready:      { title: '🟢 อุปกรณ์พร้อมให้รับแล้ว', body: '{equipment} ของ {reserver} พร้อมให้มารับที่จุดรับ', link: '/admin/reservations' },
+    reservation_converted:  { title: '🔄 แปลงการจองเป็นการยืม',   body: '{reserver} รับ {equipment} เรียบร้อย (จากการจอง)', link: '/admin/loans' },
+    special_loan_created:   { title: '⭐ สร้างการยืมพิเศษใหม่',   body: '{borrower} ยืม {equipment} (พิเศษ) ถึง {end_date}', link: '/admin/loans' },
+    special_loan_completed: { title: '⭐ คืนการยืมพิเศษแล้ว',     body: '{borrower} คืน {equipment} (พิเศษ) เรียบร้อยแล้ว', link: '/admin/loans' },
+    special_loan_cancelled: { title: '⭐ ยกเลิกการยืมพิเศษ',      body: '{borrower} ยกเลิกการยืม {equipment} (พิเศษ)', link: '/admin/loans' },
+}
+
+/**
+ * Fetches admin_welpru_ids from system_config.
+ * Returns empty array if unavailable.
+ */
+async function getAdminWelpruIds(): Promise<string[]> {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return []
+    try {
+        const admin = createSupabaseClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+        )
+        const { data } = await admin
+            .from('system_config')
+            .select('admin_welpru_ids')
+            .eq('id', 1)
+            .single()
+        return (data?.admin_welpru_ids as string[]) ?? []
+    } catch {
+        return []
     }
 }
 
@@ -191,10 +233,38 @@ export async function notifyAndLog(params: NotifyAndLogParams): Promise<void> {
         }
     }
 
-    // 3. Activity Log
+    // 3. Admin WeLPRU — send to admin recipients if event has admin_welpru enabled
+    if (params.eventKey) {
+        const shouldSendAdminWelpru = eventCfg.admin_welpru ?? false
+        if (shouldSendAdminWelpru) {
+            const adminIds = await getAdminWelpruIds()
+            if (adminIds.length > 0) {
+                const defaults = params.eventKey ? ADMIN_EVENT_DEFAULTS[params.eventKey] : undefined
+                const adminTitle = eventCfg.admin_welpru_title
+                    ?? (defaults?.title ? applyTemplate(defaults.title, params.welpruVariables) : undefined)
+                const adminBody = eventCfg.admin_welpru_body
+                    ?? (defaults?.body ? applyTemplate(defaults.body, params.welpruVariables) : undefined)
+
+                const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+                const adminLink = defaults?.link ? `${appUrl}${defaults.link}` : undefined
+
+                if (adminTitle && adminBody) {
+                    tasks.push(sendWeLPRUNotification({
+                        userIds: adminIds,
+                        title: adminTitle,
+                        body: adminBody,
+                        ...(adminLink && { link: adminLink }),
+                    }))
+                }
+            }
+        }
+    }
+
+    // 4. Activity Log
     if (params.activity) {
         tasks.push(logActivityServer(params.activity))
     }
+
 
     // Fire all in parallel, swallow individual failures
     const results = await Promise.allSettled(tasks)

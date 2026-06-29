@@ -29,13 +29,162 @@ import {
     Palette,
     Check,
     Eye,
-    EyeOff
+    EyeOff,
+    Search
 } from 'lucide-react'
 import { Database } from '@/supabase/types'
 import { useTheme, themeInfo, type Theme } from '@/components/providers/ThemeContext'
 import ManualNotificationSender from '@/components/admin/ManualNotificationSender'
+import { supabase } from '@/lib/supabase/client'
 
 type SystemConfigUpdate = Database['public']['Tables']['system_config']['Update']
+
+// ─── Admin WeLPRU Recipient Manager ───────────────────────────────────────────
+
+const ADMIN_EVENT_LIST = [
+    { key: 'new_registration',        label: 'มีผู้สมัครสมาชิกใหม่',       defaultOn: true },
+    { key: 'new_loan_request',        label: 'มีคำขอยืมอุปกรณ์ใหม่',       defaultOn: true },
+    { key: 'new_reservation_request', label: 'มีคำขอจองอุปกรณ์ใหม่',       defaultOn: true },
+    { key: 'loan_approved',           label: 'อนุมัติการยืมแล้ว',           defaultOn: false },
+    { key: 'loan_rejected',           label: 'ปฏิเสธการยืมแล้ว',           defaultOn: false },
+    { key: 'loan_returned',           label: 'คืนอุปกรณ์แล้ว',             defaultOn: false },
+    { key: 'reservation_approved',    label: 'อนุมัติการจองแล้ว',           defaultOn: false },
+    { key: 'reservation_rejected',    label: 'ปฏิเสธการจองแล้ว',           defaultOn: false },
+    { key: 'reservation_ready',       label: 'อุปกรณ์พร้อมให้รับแล้ว',     defaultOn: false },
+    { key: 'reservation_converted',   label: 'แปลงการจองเป็นการยืม',       defaultOn: false },
+    { key: 'special_loan_created',    label: 'สร้างการยืมพิเศษใหม่',       defaultOn: false },
+    { key: 'special_loan_completed',  label: 'คืนการยืมพิเศษแล้ว',         defaultOn: false },
+    { key: 'special_loan_cancelled',  label: 'ยกเลิกการยืมพิเศษ',          defaultOn: false },
+]
+
+function AdminEventCheckboxes({
+    settings,
+    onChange,
+}: {
+    settings: Record<string, any>
+    onChange: (key: string, val: boolean) => void
+}) {
+    return (
+        <div className="space-y-2">
+            {ADMIN_EVENT_LIST.map(({ key, label, defaultOn }) => {
+                const checked = settings[key]?.admin_welpru ?? defaultOn
+                return (
+                    <label key={key} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 cursor-pointer group">
+                        <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => onChange(key, e.target.checked)}
+                            className="w-4 h-4 rounded accent-indigo-600"
+                        />
+                        <span className="text-sm text-gray-700 group-hover:text-gray-900">{label}</span>
+                    </label>
+                )
+            })}
+        </div>
+    )
+}
+
+function AdminWelpruIdManager({
+    value,
+    onChange,
+}: {
+    value: string[]
+    onChange: (ids: string[]) => void
+}) {
+    const [search, setSearch] = React.useState('')
+    const [results, setResults] = React.useState<any[]>([])
+    const [loading, setLoading] = React.useState(false)
+    const [debouncedSearch, setDebouncedSearch] = React.useState('')
+
+    React.useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(search), 300)
+        return () => clearTimeout(t)
+    }, [search])
+
+    React.useEffect(() => {
+        if (!debouncedSearch.trim()) { setResults([]); return }
+        setLoading(true)
+        supabase
+            .from('profiles')
+            .select('id, user_id, first_name, last_name, role')
+            .in('role', ['admin', 'staff'])
+            .eq('status', 'approved')
+            .or(`first_name.ilike.${debouncedSearch}%,last_name.ilike.${debouncedSearch}%,user_id.ilike.${debouncedSearch}%`)
+            .limit(8)
+            .then(({ data }) => { setResults(data || []); setLoading(false) })
+    }, [debouncedSearch])
+
+    const addId = (userId: string) => {
+        if (!userId || value.includes(userId)) return
+        onChange([...value, userId])
+        setSearch('')
+        setResults([])
+    }
+
+    const removeId = (userId: string) => {
+        onChange(value.filter(id => id !== userId))
+    }
+
+    return (
+        <div className="space-y-3">
+            {/* Selected IDs */}
+            {value.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                    {value.map(id => (
+                        <span key={id} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 text-sm rounded-lg border border-indigo-100">
+                            <span className="font-mono text-xs">{id}</span>
+                            <button type="button" onClick={() => removeId(id)} className="text-indigo-400 hover:text-indigo-700">
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        </span>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-sm text-gray-400 italic">ยังไม่มีผู้รับแจ้งเตือน — ค้นหาและเพิ่มด้านล่าง</p>
+            )}
+
+            {/* Search */}
+            <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                    type="text"
+                    placeholder="ค้นหา Admin/Staff ด้วยชื่อหรือรหัส..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+                {loading && <Loader2 className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />}
+                {results.length > 0 && (
+                    <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                        {results.map(u => (
+                            <button
+                                key={u.id}
+                                type="button"
+                                onClick={() => addId(u.user_id)}
+                                disabled={!u.user_id || value.includes(u.user_id)}
+                                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-indigo-50 disabled:opacity-40 disabled:cursor-not-allowed text-left"
+                            >
+                                <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                                    <Users className="w-3.5 h-3.5 text-indigo-600" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-gray-900">{u.first_name} {u.last_name}</p>
+                                    <p className="text-xs text-gray-400">{u.user_id ? `รหัส: ${u.user_id}` : 'ไม่มีรหัส'} · {u.role}</p>
+                                </div>
+                                {value.includes(u.user_id) && <Check className="w-4 h-4 text-indigo-500 ml-auto" />}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+            <p className="text-xs text-gray-400">เฉพาะผู้ใช้ที่มี Role เป็น Admin หรือ Staff เท่านั้น และต้องมีรหัสนักศึกษา/บุคลากรในระบบ</p>
+        </div>
+    )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+
 
 type LoanLimitsByType = {
     [key: string]: {
@@ -147,6 +296,8 @@ export default function AdminSettingsClient({ initialConfig, initialEquipmentTyp
                 announcement_active: activeConfig.announcement_active,
                 welpru_notifications_enabled: activeConfig.welpru_notifications_enabled,
                 welpru_api_key: (activeConfig as any).welpru_api_key ?? null,
+                admin_welpru_ids: (activeConfig as any).admin_welpru_ids ?? [],
+
             })
             if (activeConfig.loan_limits_by_type) {
                 setLoanLimits(activeConfig.loan_limits_by_type as LoanLimitsByType)
@@ -875,6 +1026,45 @@ export default function AdminSettingsClient({ initialConfig, initialEquipmentTyp
 
                             {/* Manual Notification Sender */}
                             <ManualNotificationSender />
+
+                            {/* Admin WeLPRU Recipients */}
+                            <section className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm mb-6">
+                                <div className="flex items-center gap-3 mb-5">
+                                    <div className="p-2 bg-indigo-50 rounded-xl">
+                                        <Users className="w-5 h-5 text-indigo-600" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-gray-900">ผู้รับแจ้งเตือน Admin (WeLPRU)</h2>
+                                        <p className="text-sm text-gray-500">เลือก Admin / Staff ที่จะรับ Push Notification เมื่อมี Event ในระบบ</p>
+                                    </div>
+                                </div>
+
+                                {/* Admin Recipient List */}
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">รายชื่อผู้รับแจ้งเตือน</label>
+                                        <AdminWelpruIdManager
+                                            value={((formData as any).admin_welpru_ids as string[]) || []}
+                                            onChange={(ids) => handleChange('admin_welpru_ids' as any, ids)}
+                                        />
+                                    </div>
+
+                                    {/* Per-event checkboxes */}
+                                    <div className="pt-4 border-t border-gray-100">
+                                        <label className="block text-sm font-medium text-gray-700 mb-3">เลือก Event ที่จะส่งแจ้งเตือนให้ Admin</label>
+                                        <AdminEventCheckboxes
+                                            settings={((formData as any).notification_settings as Record<string, any>) || {}}
+                                            onChange={(key, val) => {
+                                                const current = ((formData as any).notification_settings as Record<string, any>) || {}
+                                                handleChange('notification_settings' as any, {
+                                                    ...current,
+                                                    [key]: { ...(current[key] || {}), admin_welpru: val }
+                                                })
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </section>
 
                             {/* Discord Integration */}
                             <section className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-100 shadow-sm">

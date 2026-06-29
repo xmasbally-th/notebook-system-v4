@@ -126,6 +126,7 @@ function getDefaultConfig(): SystemConfig {
         last_archived_at: null,
         notification_settings: null,
         welpru_api_key: null,
+        admin_welpru_ids: [],
     } as SystemConfig
 }
 

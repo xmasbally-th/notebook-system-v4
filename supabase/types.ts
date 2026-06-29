@@ -355,6 +355,7 @@ export interface Database {
                     support_auto_reply_message: string | null
                     notification_settings: Json | null
                     welpru_api_key: string | null
+                    admin_welpru_ids: Json | null
                     updated_at: string
                 }
                 Insert: {
@@ -383,6 +384,7 @@ export interface Database {
                     support_auto_reply_message?: string | null
                     notification_settings?: Json | null
                     welpru_api_key?: string | null
+                    admin_welpru_ids?: Json | null
                     updated_at?: string
                 }
                 Update: {
@@ -411,6 +413,7 @@ export interface Database {
                     support_auto_reply_message?: string | null
                     notification_settings?: Json | null
                     welpru_api_key?: string | null
+                    admin_welpru_ids?: Json | null
                     updated_at?: string
                 }
             }
