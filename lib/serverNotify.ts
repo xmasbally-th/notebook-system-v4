@@ -106,6 +106,20 @@ async function getNotificationSettings(): Promise<Partial<NotificationSettings>>
     }
 }
 
+/** Default user-facing WeLPRU messages per event (sent to the borrower/reserver) */
+const USER_EVENT_DEFAULTS: Partial<Record<NotificationEventKey, { title: string; body: string }>> = {
+    loan_approved:          { title: '✅ คำขอยืมได้รับอนุมัติ',    body: 'คำขอยืม {equipment} ของคุณได้รับอนุมัติแล้ว' },
+    loan_rejected:          { title: '❌ คำขอยืมถูกปฏิเสธ',       body: 'คำขอยืม {equipment} ของคุณถูกปฏิเสธ กรุณาติดต่อเจ้าหน้าที่' },
+    loan_returned:          { title: '🔄 คืนอุปกรณ์เรียบร้อย',    body: 'ขอบคุณที่คืน {equipment} เรียบร้อยแล้ว' },
+    reservation_approved:   { title: '✅ คำขอจองได้รับอนุมัติ',    body: 'การจอง {equipment} ของคุณได้รับอนุมัติแล้ว' },
+    reservation_rejected:   { title: '❌ คำขอจองถูกปฏิเสธ',       body: 'การจอง {equipment} ของคุณถูกปฏิเสธ กรุณาติดต่อเจ้าหน้าที่' },
+    reservation_ready:      { title: '🟢 อุปกรณ์พร้อมให้รับแล้ว',  body: '{equipment} ที่คุณจองไว้พร้อมให้มารับแล้ว' },
+    reservation_converted:  { title: '🔄 รับอุปกรณ์จากการจองแล้ว',  body: 'คุณรับ {equipment} เรียบร้อยแล้ว (จากการจอง)' },
+    special_loan_created:   { title: '⭐ สร้างการยืมพิเศษแล้ว',    body: 'รายการยืมพิเศษ {equipment} ถูกสร้างแล้ว' },
+    special_loan_completed: { title: '⭐ คืนการยืมพิเศษเรียบร้อย',  body: 'คืน {equipment} (พิเศษ) เรียบร้อยแล้ว' },
+    special_loan_cancelled: { title: '⭐ ยกเลิกการยืมพิเศษ',       body: 'รายการยืมพิเศษ {equipment} ถูกยกเลิก' },
+}
+
 /** Default admin notification messages per event */
 const ADMIN_EVENT_DEFAULTS: Partial<Record<NotificationEventKey, { title: string; body: string; link: string }>> = {
     new_registration:       { title: '🔔 มีผู้สมัครสมาชิกใหม่',  body: '{name} ({user_id}) จาก{department} รออนุมัติบัญชีอยู่', link: '/admin/users' },
@@ -216,11 +230,14 @@ export async function notifyAndLog(params: NotifyAndLogParams): Promise<void> {
     if (params.welpruUserIds && params.welpruUserIds.length > 0) {
         const shouldSendWelpru = params.eventKey ? (eventCfg.welpru ?? true) : true
         if (shouldSendWelpru) {
-            // Priority: explicit title/body > template from settings
+            // Priority: explicit title/body > template from settings > built-in defaults
+            const userDefault = params.eventKey ? USER_EVENT_DEFAULTS[params.eventKey] : undefined
             const title = params.welpruTitle
                 ?? (eventCfg.welpru_title ? applyTemplate(eventCfg.welpru_title, params.welpruVariables) : undefined)
+                ?? (userDefault?.title ? applyTemplate(userDefault.title, params.welpruVariables) : undefined)
             const body = params.welpruBody
                 ?? (eventCfg.welpru_body ? applyTemplate(eventCfg.welpru_body, params.welpruVariables) : undefined)
+                ?? (userDefault?.body ? applyTemplate(userDefault.body, params.welpruVariables) : undefined)
 
             if (title && body) {
                 tasks.push(sendWeLPRUNotification({
