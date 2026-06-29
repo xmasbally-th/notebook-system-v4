@@ -13,6 +13,10 @@ type Profile = {
     first_name: string | null
     last_name: string | null
     phone_number: string | null
+    title: string | null
+    user_type: string | null
+    department_id: string | null
+    user_id: string | null
 }
 
 type AuthState = 'loading' | 'authenticated' | 'unauthenticated'
@@ -88,7 +92,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
 
             const response = await fetch(
-                `${url}/rest/v1/profiles?id=eq.${uid}&select=id,status,role,first_name,last_name,phone_number`,
+                `${url}/rest/v1/profiles?id=eq.${uid}&select=id,status,role,first_name,last_name,phone_number,title,user_type,department_id,user_id`,
                 {
                     headers: {
                         'apikey': key,
@@ -221,7 +225,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
         // 2. Authenticated users handling
         if (authState === 'authenticated' && profile) {
-            const isProfileComplete = profile.first_name && profile.last_name && profile.phone_number
+            const isProfileComplete = profile.first_name && profile.last_name && profile.phone_number && profile.title && profile.user_type && profile.department_id && profile.user_id
             const isPending = profile.status === 'pending'
             const isRejected = profile.status === 'rejected'
             const isApproved = profile.status === 'approved'
@@ -238,14 +242,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
                 return
             }
 
-            // 2. If approved but profile incomplete, redirect to setup
-            if (!isProfileComplete) {
-                if (!isSetupPath) {
-                    handleRedirect('/register/complete-profile')
-                }
-                return
-            }
-
+            // 2. If approved but profile incomplete, we don't redirect here anymore.
+            // A global ProfileCompletionPopup will handle showing a popup instead.
+            
             // 3. If approved and profile complete, but on pending/setup page, redirect to home
             if (isApproved && isProfileComplete && (isPendingPath || isSetupPath)) {
                 handleRedirect('/')

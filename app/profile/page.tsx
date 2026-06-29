@@ -281,9 +281,10 @@ export default function ProfilePage() {
                                 {/* Title */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">
-                                        คำนำหน้าชื่อ
+                                        คำนำหน้าชื่อ <span className="text-red-500">*</span>
                                     </label>
                                     <select
+                                        required
                                         className="w-full rounded-lg border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 shadow-sm border p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         value={formData.title}
                                         onChange={e => setFormData({ ...formData, title: e.target.value })}
@@ -372,10 +373,11 @@ export default function ProfilePage() {
                                 {/* User Type */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">
-                                        ประเภทผู้ใช้
+                                        ประเภทผู้ใช้ <span className="text-red-500">*</span>
                                     </label>
                                     <div className="relative">
                                         <select
+                                            required
                                             className="w-full rounded-lg border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 shadow-sm border p-2.5 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                             value={formData.user_type}
                                             onChange={e => setFormData({ ...formData, user_type: e.target.value as UserType })}
@@ -392,10 +394,11 @@ export default function ProfilePage() {
                                 {/* Department */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">
-                                        หน่วยงาน/ภาควิชา
+                                        หน่วยงาน/ภาควิชา <span className="text-red-500">*</span>
                                     </label>
                                     <div className="relative">
                                         <select
+                                            required
                                             className="w-full rounded-lg border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 shadow-sm border p-2.5 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                             value={formData.department_id}
                                             onChange={e => setFormData({ ...formData, department_id: e.target.value })}

@@ -18,6 +18,7 @@ export default function ProfileSetupPage() {
         first_name: '',
         last_name: '',
         phone_number: '',
+        user_id: '',
         user_type: '' as 'student' | 'lecturer' | 'staff' | '',
         department_id: '',
     })
@@ -48,6 +49,7 @@ export default function ProfileSetupPage() {
                 first_name: profile.first_name || '',
                 last_name: profile.last_name || '',
                 phone_number: profile.phone_number || '',
+                user_id: profile.user_id || '',
                 user_type: profile.user_type || '',
                 department_id: profile.department_id || '',
             })
@@ -66,6 +68,7 @@ export default function ProfileSetupPage() {
                 first_name: formData.first_name,
                 last_name: formData.last_name,
                 phone_number: formData.phone_number,
+                user_id: formData.user_id,
                 user_type: formData.user_type || null,
                 department_id: formData.department_id || null,
             })
@@ -109,9 +112,10 @@ export default function ProfileSetupPage() {
                         {/* Title */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                คำนำหน้าชื่อ
+                                คำนำหน้าชื่อ <span className="text-red-500">*</span>
                             </label>
                             <select
+                                required
                                 className="w-full rounded-lg border-gray-300 shadow-sm border p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 value={formData.title}
                                 onChange={e => setFormData({ ...formData, title: e.target.value })}
@@ -180,13 +184,32 @@ export default function ProfileSetupPage() {
                             <p className="text-xs text-gray-500 mt-1">เบอร์ที่สามารถติดต่อได้สะดวก</p>
                         </div>
 
+                        {/* User ID */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                รหัสนักศึกษา / รหัสบุคลากร <span className="text-red-500">*</span>
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="กรอกรหัสประจำตัว"
+                                    className="w-full rounded-lg border-gray-300 shadow-sm border p-2.5 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    value={formData.user_id}
+                                    onChange={e => setFormData({ ...formData, user_id: e.target.value })}
+                                />
+                                <User className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            </div>
+                        </div>
+
                         {/* User Type */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                ประเภทผู้ใช้
+                                ประเภทผู้ใช้ <span className="text-red-500">*</span>
                             </label>
                             <div className="relative">
                                 <select
+                                    required
                                     className="w-full rounded-lg border-gray-300 shadow-sm border p-2.5 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     value={formData.user_type}
                                     onChange={e => setFormData({ ...formData, user_type: e.target.value as any })}
@@ -203,10 +226,11 @@ export default function ProfileSetupPage() {
                         {/* Department */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                หน่วยงาน/ภาควิชา
+                                หน่วยงาน/ภาควิชา <span className="text-red-500">*</span>
                             </label>
                             <div className="relative">
                                 <select
+                                    required
                                     className="w-full rounded-lg border-gray-300 shadow-sm border p-2.5 pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     value={formData.department_id}
                                     onChange={e => setFormData({ ...formData, department_id: e.target.value })}

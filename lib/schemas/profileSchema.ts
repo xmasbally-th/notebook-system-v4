@@ -8,7 +8,7 @@ import { uuidSchema, thaiEnglishNameSchema, thaiPhoneSchema } from './commonSche
 
 // Schema สำหรับการลงทะเบียนผู้ใช้ใหม่
 export const completeRegistrationSchema = z.object({
-    title: z.string().trim().optional(),
+    title: z.string().trim().min(1, 'กรุณาเลือกคำนำหน้า'),
     firstName: thaiEnglishNameSchema,
     lastName: thaiEnglishNameSchema,
     phone: thaiPhoneSchema,
