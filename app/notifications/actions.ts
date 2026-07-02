@@ -72,7 +72,7 @@ export async function notifyReservationStatusChange(reservationId: string, statu
 
         const { data: reservation } = await supabase
             .from('reservations')
-            .select('*, profiles(first_name, last_name, email), equipment(name, equipment_number)')
+            .select('*, profiles(first_name, last_name, email, user_id), equipment(name, equipment_number)')
             .eq('id', reservationId)
             .single()
 
@@ -111,7 +111,27 @@ ${header}
 ${reservation.rejection_reason ? `💬 **เหตุผล:** ${reservation.rejection_reason}` : ''}
         `.trim()
 
-        await sendDiscordNotification(message, 'reservation')
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+        const eventKeyMap: Record<string, any> = {
+            'approved': 'reservation_approved',
+            'rejected': 'reservation_rejected',
+            'ready': 'reservation_ready'
+        }
+        const eventKey = eventKeyMap[status]
+
+        if (eventKey) {
+            const { notifyAndLog } = await import('@/lib/serverNotify')
+            await notifyAndLog({
+                eventKey,
+                discordMessage: message,
+                discordType: 'reservation',
+                welpruUserIds: profile?.user_id ? [profile.user_id] : [],
+                welpruVariables: { equipment: equipment?.name || '', reserver: fullName },
+                welpruLink: `${appUrl}/my-reservations`,
+            })
+        } else {
+            await sendDiscordNotification(message, 'reservation')
+        }
     } catch (error) {
         console.error('Error notifying reservation status:', error)
     }

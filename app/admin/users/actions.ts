@@ -52,7 +52,7 @@ export async function updateUserStatus(
         .from('profiles')
         .update(updates)
         .eq('id', userId)
-        .select('email, first_name, last_name, title')
+        .select('email, first_name, last_name, title, user_id')
         .single()
 
     if (error) return { error: error.message }
@@ -64,10 +64,10 @@ export async function updateUserStatus(
         if (newStatus === 'approved') {
             try { await sendApprovalEmail(updatedUser.email, fullName) } catch (e) { console.error(e) }
             try { await sendDiscordNotification(`✅ **บัญชีได้รับการอนุมัติ**\nผู้ใช้: ${fullName} (${updatedUser.email})\nโดย: ${auth.user?.email || 'Admin'}`, 'auth') } catch (e) { console.error(e) }
-            try { await sendWeLPRUNotification({ userIds: [userId], title: 'บัญชีได้รับการอนุมัติ 🎉', body: 'บัญชีของคุณผ่านการอนุมัติ คุณสามารถเริ่มใช้งานฟีเจอร์ยืมและจองอุปกรณ์ได้ทันที' }) } catch (e) { console.error(e) }
+            try { await sendWeLPRUNotification({ userIds: updatedUser.user_id ? [updatedUser.user_id] : [], title: 'บัญชีได้รับการอนุมัติ 🎉', body: 'บัญชีของคุณผ่านการอนุมัติ คุณสามารถเริ่มใช้งานฟีเจอร์ยืมและจองอุปกรณ์ได้ทันที' }) } catch (e) { console.error(e) }
         } else if (newStatus === 'rejected') {
             try { await sendDiscordNotification(`❌ **บัญชีถูกปฏิเสธ**\nผู้ใช้: ${fullName} (${updatedUser.email})\nโดย: ${auth.user?.email || 'Admin'}`, 'auth') } catch (e) { console.error(e) }
-            try { await sendWeLPRUNotification({ userIds: [userId], title: 'บัญชีไม่ผ่านการอนุมัติ ❌', body: 'บัญชีของคุณไม่ผ่านการอนุมัติสิทธิ์การใช้งาน กรุณาติดต่อผู้ดูแลระบบ' }) } catch (e) { console.error(e) }
+            try { await sendWeLPRUNotification({ userIds: updatedUser.user_id ? [updatedUser.user_id] : [], title: 'บัญชีไม่ผ่านการอนุมัติ ❌', body: 'บัญชีของคุณไม่ผ่านการอนุมัติสิทธิ์การใช้งาน กรุณาติดต่อผู้ดูแลระบบ' }) } catch (e) { console.error(e) }
         }
     }
 
