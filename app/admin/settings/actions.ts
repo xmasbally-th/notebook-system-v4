@@ -12,6 +12,8 @@ export async function sendManualNotification(params: {
     body: string
     link?: string
 }) {
+    const invocationId = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    console.log(`[sendManualNotification] Invoked: id=${invocationId}, type=${params.type}, userIds=${params.userIds?.join(',')}`)
     try {
         const supabase = await createClient()
         const { data: { session } } = await supabase.auth.getSession()

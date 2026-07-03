@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Send, Users, User, AlertCircle, CheckCircle2, Loader2, Plus, X, Search, Link } from 'lucide-react'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://notebook-system-v4.vercel.app'
@@ -90,6 +90,7 @@ export default function ManualNotificationSender() {
     const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null)
     const [debouncedSearch, setDebouncedSearch] = useState('')
     const [showConfirmModal, setShowConfirmModal] = useState(false)
+    const submittingRef = useRef(false) // Synchronous guard against double-submission
 
     // Debounce user search input to prevent query flooding
     useEffect(() => {
@@ -161,6 +162,12 @@ export default function ManualNotificationSender() {
     }
 
     const executeNotificationSend = async () => {
+        // Synchronous double-submit guard (ref updates instantly, unlike state)
+        if (submittingRef.current) {
+            console.warn('[ManualNotification] Blocked duplicate submission')
+            return
+        }
+        submittingRef.current = true
         setIsSubmitting(true)
         try {
             const result = await sendManualNotification({
@@ -185,6 +192,7 @@ export default function ManualNotificationSender() {
             setStatus({ type: 'error', message: error.message || 'เกิดข้อผิดพลาด' })
         } finally {
             setIsSubmitting(false)
+            submittingRef.current = false
         }
     }
 
