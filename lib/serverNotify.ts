@@ -138,6 +138,16 @@ const ADMIN_EVENT_DEFAULTS: Partial<Record<NotificationEventKey, { title: string
 }
 
 /**
+ * Events that default to sending admin WeLPRU notifications.
+ * Must match ADMIN_EVENT_LIST defaultOn values in AdminSettingsClient.tsx.
+ */
+const ADMIN_WELPRU_DEFAULT_ON = new Set<NotificationEventKey>([
+    'new_registration',
+    'new_loan_request',
+    'new_reservation_request',
+] as const)
+
+/**
  * Fetches admin_welpru_ids from system_config.
  * Returns empty array if unavailable.
  */
@@ -226,7 +236,7 @@ export async function notifyAndLog(params: NotifyAndLogParams): Promise<void> {
         }
     }
 
-    // 2. WeLPRU
+    // 2. WeLPRU (user-facing)
     if (params.welpruUserIds && params.welpruUserIds.length > 0) {
         const shouldSendWelpru = params.eventKey ? (eventCfg.welpru ?? true) : true
         if (shouldSendWelpru) {
@@ -240,21 +250,32 @@ export async function notifyAndLog(params: NotifyAndLogParams): Promise<void> {
                 ?? (userDefault?.body ? applyTemplate(userDefault.body, params.welpruVariables) : undefined)
 
             if (title && body) {
+                console.log(`[notifyAndLog] User WeLPRU: event=${params.eventKey || 'none'}, to=${params.welpruUserIds.join(',')}, title="${title}"`)
                 tasks.push(sendWeLPRUNotification({
                     userIds: params.welpruUserIds,
                     title,
                     body,
                     ...(params.welpruLink && { link: params.welpruLink }),
+                }).then(result => {
+                    if (!result.success) {
+                        console.error(`[notifyAndLog] User WeLPRU failed:`, result.error)
+                    }
+                    return result
                 }))
+            } else {
+                console.warn(`[notifyAndLog] User WeLPRU skipped: no title/body resolved for event=${params.eventKey}`)
             }
         }
     }
 
     // 3. Admin WeLPRU — send to admin recipients if event has admin_welpru enabled
     if (params.eventKey) {
-        const shouldSendAdminWelpru = eventCfg.admin_welpru ?? false
+        const adminDefaultOn = ADMIN_WELPRU_DEFAULT_ON.has(params.eventKey)
+        const shouldSendAdminWelpru = eventCfg.admin_welpru ?? adminDefaultOn
+        console.log(`[notifyAndLog] Admin WeLPRU check: event=${params.eventKey}, admin_welpru=${eventCfg.admin_welpru}, defaultOn=${adminDefaultOn}, shouldSend=${shouldSendAdminWelpru}`)
         if (shouldSendAdminWelpru) {
             const adminIds = await getAdminWelpruIds()
+            console.log(`[notifyAndLog] Admin IDs: ${JSON.stringify(adminIds)}`)
             if (adminIds.length > 0) {
                 const defaults = params.eventKey ? ADMIN_EVENT_DEFAULTS[params.eventKey] : undefined
                 const adminTitle = eventCfg.admin_welpru_title
@@ -266,13 +287,23 @@ export async function notifyAndLog(params: NotifyAndLogParams): Promise<void> {
                 const adminLink = defaults?.link ? `${appUrl}${defaults.link}` : undefined
 
                 if (adminTitle && adminBody) {
+                    console.log(`[notifyAndLog] Sending admin WeLPRU to ${adminIds.length} recipients: "${adminTitle}"`)
                     tasks.push(sendWeLPRUNotification({
                         userIds: adminIds,
                         title: adminTitle,
                         body: adminBody,
                         ...(adminLink && { link: adminLink }),
+                    }).then(result => {
+                        if (!result.success) {
+                            console.error(`[notifyAndLog] Admin WeLPRU failed:`, result.error)
+                        }
+                        return result
                     }))
+                } else {
+                    console.warn(`[notifyAndLog] Admin WeLPRU skipped: missing title/body for ${params.eventKey}`)
                 }
+            } else {
+                console.log(`[notifyAndLog] Admin WeLPRU skipped: no admin IDs configured`)
             }
         }
     }
