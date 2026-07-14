@@ -256,30 +256,50 @@ export async function sendWeLPRUGroupBroadcast(params: WeLPRUGroupMessageParams)
         const safeTitle = truncateText(params.title, 50);
         const safeBody = truncateText(params.body, 250);
 
-        const payload = {
-            topic: params.targetGroup,
-            title: safeTitle,
-            body: safeBody,
-            ...(params.data && { data: params.data }),
+        // WeLPRU API only accepts 'student' or 'personnel' as topic.
+        // When 'all' is selected, send to both groups in parallel.
+        const topics: Array<'student' | 'personnel'> = params.targetGroup === 'all'
+            ? ['student', 'personnel']
+            : [params.targetGroup as 'student' | 'personnel']
+
+        const results = await Promise.allSettled(
+            topics.map(async (topic) => {
+                const payload = {
+                    topic,
+                    title: safeTitle,
+                    body: safeBody,
+                    ...(params.data && { data: params.data }),
+                }
+
+                const res = await fetch(`${WELPRU_API_URL}/notify/group`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey!,
+                    },
+                    body: JSON.stringify(payload),
+                })
+
+                if (!res.ok) {
+                    const errText = await res.text()
+                    console.error(`[WeLPRU] API returned ${res.status} for topic "${topic}": ${errText}`)
+                    throw new Error(`API Error: ${res.status} ${errText}`)
+                }
+
+                return topic
+            })
+        )
+
+        const failed = results.filter((r) => r.status === 'rejected')
+        if (failed.length > 0) {
+            const firstErr = (failed[0] as PromiseRejectedResult).reason?.message || 'Unknown error'
+            if (failed.length === topics.length) {
+                return { success: false, error: firstErr }
+            }
+            console.warn(`[WeLPRU] Group broadcast partially failed: ${failed.length}/${topics.length}`)
         }
 
-        const res = await fetch(`${WELPRU_API_URL}/notify/group`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-API-Key': apiKey,
-            },
-            body: JSON.stringify(payload),
-        })
-
-        if (!res.ok) {
-            const errText = await res.text()
-            console.error(`[WeLPRU] API returned ${res.status}: ${errText}`)
-            return { success: false, error: `API Error: ${res.status} ${errText}` }
-        }
-
-        // 200 OK expected for group broadcasts
-        console.log(`[WeLPRU] Successfully sent broadcast to group: ${params.targetGroup}.`)
+        console.log(`[WeLPRU] Successfully sent broadcast to group: ${params.targetGroup} (${topics.length - failed.length}/${topics.length} topics).`)
         return { success: true }
     } catch (error: any) {
         // Fail gracefully
