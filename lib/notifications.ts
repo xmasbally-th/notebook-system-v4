@@ -257,7 +257,7 @@ export async function sendWeLPRUGroupBroadcast(params: WeLPRUGroupMessageParams)
         const safeBody = truncateText(params.body, 250);
 
         const payload = {
-            target_group: params.targetGroup,
+            topic: params.targetGroup,
             title: safeTitle,
             body: safeBody,
             ...(params.data && { data: params.data }),

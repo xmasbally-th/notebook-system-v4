@@ -139,8 +139,8 @@ export default function ManualNotificationSender() {
             return
         }
 
-        if (title.length > 65) {
-            setStatus({ type: 'error', message: 'หัวข้อการแจ้งเตือนต้องไม่เกิน 65 ตัวอักษร' })
+        if (title.length > 50) {
+            setStatus({ type: 'error', message: 'หัวข้อการแจ้งเตือนต้องไม่เกิน 50 ตัวอักษร' })
             return
         }
 
@@ -361,12 +361,12 @@ export default function ManualNotificationSender() {
                     <div>
                         <div className="flex justify-between items-center mb-1">
                             <label className="block text-sm font-medium text-gray-700">หัวข้อการแจ้งเตือน <span className="text-red-500">*</span></label>
-                            <span className={`text-xs ${(title.length > 65) ? 'text-red-500 font-bold' : 'text-gray-400'}`}>{title.length}/65</span>
+                            <span className={`text-xs ${(title.length > 50) ? 'text-red-500 font-bold' : 'text-gray-400'}`}>{title.length}/50</span>
                         </div>
                         <input
                             type="text"
                             required
-                            maxLength={65}
+                            maxLength={50}
                             placeholder="เช่น ประกาศสำคัญจากระบบ..."
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}

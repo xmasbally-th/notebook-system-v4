@@ -57,14 +57,13 @@ export async function sendManualNotification(formData: FormData) {
                 return { success: false, error: 'กรุณาเลือกกลุ่มเป้าหมาย' }
             }
 
-            try {
-                await sendWeLPRUGroupBroadcast({
-                    title,
-                    body,
-                    targetGroup
-                })
-            } catch (error) {
-                return { success: false, error: 'เกิดข้อผิดพลาดในการส่งข้อความแบบกลุ่ม' }
+            const res = await sendWeLPRUGroupBroadcast({
+                title,
+                body,
+                targetGroup
+            })
+            if (res && !res.success) {
+                return { success: false, error: res.error || 'เกิดข้อผิดพลาดในการส่งข้อความแบบกลุ่ม' }
             }
 
             return { success: true }
