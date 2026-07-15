@@ -143,14 +143,29 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         }
     }, [fetchProfile, clearProfileCache])
 
-    // Role-based redirect for home page (Client-side)
+    // Role-based and Status-based redirect (Client-side)
     useEffect(() => {
-        if (authState === 'authenticated' && profile?.status === 'approved') {
+        if (authState === 'authenticated' && profile) {
+            const isPending = profile.status === 'pending'
+            const isRejected = profile.status === 'rejected'
+            const isApproved = profile.status === 'approved'
             const isAdmin = profile.role === 'admin'
             const isStaff = profile.role === 'staff'
             
+            // Redirect pending/rejected users to /pending-approval if not already there
+            if ((isPending || isRejected) && !pathname.startsWith('/pending-approval') && !pathname.startsWith('/profile/setup')) {
+                router.replace('/pending-approval')
+                return
+            }
+
+            // Redirect approved users away from pending-approval
+            if (isApproved && pathname.startsWith('/pending-approval')) {
+                router.replace('/')
+                return
+            }
+
             // Redirect admin and staff to their respective dashboards when visiting home
-            if (pathname === '/') {
+            if (isApproved && pathname === '/') {
                 if (isAdmin) {
                     router.replace('/admin')
                 } else if (isStaff) {
