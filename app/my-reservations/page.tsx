@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { formatThaiDate } from '@/lib/formatThaiDate'
 import { useToast } from '@/components/ui/toast'
 import { useQueryClient } from '@tanstack/react-query'
-import AuthGuard from '@/components/auth/AuthGuard'
+
 import {
     Clock, CheckCircle, XCircle, CalendarPlus, Package,
     Calendar, ArrowRight, Loader2, AlertTriangle, Ban
@@ -45,7 +45,7 @@ export default function MyReservationsPage() {
     }
 
     return (
-        <AuthGuard>
+
             <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-4xl mx-auto">
                     <div className="flex items-center justify-between mb-6">
@@ -188,6 +188,6 @@ export default function MyReservationsPage() {
                     )}
                 </div>
             </div>
-        </AuthGuard>
+
     )
 }

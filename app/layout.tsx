@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 import { DebugConsole } from '@/components/providers/LazyComponents'
 
 import QueryProvider from '@/components/providers/QueryProvider'
-import AuthGuard from '@/components/auth/AuthGuard'
+import AuthProvider from '@/components/auth/AuthProvider'
 import ProfileCompletionPopup from '@/components/auth/ProfileCompletionPopup'
 import ErrorBoundary from '@/components/error/ErrorBoundary'
 import { ThemeProvider } from '@/components/providers/ThemeContext'
@@ -69,10 +69,10 @@ export default function RootLayout({
                 <ThemeProvider>
                     <ErrorBoundary>
                         <QueryProvider>
-                            <AuthGuard>
+                            <AuthProvider>
                                 {children}
                                 <ProfileCompletionPopup />
-                            </AuthGuard>
+                            </AuthProvider>
                         </QueryProvider>
                     </ErrorBoundary>
                     <DebugConsole />

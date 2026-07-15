@@ -14,23 +14,17 @@ export default async function EquipmentListPage() {
         redirect('/login')
     }
 
-    // Check user status
-    const { data: profile } = await (supabase as any)
-        .from('profiles')
-        .select('status')
-        .eq('id', user.id)
-        .single()
+    // Parallel fetch: profile check + equipment types
+    const [profileResult, typesResult] = await Promise.all([
+        (supabase as any).from('profiles').select('status').eq('id', user.id).single(),
+        (supabase as any).from('equipment_types').select('id, name, icon').eq('is_active', true).order('name')
+    ])
 
-    if (!profile || profile.status !== 'approved') {
+    if (!profileResult.data || profileResult.data.status !== 'approved') {
         redirect('/pending-approval')
     }
 
-    // Fetch equipment types for filter
-    const { data: equipmentTypes } = await (supabase as any)
-        .from('equipment_types')
-        .select('id, name, icon')
-        .eq('is_active', true)
-        .order('name')
+    const equipmentTypes = typesResult.data
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col font-sans">

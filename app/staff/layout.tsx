@@ -13,10 +13,9 @@ export default async function StaffRootLayout({
 }) {
     // 1. Server-Side Auth Check & Profile Fetch (No Client Waterfalls)
     const supabase = await createClient()
-    const { data: { session }, error: authError } = await supabase.auth.getSession()
-    const user = session?.user
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (authError || !user) {
+    if (!user) {
         redirect('/login')
     }
 

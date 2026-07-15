@@ -3,7 +3,7 @@
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import Link from 'next/link'
-import AuthGuard from '@/components/auth/AuthGuard'
+
 import {
     Activity, Box, UserPlus, Edit, FileStack,
     Package, CalendarPlus, Clock, CheckCircle2, XCircle,
@@ -16,7 +16,7 @@ import React from 'react'
 
 export default function UserGuidePage() {
     return (
-        <AuthGuard>
+
             <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
                 <Header />
 
@@ -606,7 +606,7 @@ export default function UserGuidePage() {
 
                 <Footer />
             </div>
-        </AuthGuard>
+
     )
 }
 
