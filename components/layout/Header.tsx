@@ -11,13 +11,7 @@ import UserNotificationBell from '@/components/ui/UserNotificationBell'
 import { useSystemConfig } from '@/hooks/useSystemConfig'
 import ThemeToggle from '@/components/ThemeToggle'
 
-// Get Supabase client for auth operations
-function getSupabaseClient() {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    if (!url || !key) return null
-    return createBrowserClient(url, key)
-}
+import { getSupabaseBrowserClient } from '@/lib/supabase-helpers'
 
 export default function Header() {
     const [user, setUser] = useState<any>(null)
@@ -29,7 +23,7 @@ export default function Header() {
 
     useEffect(() => {
         const checkUser = async () => {
-            const client = getSupabaseClient()
+            const client = getSupabaseBrowserClient()
             if (!client) return
             const { data: { session } } = await client.auth.getSession()
             setUser(session?.user || null)
@@ -39,7 +33,7 @@ export default function Header() {
     }, [])
 
     const handleSignOut = async () => {
-        const client = getSupabaseClient()
+        const client = getSupabaseBrowserClient()
         if (client) {
             await client.auth.signOut()
         }
@@ -62,7 +56,6 @@ export default function Header() {
                                     alt="Logo"
                                     fill
                                     className="object-contain"
-                                    unoptimized
                                     />
                             </div>
                         ) : (

@@ -4,7 +4,7 @@ import { Kanit, Mali } from 'next/font/google'
 
 const kanit = Kanit({
     subsets: ['thai', 'latin'],
-    weight: ['400', '500', '600', '700'],
+    weight: ['400', '500', '600'],
     variable: '--font-kanit',
     display: 'swap',
     adjustFontFallback: true, // P8: auto-generate size-adjust to reduce CLS
@@ -12,7 +12,7 @@ const kanit = Kanit({
 
 const mali = Mali({
     subsets: ['thai', 'latin'],
-    weight: ['400', '500', '600'],
+    weight: ['400', '600'],
     variable: '--font-mali',
     display: 'swap',
     adjustFontFallback: true, // P8: auto-generate size-adjust to reduce CLS
