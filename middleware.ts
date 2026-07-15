@@ -1,35 +1,32 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// Protected routes that require authentication
-const PROTECTED_PREFIXES = [
-    '/my-loans',
-    '/my-reservations',
-    '/equipment',
-    '/admin',
-    '/staff',
-    '/pending-approval',
-    '/profile',
-    '/notifications',
-    '/user-guide'
-]
+// Explicitly read env vars at module level for Node.js runtime
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+// Define route patterns
+const PUBLIC_ROUTES = ['/', '/login', '/auth/callback', '/auth/auth-code-error']
+const PENDING_ROUTES = ['/pending-approval']
+const PROFILE_SETUP_ROUTES = ['/register/complete-profile', '/profile/setup']
+const ADMIN_ROUTES = ['/admin']
+const STAFF_ROUTES = ['/staff']
+const EQUIPMENT_ROUTES = ['/equipment']
+
+// Default export function - required by Next.js 16 proxy
 export async function middleware(request: NextRequest) {
-    let supabaseResponse = NextResponse.next({
-        request,
-    })
+    const { pathname } = request.nextUrl
+    let response = NextResponse.next({ request })
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    // Should not happen in proper env, but safeguard
-    if (!supabaseUrl || !supabaseAnonKey) {
-        return supabaseResponse
+    // If env vars are not available, pass through without auth
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        console.warn('Supabase env vars not configured, skipping auth')
+        return response
     }
 
     const supabase = createServerClient(
-        supabaseUrl,
-        supabaseAnonKey,
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY,
         {
             cookies: {
                 getAll() {
@@ -37,63 +34,115 @@ export async function middleware(request: NextRequest) {
                 },
                 setAll(cookiesToSet) {
                     cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-                    supabaseResponse = NextResponse.next({
-                        request,
-                    })
+                    response = NextResponse.next({ request })
                     cookiesToSet.forEach(({ name, value, options }) =>
-                        supabaseResponse.cookies.set(name, value, options)
+                        response.cookies.set(name, value, options)
                     )
                 },
             },
         }
     )
 
-    const url = request.nextUrl.clone()
-    const path = url.pathname
-
-    // Allow static assets, images, API routes, auth callback
-    if (path.startsWith('/_next') || path.startsWith('/api') || path.includes('.') || path.startsWith('/auth')) {
-        return supabaseResponse
-    }
-
-    const isProtectedRoute = PROTECTED_PREFIXES.some(prefix => path === prefix || path.startsWith(`${prefix}/`))
-    const isLoginRoute = path === '/login'
-
-    // If it's a public route (like /), don't check auth at the edge to save latency
-    // and avoid Edge clock skew bugs where getSession() clears valid cookies.
-    if (!isProtectedRoute && !isLoginRoute) {
-        return supabaseResponse
-    }
-
-    // For protected routes and /login, use getUser() instead of getSession()
-    // getUser() makes a network request to Supabase API, bypassing local clock skew issues
-    // that cause getSession() to falsely invalidate and delete fresh tokens.
+    // Get current user
     const { data: { user } } = await supabase.auth.getUser()
 
-    // Not authenticated, trying to access protected route -> Redirect to login
-    if (!user && isProtectedRoute) {
+    // Check route types
+    const isPublicRoute = PUBLIC_ROUTES.some(route => {
+        // For root path, use exact match
+        if (route === '/') return pathname === '/'
+        // For other paths, use startsWith
+        return pathname.startsWith(route)
+    })
+    const isPendingRoute = PENDING_ROUTES.some(route => pathname.startsWith(route))
+    const isProfileSetupRoute = PROFILE_SETUP_ROUTES.some(route => pathname.startsWith(route))
+    const isAdminRoute = ADMIN_ROUTES.some(route => pathname.startsWith(route))
+    const isStaffRoute = STAFF_ROUTES.some(route => pathname.startsWith(route))
+    const isEquipmentRoute = EQUIPMENT_ROUTES.some(route => pathname.startsWith(route))
+
+    // Equipment routes are public - no auth needed
+    if (isEquipmentRoute) {
+        return response
+    }
+
+    // If no user and trying to access protected route, redirect to login
+    if (!user && !isPublicRoute && !isPendingRoute) {
+        const url = request.nextUrl.clone()
         url.pathname = '/login'
         return NextResponse.redirect(url)
     }
 
-    // Authenticated, trying to access login -> Redirect to home
-    if (user && isLoginRoute) {
-        url.pathname = '/'
-        return NextResponse.redirect(url)
+    // If user exists, check profile and status
+    if (user) {
+        // Redirect logged-in users away from login page
+        if (pathname === '/login') {
+            const url = request.nextUrl.clone()
+            url.pathname = '/'
+            return NextResponse.redirect(url)
+        }
+
+        // Get user profile for status/role checking (minimal select)
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('status, role')
+            .eq('id', user.id)
+            .single()
+
+        if (profile) {
+            const isPending = profile.status === 'pending'
+            const isRejected = profile.status === 'rejected'
+            const isApproved = profile.status === 'approved'
+            const isAdminUser = profile.role === 'admin'
+            const isStaffUser = profile.role === 'staff'
+
+            // If pending/rejected, redirect to pending-approval
+            if ((isPending || isRejected) && !isPendingRoute && !isProfileSetupRoute) {
+                const url = request.nextUrl.clone()
+                url.pathname = '/pending-approval'
+                return NextResponse.redirect(url)
+            }
+
+            // If approved and trying to access pending-approval, redirect to home
+            if (isApproved && isPendingRoute) {
+                const url = request.nextUrl.clone()
+                url.pathname = '/'
+                return NextResponse.redirect(url)
+            }
+
+            // Admin route access control
+            if (isAdminRoute && !isAdminUser) {
+                const url = request.nextUrl.clone()
+                url.pathname = isStaffUser ? '/staff' : '/'
+                return NextResponse.redirect(url)
+            }
+
+            // Staff route access control - staff and admin can access
+            if (isStaffRoute && !isStaffUser && !isAdminUser) {
+                const url = request.nextUrl.clone()
+                url.pathname = '/'
+                return NextResponse.redirect(url)
+            }
+
+            // Redirect based on role when accessing home page
+            if (isApproved && pathname === '/') {
+                if (isAdminUser) {
+                    const url = request.nextUrl.clone()
+                    url.pathname = '/admin'
+                    return NextResponse.redirect(url)
+                } else if (isStaffUser) {
+                    const url = request.nextUrl.clone()
+                    url.pathname = '/staff'
+                    return NextResponse.redirect(url)
+                }
+            }
+        }
     }
 
-    return supabaseResponse
+    return response
 }
 
 export const config = {
     matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         * Feel free to modify this pattern to include more paths.
-         */
         '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }
+

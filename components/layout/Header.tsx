@@ -10,8 +10,6 @@ import { useEffect, useState, useTransition } from 'react'
 import UserNotificationBell from '@/components/ui/UserNotificationBell'
 import { useSystemConfig } from '@/hooks/useSystemConfig'
 import ThemeToggle from '@/components/ThemeToggle'
-import { useAuth } from '@/components/auth/AuthProvider'
-import { LayoutDashboard } from 'lucide-react'
 
 // Get Supabase client for auth operations
 function getSupabaseClient() {
@@ -25,7 +23,6 @@ export default function Header() {
     const [user, setUser] = useState<any>(null)
     const [accessToken, setAccessToken] = useState<string | null>(null)
     const [isMenuOpen, setIsMenuOpen] = useState(false)
-    const { profile } = useAuth()
     const [, startTransition] = useTransition()
     const router = useRouter()
     const { data: systemConfig } = useSystemConfig()
@@ -106,24 +103,6 @@ export default function Header() {
                                     <HelpCircle className="w-4 h-4" aria-hidden="true" />
                                     คู่มือ
                                 </Link>
-                                {profile?.role === 'admin' && (
-                                    <Link
-                                        href="/admin"
-                                        className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 px-3 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
-                                    >
-                                        <LayoutDashboard className="w-4 h-4" aria-hidden="true" />
-                                        จัดการระบบ (Admin)
-                                    </Link>
-                                )}
-                                {profile?.role === 'staff' && (
-                                    <Link
-                                        href="/staff"
-                                        className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 px-3 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
-                                    >
-                                        <LayoutDashboard className="w-4 h-4" aria-hidden="true" />
-                                        จัดการระบบ (Staff)
-                                    </Link>
-                                )}
                                 <Link
                                     href="/profile"
                                     className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-900 transition-colors"
@@ -201,26 +180,6 @@ export default function Header() {
                                     <HelpCircle className="w-5 h-5" aria-hidden="true" />
                                     คู่มือการใช้งาน
                                 </Link>
-                                {profile?.role === 'admin' && (
-                                    <Link
-                                        href="/admin"
-                                        onClick={() => setIsMenuOpen(false)}
-                                        className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium"
-                                    >
-                                        <LayoutDashboard className="w-5 h-5" aria-hidden="true" />
-                                        จัดการระบบ (Admin)
-                                    </Link>
-                                )}
-                                {profile?.role === 'staff' && (
-                                    <Link
-                                        href="/staff"
-                                        onClick={() => setIsMenuOpen(false)}
-                                        className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium"
-                                    >
-                                        <LayoutDashboard className="w-5 h-5" aria-hidden="true" />
-                                        จัดการระบบ (Staff)
-                                    </Link>
-                                )}
                                 <Link
                                     href="/profile"
                                     onClick={() => setIsMenuOpen(false)}
