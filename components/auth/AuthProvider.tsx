@@ -62,7 +62,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
             const { data, error } = await client
                 .from('profiles')
-                .select('id,status,role,first_name,last_name,phone_number,title,user_type,department_id,user_id')
+                .select('id,status,role,first_name,last_name,phone_number,title,user_type,department_id')
                 .eq('id', uid)
                 .single()
 
