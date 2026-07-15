@@ -39,3 +39,5 @@ export default async function LoginPage() {
         </Suspense>
     )
 }
+
+export const dynamic = 'force-dynamic'
