@@ -57,30 +57,21 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         }
 
         try {
-            const { url, key } = getSupabaseCredentials()
-            if (!url || !key) return null
+            const client = getSupabaseBrowserClient()
+            if (!client) return null
 
-            const controller = new AbortController()
-            const timeoutId = setTimeout(() => controller.abort(), 10000)
+            const { data, error } = await client
+                .from('profiles')
+                .select('id,status,role,first_name,last_name,phone_number,title,user_type,department_id,user_id')
+                .eq('id', uid)
+                .single()
 
-            const response = await fetch(
-                `${url}/rest/v1/profiles?id=eq.${uid}&select=id,status,role,first_name,last_name,phone_number,title,user_type,department_id,user_id`,
-                {
-                    headers: {
-                        'apikey': key,
-                        'Authorization': `Bearer ${key}` // Note: Ideally should use session.access_token but this is what existed
-                    },
-                    signal: controller.signal,
-                    cache: 'no-store'
-                }
-            )
+            if (error) {
+                console.warn('Error fetching profile:', error)
+                return null
+            }
 
-            clearTimeout(timeoutId)
-
-            if (!response.ok) return null
-
-            const data = await response.json()
-            const profileData = data?.[0] as Profile | null
+            const profileData = data as Profile
 
             if (profileData) {
                 profileCacheRef.current = {
