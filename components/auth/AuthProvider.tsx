@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useRouter, usePathname } from 'next/navigation'
 import { getSupabaseBrowserClient, getSupabaseCredentials } from '@/lib/supabase-helpers'
 
 type Profile = {
@@ -40,6 +41,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     const [authState, setAuthState] = useState<AuthState>('loading')
     const [userId, setUserId] = useState<string | null>(null)
     const [profile, setProfile] = useState<Profile | null>(null)
+    
+    const router = useRouter()
+    const pathname = usePathname()
 
     const profileCacheRef = useRef<{ data: Profile | null; timestamp: number } | null>(null)
 
@@ -147,6 +151,23 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
             isMounted = false
         }
     }, [fetchProfile, clearProfileCache])
+
+    // Role-based redirect for home page (Client-side)
+    useEffect(() => {
+        if (authState === 'authenticated' && profile?.status === 'approved') {
+            const isAdmin = profile.role === 'admin'
+            const isStaff = profile.role === 'staff'
+            
+            // Redirect admin and staff to their respective dashboards when visiting home
+            if (pathname === '/') {
+                if (isAdmin) {
+                    router.replace('/admin')
+                } else if (isStaff) {
+                    router.replace('/staff')
+                }
+            }
+        }
+    }, [authState, profile, pathname, router])
 
     // Notice we do NOT block rendering. We just return children.
     return (
