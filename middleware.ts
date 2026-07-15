@@ -48,10 +48,6 @@ export async function middleware(request: NextRequest) {
         }
     )
 
-    // Using getSession is faster but less secure. Since we do a full secure check in the layouts, 
-    // getSession is sufficient for this fast middleware redirect.
-    const { data: { session } } = await supabase.auth.getSession()
-
     const url = request.nextUrl.clone()
     const path = url.pathname
 
@@ -63,14 +59,25 @@ export async function middleware(request: NextRequest) {
     const isProtectedRoute = PROTECTED_PREFIXES.some(prefix => path === prefix || path.startsWith(`${prefix}/`))
     const isLoginRoute = path === '/login'
 
+    // If it's a public route (like /), don't check auth at the edge to save latency
+    // and avoid Edge clock skew bugs where getSession() clears valid cookies.
+    if (!isProtectedRoute && !isLoginRoute) {
+        return supabaseResponse
+    }
+
+    // For protected routes and /login, use getUser() instead of getSession()
+    // getUser() makes a network request to Supabase API, bypassing local clock skew issues
+    // that cause getSession() to falsely invalidate and delete fresh tokens.
+    const { data: { user } } = await supabase.auth.getUser()
+
     // Not authenticated, trying to access protected route -> Redirect to login
-    if (!session && isProtectedRoute) {
+    if (!user && isProtectedRoute) {
         url.pathname = '/login'
         return NextResponse.redirect(url)
     }
 
     // Authenticated, trying to access login -> Redirect to home
-    if (session && isLoginRoute) {
+    if (user && isLoginRoute) {
         url.pathname = '/'
         return NextResponse.redirect(url)
     }
