@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import { ReportData } from '@/hooks/useReportData'
 import { getSupabaseCredentials } from '@/lib/supabase-helpers'
 import { formatThaiDate } from '@/lib/formatThaiDate'
+import { getDueDate } from '@/lib/reportDataProcessors'
 import {
     Package,
     CheckCircle2,
@@ -17,7 +18,11 @@ import {
     History,
     AlertTriangle,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Calendar,
+    Filter,
+    FileText,
+    Building
 } from 'lucide-react'
 
 interface EquipmentTabProps {
@@ -30,13 +35,19 @@ interface BorrowRecord {
     id: string
     status: string
     created_at: string
+    start_date?: string | null
     end_date: string
-    returned_at: string | null
+    return_time?: string | null
+    returned_at?: string | null
+    return_condition?: string | null
+    return_notes?: string | null
+    purpose?: string | null
     profiles: {
         first_name: string
         last_name: string
         email: string
         avatar_url: string | null
+        department?: { name: string } | string | null
     } | null
 }
 
@@ -46,6 +57,12 @@ const STATUS_MAP: Record<string, { label: string; color: string; icon: typeof Ch
     borrowed: { label: 'ถูกยืม', color: 'bg-blue-100 text-blue-700 border-blue-200', icon: Clock },
     maintenance: { label: 'ซ่อมบำรุง', color: 'bg-orange-100 text-orange-700 border-orange-200', icon: Wrench },
     retired: { label: 'เลิกใช้งาน', color: 'bg-red-100 text-red-700 border-red-200', icon: AlertTriangle },
+}
+
+const CONDITION_MAP: Record<string, { label: string; color: string }> = {
+    good: { label: 'ปกติ', color: 'bg-green-100 text-green-700 border-green-200' },
+    damaged: { label: 'ชำรุด', color: 'bg-amber-100 text-amber-800 border-amber-200' },
+    missing_parts: { label: 'อุปกรณ์ไม่ครบ', color: 'bg-red-100 text-red-700 border-red-200' }
 }
 
 // ==========================================
@@ -66,7 +83,9 @@ function BorrowHistoryModal({
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [currentPage, setCurrentPage] = useState(1)
-    const ITEMS_PER_PAGE = 10
+    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'returned'>('all')
+    const [filterByDateRange, setFilterByDateRange] = useState(false)
+    const ITEMS_PER_PAGE = 8
 
     const fetchHistory = useCallback(async () => {
         if (!equipment) return
@@ -77,17 +96,12 @@ function BorrowHistoryModal({
             const { url, key } = getSupabaseCredentials()
             if (!url || !key) throw new Error('Missing credentials')
 
-            // Get auth token
             const { createBrowserClient } = await import('@supabase/ssr')
             const supabase = createBrowserClient(url, key)
             const { data: { session } } = await supabase.auth.getSession()
             if (!session) throw new Error('Not authenticated')
 
-            let query = `${url}/rest/v1/loanRequests?select=id,status,created_at,end_date,returned_at,profiles!fk_loanrequests_profiles(first_name,last_name,email,avatar_url)&equipment_id=eq.${equipment.id}&status=in.(approved,returned)&order=created_at.desc`
-
-            if (dateRange) {
-                query += `&created_at=gte.${dateRange.from.toISOString()}&created_at=lte.${dateRange.to.toISOString()}`
-            }
+            const query = `${url}/rest/v1/loanRequests?select=id,status,created_at,start_date,end_date,return_time,returned_at,return_condition,return_notes,purpose,profiles!fk_loanrequests_profiles(first_name,last_name,email,avatar_url,department:departments(name))&equipment_id=eq.${equipment.id}&order=created_at.desc`
 
             const res = await fetch(query, {
                 headers: {
@@ -101,15 +115,17 @@ function BorrowHistoryModal({
             const data = await res.json()
             setRecords(Array.isArray(data) ? data : [])
         } catch (err: any) {
-            setError(err.message || 'เกิดข้อผิดพลาด')
+            setError(err.message || 'เกิดข้อผิดพลาดในการโหลดประวัติ')
         } finally {
             setLoading(false)
         }
-    }, [equipment, dateRange])
+    }, [equipment])
 
     useEffect(() => {
         if (isOpen && equipment) {
             setCurrentPage(1)
+            setStatusFilter('all')
+            setFilterByDateRange(false)
             fetchHistory()
         }
         return () => {
@@ -119,9 +135,39 @@ function BorrowHistoryModal({
         }
     }, [isOpen, equipment, fetchHistory])
 
+    // Filter records based on active status filter and date range toggle
+    const filteredRecords = useMemo(() => {
+        return records.filter(record => {
+            const dueDate = getDueDate(record.end_date, record.return_time)
+
+            // Status filter
+            if (statusFilter === 'active' && record.status !== 'approved') return false
+            if (statusFilter === 'returned' && record.status !== 'returned') return false
+
+            // Optional Date range filter
+            if (filterByDateRange && dateRange) {
+                const borrowDate = record.start_date ? new Date(record.start_date) : new Date(record.created_at)
+                const isWithinRange = borrowDate <= dateRange.to && (
+                    record.returned_at ? new Date(record.returned_at) >= dateRange.from : dueDate >= dateRange.from
+                )
+                // Always show active borrowings even if dateRange filter is enabled
+                if (!isWithinRange && record.status !== 'approved') return false
+            }
+
+            return true
+        })
+    }, [records, statusFilter, filterByDateRange, dateRange])
+
     if (!isOpen || !equipment) return null
 
     const statusConfig = STATUS_MAP[equipment.status] || STATUS_MAP.ready
+
+    const getDepartmentName = (dept: any): string => {
+        if (!dept) return ''
+        if (typeof dept === 'string') return dept
+        if (typeof dept === 'object') return dept.name || dept.label || ''
+        return ''
+    }
 
     return (
         <div
@@ -129,17 +175,17 @@ function BorrowHistoryModal({
             onClick={onClose}
         >
             <div
-                className="bg-white rounded-none sm:rounded-2xl shadow-2xl w-full max-w-2xl h-full sm:h-auto sm:max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden"
+                className="bg-white rounded-none sm:rounded-2xl shadow-2xl w-full max-w-2xl h-full sm:h-auto sm:max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-start justify-between p-5 sm:p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+                <div className="flex items-start justify-between p-5 sm:p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50 flex-shrink-0">
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                             <History className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                            <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">ประวัติการยืม</h2>
+                            <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">ประวัติการใช้งานอุปกรณ์</h2>
                         </div>
-                        <p className="text-sm text-gray-600 truncate">{equipment.name}</p>
+                        <p className="text-sm font-semibold text-gray-700 truncate">{equipment.name}</p>
                         <div className="flex items-center gap-2 mt-2">
                             <span className="text-xs font-mono bg-white/80 px-2 py-0.5 rounded-md text-gray-600 border border-gray-200">
                                 #{equipment.equipment_number}
@@ -157,45 +203,89 @@ function BorrowHistoryModal({
                     </button>
                 </div>
 
+                {/* Sub-header / Filters */}
+                <div className="p-4 bg-gray-50/80 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3 flex-shrink-0">
+                    {/* Status Tabs */}
+                    <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-200 text-xs font-medium">
+                        <button
+                            onClick={() => { setStatusFilter('all'); setCurrentPage(1); }}
+                            className={`px-3 py-1.5 rounded-lg transition-colors ${statusFilter === 'all' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                        >
+                            ทั้งหมด ({records.length})
+                        </button>
+                        <button
+                            onClick={() => { setStatusFilter('active'); setCurrentPage(1); }}
+                            className={`px-3 py-1.5 rounded-lg transition-colors ${statusFilter === 'active' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                        >
+                            กำลังยืม ({records.filter(r => r.status === 'approved').length})
+                        </button>
+                        <button
+                            onClick={() => { setStatusFilter('returned'); setCurrentPage(1); }}
+                            className={`px-3 py-1.5 rounded-lg transition-colors ${statusFilter === 'returned' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                        >
+                            คืนแล้ว ({records.filter(r => r.status === 'returned').length})
+                        </button>
+                    </div>
+
+                    {/* Date range toggle */}
+                    {dateRange && (
+                        <button
+                            onClick={() => { setFilterByDateRange(!filterByDateRange); setCurrentPage(1); }}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-colors ${filterByDateRange ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                        >
+                            <Filter className="w-3.5 h-3.5" />
+                            {filterByDateRange ? 'กรองตามช่วงวันที่เลือก' : 'ประวัติทั้งหมด'}
+                        </button>
+                    )}
+                </div>
+
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-5 sm:p-6">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-12 gap-3">
                             <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                            <p className="text-sm text-gray-500">กำลังโหลดข้อมูล...</p>
+                            <p className="text-sm text-gray-500">กำลังโหลดข้อมูลประวัติ...</p>
                         </div>
                     ) : error ? (
                         <div className="flex flex-col items-center justify-center py-12 gap-3">
                             <AlertTriangle className="w-8 h-8 text-red-400" />
                             <p className="text-sm text-red-600">{error}</p>
                         </div>
-                    ) : records.length === 0 ? (
+                    ) : filteredRecords.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-12 gap-3">
                             <Package className="w-12 h-12 text-gray-200" />
-                            <p className="text-gray-500 font-medium">ไม่มีประวัติการยืมในช่วงเวลานี้</p>
-                            <p className="text-xs text-gray-400">ลองเปลี่ยนช่วงวันที่ดู</p>
+                            <p className="text-gray-500 font-medium">ไม่พบประวัติการยืมอุปกรณ์</p>
+                            <p className="text-xs text-gray-400">
+                                {filterByDateRange ? 'ลองปิดตัวกรองช่วงวันที่เพื่อดูประวัติทั้งหมด' : 'อุปกรณ์นี้ยังไม่มีประวัติการยืม'}
+                            </p>
                         </div>
                     ) : (() => {
-                        const totalPages = Math.ceil(records.length / ITEMS_PER_PAGE)
+                        const totalPages = Math.ceil(filteredRecords.length / ITEMS_PER_PAGE)
                         const startIdx = (currentPage - 1) * ITEMS_PER_PAGE
-                        const paginatedRecords = records.slice(startIdx, startIdx + ITEMS_PER_PAGE)
+                        const paginatedRecords = filteredRecords.slice(startIdx, startIdx + ITEMS_PER_PAGE)
 
                         return (
                             <div className="space-y-3">
-                                <p className="text-xs text-gray-500 mb-4">
-                                    ทั้งหมด {records.length} รายการ
+                                <p className="text-xs text-gray-500 mb-2">
+                                    แสดง {filteredRecords.length} รายการ
                                     {totalPages > 1 && ` • หน้า ${currentPage}/${totalPages}`}
                                 </p>
                                 {paginatedRecords.map((record) => {
                                     const userName = record.profiles
                                         ? `${record.profiles.first_name || ''} ${record.profiles.last_name || ''}`.trim()
                                         : 'ไม่ทราบ'
+                                    const deptName = record.profiles ? getDepartmentName(record.profiles.department) : ''
+                                    const dueDate = getDueDate(record.end_date, record.return_time)
+                                    const isOverdue = record.status === 'approved' && new Date() > dueDate
                                     const isReturned = record.status === 'returned'
+                                    const conditionConfig = record.return_condition ? CONDITION_MAP[record.return_condition] : null
+
+                                    const borrowDateStr = record.start_date || record.created_at
 
                                     return (
                                         <div
                                             key={record.id}
-                                            className="group bg-gray-50 hover:bg-gray-100/80 rounded-xl p-4 transition-all duration-200 border border-gray-100"
+                                            className="group bg-white hover:bg-gray-50/80 rounded-xl p-4 transition-all duration-200 border border-gray-200 shadow-sm"
                                         >
                                             <div className="flex items-start gap-3">
                                                 {/* Avatar */}
@@ -220,34 +310,81 @@ function BorrowHistoryModal({
                                                 {/* Info */}
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center justify-between gap-2">
-                                                        <p className="font-semibold text-gray-900 text-sm truncate">{userName}</p>
-                                                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${isReturned
-                                                            ? 'bg-green-100 text-green-700'
-                                                            : 'bg-blue-100 text-blue-700'
-                                                            }`}>
-                                                            {isReturned ? 'คืนแล้ว' : 'กำลังยืม'}
-                                                        </span>
+                                                        <div className="flex items-center gap-2 truncate">
+                                                            <p className="font-semibold text-gray-900 text-sm truncate">{userName}</p>
+                                                            {deptName && (
+                                                                <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md flex-shrink-0">
+                                                                    <Building className="w-3 h-3 text-gray-400" />
+                                                                    {deptName}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                                                            {isReturned ? (
+                                                                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+                                                                    คืนแล้ว
+                                                                </span>
+                                                            ) : isOverdue ? (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200 animate-pulse">
+                                                                    <AlertTriangle className="w-3 h-3" />
+                                                                    เกินกำหนด
+                                                                </span>
+                                                            ) : record.status === 'approved' ? (
+                                                                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                                                                    กำลังยืม
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                                                                    {record.status}
+                                                                </span>
+                                                            )}
+
+                                                            {conditionConfig && (
+                                                                <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium border ${conditionConfig.color}`}>
+                                                                    {conditionConfig.label}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
+
                                                     {record.profiles?.email && (
                                                         <p className="text-xs text-gray-500 truncate mt-0.5">{record.profiles.email}</p>
                                                     )}
-                                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-gray-500">
+
+                                                    {/* Dates */}
+                                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2.5 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
                                                         <span className="inline-flex items-center gap-1">
-                                                            <span className="font-medium text-gray-600">ยืม:</span>
-                                                            {formatThaiDate(record.created_at)}
+                                                            <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                                                            <span className="font-medium text-gray-700">วันที่ยืม:</span>
+                                                            {formatThaiDate(borrowDateStr)}
                                                         </span>
-                                                        <ArrowRight className="w-3 h-3 text-gray-300 hidden sm:block" />
+                                                        <ArrowRight className="w-3.5 h-3.5 text-gray-300 hidden sm:block" />
                                                         <span className="inline-flex items-center gap-1">
-                                                            <span className="font-medium text-gray-600">กำหนดคืน:</span>
+                                                            <Clock className="w-3.5 h-3.5 text-amber-500" />
+                                                            <span className="font-medium text-gray-700">กำหนดคืน:</span>
                                                             {formatThaiDate(record.end_date)}
                                                         </span>
                                                         {record.returned_at && (
-                                                            <span className="inline-flex items-center gap-1 text-green-600">
-                                                                <span className="font-medium">คืนจริง:</span>
+                                                            <span className="inline-flex items-center gap-1 text-green-700 font-medium">
+                                                                <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                                                                <span>คืนจริง:</span>
                                                                 {formatThaiDate(record.returned_at)}
                                                             </span>
                                                         )}
                                                     </div>
+
+                                                    {/* Purpose or Notes */}
+                                                    {record.purpose && (
+                                                        <p className="text-xs text-gray-500 mt-2 flex items-start gap-1">
+                                                            <FileText className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                                                            <span className="font-medium text-gray-600">วัตถุประสงค์:</span> {record.purpose}
+                                                        </p>
+                                                    )}
+                                                    {record.return_notes && (
+                                                        <p className="text-xs text-amber-700 mt-1 flex items-start gap-1 bg-amber-50/60 px-2 py-1 rounded border border-amber-100">
+                                                            <span className="font-semibold">หมายเหตุการคืน:</span> {record.return_notes}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -295,7 +432,7 @@ function BorrowHistoryModal({
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 sm:p-5 border-t border-gray-100 bg-gray-50 sm:rounded-b-2xl">
+                <div className="p-4 sm:p-5 border-t border-gray-100 bg-gray-50 sm:rounded-b-2xl flex-shrink-0 flex justify-end">
                     <button
                         onClick={onClose}
                         className="w-full sm:w-auto px-6 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors text-sm font-medium"
@@ -370,19 +507,8 @@ export default function EquipmentTab({ data, isLoading, dateRange: parentDateRan
             .sort((a, b) => a.name.localeCompare(b.name, 'th'))
     }, [selectedTypeId, data?.allEquipment])
 
-    // Equipment usage counts from popularEquipment
-    const usageMap = useMemo(() => {
-        const map: Record<string, { loan_count: number; returned_count: number }> = {}
-        if (data?.popularEquipment) {
-            data.popularEquipment.forEach(item => {
-                map[item.id] = {
-                    loan_count: item.loan_count,
-                    returned_count: item.returned_count
-                }
-            })
-        }
-        return map
-    }, [data?.popularEquipment])
+    // Equipment usage counts from equipmentUsageMap (calculated for all equipment)
+    const usageMap = data?.equipmentUsageMap ?? {}
 
     const selectedCategory = categories.find(c => c.id === selectedTypeId)
 
@@ -517,7 +643,7 @@ export default function EquipmentTab({ data, isLoading, dateRange: parentDateRan
                                     const effectiveStatus = getEffectiveStatus(eq)
                                     const config = STATUS_MAP[effectiveStatus] || STATUS_MAP.ready
                                     const StatusIcon = config.icon
-                                    const usage = usageMap[eq.id]
+                                    const usage = usageMap[eq.id] || { loan_count: 0, returned_count: 0 }
 
                                     return (
                                         <button
@@ -544,15 +670,13 @@ export default function EquipmentTab({ data, isLoading, dateRange: parentDateRan
                                             </span>
 
                                             {/* Usage stats */}
-                                            {usage && (
-                                                <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-50 text-xs text-gray-500">
-                                                    <span>ยืม <span className="font-semibold text-gray-700">{usage.loan_count}</span></span>
-                                                    <span>คืน <span className="font-semibold text-green-600">{usage.returned_count}</span></span>
-                                                </div>
-                                            )}
+                                            <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-50 text-xs text-gray-500">
+                                                <span>ยืม <span className="font-semibold text-gray-700">{usage.loan_count}</span></span>
+                                                <span>คืน <span className="font-semibold text-green-600">{usage.returned_count}</span></span>
+                                            </div>
 
                                             {/* Click hint */}
-                                            <div className="flex items-center gap-1 mt-2 text-[10px] text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center gap-1 mt-2 text-[10px] text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
                                                 <History className="w-3 h-3" />
                                                 คลิกเพื่อดูประวัติ
                                             </div>

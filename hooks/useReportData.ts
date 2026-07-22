@@ -8,6 +8,7 @@ import {
     calculateReservationStats,
     calculateEquipmentStats,
     calculatePopularEquipment,
+    calculateEquipmentUsageMap,
     formatOverdueItems,
     calculateUserStats,
     processStaffActivityLog,
@@ -221,6 +222,7 @@ export interface ReportData {
     equipmentTypes: EquipmentType[]
     allEquipment: Equipment[]
     borrowedEquipmentIds: Set<string>
+    equipmentUsageMap: Record<string, { loan_count: number; returned_count: number }>
     specialLoanStats: SpecialLoanStats
 }
 
@@ -401,6 +403,7 @@ export function useReportData(dateRange: DateRange) {
         const reservationStats = calculateReservationStats(reservations)
         const equipmentStats = calculateEquipmentStats(equipment)
         const popularEquipment = calculatePopularEquipment(loans, reservations, equipment)
+        const equipmentUsageMap = calculateEquipmentUsageMap(loans, equipment)
         const overdueItems = formatOverdueItems(overdueLoans)
         const { userStats, departments, departmentStats } = calculateUserStats(profiles, loans, reservations, overdueLoans)
         const staffActivity = processStaffActivityLog(staffActivityLog, profiles)
@@ -433,6 +436,7 @@ export function useReportData(dateRange: DateRange) {
             equipmentTypes: Array.isArray(equipmentTypes) ? equipmentTypes : [],
             allEquipment: Array.isArray(equipment) ? equipment : [],
             borrowedEquipmentIds,
+            equipmentUsageMap,
             specialLoanStats
         }
     }, [

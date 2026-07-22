@@ -148,6 +148,35 @@ export function calculatePopularEquipment(loans: any[], reservations: any[], equ
 }
 
 /**
+ * Calculate equipment usage map (loan_count & returned_count) for all equipment
+ */
+export function calculateEquipmentUsageMap(loans: any[], equipment: any[]): Record<string, { loan_count: number; returned_count: number }> {
+    const map: Record<string, { loan_count: number; returned_count: number }> = {}
+
+    if (Array.isArray(equipment)) {
+        equipment.forEach((eq: any) => {
+            map[eq.id] = { loan_count: 0, returned_count: 0 }
+        })
+    }
+
+    if (Array.isArray(loans)) {
+        loans.forEach((loan: any) => {
+            if (!loan.equipment_id) return
+            if (loan.status !== 'approved' && loan.status !== 'returned') return
+            if (!map[loan.equipment_id]) {
+                map[loan.equipment_id] = { loan_count: 0, returned_count: 0 }
+            }
+            map[loan.equipment_id].loan_count++
+            if (loan.status === 'returned') {
+                map[loan.equipment_id].returned_count++
+            }
+        })
+    }
+
+    return map
+}
+
+/**
  * Format overdue loan items
  */
 export function formatOverdueItems(overdueLoans: any[]): OverdueItem[] {
