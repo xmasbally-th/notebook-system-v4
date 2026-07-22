@@ -29,7 +29,7 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
     // Fetch extended profile info for business logic & notifications
     const { data: profile } = await (supabase as any)
         .from('profiles')
-        .select('status, first_name, last_name, email, user_type, departments(name)')
+        .select('status, first_name, last_name, email, user_type, user_id, departments(name)')
         .eq('id', user.id)
         .single()
 
@@ -197,16 +197,20 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
 ⏰ **เวลาที่คืน:** ${formattedReturnTime}
     `.trim()
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
     await notifyAndLog({
         eventKey: 'new_loan_request',
         discordMessage: message,
         discordType: 'loan',
+        welpruUserIds: profile?.user_id ? [profile.user_id] : [],
         welpruVariables: {
             borrower: fullName,
             equipment: equipmentName,
             start_date: formatThaiDate(startDate),
             end_date: formatThaiDate(endDate),
         },
+        welpruLink: `${appUrl}/my-loans`,
     })
 
     revalidatePath('/')

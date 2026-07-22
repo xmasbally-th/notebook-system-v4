@@ -21,7 +21,7 @@ export async function submitReservationRequest(formData: FormData) {
     // Fetch extended profile info needed for notifications
     const { data: profile } = await (supabase as any)
         .from('profiles')
-        .select('role, first_name, last_name, email, departments(name)')
+        .select('role, first_name, last_name, email, user_id, departments(name)')
         .eq('id', user.id)
         .single()
 
@@ -130,12 +130,14 @@ export async function submitReservationRequest(formData: FormData) {
             eventKey: 'new_reservation_request',
             discordMessage: message,
             discordType: 'reservation',
+            welpruUserIds: profile.user_id ? [profile.user_id] : [],
             welpruVariables: {
                 reserver: fullName,
                 equipment: equipmentName,
                 start_date: formatThaiDate(startDate),
                 end_date: formatThaiDate(endDate),
             },
+            welpruLink: `${appUrl}/my-reservations`,
         })
     } catch (notifyError) {
         console.error('Notification failed:', notifyError)

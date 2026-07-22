@@ -108,6 +108,8 @@ async function getNotificationSettings(): Promise<Partial<NotificationSettings>>
 
 /** Default user-facing WeLPRU messages per event (sent to the borrower/reserver) */
 const USER_EVENT_DEFAULTS: Partial<Record<NotificationEventKey, { title: string; body: string }>> = {
+    new_reservation_request:{ title: '📅 ส่งคำขอจองเรียบร้อยแล้ว', body: 'บันทึกคำขอจอง {equipment} ของคุณแล้ว (รอการอนุมัติ)' },
+    new_loan_request:       { title: '📦 ส่งคำขอยืมเรียบร้อยแล้ว', body: 'บันทึกคำขอยืม {equipment} ของคุณแล้ว (รอการอนุมัติ)' },
     loan_approved:          { title: '✅ คำขอยืมได้รับอนุมัติ',    body: 'คำขอยืม {equipment} ของคุณได้รับอนุมัติแล้ว' },
     loan_rejected:          { title: '❌ คำขอยืมถูกปฏิเสธ',       body: 'คำขอยืม {equipment} ของคุณถูกปฏิเสธ กรุณาติดต่อเจ้าหน้าที่' },
     loan_returned:          { title: '🔄 คืนอุปกรณ์เรียบร้อย',    body: 'ขอบคุณที่คืน {equipment} เรียบร้อยแล้ว' },
