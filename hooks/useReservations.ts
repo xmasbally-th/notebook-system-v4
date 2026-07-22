@@ -206,28 +206,75 @@ export function useStaffActivityLog(filters?: {
             if (!response.ok) return []
             const logs = await response.json()
 
-            // Fetch profiles for staff members
-            const staffIds = Array.from(new Set(logs.map((log: any) => log.staff_id))) as string[]
-            if (staffIds.length === 0) return logs
+            // Fetch profiles for staff members and target users
+            const staffIds = Array.from(new Set(logs.map((log: any) => log.staff_id).filter(Boolean))) as string[]
+            const targetUserIds = Array.from(new Set(logs.map((log: any) => log.target_user_id).filter(Boolean))) as string[]
+            const allUserIds = Array.from(new Set([...staffIds, ...targetUserIds])) as string[]
 
-            const profilesResponse = await fetch(
-                `${url}/rest/v1/profiles?id=in.(${staffIds.join(',')})&select=id,first_name,last_name,email`,
-                {
-                    headers: {
-                        'apikey': key,
-                        'Authorization': `Bearer ${accessToken}`
+            let profilesMap = new Map()
+            if (allUserIds.length > 0) {
+                const profilesResponse = await fetch(
+                    `${url}/rest/v1/profiles?id=in.(${allUserIds.join(',')})&select=id,first_name,last_name,email,user_id`,
+                    {
+                        headers: {
+                            'apikey': key,
+                            'Authorization': `Bearer ${accessToken}`
+                        }
                     }
+                )
+                if (profilesResponse.ok) {
+                    const profiles = await profilesResponse.json()
+                    profilesMap = new Map(profiles.map((p: any) => [p.id, p]))
                 }
-            )
+            }
 
-            const profiles = profilesResponse.ok ? await profilesResponse.json() : []
-            const profilesMap = new Map(profiles.map((p: any) => [p.id, p]))
+            // Hydrate loan & reservation target details (equipment name & number)
+            const loanIds = logs.filter((l: any) => l.target_type === 'loan' && l.target_id).map((l: any) => l.target_id)
+            const reservationIds = logs.filter((l: any) => l.target_type === 'reservation' && l.target_id).map((l: any) => l.target_id)
 
-            // Merge profiles into logs
-            return logs.map((log: any) => ({
-                ...log,
-                profiles: profilesMap.get(log.staff_id) || null
-            }))
+            const loanDetailsMap = new Map()
+            const resDetailsMap = new Map()
+
+            if (loanIds.length > 0) {
+                const loanRes = await fetch(
+                    `${url}/rest/v1/loanRequests?id=in.(${loanIds.join(',')})&select=id,equipment(name,equipment_number),profiles(first_name,last_name,email)`,
+                    { headers: { 'apikey': key, 'Authorization': `Bearer ${accessToken}` } }
+                )
+                if (loanRes.ok) {
+                    const loansData = await loanRes.json()
+                    loansData.forEach((ld: any) => loanDetailsMap.set(ld.id, ld))
+                }
+            }
+
+            if (reservationIds.length > 0) {
+                const resRes = await fetch(
+                    `${url}/rest/v1/reservations?id=in.(${reservationIds.join(',')})&select=id,equipment(name,equipment_number),profiles(first_name,last_name,email)`,
+                    { headers: { 'apikey': key, 'Authorization': `Bearer ${accessToken}` } }
+                )
+                if (resRes.ok) {
+                    const resData = await resRes.json()
+                    resData.forEach((rd: any) => resDetailsMap.set(rd.id, rd))
+                }
+            }
+
+            // Merge profiles and equipment into logs
+            return logs.map((log: any) => {
+                const targetObj = log.target_type === 'loan'
+                    ? loanDetailsMap.get(log.target_id)
+                    : log.target_type === 'reservation'
+                        ? resDetailsMap.get(log.target_id)
+                        : null
+
+                const targetProfile = profilesMap.get(log.target_user_id) || targetObj?.profiles || null
+                const equipment = targetObj?.equipment || (log.details?.equipment_name ? { name: log.details.equipment_name, equipment_number: log.details.equipment_number || '-' } : null)
+
+                return {
+                    ...log,
+                    profiles: profilesMap.get(log.staff_id) || null,
+                    target_profile: targetProfile,
+                    equipment: equipment
+                }
+            })
         }
     })
 }

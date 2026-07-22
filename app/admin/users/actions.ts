@@ -1,7 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/server'
-import { requireAdmin } from '@/lib/auth-guard'
+import { requireAdmin, requireStaff } from '@/lib/auth-guard'
 import { sendApprovalEmail } from '@/lib/email'
 import { sendDiscordNotification, sendWeLPRUNotification } from '@/lib/notifications'
 import { revalidatePath } from 'next/cache'
@@ -24,8 +24,8 @@ export async function updateUserStatus(
         return { error: parsed.error.issues[0]?.message || 'ข้อมูลไม่ถูกต้อง' }
     }
 
-    // 2. Check Admin Permission
-    const auth = await requireAdmin()
+    // 2. Check Staff/Admin Permission
+    const auth = await requireStaff()
     if (auth.error) return { error: auth.error }
 
     // Prevent self-status modification
@@ -63,15 +63,16 @@ export async function updateUserStatus(
         
         if (newStatus === 'approved') {
             try { await sendApprovalEmail(updatedUser.email, fullName) } catch (e) { console.error(e) }
-            try { await sendDiscordNotification(`✅ **บัญชีได้รับการอนุมัติ**\nผู้ใช้: ${fullName} (${updatedUser.email})\nโดย: ${auth.user?.email || 'Admin'}`, 'auth') } catch (e) { console.error(e) }
+            try { await sendDiscordNotification(`✅ **บัญชีได้รับการอนุมัติ**\nผู้ใช้: ${fullName} (${updatedUser.email})\nโดย: ${auth.user?.email || 'Staff'}`, 'auth') } catch (e) { console.error(e) }
             try { await sendWeLPRUNotification({ userIds: updatedUser.user_id ? [updatedUser.user_id] : [], title: 'บัญชีได้รับการอนุมัติ 🎉', body: 'บัญชีของคุณผ่านการอนุมัติ คุณสามารถเริ่มใช้งานฟีเจอร์ยืมและจองอุปกรณ์ได้ทันที' }) } catch (e) { console.error(e) }
         } else if (newStatus === 'rejected') {
-            try { await sendDiscordNotification(`❌ **บัญชีถูกปฏิเสธ**\nผู้ใช้: ${fullName} (${updatedUser.email})\nโดย: ${auth.user?.email || 'Admin'}`, 'auth') } catch (e) { console.error(e) }
+            try { await sendDiscordNotification(`❌ **บัญชีถูกปฏิเสธ**\nผู้ใช้: ${fullName} (${updatedUser.email})\nโดย: ${auth.user?.email || 'Staff'}`, 'auth') } catch (e) { console.error(e) }
             try { await sendWeLPRUNotification({ userIds: updatedUser.user_id ? [updatedUser.user_id] : [], title: 'บัญชีไม่ผ่านการอนุมัติ ❌', body: 'บัญชีของคุณไม่ผ่านการอนุมัติสิทธิ์การใช้งาน กรุณาติดต่อผู้ดูแลระบบ' }) } catch (e) { console.error(e) }
         }
     }
 
     revalidatePath('/admin/users')
+    revalidatePath('/staff/users')
     return { success: true }
 }
 
@@ -116,8 +117,8 @@ export async function updateMultipleUserStatus(
         return { error: parsed.error.issues[0]?.message || 'ข้อมูลไม่ถูกต้อง' }
     }
 
-    // 2. Check Admin Permission
-    const auth = await requireAdmin()
+    // 2. Check Staff/Admin Permission
+    const auth = await requireStaff()
     if (auth.error) return { error: auth.error }
 
     // Prevent self-status modification in bulk update
@@ -166,14 +167,14 @@ export async function updateMultipleUserStatus(
             // Discord & WeLPRU
             try {
                 const names = usersToNotify.map(u => `${u.first_name} ${u.last_name || ''}`).join(', ')
-                await sendDiscordNotification(`✅ **อนุมัติบัญชีกลุ่ม (${usersToNotify.length} คน)**\nผู้ใช้: ${names}\nโดย: ${auth.user?.email || 'Admin'}`, 'auth')
+                await sendDiscordNotification(`✅ **อนุมัติบัญชีกลุ่ม (${usersToNotify.length} คน)**\nผู้ใช้: ${names}\nโดย: ${auth.user?.email || 'Staff'}`, 'auth')
                 const ids = usersToNotify.map(u => u.id)
                 await sendWeLPRUNotification({ userIds: ids, title: 'บัญชีได้รับการอนุมัติ 🎉', body: 'บัญชีของคุณผ่านการอนุมัติ คุณสามารถเริ่มใช้งานฟีเจอร์ยืมและจองอุปกรณ์ได้ทันที' })
             } catch (e) { console.error(e) }
         } else if (newStatus === 'rejected') {
             try {
                 const names = usersToNotify.map(u => `${u.first_name} ${u.last_name || ''}`).join(', ')
-                await sendDiscordNotification(`❌ **ปฏิเสธบัญชีกลุ่ม (${usersToNotify.length} คน)**\nผู้ใช้: ${names}\nโดย: ${auth.user?.email || 'Admin'}`, 'auth')
+                await sendDiscordNotification(`❌ **ปฏิเสธบัญชีกลุ่ม (${usersToNotify.length} คน)**\nผู้ใช้: ${names}\nโดย: ${auth.user?.email || 'Staff'}`, 'auth')
                 const ids = usersToNotify.map(u => u.id)
                 await sendWeLPRUNotification({ userIds: ids, title: 'บัญชีไม่ผ่านการอนุมัติ ❌', body: 'บัญชีของคุณไม่ผ่านการอนุมัติสิทธิ์การใช้งาน กรุณาติดต่อผู้ดูแลระบบ' })
             } catch (e) { console.error(e) }
@@ -181,6 +182,7 @@ export async function updateMultipleUserStatus(
     }
 
     revalidatePath('/admin/users')
+    revalidatePath('/staff/users')
     return { success: true, count: userIds.length }
 }
 

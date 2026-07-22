@@ -15,7 +15,8 @@ import {
     Calendar,
     AlertTriangle,
     Info,
-    CalendarPlus
+    CalendarPlus,
+    CalendarX
 } from 'lucide-react'
 
 
@@ -102,7 +103,7 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
         // Additional conflict check
         const conflictErrors: string[] = []
         if (isDateConflict(startDate) || isDateConflict(endDate)) {
-            conflictErrors.push('ช่วงวันที่เลือกมีการจองหรือยืมอยู่แล้ว')
+            conflictErrors.push('⚠️ อุปกรณ์ชิ้นนี้มีผู้ใช้จอง/ยืมไว้แล้วในช่วงวันที่เลือก กรุณาเลือกอุปกรณ์ชิ้นอื่น หรือเปลี่ยนวันและเวลาเพื่อไม่ให้ตรงกัน')
         }
 
         setValidationErrors([...result.errors, ...conflictErrors])
@@ -228,15 +229,24 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
                 </div>
             </div>
 
-            {/* Operating Hours Info */}
-            {config && (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Clock className="w-4 h-4 text-gray-400" />
-                        <span>เวลาทำการ: {config.openingTime} - {config.closingTime} น.</span>
-                        {config.breakStartTime && config.breakEndTime && (
-                            <span className="text-gray-400">| พัก {config.breakStartTime} - {config.breakEndTime} น.</span>
-                        )}
+            {/* Booked / Reserved Date Ranges Warning Box */}
+            {((availability?.reservations?.length || 0) + (availability?.loans?.length || 0)) > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                        <CalendarX className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div className="space-y-1 text-sm text-amber-900">
+                            <h4 className="font-bold text-amber-900">ช่วงวันที่อุปกรณ์นี้ถูกจอง/ยืมแล้ว:</h4>
+                            <div className="flex flex-wrap gap-2 pt-1">
+                                {[...(availability?.reservations || []), ...(availability?.loans || [])].map((b: any, idx: number) => (
+                                    <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 text-xs font-medium border border-amber-300">
+                                        📅 {formatThaiDate(b.start_date)} - {formatThaiDate(b.end_date)}
+                                    </span>
+                                ))}
+                            </div>
+                            <p className="text-xs text-amber-700 pt-1">
+                                💡 หากท่านเลือกวันเวลาตรงกับช่วงนี้ กรุณาเปลี่ยนไปเลือกอุปกรณ์ชิ้นอื่น หรือปรับเปลี่ยนวันเวลาในการจอง
+                            </p>
+                        </div>
                     </div>
                 </div>
             )}

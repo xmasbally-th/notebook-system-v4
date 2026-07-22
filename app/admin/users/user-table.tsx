@@ -64,7 +64,7 @@ const userTypeLabels: Record<string, string> = {
     staff: 'บุคลากร'
 }
 
-export default function UserTable({ users, departments }: { users: User[], departments: Department[] }) {
+export default function UserTable({ users, departments, isStaffMode = false }: { users: User[], departments: Department[], isStaffMode?: boolean }) {
     const router = useRouter()
     const toast = useToast()
     const [loading, setLoading] = useState<string | null>(null)
@@ -607,16 +607,18 @@ export default function UserTable({ users, departments }: { users: User[], depar
                                                         </>
                                                     )}
 
-                                                    {/* Role dropdown */}
-                                                    <select
-                                                        value={user.role}
-                                                        onChange={(e) => handleRoleUpdate(user.id, e.target.value as 'admin' | 'staff' | 'user')}
-                                                        className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                                    >
-                                                        <option value="user">User</option>
-                                                        <option value="staff">Staff</option>
-                                                        <option value="admin">Admin</option>
-                                                    </select>
+                                                    {/* Role dropdown (Admin only) */}
+                                                    {!isStaffMode && (
+                                                        <select
+                                                            value={user.role}
+                                                            onChange={(e) => handleRoleUpdate(user.id, e.target.value as 'admin' | 'staff' | 'user')}
+                                                            className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                                        >
+                                                            <option value="user">User</option>
+                                                            <option value="staff">Staff</option>
+                                                            <option value="admin">Admin</option>
+                                                        </select>
+                                                    )}
 
                                                     {/* Edit button */}
                                                     <button

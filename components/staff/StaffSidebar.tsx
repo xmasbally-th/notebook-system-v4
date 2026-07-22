@@ -14,6 +14,7 @@ import {
     Menu,
     X,
     User,
+    UserCheck,
     CalendarPlus,
     BookOpen
 } from 'lucide-react'
@@ -32,6 +33,7 @@ function getSupabaseClient() {
 
 const menuItems = [
     { href: '/staff', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/staff/users', label: 'อนุมัติผู้ใช้งาน', icon: UserCheck },
     { href: '/staff/loans', label: 'จัดการคำขอยืม', icon: ClipboardList },
     { href: '/staff/reservations', label: 'จัดการการจอง', icon: CalendarPlus },
     { href: '/staff/returns', label: 'รับคืนอุปกรณ์', icon: RotateCcw },

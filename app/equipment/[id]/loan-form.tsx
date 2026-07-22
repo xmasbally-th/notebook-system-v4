@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { submitLoanRequest } from '../actions'
 import { useLoanValidation } from '@/hooks/useLoanValidation'
 import { useProfile } from '@/hooks/useProfile'
-import { formatThaiDate, formatThaiTime } from '@/lib/formatThaiDate'
+import { useEquipmentAvailability } from '@/hooks/useReservations'
+import { formatThaiDate } from '@/lib/formatThaiDate'
 import {
     Loader2,
     AlertCircle,
@@ -14,7 +15,8 @@ import {
     Calendar,
     AlertTriangle,
     Info,
-    ShieldCheck
+    ShieldCheck,
+    CalendarX
 } from 'lucide-react'
 
 interface LoanRequestFormProps {
@@ -27,6 +29,7 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
     const userType = profile?.user_type || 'student'
 
     const { validateDates, isLoading: validationLoading, config, currentLoanCount } = useLoanValidation(userType as 'student' | 'lecturer' | 'staff')
+    const { data: availability } = useEquipmentAvailability(equipmentId)
 
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -41,25 +44,53 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
     const [validationErrors, setValidationErrors] = useState<string[]>([])
     const [validationWarnings, setValidationWarnings] = useState<string[]>([])
 
+    // Check overlap with existing reservations & loans
+    const allBookings = [
+        ...(availability?.reservations || []),
+        ...(availability?.loans || [])
+    ]
+
+    const hasConflictBooking = (sDate: string, eDate: string): boolean => {
+        if (!sDate || !eDate || allBookings.length === 0) return false
+        const start = new Date(sDate)
+        const end = new Date(eDate)
+        start.setHours(0, 0, 0, 0)
+        end.setHours(0, 0, 0, 0)
+
+        return allBookings.some(b => {
+            const bStart = new Date(b.start_date)
+            const bEnd = new Date(b.end_date)
+            bStart.setHours(0, 0, 0, 0)
+            bEnd.setHours(0, 0, 0, 0)
+            return start <= bEnd && end >= bStart
+        })
+    }
+
     // Validate on date/time change
     useEffect(() => {
         if (startDate && endDate && config) {
             const result = validateDates(startDate, endDate, returnTime)
-            setValidationErrors(result.errors)
+            const extraErrors: string[] = []
+
+            if (hasConflictBooking(startDate, endDate)) {
+                extraErrors.push('⚠️ อุปกรณ์ชิ้นนี้มีผู้ใช้จอง/ยืมไว้แล้วในช่วงวันที่เลือก กรุณาเลือกอุปกรณ์ชิ้นอื่น หรือเปลี่ยนวันและเวลาเพื่อไม่ให้ตรงกัน')
+            }
+
+            setValidationErrors([...result.errors, ...extraErrors])
             setValidationWarnings(result.warnings)
+        } else {
+            setValidationErrors([])
+            setValidationWarnings([])
         }
-    }, [startDate, endDate, returnTime, config, validateDates])
+    }, [startDate, endDate, returnTime, config, validateDates, availability])
 
     // Get min date (today)
     const today = new Date().toISOString().split('T')[0]
 
     // Calculate max end date based on start date and max loan days
-    // Example: if startDate is 26th and maxDays is 3, maxEndDate should be 28th
-    // (26=day1, 27=day2, 28=day3)
     const maxEndDate = (() => {
         if (!startDate || !config) return ''
         const start = new Date(startDate)
-        // Add (maxDays - 1) because the start day counts as day 1
         start.setDate(start.getDate() + config.maxDays - 1)
         return start.toISOString().split('T')[0]
     })()
@@ -67,7 +98,11 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
 
-        // Re-validate before submit
+        if (hasConflictBooking(startDate, endDate)) {
+            setValidationErrors(['⚠️ อุปกรณ์ชิ้นนี้มีผู้ใช้จอง/ยืมไว้แล้วในช่วงวันที่เลือก กรุณาเลือกอุปกรณ์ชิ้นอื่น หรือเปลี่ยนวันและเวลาเพื่อไม่ให้ตรงกัน'])
+            return
+        }
+
         const result = validateDates(startDate, endDate, returnTime)
         if (!result.isValid) {
             setValidationErrors(result.errors)
@@ -157,6 +192,28 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
                 </div>
             )}
 
+            {/* Booked / Reserved Date Ranges Warning Box */}
+            {allBookings.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                        <CalendarX className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div className="space-y-1 text-sm text-amber-900">
+                            <h4 className="font-bold text-amber-900">ช่วงวันที่อุปกรณ์นี้ถูกจอง/ยืมแล้ว:</h4>
+                            <div className="flex flex-wrap gap-2 pt-1">
+                                {allBookings.map((b: any, idx: number) => (
+                                    <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 text-xs font-medium border border-amber-300">
+                                        📅 {formatThaiDate(b.start_date)} - {formatThaiDate(b.end_date)}
+                                    </span>
+                                ))}
+                            </div>
+                            <p className="text-xs text-amber-700 pt-1">
+                                💡 หากท่านเลือกวันเวลาตรงกับช่วงนี้ กรุณาเปลี่ยนไปเลือกอุปกรณ์ชิ้นอื่น หรือปรับเปลี่ยนวันเวลาในการยืม
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
                 {/* Date Inputs */}
@@ -228,8 +285,6 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
                     )}
                 </div>
 
-
-
                 {/* Validation Warnings */}
                 {validationWarnings.length > 0 && (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
@@ -246,12 +301,12 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
 
                 {/* Validation Errors */}
                 {validationErrors.length > 0 && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                        <div className="flex items-start gap-2">
+                    <div className="bg-red-50 border border-red-300 rounded-xl p-4">
+                        <div className="flex items-start gap-3">
                             <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                            <div>
+                            <div className="space-y-1">
                                 {validationErrors.map((err, i) => (
-                                    <p key={i} className="text-sm text-red-700">{err}</p>
+                                    <p key={i} className="text-sm font-medium text-red-700">{err}</p>
                                 ))}
                             </div>
                         </div>
@@ -260,10 +315,10 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
 
                 {/* Server Error */}
                 {error && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <div className="bg-red-50 border border-red-300 rounded-xl p-4">
                         <div className="flex items-center gap-2">
                             <AlertCircle className="w-5 h-5 text-red-600" />
-                            <p className="text-sm text-red-700">{error}</p>
+                            <p className="text-sm font-medium text-red-700">{error}</p>
                         </div>
                     </div>
                 )}

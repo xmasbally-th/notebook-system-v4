@@ -133,7 +133,7 @@ export async function validateBooking(input: BookingValidationInput): Promise<Bo
     if (timeConflict) {
         return {
             valid: false,
-            error: 'ช่วงเวลาที่เลือกมีการจองหรือยืมอยู่แล้ว',
+            error: 'อุปกรณ์ชิ้นนี้ถูกผู้ใช้อื่นจอง/ยืมไว้แล้วในช่วงเวลาดังกล่าว กรุณาเปลี่ยนไปเลือกอุปกรณ์ชิ้นอื่น หรือเปลี่ยนวันที่และเวลาไม่ให้ตรงกัน',
             errorCode: 'TIME_CONFLICT'
         }
     }
