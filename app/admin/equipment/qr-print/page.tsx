@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
-import { ArrowLeft, Printer, CheckSquare, Square, Filter, Loader2, Sparkles, SlidersHorizontal, Search, X, Tag } from 'lucide-react'
+import { ArrowLeft, Printer, CheckSquare, Square, Filter, Loader2, Sparkles, SlidersHorizontal, Search, X, Tag, FileText, Info } from 'lucide-react'
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { getAllEquipmentForQrPrint } from '../actions'
 import { getSupabaseCredentials } from '@/lib/supabase-helpers'
@@ -102,7 +102,7 @@ export default function EquipmentQrPrintPage() {
     }
 
     return (
-        <div className="space-y-6 max-w-6xl mx-auto pb-16 print:max-w-none print:m-0 print:p-0 print:space-y-0">
+        <div id="print-page-wrapper" className="space-y-6 max-w-6xl mx-auto pb-16 print:max-w-none print:m-0 print:p-0 print:space-y-0">
             {/* Screen Header (Hidden on print) */}
             <div className="print:hidden">
                 <div className="flex items-center gap-2 mb-4">
@@ -121,7 +121,7 @@ export default function EquipmentQrPrintPage() {
                             <span>🖨️ พิมพ์สติกเกอร์ QR Code ประจำอุปกรณ์</span>
                         </h1>
                         <p className="text-sm text-gray-500 mt-1">
-                            สร้างสติกเกอร์ QR Code พร้อมรหัสครุภัณฑ์ สำหรับพิมพ์ติดบนตัวเครื่องหรืออุปกรณ์
+                            สร้างสติกเกอร์ QR Code พร้อมรหัสครุภัณฑ์ ออกแบบให้พอดีกับกระดาษ A4 มาตรฐาน
                         </p>
                     </div>
 
@@ -217,7 +217,7 @@ export default function EquipmentQrPrintPage() {
                                             : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                                     }`}
                                 >
-                                    กะทัดรัด (มินิมอล)
+                                    กะทัดรัด (A4: 3 แถว)
                                 </button>
                                 <button
                                     type="button"
@@ -228,23 +228,30 @@ export default function EquipmentQrPrintPage() {
                                             : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                                     }`}
                                 >
-                                    มาตรฐาน (โน้ตบุ๊ค)
+                                    มาตรฐาน (A4: 2 แถว)
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    {/* Quick description for current size mode */}
-                    <div className="text-[11px] text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg flex items-center justify-between">
-                        <span>
-                            {stickerSize === 'compact' ? (
-                                <>✨ <strong>แบบกะทัดรัด:</strong> มีเฉพาะ QR Code, รหัสครุภัณฑ์, และชื่ออุปกรณ์ (ตัดข้อมูลซ้ำ เหมาะกับอุปกรณ์ขนาดเล็ก/สติกเกอร์ 3 แถว)</>
-                            ) : (
-                                <>💻 <strong>แบบมาตรฐาน:</strong> ขนาดใหญ่สำหรับโน้ตบุ๊ค พร้อมโลโก้ระบบ (สติกเกอร์ 2 แถว)</>
-                            )}
-                        </span>
-                        <span className="font-mono text-gray-400">
-                            {stickerSize === 'compact' ? 'พิมพ์ 3 คอลัมน์/หน้า' : 'พิมพ์ 2 คอลัมน์/หน้า'}
+                    {/* A4 Paper Specification & Helper banner */}
+                    <div className="text-xs text-gray-600 bg-indigo-50/70 border border-indigo-100 px-3.5 py-2.5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
+                            <span>
+                                {stickerSize === 'compact' ? (
+                                    <>
+                                        <strong>แบบกะทัดรัดสำหรับ A4:</strong> จัดวาง 3 คอลัมน์ x 8 แถว (~24 ดวง/แผ่น A4) พอดีขอบกระดาษ มีเฉพาะ QR, รหัส และชื่ออุปกรณ์
+                                    </>
+                                ) : (
+                                    <>
+                                        <strong>แบบมาตรฐานสำหรับ A4:</strong> จัดวาง 2 คอลัมน์ x 5 แถว (~10-12 ดวง/แผ่น A4) ขนาดใหญ่พร้อมชื่อระบบ
+                                    </>
+                                )}
+                            </span>
+                        </div>
+                        <span className="text-[11px] text-indigo-700 font-medium whitespace-nowrap bg-white px-2.5 py-1 rounded-lg border border-indigo-200/60 shadow-2xs self-start sm:self-auto">
+                            📄 รองรับ A4 แนวตั้ง (Portrait)
                         </span>
                     </div>
 
@@ -298,8 +305,8 @@ export default function EquipmentQrPrintPage() {
                     id="printable-stickers-grid"
                     className={`grid gap-3 sm:gap-4 print:gap-2 ${
                         stickerSize === 'compact'
-                            ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 print:grid-cols-3'
-                            : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 print:grid-cols-2'
+                            ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 grid-compact'
+                            : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 grid-standard'
                     }`}
                 >
                     {filteredEquipment.map((eq: any) => {
@@ -309,24 +316,24 @@ export default function EquipmentQrPrintPage() {
                             ? eq.equipment_number
                             : `#${eq.equipment_number}`
 
-                        // If not selected, hide from print media completely
+                        // Compact Layout (Optimized for A4: 3 columns x 8 rows, height 33mm)
                         if (stickerSize === 'compact') {
                             return (
                                 <div
                                     key={eq.id}
                                     onClick={() => toggleSelect(eq.id)}
                                     className={`
-                                        relative bg-white rounded-xl p-3 border transition-all cursor-pointer select-none
+                                        sticker-card sticker-card-compact relative bg-white rounded-xl p-3 border transition-all cursor-pointer select-none
                                         break-inside-avoid print:break-inside-avoid print:cursor-default
                                         ${isSelected
-                                            ? 'border-indigo-300 ring-2 ring-indigo-500/10 shadow-xs print:border print:border-gray-500 print:border-dashed print:ring-0 print:shadow-none'
+                                            ? 'border-indigo-300 ring-2 ring-indigo-500/10 shadow-xs print:ring-0 print:shadow-none'
                                             : 'border-dashed border-gray-300 opacity-45 hover:opacity-75 print:hidden'
                                         }
                                     `}
                                     style={{ pageBreakInside: 'avoid' }}
                                 >
                                     {/* Screen Selection Checkbox */}
-                                    <div className="absolute top-2.5 right-2.5 print:hidden z-10">
+                                    <div className="absolute top-2 right-2 print:hidden z-10">
                                         {isSelected ? (
                                             <CheckSquare className="w-4 h-4 text-indigo-600" />
                                         ) : (
@@ -334,33 +341,33 @@ export default function EquipmentQrPrintPage() {
                                         )}
                                     </div>
 
-                                    {/* Compact Layout: Strictly QR CODE + รหัสครุภัณฑ์ + ชื่ออุปกรณ์ (No duplicates, no fluff) */}
-                                    <div className="flex items-center gap-3 pr-4 print:pr-0">
+                                    {/* Compact Layout: Strictly QR CODE + รหัสครุภัณฑ์ + ชื่ออุปกรณ์ */}
+                                    <div className="flex items-center gap-2.5 h-full pr-4 print:pr-0">
                                         {/* 1. High Resolution QR Code */}
-                                        <div className="p-1.5 bg-white rounded-lg border border-gray-200 print:border-black shrink-0 flex items-center justify-center">
+                                        <div className="p-1 bg-white rounded-md border border-gray-200 print:border-black shrink-0 flex items-center justify-center">
                                             <QRCodeSVG
                                                 value={targetUrl}
-                                                size={76}
+                                                size={66}
                                                 level="M"
                                                 includeMargin={false}
                                             />
                                         </div>
 
                                         {/* 2. รหัสครุภัณฑ์ & 3. ชื่ออุปกรณ์ */}
-                                        <div className="min-w-0 flex-1 space-y-1 text-left">
+                                        <div className="min-w-0 flex-1 flex flex-col justify-center gap-1 text-left">
                                             <div>
-                                                <span className="text-[10px] font-semibold text-gray-500 print:text-gray-700 uppercase tracking-wider block leading-tight">
+                                                <span className="text-[9px] font-semibold text-gray-500 print:text-gray-700 uppercase tracking-wider block leading-none mb-0.5">
                                                     รหัสครุภัณฑ์
                                                 </span>
-                                                <span className="text-sm sm:text-base font-extrabold font-mono text-gray-900 print:text-black leading-tight block truncate">
+                                                <span className="text-xs sm:text-sm font-extrabold font-mono text-gray-900 print:text-black leading-tight block truncate">
                                                     {formattedEquipmentNumber}
                                                 </span>
                                             </div>
                                             <div>
-                                                <span className="text-[10px] font-semibold text-gray-500 print:text-gray-700 uppercase tracking-wider block leading-tight">
+                                                <span className="text-[9px] font-semibold text-gray-500 print:text-gray-700 uppercase tracking-wider block leading-none mb-0.5">
                                                     ชื่ออุปกรณ์
                                                 </span>
-                                                <p className="text-xs font-semibold text-gray-800 print:text-black leading-snug line-clamp-2">
+                                                <p className="text-[11px] font-semibold text-gray-800 print:text-black leading-tight line-clamp-2">
                                                     {eq.name}
                                                 </p>
                                             </div>
@@ -370,16 +377,16 @@ export default function EquipmentQrPrintPage() {
                             )
                         }
 
-                        // Standard Layout (Laptop size with full header)
+                        // Standard Layout (Laptop size with header)
                         return (
                             <div
                                 key={eq.id}
                                 onClick={() => toggleSelect(eq.id)}
                                 className={`
-                                    relative bg-white rounded-2xl p-4 border transition-all cursor-pointer select-none
+                                    sticker-card sticker-card-standard relative bg-white rounded-2xl p-4 border transition-all cursor-pointer select-none
                                     break-inside-avoid print:break-inside-avoid print:cursor-default
                                     ${isSelected
-                                        ? 'border-indigo-300 ring-2 ring-indigo-500/20 shadow-xs print:border print:border-gray-500 print:border-dashed print:ring-0 print:shadow-none'
+                                        ? 'border-indigo-300 ring-2 ring-indigo-500/20 shadow-xs print:ring-0 print:shadow-none'
                                         : 'border-dashed border-gray-300 opacity-45 hover:opacity-75 print:hidden'
                                     }
                                 `}
@@ -394,8 +401,8 @@ export default function EquipmentQrPrintPage() {
                                     )}
                                 </div>
 
-                                {/* Sticker Header: Displays equipment type (no duplicate number) */}
-                                <div className="flex items-center justify-between pb-2 mb-3 border-b border-gray-200 text-gray-800 pr-7 print:pr-0">
+                                {/* Sticker Header */}
+                                <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-gray-200 text-gray-800 pr-7 print:pr-0">
                                     <div className="flex items-center gap-1.5">
                                         <span className="text-sm">💻</span>
                                         <span className="text-[11px] font-bold tracking-wider uppercase text-gray-700">
@@ -408,12 +415,12 @@ export default function EquipmentQrPrintPage() {
                                 </div>
 
                                 {/* Sticker Body */}
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3.5">
                                     {/* High Resolution QR Code */}
-                                    <div className="p-2 bg-white rounded-xl border border-gray-200 shadow-xs print:border-black print:shadow-none shrink-0">
+                                    <div className="p-1.5 bg-white rounded-xl border border-gray-200 shadow-xs print:border-black print:shadow-none shrink-0">
                                         <QRCodeSVG
                                             value={targetUrl}
-                                            size={104}
+                                            size={96}
                                             level="M"
                                             includeMargin={false}
                                         />
@@ -421,14 +428,14 @@ export default function EquipmentQrPrintPage() {
 
                                     {/* Equipment Info */}
                                     <div className="min-w-0 flex-1 space-y-1 text-left">
-                                        <span className="text-[11px] text-gray-500 font-medium block">รหัสครุภัณฑ์</span>
-                                        <h3 className="text-base sm:text-lg font-extrabold font-mono text-gray-900 leading-tight truncate">
+                                        <span className="text-[10px] text-gray-500 font-medium block leading-none">รหัสครุภัณฑ์</span>
+                                        <h3 className="text-sm sm:text-base font-extrabold font-mono text-gray-900 leading-tight truncate">
                                             {formattedEquipmentNumber}
                                         </h3>
                                         <p className="text-xs font-semibold text-indigo-700 print:text-black line-clamp-2">
                                             {eq.name}
                                         </p>
-                                        <p className="text-[10px] text-gray-400 pt-1 leading-snug">
+                                        <p className="text-[10px] text-gray-400 pt-0.5 leading-snug">
                                             📱 สแกนกล้องเพื่อยืม-คืนด่วน
                                         </p>
                                     </div>
@@ -439,31 +446,79 @@ export default function EquipmentQrPrintPage() {
                 </div>
             )}
 
-            {/* Print Stylesheet Injection */}
+            {/* Print Stylesheet Injection for A4 Paper */}
             <style jsx global>{`
                 @media print {
                     @page {
-                        size: auto;
-                        margin: 8mm;
+                        size: A4 portrait;
+                        margin: 10mm 8mm 10mm 8mm;
                     }
-                    /* Hide unnecessary browser/page elements */
-                    header, nav, aside, footer, .print\\:hidden {
-                        display: none !important;
-                    }
-                    body {
+                    html, body {
+                        width: 210mm !important;
+                        height: auto !important;
+                        min-height: 100% !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
                         background: white !important;
                         color: black !important;
-                        padding: 0 !important;
-                        margin: 0 !important;
+                        overflow: visible !important;
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
                     }
-                    /* Ensure print container fits cleanly */
+                    /* Hide unnecessary layout and screen elements */
+                    header, nav, aside, footer, .print\\:hidden {
+                        display: none !important;
+                    }
+                    /* Reset Next.js layout containers that cause print clipping */
+                    div, main {
+                        padding-left: 0 !important;
+                        padding-right: 0 !important;
+                        margin-left: 0 !important;
+                        margin-right: 0 !important;
+                        overflow: visible !important;
+                        max-width: none !important;
+                        box-shadow: none !important;
+                    }
+                    #print-page-wrapper {
+                        width: 100% !important;
+                        max-width: 194mm !important;
+                        margin: 0 auto !important;
+                        padding: 0 !important;
+                    }
                     #printable-stickers-grid {
+                        display: grid !important;
                         width: 100% !important;
                         margin: 0 !important;
                         padding: 0 !important;
-                        gap: 0.25cm !important;
+                        box-sizing: border-box !important;
+                    }
+                    #printable-stickers-grid.grid-compact {
+                        grid-template-columns: repeat(3, 1fr) !important;
+                        gap: 2.5mm !important;
+                    }
+                    #printable-stickers-grid.grid-standard {
+                        grid-template-columns: repeat(2, 1fr) !important;
+                        gap: 3.5mm !important;
+                    }
+                    .sticker-card {
+                        break-inside: avoid !important;
+                        page-break-inside: avoid !important;
+                        box-sizing: border-box !important;
+                        border: 0.8px dashed #555 !important;
+                        border-radius: 4px !important;
+                        background: white !important;
+                        box-shadow: none !important;
+                    }
+                    .sticker-card-compact {
+                        height: 33mm !important;
+                        max-height: 33mm !important;
+                        padding: 2.5mm 3mm !important;
+                        overflow: hidden !important;
+                    }
+                    .sticker-card-standard {
+                        min-height: 44mm !important;
+                        padding: 3mm 4mm !important;
+                        overflow: hidden !important;
                     }
                 }
             `}</style>
