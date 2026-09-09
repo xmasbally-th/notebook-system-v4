@@ -2,12 +2,13 @@
 
 import { useTransition, useState, useMemo } from 'react'
 import {
-    RotateCcw, AlertTriangle, User, Package, Calendar, Search, ClipboardCheck
+    RotateCcw, AlertTriangle, User, Package, Calendar, Search, ClipboardCheck, QrCode
 } from 'lucide-react'
 import Image from 'next/image'
 import { processReturn } from '@/app/admin/loans/actions'
 import { useToast } from '@/components/ui/toast'
 import ReturnModal from './ReturnModal'
+import QrScannerModal from '@/components/scanner/QrScannerModal'
 
 interface ActiveLoan {
     id: string
@@ -45,6 +46,30 @@ export default function ActiveLoansSection({ initialData }: Props) {
     const [isPending, startTransition] = useTransition()
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedLoan, setSelectedLoan] = useState<ActiveLoan | null>(null)
+    const [showScanner, setShowScanner] = useState(false)
+
+    const handleScanCode = (code: string) => {
+        let cleanCode = code.trim()
+        // Support URL format (e.g. /equipment/<uuid>?mode=counter)
+        const urlMatch = cleanCode.match(/\/equipment\/([0-9a-fA-F-]{36})/)
+        if (urlMatch && urlMatch[1]) {
+            cleanCode = urlMatch[1]
+        }
+        const stripped = cleanCode.replace(/^#/, '').toLowerCase()
+
+        const matchedLoan = initialData.find((loan: any) => {
+            const eqId = loan.equipment?.id || ''
+            const eqNum = (loan.equipment?.equipment_number || '').replace(/^#/, '').toLowerCase()
+            return eqId === cleanCode || eqNum === stripped
+        })
+
+        if (matchedLoan) {
+            handleReturn(matchedLoan)
+            toast.success(`พบอุปกรณ์ ${matchedLoan.equipment?.name || ''} (${matchedLoan.equipment?.equipment_number || ''})`)
+        } else {
+            toast.error(`ไม่พบรายการยืมที่กำลังใช้งานของอุปกรณ์ "${cleanCode}" (หรืออุปกรณ์นี้อาจยังไม่ได้ถูกยืม)`)
+        }
+    }
 
     const filteredLoans = useMemo(() => {
         if (!searchTerm) return initialData
@@ -85,18 +110,26 @@ export default function ActiveLoansSection({ initialData }: Props) {
 
     return (
         <>
-            {/* Search */}
-            <div className="mb-6">
-                <div className="relative max-w-md">
+            {/* Search and Scan Toolbar */}
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between mb-6">
+                <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                         type="text"
                         placeholder="ค้นหาผู้ยืม หรืออุปกรณ์..."
-                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white shadow-2xs"
                         value={searchTerm}
                         onChange={e => startTransition(() => setSearchTerm(e.target.value))}
                     />
                 </div>
+                <button
+                    type="button"
+                    onClick={() => setShowScanner(true)}
+                    className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm hover:shadow transition-all whitespace-nowrap cursor-pointer"
+                >
+                    <QrCode className="w-4 h-4" />
+                    <span>สแกน QR รับคืน</span>
+                </button>
             </div>
 
             {/* List */}
@@ -178,6 +211,17 @@ export default function ActiveLoansSection({ initialData }: Props) {
                     isPending={isPending}
                     onConfirm={handleReturnConfirm}
                     onClose={() => setSelectedLoan(null)}
+                />
+            )}
+
+            {/* QR Scanner Modal for Instant Return */}
+            {showScanner && (
+                <QrScannerModal
+                    isOpen={showScanner}
+                    onClose={() => setShowScanner(false)}
+                    onScanSuccess={handleScanCode}
+                    title="สแกน QR เพื่อรับคืนอุปกรณ์"
+                    subtitle="ส่องกล้องไปที่ QR Code บนตัวเครื่องอุปกรณ์เพื่อค้นหาและทำรายการรับคืนด่วน"
                 />
             )}
         </>

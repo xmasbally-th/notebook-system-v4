@@ -341,29 +341,29 @@ export default function EquipmentQrPrintPage() {
                                     </div>
 
                                     {/* Compact Layout: Strictly QR CODE + รหัสครุภัณฑ์ + ชื่ออุปกรณ์ */}
-                                    <div className="flex items-center gap-2 print:gap-1.5 h-full pr-3 print:pr-0">
-                                        {/* 1. High Resolution QR Code */}
-                                        <div className="p-1 bg-white rounded-md border border-gray-200 print:border-black shrink-0 flex items-center justify-center">
+                                    <div className="flex items-center gap-2.5 h-full pr-3 print:pr-0">
+                                        {/* 1. High Resolution QR Code (Enhanced for Instant Mobile Scanning) */}
+                                        <div className="p-0.5 bg-white rounded-lg border border-gray-200 print:border-black shrink-0 flex items-center justify-center shadow-2xs print:shadow-none">
                                             <QRCodeSVG
                                                 value={targetUrl}
-                                                size={58}
-                                                level="M"
-                                                includeMargin={false}
+                                                size={78}
+                                                level="L"
+                                                includeMargin={true}
                                             />
                                         </div>
 
                                         {/* 2. รหัสครุภัณฑ์ & 3. ชื่ออุปกรณ์ */}
                                         <div className="min-w-0 flex-1 flex flex-col justify-center gap-0.5 text-left">
                                             <div>
-                                                <span className="text-[8.5px] print:text-[8px] font-semibold text-gray-500 print:text-gray-700 uppercase tracking-wider block leading-none mb-0.5">
+                                                <span className="text-[8px] font-semibold text-gray-500 print:text-gray-700 uppercase tracking-wider block leading-none mb-0.5">
                                                     รหัสครุภัณฑ์
                                                 </span>
-                                                <span className="text-xs print:text-[9.5px] font-bold font-mono text-gray-900 print:text-black leading-tight block break-all">
+                                                <span className="text-xs print:text-[9px] font-bold font-mono text-gray-900 print:text-black leading-tight block break-all">
                                                     {formattedEquipmentNumber}
                                                 </span>
                                             </div>
                                             <div className="mt-0.5">
-                                                <span className="text-[8.5px] print:text-[8px] font-semibold text-gray-500 print:text-gray-700 uppercase tracking-wider block leading-none mb-0.5">
+                                                <span className="text-[8px] font-semibold text-gray-500 print:text-gray-700 uppercase tracking-wider block leading-none mb-0.5">
                                                     ชื่ออุปกรณ์
                                                 </span>
                                                 <p className="text-[11px] print:text-[9.5px] font-semibold text-gray-800 print:text-black leading-tight line-clamp-2">
@@ -419,9 +419,9 @@ export default function EquipmentQrPrintPage() {
                                     <div className="p-1.5 bg-white rounded-xl border border-gray-200 shadow-xs print:border-black print:shadow-none shrink-0">
                                         <QRCodeSVG
                                             value={targetUrl}
-                                            size={96}
-                                            level="M"
-                                            includeMargin={false}
+                                            size={104}
+                                            level="L"
+                                            includeMargin={true}
                                         />
                                     </div>
 

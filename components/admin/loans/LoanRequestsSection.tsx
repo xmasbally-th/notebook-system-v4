@@ -4,11 +4,12 @@ import { useTransition, useOptimistic, useState, useMemo } from 'react'
 import {
     ClipboardList, CheckCircle, XCircle, Clock,
     Search, AlertTriangle, User, Package,
-    Calendar, ArrowUpRight
+    Calendar, ArrowUpRight, QrCode
 } from 'lucide-react'
 import Image from 'next/image'
 import { approveLoanRequests, rejectLoanRequests } from '@/app/admin/loans/actions'
 import { useToast } from '@/components/ui/toast'
+import QrScannerModal from '@/components/scanner/QrScannerModal'
 
 type LoanStatus = 'pending' | 'approved' | 'rejected' | 'returned'
 
@@ -45,6 +46,32 @@ export default function LoanRequestsSection({ initialData }: Props) {
     const [statusFilter, setStatusFilter] = useState('all')
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
+    const [showScanner, setShowScanner] = useState(false)
+
+    const handleScanCode = (code: string) => {
+        let cleanCode = code.trim()
+        const urlMatch = cleanCode.match(/\/equipment\/([0-9a-fA-F-]{36})/)
+        if (urlMatch && urlMatch[1]) {
+            cleanCode = urlMatch[1]
+        }
+        const stripped = cleanCode.replace(/^#/, '')
+
+        const matched = initialData.find(item => {
+            const eqNum = (item.equipment?.equipment_number || '').replace(/^#/, '').toLowerCase()
+            return eqNum === stripped.toLowerCase()
+        })
+
+        startTransition(() => {
+            setSearchTerm(matched?.equipment?.equipment_number || stripped)
+            setCurrentPage(1)
+        })
+
+        if (matched) {
+            toast.success(`กรองคำขอตามอุปกรณ์: ${matched.equipment?.name || ''} (${matched.equipment?.equipment_number || ''})`)
+        } else {
+            toast.info(`ค้นหาคำขอยืมด้วยรหัส "${stripped}"`)
+        }
+    }
 
     // ─── Stats ────────────────────────────────────────────────────────────────
     const stats = useMemo(() => {
@@ -153,6 +180,15 @@ export default function LoanRequestsSection({ initialData }: Props) {
                                 onChange={e => startTransition(() => { setSearchTerm(e.target.value); setCurrentPage(1) })}
                             />
                         </div>
+                        <button
+                            type="button"
+                            onClick={() => setShowScanner(true)}
+                            className="flex items-center justify-center gap-1.5 px-3.5 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 text-sm whitespace-nowrap cursor-pointer transition-all bg-white"
+                            title="สแกน QR Code เพื่อค้นหาคำขอของอุปกรณ์"
+                        >
+                            <QrCode className="w-4 h-4 text-gray-600" />
+                            <span>สแกน QR</span>
+                        </button>
                         <select
                             className="px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm min-w-[140px]"
                             value={statusFilter}
@@ -390,6 +426,17 @@ export default function LoanRequestsSection({ initialData }: Props) {
                     </div>
                 )}
             </div>
+
+            {/* QR Scanner Modal for Search */}
+            {showScanner && (
+                <QrScannerModal
+                    isOpen={showScanner}
+                    onClose={() => setShowScanner(false)}
+                    onScanSuccess={handleScanCode}
+                    title="สแกน QR ค้นหาคำขอยืม"
+                    subtitle="ส่องกล้องไปที่ QR Code บนตัวเครื่องอุปกรณ์เพื่อค้นหารายการคำขอยืมของอุปกรณ์นี้"
+                />
+            )}
         </div>
     )
 }
