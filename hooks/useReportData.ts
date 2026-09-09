@@ -301,20 +301,6 @@ export function useReportData(dateRange: DateRange) {
         queryFn: () => fetchSupabase<any[]>(`special_loan_requests?select=id,borrower_id,borrower_name,external_borrower_org,equipment_type_name,quantity,equipment_numbers,loan_date,return_date,purpose,status,returned_at,created_at&created_at=gte.${fromDate}&created_at=lte.${toDate}&order=created_at.desc`)
     })
 
-    // 9. Historical loans query
-    const historicalLoansQuery = useQuery({
-        queryKey: ['report-historical-loans', fromDate, toDate],
-        staleTime: 60000,
-        queryFn: () => fetchSupabase<any[]>(`loanRequests?select=id,status,created_at,end_date,returned_at,user_id,equipment_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`)
-    })
-
-    // 10. Historical reservations query
-    const historicalReservationsQuery = useQuery({
-        queryKey: ['report-historical-reservations', fromDate, toDate],
-        staleTime: 60000,
-        queryFn: () => fetchSupabase<any[]>(`reservations?select=id,status,created_at,user_id,equipment_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`)
-    })
-
     const isLoading = loansQuery.isLoading ||
         reservationsQuery.isLoading ||
         equipmentQuery.isLoading ||
@@ -322,9 +308,7 @@ export function useReportData(dateRange: DateRange) {
         profilesQuery.isLoading ||
         staffActivityQuery.isLoading ||
         equipmentTypesQuery.isLoading ||
-        specialLoansQuery.isLoading ||
-        historicalLoansQuery.isLoading ||
-        historicalReservationsQuery.isLoading
+        specialLoansQuery.isLoading
 
     const error = loansQuery.error ||
         reservationsQuery.error ||
@@ -333,9 +317,7 @@ export function useReportData(dateRange: DateRange) {
         profilesQuery.error ||
         staffActivityQuery.error ||
         equipmentTypesQuery.error ||
-        specialLoansQuery.error ||
-        historicalLoansQuery.error ||
-        historicalReservationsQuery.error
+        specialLoansQuery.error
 
     const data = useMemo<ReportData | undefined>(() => {
         if (
@@ -346,9 +328,7 @@ export function useReportData(dateRange: DateRange) {
             !profilesQuery.data ||
             !staffActivityQuery.data ||
             !equipmentTypesQuery.data ||
-            !specialLoansQuery.data ||
-            !historicalLoansQuery.data ||
-            !historicalReservationsQuery.data
+            !specialLoansQuery.data
         ) {
             return undefined
         }
@@ -361,8 +341,8 @@ export function useReportData(dateRange: DateRange) {
         const staffActivityLog = staffActivityQuery.data
         const equipmentTypes = equipmentTypesQuery.data
         const specialLoansRaw = specialLoansQuery.data
-        const monthlyLoans = historicalLoansQuery.data
-        const monthlyReservations = historicalReservationsQuery.data
+        const monthlyLoans = loans
+        const monthlyReservations = reservations
 
         // Filter overdue loans accurately using return_time & date range constraints (due date <= toDate)
         const now = new Date()
@@ -448,8 +428,6 @@ export function useReportData(dateRange: DateRange) {
         staffActivityQuery.data,
         equipmentTypesQuery.data,
         specialLoansQuery.data,
-        historicalLoansQuery.data,
-        historicalReservationsQuery.data,
         dateRange.to,
         today
     ])

@@ -1,4 +1,5 @@
 import React from 'react'
+import Link from 'next/link'
 import { Mail, Phone, MapPin, Github } from 'lucide-react'
 
 export default function Footer() {
@@ -25,10 +26,10 @@ export default function Footer() {
                     <div>
                         <h4 className="text-white font-semibold mb-4">ลิงก์ด่วน</h4>
                         <ul className="space-y-2 text-sm">
-                            <li><a href="/" className="hover:text-blue-400 transition-colors">หน้าแรก</a></li>
-                            <li><a href="/equipment" className="hover:text-blue-400 transition-colors">อุปกรณ์</a></li>
-                            <li><a href="/user-guide" className="hover:text-blue-400 transition-colors">คู่มือการใช้งาน</a></li>
-                            <li><a href="/login" className="hover:text-blue-400 transition-colors">เข้าสู่ระบบ</a></li>
+                            <li><Link href="/" className="hover:text-blue-400 transition-colors">หน้าแรก</Link></li>
+                            <li><Link href="/equipment" className="hover:text-blue-400 transition-colors">อุปกรณ์</Link></li>
+                            <li><Link href="/user-guide" className="hover:text-blue-400 transition-colors">คู่มือการใช้งาน</Link></li>
+                            <li><Link href="/login" className="hover:text-blue-400 transition-colors">เข้าสู่ระบบ</Link></li>
                         </ul>
                     </div>
 

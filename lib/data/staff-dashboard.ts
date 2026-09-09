@@ -47,29 +47,20 @@ export interface EquipmentInventorySummary {
 export async function getStaffDashboardStats(): Promise<StaffDashboardStats> {
     try {
         const supabase = await createClient()
+        const todayStr = new Date().toISOString().split('T')[0]
 
-        const [allLoansResult, overdueResult] = await Promise.all([
-            supabase
-                .from('loanRequests')
-                .select('id, status', { count: 'exact' }),
-            supabase
-                .from('loanRequests')
-                .select('id, end_date')
-                .eq('status', 'approved')
-                .lt('end_date', new Date().toISOString().split('T')[0]),
+        const [totalResult, pendingResult, approvedResult, overdueResult] = await Promise.all([
+            supabase.from('loanRequests').select('*', { count: 'exact', head: true }),
+            supabase.from('loanRequests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+            supabase.from('loanRequests').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
+            supabase.from('loanRequests').select('*', { count: 'exact', head: true }).eq('status', 'approved').lt('end_date', todayStr),
         ])
 
-        const loans = allLoansResult.data ?? []
-        const overdue = overdueResult.data?.length ?? 0
-
-        const pending = loans.filter((l) => l.status === 'pending').length
-        const approved = loans.filter((l) => l.status === 'approved').length
-
         return {
-            pending,
-            approved,
-            overdue,
-            total: loans.length,
+            total: totalResult.count ?? 0,
+            pending: pendingResult.count ?? 0,
+            approved: approvedResult.count ?? 0,
+            overdue: overdueResult.count ?? 0,
         }
     } catch {
         return { pending: 0, approved: 0, overdue: 0, total: 0 }

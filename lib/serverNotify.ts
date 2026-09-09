@@ -8,7 +8,7 @@
  */
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-import { sendDiscordNotification, sendWeLPRUNotification, type NotificationType } from './notifications'
+import { sendDiscordNotification, sendWeLPRUNotification, type NotificationType, type DiscordEmbed } from './notifications'
 import type { ActionType } from './staffActivityLog'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -56,6 +56,8 @@ interface NotifyAndLogParams {
     eventKey?: NotificationEventKey
     /** Discord message string */
     discordMessage?: string
+    /** Custom Discord embed card */
+    discordEmbed?: DiscordEmbed
     /** Discord channel type */
     discordType?: NotificationType
     /** WeLPRU recipient user IDs */
@@ -230,11 +232,43 @@ export async function notifyAndLog(params: NotifyAndLogParams): Promise<void> {
     const tasks: Promise<any>[] = []
 
     // 1. Discord
-    if (params.discordMessage) {
+    if (params.discordMessage || params.discordEmbed) {
         // If eventKey specified, respect the discord toggle; otherwise always send
         const shouldSendDiscord = params.eventKey ? (eventCfg.discord ?? true) : true
         if (shouldSendDiscord) {
-            tasks.push(sendDiscordNotification(params.discordMessage, params.discordType ?? 'general'))
+            let embed = params.discordEmbed
+            // Auto-convert discordMessage into rich embed if no custom embed provided
+            if (!embed && params.discordMessage) {
+                const lines = params.discordMessage.split('\n').filter(Boolean)
+                const title = lines[0]?.replace(/^[*#\s]+|[*#\s]+$/g, '') || 'แจ้งเตือนจากระบบ'
+                const rest = lines.slice(1).join('\n')
+
+                let color = 0x6366F1 // Default indigo
+                if (params.discordMessage.includes('✅') || params.discordMessage.includes('อนุมัติ') || params.discordMessage.includes('คืน')) {
+                    color = 0x22C55E // Green
+                } else if (params.discordMessage.includes('❌') || params.discordMessage.includes('ปฏิเสธ') || params.discordMessage.includes('ยกเลิก') || params.discordMessage.includes('เกินกำหนด')) {
+                    color = 0xEF4444 // Red
+                } else if (params.discordMessage.includes('🟢') || params.discordMessage.includes('พร้อม')) {
+                    color = 0x3B82F6 // Blue
+                } else if (params.discordMessage.includes('📦') || params.discordMessage.includes('📅') || params.discordMessage.includes('ใหม่')) {
+                    color = 0xEAB308 // Yellow
+                }
+
+                embed = {
+                    title,
+                    description: rest || undefined,
+                    color,
+                    timestamp: new Date().toISOString(),
+                    footer: { text: 'ระบบยืม-คืนอุปกรณ์ Notebook System' }
+                }
+            }
+
+            tasks.push(
+                sendDiscordNotification(
+                    embed ? { embeds: [embed] } : params.discordMessage!,
+                    params.discordType ?? 'general'
+                )
+            )
         }
     }
 

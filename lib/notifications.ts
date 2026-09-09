@@ -2,6 +2,30 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 export type NotificationType = 'general' | 'auth' | 'loan' | 'reservation' | 'maintenance'
 
+export interface DiscordEmbedField {
+    name: string
+    value: string
+    inline?: boolean
+}
+
+export interface DiscordEmbed {
+    title?: string
+    description?: string
+    url?: string
+    color?: number
+    fields?: DiscordEmbedField[]
+    timestamp?: string
+    footer?: { text: string; icon_url?: string }
+    author?: { name: string; icon_url?: string }
+}
+
+export interface DiscordPayload {
+    content?: string
+    embeds?: DiscordEmbed[]
+    username?: string
+    avatar_url?: string
+}
+
 // ─── Retry helper ─────────────────────────────────────────────────────────────
 
 /**
@@ -44,7 +68,10 @@ async function fetchWithRetry(
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export async function sendDiscordNotification(message: string, type: NotificationType = 'general') {
+export async function sendDiscordNotification(
+    payload: string | DiscordPayload,
+    type: NotificationType = 'general'
+) {
     try {
         let discordWebhookUrl: string | null = null
 
@@ -91,16 +118,23 @@ export async function sendDiscordNotification(message: string, type: Notificatio
             return
         }
 
+        // Format request body (support both plain text and rich embeds)
+        const requestBody = typeof payload === 'string'
+            ? { content: payload, username: 'Notebook System Bot' }
+            : {
+                username: payload.username || 'Notebook System Bot',
+                content: payload.content,
+                embeds: payload.embeds,
+                ...(payload.avatar_url && { avatar_url: payload.avatar_url })
+            }
+
         // 2. Send with retry
         await fetchWithRetry(
             discordWebhookUrl,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    content: message,
-                    username: 'Notebook System Bot',
-                }),
+                body: JSON.stringify(requestBody),
             },
             2 // up to 3 total attempts
         )
