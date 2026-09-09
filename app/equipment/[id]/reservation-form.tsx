@@ -72,24 +72,40 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
         return maxEndDate < maxDateStr ? maxEndDate : maxDateStr
     })()
 
-    // Check for date conflicts with existing reservations/loans
-    const isDateConflict = (date: string): boolean => {
-        if (!availability) return false
-        const checkDate = new Date(date)
+    // Check for date/time conflicts with existing reservations/loans
+    const hasConflictBooking = (sDate: string, eDate: string, pTime?: string, rTime?: string): boolean => {
+        if (!sDate || !eDate || !availability) return false
 
         const allBookings = [
             ...(availability.reservations || []),
             ...(availability.loans || [])
         ]
+        if (allBookings.length === 0) return false
 
-        return allBookings.some(booking => {
-            const start = new Date(booking.start_date)
-            const end = new Date(booking.end_date)
-            return checkDate >= start && checkDate <= end
+        const openingTime = config?.openingTime || '08:00'
+        const closingTime = config?.closingTime || '17:00'
+
+        const startMs = new Date(`${sDate.split('T')[0]}T${pTime || openingTime}:00`).getTime()
+        const endMs = new Date(`${eDate.split('T')[0]}T${rTime || closingTime}:00`).getTime()
+
+        if (endMs <= startMs) return false
+
+        return allBookings.some(b => {
+            const bStartDateStr = b.start_date.split('T')[0]
+            const bEndDateStr = b.end_date.split('T')[0]
+
+            const bPickup = b.pickup_time ? b.pickup_time.slice(0, 5) : (config?.openingTime || '08:00')
+            const bReturn = b.return_time ? b.return_time.slice(0, 5) : (config?.closingTime || '17:00')
+
+            const bStartMs = new Date(`${bStartDateStr}T${bPickup}:00`).getTime()
+            const bEndMs = new Date(`${bEndDateStr}T${bReturn}:00`).getTime()
+
+            // Overlap condition: start < bEnd AND end > bStart
+            return startMs < bEndMs && endMs > bStartMs
         })
     }
 
-    // Validate on date change
+    // Validate on date/time change
     useEffect(() => {
         if (!startDate || !endDate) {
             setValidationErrors([])
@@ -100,18 +116,23 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
         // Run main validation
         const result = validateReservation(startDate, endDate)
 
-        // Additional conflict check
+        // Time-slot conflict check
         const conflictErrors: string[] = []
-        if (isDateConflict(startDate) || isDateConflict(endDate)) {
-            conflictErrors.push('⚠️ อุปกรณ์ชิ้นนี้มีผู้ใช้จอง/ยืมไว้แล้วในช่วงวันที่เลือก กรุณาเลือกอุปกรณ์ชิ้นอื่น หรือเปลี่ยนวันและเวลาเพื่อไม่ให้ตรงกัน')
+        if (hasConflictBooking(startDate, endDate, pickupTime, returnTime)) {
+            conflictErrors.push('⚠️ อุปกรณ์ชิ้นนี้มีผู้ใช้จอง/ยืมไว้แล้วในช่วงเวลาดังกล่าว กรุณาปรับเปลี่ยนวันและเวลาเพื่อไม่ให้ตรงกัน')
         }
 
         setValidationErrors([...result.errors, ...conflictErrors])
         setValidationWarnings(result.warnings)
-    }, [startDate, endDate, availability, validateReservation])
+    }, [startDate, endDate, pickupTime, returnTime, availability, validateReservation])
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
+
+        if (hasConflictBooking(startDate, endDate, pickupTime, returnTime)) {
+            setValidationErrors(['⚠️ อุปกรณ์ชิ้นนี้มีผู้ใช้จอง/ยืมไว้แล้วในช่วงเวลาดังกล่าว กรุณาปรับเปลี่ยนวันและเวลาเพื่อไม่ให้ตรงกัน'])
+            return
+        }
 
         if (validationErrors.length > 0) {
             return
@@ -235,16 +256,29 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
                     <div className="flex items-start gap-3">
                         <CalendarX className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                         <div className="space-y-1 text-sm text-amber-900">
-                            <h4 className="font-bold text-amber-900">ช่วงวันที่อุปกรณ์นี้ถูกจอง/ยืมแล้ว:</h4>
+                            <h4 className="font-bold text-amber-900">ช่วงเวลาที่อุปกรณ์นี้ถูกจอง/ยืมแล้ว:</h4>
                             <div className="flex flex-wrap gap-2 pt-1">
-                                {[...(availability?.reservations || []), ...(availability?.loans || [])].map((b: any, idx: number) => (
-                                    <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 text-xs font-medium border border-amber-300">
-                                        📅 {formatThaiDate(b.start_date)} - {formatThaiDate(b.end_date)}
-                                    </span>
-                                ))}
+                                {[...(availability?.reservations || []), ...(availability?.loans || [])].map((b: any, idx: number) => {
+                                    const bStart = b.start_date.split('T')[0]
+                                    const bEnd = b.end_date.split('T')[0]
+                                    const pTime = b.pickup_time ? b.pickup_time.slice(0, 5) : null
+                                    const rTime = b.return_time ? b.return_time.slice(0, 5) : null
+
+                                    const timeLabel = pTime && rTime
+                                        ? `(${pTime} - ${rTime} น.)`
+                                        : pTime ? `(เริ่มรับ ${pTime} น.)`
+                                        : rTime ? `(กำหนดคืน ${rTime} น.)`
+                                        : ''
+
+                                    return (
+                                        <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 text-xs font-medium border border-amber-300">
+                                            📅 {bStart === bEnd ? formatThaiDate(bStart) : `${formatThaiDate(bStart)} - ${formatThaiDate(bEnd)}`} {timeLabel}
+                                        </span>
+                                    )
+                                })}
                             </div>
                             <p className="text-xs text-amber-700 pt-1">
-                                💡 หากท่านเลือกวันเวลาตรงกับช่วงนี้ กรุณาเปลี่ยนไปเลือกอุปกรณ์ชิ้นอื่น หรือปรับเปลี่ยนวันเวลาในการจอง
+                                💡 ท่านสามารถเลือกจองช่วงเวลาที่ว่างได้แม้จะเป็นวันเดียวกัน (เช่น จองรับของหลังเวลาที่มีผู้คืนเครื่องแล้ว)
                             </p>
                         </div>
                     </div>

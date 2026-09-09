@@ -21,6 +21,8 @@ export interface BookingValidationInput {
     bookingType: BookingType
     /** ระบุเมื่อต้องการ exclude การจองตัวเองจากการตรวจสอบ */
     excludeReservationId?: string
+    /** ระบุเมื่อต้องการ exclude การยืมตัวเองจากการตรวจสอบ */
+    excludeLoanId?: string
 }
 
 export interface BookingValidationResult {
@@ -56,13 +58,8 @@ export function validateDateNotInPast(date: Date): BookingValidationResult {
  * ตรวจสอบช่วงวันที่ว่าถูกต้องหรือไม่ (end >= start)
  */
 export function validateDateRange(startDate: Date, endDate: Date): BookingValidationResult {
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-    start.setHours(0, 0, 0, 0)
-    end.setHours(0, 0, 0, 0)
-
-    if (end < start) {
-        return { valid: false, error: 'วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น', errorCode: 'DATE_RANGE' }
+    if (endDate.getTime() < startDate.getTime()) {
+        return { valid: false, error: 'วันที่และเวลาสิ้นสุดต้องไม่ก่อนวันที่และเวลาเริ่มต้น', errorCode: 'DATE_RANGE' }
     }
     return { valid: true }
 }
@@ -71,8 +68,7 @@ export function validateDateRange(startDate: Date, endDate: Date): BookingValida
  * ตรวจสอบจำนวนวันยืมว่าเกินกำหนดหรือไม่
  */
 export function validateDuration(startDate: Date, endDate: Date, maxDays: number): BookingValidationResult {
-    const durationMs = endDate.getTime() - startDate.getTime()
-    const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24)) + 1
+    const durationDays = calculateDurationDays(startDate, endDate)
 
     if (durationDays > maxDays) {
         return {
@@ -85,11 +81,15 @@ export function validateDuration(startDate: Date, endDate: Date, maxDays: number
 }
 
 /**
- * คำนวณจำนวนวันยืม
+ * คำนวณจำนวนวันยืม (ปัดเศษตามวันปฏิทิน)
  */
 export function calculateDurationDays(startDate: Date, endDate: Date): number {
-    const durationMs = endDate.getTime() - startDate.getTime()
-    return Math.ceil(durationMs / (1000 * 60 * 60 * 24)) + 1
+    const sDate = new Date(startDate)
+    const eDate = new Date(endDate)
+    sDate.setHours(0, 0, 0, 0)
+    eDate.setHours(0, 0, 0, 0)
+    const durationMs = eDate.getTime() - sDate.getTime()
+    return Math.round(durationMs / (1000 * 60 * 60 * 24)) + 1
 }
 
 // ===== Composite Validation =====
@@ -104,7 +104,7 @@ export function calculateDurationDays(startDate: Date, endDate: Date): number {
  * 4. ไม่ซ้อนเวลากับการจอง/ยืมอื่น (Time Conflict)
  */
 export async function validateBooking(input: BookingValidationInput): Promise<BookingValidationResult> {
-    const { userId, equipmentId, startDate, endDate, excludeReservationId } = input
+    const { userId, equipmentId, startDate, endDate, excludeReservationId, excludeLoanId } = input
 
     // 1. Date not in past
     const pastCheck = validateDateNotInPast(startDate)
@@ -129,7 +129,7 @@ export async function validateBooking(input: BookingValidationInput): Promise<Bo
     }
 
     // 4. Time conflict (overlapping dates with other bookings)
-    const timeConflict = await checkTimeConflict(equipmentId, startDate, endDate, excludeReservationId)
+    const timeConflict = await checkTimeConflict(equipmentId, startDate, endDate, excludeReservationId, excludeLoanId)
     if (timeConflict) {
         return {
             valid: false,

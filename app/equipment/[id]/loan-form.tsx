@@ -35,9 +35,10 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState(false)
 
-    // Form values
-    const [startDate, setStartDate] = useState('')
-    const [endDate, setEndDate] = useState('')
+    // Form values (instant loan starts today)
+    const today = new Date().toISOString().split('T')[0]
+    const [startDate, setStartDate] = useState(today)
+    const [endDate, setEndDate] = useState(today)
     const [returnTime, setReturnTime] = useState('')
 
     // Validation state
@@ -50,19 +51,41 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
         ...(availability?.loans || [])
     ]
 
-    const hasConflictBooking = (sDate: string, eDate: string): boolean => {
+    const hasConflictBooking = (sDate: string, eDate: string, rTime?: string): boolean => {
         if (!sDate || !eDate || allBookings.length === 0) return false
-        const start = new Date(sDate)
-        const end = new Date(eDate)
-        start.setHours(0, 0, 0, 0)
-        end.setHours(0, 0, 0, 0)
+
+        // Instant loan starts NOW (current timestamp at counter)
+        const now = new Date()
+        const sDateStr = sDate.split('T')[0]
+        const todayStr = now.toISOString().split('T')[0]
+
+        let startMs: number
+        if (sDateStr === todayStr) {
+            startMs = now.getTime()
+        } else {
+            const openingTime = config?.openingTime || '08:00'
+            startMs = new Date(`${sDateStr}T${openingTime}:00`).getTime()
+        }
+
+        const closingTime = config?.closingTime || '17:00'
+        const returnTimeStr = rTime || closingTime
+        const endMs = new Date(`${eDate.split('T')[0]}T${returnTimeStr}:00`).getTime()
+
+        if (endMs <= startMs) return false
 
         return allBookings.some(b => {
-            const bStart = new Date(b.start_date)
-            const bEnd = new Date(b.end_date)
-            bStart.setHours(0, 0, 0, 0)
-            bEnd.setHours(0, 0, 0, 0)
-            return start <= bEnd && end >= bStart
+            const bStartDateStr = b.start_date.split('T')[0]
+            const bEndDateStr = b.end_date.split('T')[0]
+
+            // Reservations have pickup_time; loans have return_time
+            const bPickup = b.pickup_time ? b.pickup_time.slice(0, 5) : (config?.openingTime || '08:00')
+            const bReturn = b.return_time ? b.return_time.slice(0, 5) : (config?.closingTime || '17:00')
+
+            const bStartMs = new Date(`${bStartDateStr}T${bPickup}:00`).getTime()
+            const bEndMs = new Date(`${bEndDateStr}T${bReturn}:00`).getTime()
+
+            // Overlap condition: start < bEnd AND end > bStart
+            return startMs < bEndMs && endMs > bStartMs
         })
     }
 
@@ -72,8 +95,8 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
             const result = validateDates(startDate, endDate, returnTime)
             const extraErrors: string[] = []
 
-            if (hasConflictBooking(startDate, endDate)) {
-                extraErrors.push('⚠️ อุปกรณ์ชิ้นนี้มีผู้ใช้จอง/ยืมไว้แล้วในช่วงวันที่เลือก กรุณาเลือกอุปกรณ์ชิ้นอื่น หรือเปลี่ยนวันและเวลาเพื่อไม่ให้ตรงกัน')
+            if (hasConflictBooking(startDate, endDate, returnTime)) {
+                extraErrors.push('⚠️ อุปกรณ์ชิ้นนี้มีผู้ใช้จอง/ยืมไว้แล้วในช่วงเวลาดังกล่าว กรุณาปรับเปลี่ยนวันและเวลาเพื่อไม่ให้ตรงกัน')
             }
 
             setValidationErrors([...result.errors, ...extraErrors])
@@ -83,9 +106,6 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
             setValidationWarnings([])
         }
     }, [startDate, endDate, returnTime, config, validateDates, availability])
-
-    // Get min date (today)
-    const today = new Date().toISOString().split('T')[0]
 
     // Calculate max end date based on start date and max loan days
     const maxEndDate = (() => {
@@ -98,8 +118,8 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
 
-        if (hasConflictBooking(startDate, endDate)) {
-            setValidationErrors(['⚠️ อุปกรณ์ชิ้นนี้มีผู้ใช้จอง/ยืมไว้แล้วในช่วงวันที่เลือก กรุณาเลือกอุปกรณ์ชิ้นอื่น หรือเปลี่ยนวันและเวลาเพื่อไม่ให้ตรงกัน'])
+        if (hasConflictBooking(startDate, endDate, returnTime)) {
+            setValidationErrors(['⚠️ อุปกรณ์ชิ้นนี้มีผู้ใช้จอง/ยืมไว้แล้วในช่วงเวลาดังกล่าว กรุณาปรับเปลี่ยนวันและเวลาเพื่อไม่ให้ตรงกัน'])
             return
         }
 
@@ -115,8 +135,9 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
         try {
             const formData = new FormData()
             formData.append('equipmentId', equipmentId)
-            formData.append('startDate', startDate)
-            formData.append('endDate', `${endDate}T${returnTime}`)
+            formData.append('startDate', startDate || today)
+            formData.append('endDate', endDate)
+            formData.append('returnTime', returnTime)
 
             const submitResult = await submitLoanRequest(null, formData)
             if (submitResult?.error) {
@@ -198,16 +219,29 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
                     <div className="flex items-start gap-3">
                         <CalendarX className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                         <div className="space-y-1 text-sm text-amber-900">
-                            <h4 className="font-bold text-amber-900">ช่วงวันที่อุปกรณ์นี้ถูกจอง/ยืมแล้ว:</h4>
+                            <h4 className="font-bold text-amber-900">ช่วงเวลาที่อุปกรณ์นี้ถูกจอง/ยืมแล้ว:</h4>
                             <div className="flex flex-wrap gap-2 pt-1">
-                                {allBookings.map((b: any, idx: number) => (
-                                    <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 text-xs font-medium border border-amber-300">
-                                        📅 {formatThaiDate(b.start_date)} - {formatThaiDate(b.end_date)}
-                                    </span>
-                                ))}
+                                {allBookings.map((b: any, idx: number) => {
+                                    const bStart = b.start_date.split('T')[0]
+                                    const bEnd = b.end_date.split('T')[0]
+                                    const pTime = b.pickup_time ? b.pickup_time.slice(0, 5) : null
+                                    const rTime = b.return_time ? b.return_time.slice(0, 5) : null
+
+                                    const timeLabel = pTime && rTime
+                                        ? `(${pTime} - ${rTime} น.)`
+                                        : pTime ? `(เริ่มรับ ${pTime} น.)`
+                                        : rTime ? `(กำหนดคืน ${rTime} น.)`
+                                        : ''
+
+                                    return (
+                                        <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 text-xs font-medium border border-amber-300">
+                                            📅 {bStart === bEnd ? formatThaiDate(bStart) : `${formatThaiDate(bStart)} - ${formatThaiDate(bEnd)}`} {timeLabel}
+                                        </span>
+                                    )
+                                })}
                             </div>
                             <p className="text-xs text-amber-700 pt-1">
-                                💡 หากท่านเลือกวันเวลาตรงกับช่วงนี้ กรุณาเปลี่ยนไปเลือกอุปกรณ์ชิ้นอื่น หรือปรับเปลี่ยนวันเวลาในการยืม
+                                💡 ท่านสามารถยืมและคืนก่อนเวลาที่มีคิวจองล่วงหน้าได้ (เช่น คืนเครื่องก่อนเวลารับของคิวถัดไป)
                             </p>
                         </div>
                     </div>
@@ -221,22 +255,19 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">
                             <Calendar className="w-4 h-4 inline-block mr-1" />
-                            วันที่ยืม
+                            วันที่ยืม (ทำรายการยืมทันที ณ วันนี้)
                         </label>
                         <input
                             type="date"
                             name="startDate"
                             required
-                            min={today}
-                            className="w-full rounded-lg border-gray-300 border shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-2.5"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
+                            disabled
+                            className="w-full rounded-lg border-gray-300 border shadow-sm bg-gray-50 text-gray-700 text-sm p-2.5 cursor-not-allowed"
+                            value={startDate || today}
                         />
-                        {startDate && (
-                            <p className="text-sm text-blue-600 mt-1 font-medium">
-                                ⇒ {formatThaiDate(startDate)} (พ.ศ.)
-                            </p>
-                        )}
+                        <p className="text-sm text-blue-600 mt-1 font-medium">
+                            ⇒ {formatThaiDate(startDate || today)} (เริ่มยืมทันที ณ เวลาปัจจุบัน)
+                        </p>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">

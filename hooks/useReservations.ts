@@ -134,7 +134,7 @@ export function useEquipmentAvailability(equipmentId: string) {
 
             // Fetch reservations
             const resResponse = await fetch(
-                `${url}/rest/v1/reservations?equipment_id=eq.${equipmentId}&status=in.(pending,approved,ready)&select=id,start_date,end_date,status`,
+                `${url}/rest/v1/reservations?equipment_id=eq.${equipmentId}&status=in.(pending,approved,ready)&select=id,start_date,end_date,pickup_time,return_time,status`,
                 {
                     headers: {
                         'apikey': key,
@@ -145,7 +145,7 @@ export function useEquipmentAvailability(equipmentId: string) {
 
             // Fetch loans
             const loanResponse = await fetch(
-                `${url}/rest/v1/loanRequests?equipment_id=eq.${equipmentId}&status=in.(pending,approved)&select=id,start_date,end_date,status`,
+                `${url}/rest/v1/loanRequests?equipment_id=eq.${equipmentId}&status=in.(pending,approved)&select=id,start_date,end_date,return_time,status`,
                 {
                     headers: {
                         'apikey': key,

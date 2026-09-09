@@ -61,12 +61,21 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
     const loanLimits = config?.loan_limits_by_type as LoanLimitsByType | null
     const limits = loanLimits?.[userType as keyof LoanLimitsByType] || { max_days: 7, max_items: 1, type_limits: {} }
 
-    const start = new Date(startDate)
-    const end = new Date(endDate)
+    // Instant loan starts NOW (at service counter)
+    const now = new Date()
+    const start = now
+    const closingTime = config?.closing_time || '17:00'
+    const cleanReturnTime = returnTime ? (returnTime.length === 5 ? `${returnTime}:00` : returnTime) : `${closingTime}:00`
+    const end = new Date(`${endDate.split('T')[0]}T${cleanReturnTime}+07:00`)
 
-    // Check loan duration
-    const durationMs = end.getTime() - start.getTime()
-    const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24)) + 1
+    if (end.getTime() <= start.getTime()) {
+        return { error: 'เวลาที่คืนต้องอยู่หลังเวลาปัจจุบัน' }
+    }
+
+    // Check loan duration by calendar days
+    const sDate = new Date(`${startDate.split('T')[0]}T00:00:00+07:00`)
+    const eDate = new Date(`${endDate.split('T')[0]}T00:00:00+07:00`)
+    const durationDays = Math.round((eDate.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
 
     if (durationDays > limits.max_days) {
         return { error: `ระยะเวลายืมเกินกำหนดสูงสุด (สูงสุด ${limits.max_days} วัน)` }
@@ -91,8 +100,8 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
 
     // Check closed dates
     const closedDates = (config?.closed_dates as string[]) || []
-    const startDateStr = start.toISOString().split('T')[0]
-    const endDateStr = end.toISOString().split('T')[0]
+    const startDateStr = startDate.split('T')[0]
+    const endDateStr = endDate.split('T')[0]
 
     if (closedDates.includes(startDateStr)) {
         return { error: 'วันที่ยืมตรงกับวันหยุดทำการ' }
@@ -158,12 +167,10 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
     const insertData: any = {
         user_id: user.id,
         equipment_id: equipmentId,
-        start_date: new Date(startDate).toISOString(),
-        end_date: new Date(endDate).toISOString(),
+        start_date: start.toISOString(),
+        end_date: end.toISOString(),
+        return_time: cleanReturnTime,
         status: 'pending'
-    }
-    if (returnTime) {
-        insertData.return_time = returnTime
     }
     const { data: insertedLoan, error } = await (supabase as any)
         .from('loanRequests')

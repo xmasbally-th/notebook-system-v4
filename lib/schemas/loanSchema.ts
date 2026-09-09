@@ -30,6 +30,21 @@ export const submitLoanSchema = z.object({
         return start >= today
     },
     { message: 'วันที่ยืมต้องไม่เป็นวันที่ผ่านมาแล้ว', path: ['startDate'] }
+).refine(
+    (data) => {
+        const startStr = data.startDate.split('T')[0]
+        const endStr = data.endDate.split('T')[0]
+        const todayStr = new Date().toISOString().split('T')[0]
+        if (startStr === todayStr && endStr === todayStr && data.returnTime) {
+            const now = new Date()
+            const [rHours, rMinutes] = data.returnTime.split(':').map(Number)
+            const returnDate = new Date()
+            returnDate.setHours(rHours, rMinutes, 0, 0)
+            return returnDate.getTime() > now.getTime()
+        }
+        return true
+    },
+    { message: 'เวลาที่จะคืนต้องอยู่หลังเวลาปัจจุบัน', path: ['returnTime'] }
 )
 
 // Schema สำหรับ approve/reject loan (ใช้ loanId เท่านั้น)

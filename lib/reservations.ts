@@ -129,7 +129,8 @@ export async function checkTimeConflict(
     equipmentId: string,
     startDate: Date,
     endDate: Date,
-    excludeReservationId?: string
+    excludeReservationId?: string,
+    excludeLoanId?: string
 ): Promise<boolean> {
     const { url, key } = getSupabaseCredentials()
     if (!url || !key) return false // Allow if can't check
@@ -148,14 +149,15 @@ export async function checkTimeConflict(
                 target_equipment_id: equipmentId,
                 new_start_date: startDate.toISOString(),
                 new_end_date: endDate.toISOString(),
-                exclude_reservation_id: excludeReservationId || null
+                exclude_reservation_id: excludeReservationId || null,
+                exclude_loan_id: excludeLoanId || null
             })
         })
 
         // RPC not available - fallback to direct query
         if (response.status === 400 || response.status === 404) {
             console.warn('[checkTimeConflict] RPC not available, using fallback query')
-            return await checkTimeConflictFallback(url, key, accessToken, equipmentId, startDate, endDate, excludeReservationId)
+            return await checkTimeConflictFallback(url, key, accessToken, equipmentId, startDate, endDate, excludeReservationId, excludeLoanId)
         }
 
         if (!response.ok) {
@@ -179,13 +181,14 @@ async function checkTimeConflictFallback(
     equipmentId: string,
     startDate: Date,
     endDate: Date,
-    excludeReservationId?: string
+    excludeReservationId?: string,
+    excludeLoanId?: string
 ): Promise<boolean> {
     try {
         const authHeader = accessToken ? `Bearer ${accessToken}` : `Bearer ${key}`
 
         // Check reservations
-        let reservationQuery = `${url}/rest/v1/reservations?equipment_id=eq.${equipmentId}&status=in.(pending,approved,ready)&start_date=lte.${endDate.toISOString()}&end_date=gte.${startDate.toISOString()}&select=id`
+        let reservationQuery = `${url}/rest/v1/reservations?equipment_id=eq.${equipmentId}&status=in.(pending,approved,ready)&select=id,start_date,end_date,pickup_time,return_time`
         if (excludeReservationId) {
             reservationQuery += `&id=neq.${excludeReservationId}`
         }
@@ -196,11 +199,26 @@ async function checkTimeConflictFallback(
 
         if (reservationRes.ok) {
             const reservations = await reservationRes.json()
-            if (reservations.length > 0) return true
+            for (const r of reservations) {
+                const rStartDay = r.start_date.split('T')[0]
+                const rEndDay = r.end_date.split('T')[0]
+                const rPickup = r.pickup_time ? r.pickup_time.slice(0, 5) : '08:00'
+                const rReturn = r.return_time ? r.return_time.slice(0, 5) : '17:00'
+                const rStart = new Date(`${rStartDay}T${rPickup}:00+07:00`).getTime()
+                const rEnd = new Date(`${rEndDay}T${rReturn}:00+07:00`).getTime()
+
+                // Overlap check: start < rEnd && end > rStart
+                if (startDate.getTime() < rEnd && endDate.getTime() > rStart) {
+                    return true
+                }
+            }
         }
 
         // Check loans
-        const loanQuery = `${url}/rest/v1/loanRequests?equipment_id=eq.${equipmentId}&status=in.(pending,approved)&start_date=lte.${endDate.toISOString()}&end_date=gte.${startDate.toISOString()}&select=id`
+        let loanQuery = `${url}/rest/v1/loanRequests?equipment_id=eq.${equipmentId}&status=in.(pending,approved)&select=id,start_date,end_date,return_time`
+        if (excludeLoanId) {
+            loanQuery += `&id=neq.${excludeLoanId}`
+        }
 
         const loanRes = await fetch(loanQuery, {
             headers: { 'apikey': key, 'Authorization': authHeader }
@@ -208,7 +226,17 @@ async function checkTimeConflictFallback(
 
         if (loanRes.ok) {
             const loans = await loanRes.json()
-            if (loans.length > 0) return true
+            for (const l of loans) {
+                const lStart = new Date(l.start_date).getTime()
+                const lEndDay = l.end_date.split('T')[0]
+                const lReturn = l.return_time ? l.return_time.slice(0, 5) : '17:00'
+                const lEnd = new Date(`${lEndDay}T${lReturn}:00+07:00`).getTime()
+
+                // Overlap check: start < lEnd && end > lStart
+                if (startDate.getTime() < lEnd && endDate.getTime() > lStart) {
+                    return true
+                }
+            }
         }
 
         // Check special loan requests
@@ -259,26 +287,25 @@ export async function createReservation(
     const accessToken = await accessTokenPromise
     if (!accessToken) return { success: false, error: 'กรุณาเข้าสู่ระบบ' }
 
-    // Validate dates
-    const start = new Date(startDate)
-    const end = new Date(endDate)
+    // Validate dates and times
+    const cleanPickupTime = pickupTime ? (pickupTime.length === 5 ? `${pickupTime}:00` : pickupTime) : '08:00:00'
+    const cleanReturnTime = returnTime ? (returnTime.length === 5 ? `${returnTime}:00` : returnTime) : '17:00:00'
+    const startDateTime = new Date(`${startDate.split('T')[0]}T${cleanPickupTime}+07:00`)
+    const endDateTime = new Date(`${endDate.split('T')[0]}T${cleanReturnTime}+07:00`)
 
     // Get today at midnight for comparison
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
     // Check if start date is in the past
-    const startDateOnly = new Date(start)
-    startDateOnly.setHours(0, 0, 0, 0)
+    const startDateOnly = new Date(`${startDate.split('T')[0]}T00:00:00+07:00`)
     if (startDateOnly < today) {
         return { success: false, error: 'วันที่รับต้องไม่เป็นวันที่ผ่านมาแล้ว' }
     }
 
-    // Check if end date is before start date
-    const endDateOnly = new Date(end)
-    endDateOnly.setHours(0, 0, 0, 0)
-    if (endDateOnly < startDateOnly) {
-        return { success: false, error: 'วันที่คืนต้องไม่ก่อนวันที่รับ' }
+    // Check if end date is before start date or end time before start time
+    if (endDateTime.getTime() <= startDateTime.getTime()) {
+        return { success: false, error: 'วันและเวลาที่คืนต้องอยู่หลังวันและเวลาที่รับอุปกรณ์' }
     }
 
     // Check type conflict (optional - skip if RPC not available)
@@ -291,8 +318,8 @@ export async function createReservation(
         console.warn('[createReservation] Type conflict check skipped (RPC may not be deployed)')
     }
 
-    // Check time conflict
-    const timeConflict = await checkTimeConflict(equipmentId, new Date(startDate), new Date(endDate))
+    // Check time conflict with precise timestamps
+    const timeConflict = await checkTimeConflict(equipmentId, startDateTime, endDateTime)
     if (timeConflict) {
         return { success: false, error: 'ช่วงเวลาที่เลือกมีการจองหรือยืมอยู่แล้ว' }
     }
@@ -313,11 +340,11 @@ export async function createReservation(
             body: JSON.stringify({
                 user_id: user.id,
                 equipment_id: equipmentId,
-                start_date: startDate,
-                end_date: endDate,
+                start_date: startDateTime.toISOString(),
+                end_date: endDateTime.toISOString(),
                 status,
-                pickup_time: pickupTime || null,
-                return_time: returnTime || null,
+                pickup_time: cleanPickupTime,
+                return_time: cleanReturnTime,
                 approved_at: isSelfAction ? new Date().toISOString() : null,
                 approved_by: isSelfAction ? user.id : null
             })

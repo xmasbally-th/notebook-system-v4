@@ -37,8 +37,14 @@ export async function submitReservationRequest(formData: FormData) {
     }
 
     const { equipmentId, startDate, endDate, pickupTime, returnTime } = parsed.data
-    const start = new Date(startDate)
-    const end = new Date(endDate)
+    const cleanPickupTime = pickupTime ? (pickupTime.length === 5 ? `${pickupTime}:00` : pickupTime) : '08:00:00'
+    const cleanReturnTime = returnTime ? (returnTime.length === 5 ? `${returnTime}:00` : returnTime) : '17:00:00'
+    const start = new Date(`${startDate.split('T')[0]}T${cleanPickupTime}+07:00`)
+    const end = new Date(`${endDate.split('T')[0]}T${cleanReturnTime}+07:00`)
+
+    if (end.getTime() <= start.getTime()) {
+        return { error: 'วันและเวลาที่คืนต้องอยู่หลังวันและเวลาที่รับอุปกรณ์' }
+    }
 
     // 3. Domain Validation (Conflicts)
     const validation = await validateBooking({
@@ -79,11 +85,11 @@ export async function submitReservationRequest(formData: FormData) {
         .insert({
             user_id: user.id,
             equipment_id: equipmentId,
-            start_date: startDate,
-            end_date: endDate,
+            start_date: start.toISOString(),
+            end_date: end.toISOString(),
             status,
-            pickup_time: pickupTime || null,
-            return_time: returnTime || null,
+            pickup_time: cleanPickupTime,
+            return_time: cleanReturnTime,
             approved_at: isSelfAction ? new Date().toISOString() : null,
             approved_by: isSelfAction ? user.id : null
         })
@@ -104,8 +110,9 @@ export async function submitReservationRequest(formData: FormData) {
         const dept = profile.departments?.name || '-'
         const equipmentName = insertedReservation.equipment?.name || 'ไม่ทราบชื่อ'
         const equipmentNumber = insertedReservation.equipment?.equipment_number || '-'
-        const durationMs = end.getTime() - start.getTime()
-        const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24)) + 1
+        const sDate = new Date(`${startDate.split('T')[0]}T00:00:00+07:00`)
+        const eDate = new Date(`${endDate.split('T')[0]}T00:00:00+07:00`)
+        const durationDays = Math.round((eDate.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
 
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
