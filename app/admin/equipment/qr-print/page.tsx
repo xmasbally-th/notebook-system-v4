@@ -312,9 +312,8 @@ export default function EquipmentQrPrintPage() {
                     {filteredEquipment.map((eq: any) => {
                         const isSelected = selectedIds.has(eq.id)
                         const targetUrl = `${originUrl || 'https://notebook-system.app'}/equipment/${eq.id}?mode=counter`
-                        const formattedEquipmentNumber = eq.equipment_number?.startsWith('#')
-                            ? eq.equipment_number
-                            : `#${eq.equipment_number}`
+                        // Remove leading '#' symbol and whitespace from equipment number
+                        const formattedEquipmentNumber = (eq.equipment_number || '').replace(/^#+/, '').trim() || '-'
 
                         // Compact Layout (Optimized for A4: 3 columns x 8 rows, height 33mm)
                         if (stickerSize === 'compact') {
@@ -342,32 +341,32 @@ export default function EquipmentQrPrintPage() {
                                     </div>
 
                                     {/* Compact Layout: Strictly QR CODE + รหัสครุภัณฑ์ + ชื่ออุปกรณ์ */}
-                                    <div className="flex items-center gap-2.5 h-full pr-4 print:pr-0">
+                                    <div className="flex items-center gap-2 print:gap-1.5 h-full pr-3 print:pr-0">
                                         {/* 1. High Resolution QR Code */}
                                         <div className="p-1 bg-white rounded-md border border-gray-200 print:border-black shrink-0 flex items-center justify-center">
                                             <QRCodeSVG
                                                 value={targetUrl}
-                                                size={66}
+                                                size={58}
                                                 level="M"
                                                 includeMargin={false}
                                             />
                                         </div>
 
                                         {/* 2. รหัสครุภัณฑ์ & 3. ชื่ออุปกรณ์ */}
-                                        <div className="min-w-0 flex-1 flex flex-col justify-center gap-1 text-left">
+                                        <div className="min-w-0 flex-1 flex flex-col justify-center gap-0.5 text-left">
                                             <div>
-                                                <span className="text-[9px] font-semibold text-gray-500 print:text-gray-700 uppercase tracking-wider block leading-none mb-0.5">
+                                                <span className="text-[8.5px] print:text-[8px] font-semibold text-gray-500 print:text-gray-700 uppercase tracking-wider block leading-none mb-0.5">
                                                     รหัสครุภัณฑ์
                                                 </span>
-                                                <span className="text-xs sm:text-sm font-extrabold font-mono text-gray-900 print:text-black leading-tight block truncate">
+                                                <span className="text-xs print:text-[9.5px] font-bold font-mono text-gray-900 print:text-black leading-tight block break-all">
                                                     {formattedEquipmentNumber}
                                                 </span>
                                             </div>
-                                            <div>
-                                                <span className="text-[9px] font-semibold text-gray-500 print:text-gray-700 uppercase tracking-wider block leading-none mb-0.5">
+                                            <div className="mt-0.5">
+                                                <span className="text-[8.5px] print:text-[8px] font-semibold text-gray-500 print:text-gray-700 uppercase tracking-wider block leading-none mb-0.5">
                                                     ชื่ออุปกรณ์
                                                 </span>
-                                                <p className="text-[11px] font-semibold text-gray-800 print:text-black leading-tight line-clamp-2">
+                                                <p className="text-[11px] print:text-[9.5px] font-semibold text-gray-800 print:text-black leading-tight line-clamp-2">
                                                     {eq.name}
                                                 </p>
                                             </div>
@@ -429,7 +428,7 @@ export default function EquipmentQrPrintPage() {
                                     {/* Equipment Info */}
                                     <div className="min-w-0 flex-1 space-y-1 text-left">
                                         <span className="text-[10px] text-gray-500 font-medium block leading-none">รหัสครุภัณฑ์</span>
-                                        <h3 className="text-sm sm:text-base font-extrabold font-mono text-gray-900 leading-tight truncate">
+                                        <h3 className="text-sm sm:text-base font-extrabold font-mono text-gray-900 print:text-black leading-tight break-all">
                                             {formattedEquipmentNumber}
                                         </h3>
                                         <p className="text-xs font-semibold text-indigo-700 print:text-black line-clamp-2">
