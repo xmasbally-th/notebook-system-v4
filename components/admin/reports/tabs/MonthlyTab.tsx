@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useDeferredValue } from 'react'
 import dynamic from 'next/dynamic'
 import { ReportData } from '@/hooks/useReportData'
 import { exportToCSV, getStatusLabel, getStatusColor } from '@/lib/reports'
@@ -30,6 +30,7 @@ interface MonthlyTabProps {
 export default function MonthlyTab({ data, isLoading }: MonthlyTabProps) {
     const [selectedMonthKey, setSelectedMonthKey] = useState<string>('')
     const [searchQuery, setSearchQuery] = useState<string>('')
+    const deferredSearchQuery = useDeferredValue(searchQuery)
     const [currentPage, setCurrentPage] = useState(1)
     const ITEMS_PER_PAGE = 10
 
@@ -46,10 +47,10 @@ export default function MonthlyTab({ data, isLoading }: MonthlyTabProps) {
         return data.monthlyStats.find(s => s.monthKey === selectedMonthKey) || data.monthlyStats[data.monthlyStats.length - 1]
     }, [data?.monthlyStats, selectedMonthKey])
 
-    // Filter details based on search query
+    // Filter details based on deferred search query (prevents input lag)
     const filteredDetails = useMemo(() => {
         if (!selectedMonthData?.details) return []
-        const query = searchQuery.trim().toLowerCase()
+        const query = deferredSearchQuery.trim().toLowerCase()
         if (!query) return selectedMonthData.details
         return selectedMonthData.details.filter(item => 
             item.user_name.toLowerCase().includes(query) ||
@@ -58,12 +59,12 @@ export default function MonthlyTab({ data, isLoading }: MonthlyTabProps) {
             item.equipment_number.toLowerCase().includes(query) ||
             (item.type === 'loan' ? 'ยืม คืน' : 'จอง').includes(query)
         )
-    }, [selectedMonthData?.details, searchQuery])
+    }, [selectedMonthData?.details, deferredSearchQuery])
 
     // Reset page when month or search query changes
     useEffect(() => {
         setCurrentPage(1)
-    }, [selectedMonthKey, searchQuery])
+    }, [selectedMonthKey, deferredSearchQuery])
 
     const exportMonthlyCSV = () => {
         if (!data?.monthlyStats) return

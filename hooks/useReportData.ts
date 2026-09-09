@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getSupabaseCredentials } from '@/lib/supabase-helpers'
+import { supabase } from '@/lib/supabase/client'
 import {
     calculateLoanStats,
     calculateReservationStats,
@@ -16,19 +17,33 @@ import {
     getDueDate
 } from '@/lib/reportDataProcessors'
 
-// Get access token from session
-async function getAccessToken(): Promise<string | null> {
-    try {
-        const { url, key } = getSupabaseCredentials()
-        if (!url || !key) return null
+// Token caching to eliminate redundant concurrent getSession calls
+let cachedToken: { token: string | null; expiry: number } | null = null
+let pendingTokenPromise: Promise<string | null> | null = null
 
-        const { createBrowserClient } = await import('@supabase/ssr')
-        const supabase = createBrowserClient(url, key)
-        const { data: { session } } = await supabase.auth.getSession()
-        return session?.access_token || null
-    } catch {
-        return null
+async function getAccessToken(): Promise<string | null> {
+    const now = Date.now()
+    if (cachedToken && cachedToken.expiry > now) {
+        return cachedToken.token
     }
+    if (pendingTokenPromise) {
+        return pendingTokenPromise
+    }
+
+    pendingTokenPromise = (async () => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession()
+            const token = session?.access_token || null
+            cachedToken = { token, expiry: Date.now() + 30000 } // Cache for 30s
+            return token
+        } catch {
+            return null
+        } finally {
+            pendingTokenPromise = null
+        }
+    })()
+
+    return pendingTokenPromise
 }
 
 // Helper fetch function using Supabase credentials
@@ -207,6 +222,19 @@ export interface SpecialLoanStats {
     items: SpecialLoanItem[]
 }
 
+export interface BorrowedEquipmentInfo {
+    loanId: string
+    borrowerId: string
+    borrowerName: string
+    borrowerEmail?: string
+    borrowerDepartment?: string
+    borrowerAvatar?: string | null
+    startDate?: string | null
+    endDate: string
+    returnTime?: string | null
+    purpose?: string | null
+}
+
 export interface ReportData {
     loanStats: LoanStats
     reservationStats: ReservationStats
@@ -222,11 +250,12 @@ export interface ReportData {
     equipmentTypes: EquipmentType[]
     allEquipment: Equipment[]
     borrowedEquipmentIds: Set<string>
+    borrowedEquipmentMap: Record<string, BorrowedEquipmentInfo>
     equipmentUsageMap: Record<string, { loan_count: number; returned_count: number }>
     specialLoanStats: SpecialLoanStats
 }
 
-export function useReportData(dateRange: DateRange) {
+export function useReportData(dateRange: DateRange, activeTab: string = 'overview') {
     const fromDate = dateRange.from.toISOString()
     const toDate = dateRange.to.toISOString()
 
@@ -236,99 +265,94 @@ export function useReportData(dateRange: DateRange) {
         return d
     }, [])
 
-    const sixMonthsAgo = useMemo(() => {
-        const d = new Date(dateRange.to)
-        d.setMonth(d.getMonth() - 5)
-        d.setDate(1)
-        d.setHours(0, 0, 0, 0)
-        return d
-    }, [dateRange.to])
-    const sixMonthsAgoISO = sixMonthsAgo.toISOString()
-
-    // 1. Loans query
+    // 1. Loans query (core)
     const loansQuery = useQuery({
         queryKey: ['report-loans', fromDate, toDate],
         staleTime: 60000,
-        queryFn: () => fetchSupabase<any[]>(`loanRequests?select=id,status,created_at,end_date,returned_at,user_id,equipment_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`)
+        queryFn: () => fetchSupabase<any[]>(`loanRequests?select=id,status,created_at,start_date,end_date,return_time,returned_at,purpose,user_id,equipment_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`)
     })
 
-    // 2. Reservations query
+    // 2. Reservations query (core)
     const reservationsQuery = useQuery({
         queryKey: ['report-reservations', fromDate, toDate],
         staleTime: 60000,
         queryFn: () => fetchSupabase<any[]>(`reservations?select=id,status,created_at,user_id,equipment_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`)
     })
 
-    // 3. Equipment query (unfiltered, longer staleTime)
+    // 3. Equipment query without unused 'images' column (core, 5 min cache)
     const equipmentQuery = useQuery({
         queryKey: ['report-equipment'],
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        queryFn: () => fetchSupabase<any[]>(`equipment?select=id,name,equipment_number,status,equipment_type_id,images,brand,model`)
+        staleTime: 5 * 60 * 1000,
+        queryFn: () => fetchSupabase<any[]>(`equipment?select=id,name,equipment_number,status,equipment_type_id,brand,model`)
     })
 
-    // 4. Overdue query (all approved, longer staleTime)
+    // 4. Overdue query (all approved with borrower profile, core)
     const overdueQuery = useQuery({
         queryKey: ['report-overdue-raw'],
         staleTime: 60000,
-        queryFn: () => fetchSupabase<any[]>(`loanRequests?select=id,end_date,return_time,user_id,equipment_id,profiles!fk_loanrequests_profiles(first_name,last_name,email),equipment:equipment_id(name,equipment_number)&status=eq.approved`)
+        queryFn: () => fetchSupabase<any[]>(`loanRequests?select=id,start_date,end_date,return_time,purpose,user_id,equipment_id,profiles!fk_loanrequests_profiles(first_name,last_name,email,avatar_url,department:departments(name)),equipment:equipment_id(name,equipment_number)&status=eq.approved`)
     })
 
-    // 5. Profiles query (unfiltered, longer staleTime)
+    // 5. Profiles query (core, 5 min cache)
     const profilesQuery = useQuery({
         queryKey: ['report-profiles'],
-        staleTime: 5 * 60 * 1000, // 5 minutes
+        staleTime: 5 * 60 * 1000,
         queryFn: () => fetchSupabase<any[]>(`profiles?status=eq.approved&select=id,email,first_name,last_name,avatar_url,department:departments(name),role,status`)
     })
 
-    // 6. Staff activity log query
-    const staffActivityQuery = useQuery({
-        queryKey: ['report-staff-activity', fromDate, toDate],
-        staleTime: 60000,
-        queryFn: () => fetchSupabase<any[]>(`staff_activity_log?select=id,staff_id,staff_role,action_type,target_type,target_id,created_at,details&created_at=gte.${fromDate}&created_at=lte.${toDate}&order=created_at.desc`)
-    })
-
-    // 7. Equipment types query
+    // 6. Equipment types query (core, 10 min cache)
     const equipmentTypesQuery = useQuery({
         queryKey: ['report-equipment-types'],
-        staleTime: 10 * 60 * 1000, // 10 minutes
+        staleTime: 10 * 60 * 1000,
         queryFn: () => fetchSupabase<any[]>(`equipment_types?select=id,name,icon&order=name.asc`)
     })
 
-    // 8. Special loans query
+    // 7. Staff activity log query (tab-specific: only enabled when on 'activity' tab)
+    const staffActivityQuery = useQuery({
+        queryKey: ['report-staff-activity', fromDate, toDate],
+        staleTime: 60000,
+        enabled: activeTab === 'activity',
+        queryFn: () => fetchSupabase<any[]>(`staff_activity_log?select=id,staff_id,staff_role,action_type,target_type,target_id,created_at,details&created_at=gte.${fromDate}&created_at=lte.${toDate}&order=created_at.desc`)
+    })
+
+    // 8. Special loans query (tab-specific: only enabled when on 'loans' tab)
     const specialLoansQuery = useQuery({
         queryKey: ['report-special-loans', fromDate, toDate],
         staleTime: 60000,
+        enabled: activeTab === 'loans',
         queryFn: () => fetchSupabase<any[]>(`special_loan_requests?select=id,borrower_id,borrower_name,external_borrower_org,equipment_type_name,quantity,equipment_numbers,loan_date,return_date,purpose,status,returned_at,created_at&created_at=gte.${fromDate}&created_at=lte.${toDate}&order=created_at.desc`)
     })
 
-    const isLoading = loansQuery.isLoading ||
+    // Decoupled loading: core queries determine primary loading state
+    const isCoreLoading = loansQuery.isLoading ||
         reservationsQuery.isLoading ||
         equipmentQuery.isLoading ||
         overdueQuery.isLoading ||
         profilesQuery.isLoading ||
-        staffActivityQuery.isLoading ||
-        equipmentTypesQuery.isLoading ||
-        specialLoansQuery.isLoading
+        equipmentTypesQuery.isLoading
+
+    const isLoading = isCoreLoading ||
+        (activeTab === 'activity' && staffActivityQuery.isLoading) ||
+        (activeTab === 'loans' && specialLoansQuery.isLoading)
 
     const error = loansQuery.error ||
         reservationsQuery.error ||
         equipmentQuery.error ||
         overdueQuery.error ||
         profilesQuery.error ||
-        staffActivityQuery.error ||
         equipmentTypesQuery.error ||
-        specialLoansQuery.error
+        (activeTab === 'activity' ? staffActivityQuery.error : null) ||
+        (activeTab === 'loans' ? specialLoansQuery.error : null)
 
     const data = useMemo<ReportData | undefined>(() => {
+        // Return undefined only if core queries haven't resolved yet
         if (
             !loansQuery.data ||
             !reservationsQuery.data ||
             !equipmentQuery.data ||
             !overdueQuery.data ||
             !profilesQuery.data ||
-            !staffActivityQuery.data ||
-            !equipmentTypesQuery.data ||
-            !specialLoansQuery.data
+            !equipmentTypesQuery.data
         ) {
             return undefined
         }
@@ -338,9 +362,9 @@ export function useReportData(dateRange: DateRange) {
         const equipment = equipmentQuery.data
         const rawOverdueLoans = overdueQuery.data
         const profiles = profilesQuery.data
-        const staffActivityLog = staffActivityQuery.data
+        const staffActivityLog = staffActivityQuery.data || []
         const equipmentTypes = equipmentTypesQuery.data
-        const specialLoansRaw = specialLoansQuery.data
+        const specialLoansRaw = specialLoansQuery.data || []
         const monthlyLoans = loans
         const monthlyReservations = reservations
 
@@ -353,16 +377,22 @@ export function useReportData(dateRange: DateRange) {
             })
             : []
 
-        // Process special loan stats
-        let specialLoans: SpecialLoanItem[] = Array.isArray(specialLoansRaw) ? specialLoansRaw : []
+        // Pre-build profile map for O(1) lookups
+        const profileMap = new Map<string, any>()
+        if (Array.isArray(profiles)) {
+            profiles.forEach(p => profileMap.set(p.id, p))
+        }
 
-        // Map borrower_department from profiles if borrower_id exists
-        if (specialLoans.length > 0 && Array.isArray(profiles)) {
+        // Process special loan stats
+        let specialLoans: SpecialLoanItem[] = Array.isArray(specialLoansRaw) ? [...specialLoansRaw] : []
+        if (specialLoans.length > 0 && profileMap.size > 0) {
             specialLoans = specialLoans.map(loan => {
                 if (loan.borrower_id) {
-                    const profile = profiles.find(p => p.id === loan.borrower_id)
+                    const profile = profileMap.get(loan.borrower_id)
                     if (profile && profile.department) {
-                        loan.borrower_department = profile.department.name
+                        loan.borrower_department = typeof profile.department === 'string'
+                            ? profile.department
+                            : profile.department.name || ''
                     }
                 }
                 return loan
@@ -378,7 +408,32 @@ export function useReportData(dateRange: DateRange) {
             items: specialLoans
         }
 
-        // Use processor functions
+        // Build borrowedEquipmentMap for immediate borrower lookup in EquipmentTab
+        const borrowedEquipmentMap: Record<string, BorrowedEquipmentInfo> = {}
+        if (Array.isArray(rawOverdueLoans)) {
+            rawOverdueLoans.forEach((loan: any) => {
+                if (loan.equipment_id && !borrowedEquipmentMap[loan.equipment_id]) {
+                    const profile = loan.profiles || profileMap.get(loan.user_id)
+                    const deptName = profile?.department
+                        ? (typeof profile.department === 'string' ? profile.department : profile.department.name || '')
+                        : ''
+                    borrowedEquipmentMap[loan.equipment_id] = {
+                        loanId: loan.id,
+                        borrowerId: loan.user_id,
+                        borrowerName: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'ไม่ทราบชื่อ',
+                        borrowerEmail: profile?.email,
+                        borrowerDepartment: deptName,
+                        borrowerAvatar: profile?.avatar_url,
+                        startDate: loan.start_date,
+                        endDate: loan.end_date,
+                        returnTime: loan.return_time,
+                        purpose: loan.purpose
+                    }
+                }
+            })
+        }
+
+        // Use processor functions (with optimized O(N) performance)
         const loanStats = calculateLoanStats(loans, overdueLoans)
         const reservationStats = calculateReservationStats(reservations)
         const equipmentStats = calculateEquipmentStats(equipment)
@@ -396,8 +451,8 @@ export function useReportData(dateRange: DateRange) {
 
         // Build a set of equipment IDs that are currently borrowed (loan status = approved)
         const borrowedEquipmentIds = new Set<string>(
-            Array.isArray(loans)
-                ? loans.filter((l: any) => l.status === 'approved' && l.equipment_id).map((l: any) => l.equipment_id)
+            Array.isArray(rawOverdueLoans)
+                ? rawOverdueLoans.filter((l: any) => l.equipment_id).map((l: any) => l.equipment_id)
                 : []
         )
 
@@ -416,6 +471,7 @@ export function useReportData(dateRange: DateRange) {
             equipmentTypes: Array.isArray(equipmentTypes) ? equipmentTypes : [],
             allEquipment: Array.isArray(equipment) ? equipment : [],
             borrowedEquipmentIds,
+            borrowedEquipmentMap,
             equipmentUsageMap,
             specialLoanStats
         }

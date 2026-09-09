@@ -1,19 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import ReportDateRangePicker from '@/components/admin/reports/ReportDateRangePicker'
-import ReportPDFExport from '@/components/admin/reports/ReportPDFExport'
 import { useReportData, DateRange } from '@/hooks/useReportData'
-import {
-    OverviewTab,
-    LoansTab,
-    EquipmentTab,
-    ReservationsTab,
-    UsersTab,
-    ActivityTab,
-    MonthlyTab
-} from '@/components/admin/reports/tabs'
+import OverviewTab from '@/components/admin/reports/tabs/OverviewTab'
 import {
     ClipboardList,
     Package,
@@ -23,6 +15,44 @@ import {
     Activity,
     FileText
 } from 'lucide-react'
+
+// Tab Loading Skeleton Fallback
+function TabSkeleton() {
+    return (
+        <div className="space-y-4 animate-pulse">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-24 bg-gray-100 rounded-2xl" />
+                ))}
+            </div>
+            <div className="h-64 bg-gray-100 rounded-2xl" />
+        </div>
+    )
+}
+
+// Dynamic Imports for Code Splitting Non-Default Tabs & Heavy PDF Export
+const LoansTab = dynamic(() => import('@/components/admin/reports/tabs/LoansTab'), {
+    loading: () => <TabSkeleton />
+})
+const EquipmentTab = dynamic(() => import('@/components/admin/reports/tabs/EquipmentTab'), {
+    loading: () => <TabSkeleton />
+})
+const ReservationsTab = dynamic(() => import('@/components/admin/reports/tabs/ReservationsTab'), {
+    loading: () => <TabSkeleton />
+})
+const UsersTab = dynamic(() => import('@/components/admin/reports/tabs/UsersTab'), {
+    loading: () => <TabSkeleton />
+})
+const ActivityTab = dynamic(() => import('@/components/admin/reports/tabs/ActivityTab'), {
+    loading: () => <TabSkeleton />
+})
+const MonthlyTab = dynamic(() => import('@/components/admin/reports/tabs/MonthlyTab'), {
+    loading: () => <TabSkeleton />
+})
+const ReportPDFExport = dynamic(() => import('@/components/admin/reports/ReportPDFExport'), {
+    ssr: false,
+    loading: () => <div className="h-9 w-28 bg-gray-100 rounded-lg animate-pulse" />
+})
 
 type TabType = 'overview' | 'loans' | 'equipment' | 'reservations' | 'users' | 'activity' | 'monthly'
 
@@ -57,7 +87,7 @@ export default function AdminReportsPage() {
 
     const [activeTab, setActiveTab] = useState<TabType>('overview')
 
-    const { data, isLoading, error } = useReportData(dateRange)
+    const { data, isLoading, error } = useReportData(dateRange, activeTab)
 
     const tabs = [
         { id: 'overview', label: 'ภาพรวม', icon: BarChart3 },

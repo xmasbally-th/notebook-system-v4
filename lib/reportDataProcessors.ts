@@ -102,6 +102,10 @@ export function calculateEquipmentStats(equipment: any[]): EquipmentStats {
  */
 export function calculatePopularEquipment(loans: any[], reservations: any[], equipment: any[]): PopularEquipment[] {
     const equipmentUsage: Record<string, { equipment: any, loans: number, returned: number, reservations: number }> = {}
+    const equipmentMap = new Map<string, any>()
+    if (Array.isArray(equipment)) {
+        equipment.forEach((e: any) => equipmentMap.set(e.id, e))
+    }
 
     if (Array.isArray(loans)) {
         loans.forEach((loan: any) => {
@@ -109,7 +113,7 @@ export function calculatePopularEquipment(loans: any[], reservations: any[], equ
             // Only count loans that were actually approved or returned (meaningful borrows)
             if (loan.status !== 'approved' && loan.status !== 'returned') return
             if (!equipmentUsage[loan.equipment_id]) {
-                const eq = Array.isArray(equipment) ? equipment.find((e: any) => e.id === loan.equipment_id) : null
+                const eq = equipmentMap.get(loan.equipment_id) || null
                 equipmentUsage[loan.equipment_id] = { equipment: eq, loans: 0, returned: 0, reservations: 0 }
             }
             equipmentUsage[loan.equipment_id].loans++
@@ -126,7 +130,7 @@ export function calculatePopularEquipment(loans: any[], reservations: any[], equ
             // Only count active reservations that are approved (completed are already counted as loans)
             if (res.status !== 'approved') return
             if (!equipmentUsage[res.equipment_id]) {
-                const eq = Array.isArray(equipment) ? equipment.find((e: any) => e.id === res.equipment_id) : null
+                const eq = equipmentMap.get(res.equipment_id) || null
                 equipmentUsage[res.equipment_id] = { equipment: eq, loans: 0, returned: 0, reservations: 0 }
             }
             equipmentUsage[res.equipment_id].reservations++
@@ -542,6 +546,20 @@ export function calculateMonthlyStats(
         })
     }
 
+    // Pre-build Maps for O(1) lookups during month breakdown processing
+    const loansMap = new Map<string, any>()
+    if (Array.isArray(loans)) {
+        loans.forEach(l => loansMap.set(l.id, l))
+    }
+    const reservationsMap = new Map<string, any>()
+    if (Array.isArray(reservations)) {
+        reservations.forEach(r => reservationsMap.set(r.id, r))
+    }
+    const typeByNameMap = new Map<string, any>()
+    if (Array.isArray(equipmentTypes)) {
+        equipmentTypes.forEach(t => typeByNameMap.set(t.name, t))
+    }
+
     // Now post-process each month to calculate breakdowns
     Object.keys(monthlyData).forEach(monthKey => {
         const month = monthlyData[monthKey]
@@ -561,10 +579,10 @@ export function calculateMonthlyStats(
                 deptUsageMap.set(item.department, (deptUsageMap.get(item.department) || 0) + 1)
             }
 
-            // Find the loan/reservation raw item to check equipment
+            // Find the loan/reservation raw item to check equipment in O(1)
             const originalItem = item.type === 'loan' 
-                ? loans.find(l => l.id === item.id)
-                : reservations.find(r => r.id === item.id)
+                ? loansMap.get(item.id)
+                : reservationsMap.get(item.id)
 
             if (originalItem?.equipment_id) {
                 const eq = equipmentMap.get(originalItem.equipment_id)
@@ -588,8 +606,8 @@ export function calculateMonthlyStats(
         // Format equipmentTypeUsage
         month.equipmentTypeUsage = Array.from(eqTypeUsageMap.entries())
             .map(([name, count]) => {
-                // Find icon
-                const typeObj = equipmentTypes.find(t => t.name === name)
+                // Find icon in O(1)
+                const typeObj = typeByNameMap.get(name)
                 return {
                     name,
                     icon: typeObj?.icon || '📦',

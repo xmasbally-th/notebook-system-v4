@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { ReportData } from '@/hooks/useReportData'
-import { getSupabaseCredentials } from '@/lib/supabase-helpers'
+import { supabase } from '@/lib/supabase/client'
 import { formatThaiDate } from '@/lib/formatThaiDate'
 import { getDueDate } from '@/lib/reportDataProcessors'
 import {
@@ -93,27 +93,14 @@ function BorrowHistoryModal({
         setError(null)
 
         try {
-            const { url, key } = getSupabaseCredentials()
-            if (!url || !key) throw new Error('Missing credentials')
+            const { data, error: fetchErr } = await supabase
+                .from('loanRequests')
+                .select('id,status,created_at,start_date,end_date,return_time,returned_at,return_condition,return_notes,purpose,profiles:fk_loanrequests_profiles(first_name,last_name,email,avatar_url,department:departments(name))')
+                .eq('equipment_id', equipment.id)
+                .order('created_at', { ascending: false })
 
-            const { createBrowserClient } = await import('@supabase/ssr')
-            const supabase = createBrowserClient(url, key)
-            const { data: { session } } = await supabase.auth.getSession()
-            if (!session) throw new Error('Not authenticated')
-
-            const query = `${url}/rest/v1/loanRequests?select=id,status,created_at,start_date,end_date,return_time,returned_at,return_condition,return_notes,purpose,profiles!fk_loanrequests_profiles(first_name,last_name,email,avatar_url,department:departments(name))&equipment_id=eq.${equipment.id}&order=created_at.desc`
-
-            const res = await fetch(query, {
-                headers: {
-                    'apikey': key,
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
-                }
-            })
-
-            if (!res.ok) throw new Error('Failed to fetch')
-            const data = await res.json()
-            setRecords(Array.isArray(data) ? data : [])
+            if (fetchErr) throw fetchErr
+            setRecords(Array.isArray(data) ? data as any[] : [])
         } catch (err: any) {
             setError(err.message || 'เกิดข้อผิดพลาดในการโหลดประวัติ')
         } finally {
@@ -134,6 +121,11 @@ function BorrowHistoryModal({
             setCurrentPage(1)
         }
     }, [isOpen, equipment, fetchHistory])
+
+    // Find current active loan (borrowed)
+    const currentActiveLoan = useMemo(() => {
+        return records.find(r => r.status === 'approved')
+    }, [records])
 
     // Filter records based on active status filter and date range toggle
     const filteredRecords = useMemo(() => {
@@ -182,8 +174,8 @@ function BorrowHistoryModal({
                 <div className="flex items-start justify-between p-5 sm:p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50 flex-shrink-0">
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                            <History className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                            <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">ประวัติการใช้งานอุปกรณ์</h2>
+                            <User className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                            <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">รายชื่อผู้ยืมและประวัติการใช้งาน</h2>
                         </div>
                         <p className="text-sm font-semibold text-gray-700 truncate">{equipment.name}</p>
                         <div className="flex items-center gap-2 mt-2">
@@ -244,32 +236,126 @@ function BorrowHistoryModal({
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-12 gap-3">
                             <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                            <p className="text-sm text-gray-500">กำลังโหลดข้อมูลประวัติ...</p>
+                            <p className="text-sm text-gray-500">กำลังโหลดข้อมูลผู้ยืม...</p>
                         </div>
                     ) : error ? (
                         <div className="flex flex-col items-center justify-center py-12 gap-3">
                             <AlertTriangle className="w-8 h-8 text-red-400" />
                             <p className="text-sm text-red-600">{error}</p>
                         </div>
-                    ) : filteredRecords.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 gap-3">
-                            <Package className="w-12 h-12 text-gray-200" />
-                            <p className="text-gray-500 font-medium">ไม่พบประวัติการยืมอุปกรณ์</p>
-                            <p className="text-xs text-gray-400">
-                                {filterByDateRange ? 'ลองปิดตัวกรองช่วงวันที่เพื่อดูประวัติทั้งหมด' : 'อุปกรณ์นี้ยังไม่มีประวัติการยืม'}
-                            </p>
-                        </div>
-                    ) : (() => {
-                        const totalPages = Math.ceil(filteredRecords.length / ITEMS_PER_PAGE)
-                        const startIdx = (currentPage - 1) * ITEMS_PER_PAGE
-                        const paginatedRecords = filteredRecords.slice(startIdx, startIdx + ITEMS_PER_PAGE)
+                    ) : (
+                        <>
+                            {/* Prominent Current Borrower Card if equipment is currently borrowed */}
+                            {currentActiveLoan && (
+                                <div className="mb-5 bg-gradient-to-br from-blue-50 via-indigo-50/40 to-blue-50/20 border-2 border-blue-200/80 rounded-2xl p-4 sm:p-5 shadow-sm">
+                                    <div className="flex items-center justify-between gap-2 mb-3">
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm">
+                                            <Clock className="w-3.5 h-3.5" />
+                                            ผู้ยืมปัจจุบัน
+                                        </span>
+                                        {(() => {
+                                            const dueDate = getDueDate(currentActiveLoan.end_date, currentActiveLoan.return_time)
+                                            const isOverdue = new Date() > dueDate
+                                            if (isOverdue) {
+                                                const days = Math.max(1, Math.floor((Date.now() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
+                                                return (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200 animate-pulse">
+                                                        <AlertTriangle className="w-3 h-3" />
+                                                        เกินกำหนด {days} วัน
+                                                    </span>
+                                                )
+                                            }
+                                            return (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+                                                    <CheckCircle2 className="w-3 h-3" />
+                                                    อยู่ในกำหนดเวลา
+                                                </span>
+                                            )
+                                        })()}
+                                    </div>
 
-                        return (
-                            <div className="space-y-3">
-                                <p className="text-xs text-gray-500 mb-2">
-                                    แสดง {filteredRecords.length} รายการ
-                                    {totalPages > 1 && ` • หน้า ${currentPage}/${totalPages}`}
-                                </p>
+                                    <div className="flex items-start gap-3.5">
+                                        <div className="w-12 h-12 rounded-full relative overflow-hidden bg-blue-100 border-2 border-white shadow flex-shrink-0 flex items-center justify-center">
+                                            {currentActiveLoan.profiles?.avatar_url ? (
+                                                <Image
+                                                    src={currentActiveLoan.profiles.avatar_url}
+                                                    alt=""
+                                                    fill
+                                                    sizes="48px"
+                                                    className="object-cover"
+                                                />
+                                            ) : (
+                                                <User className="w-6 h-6 text-blue-600" />
+                                            )}
+                                        </div>
+
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <p className="text-base font-bold text-gray-900">
+                                                    {currentActiveLoan.profiles
+                                                        ? `${currentActiveLoan.profiles.first_name || ''} ${currentActiveLoan.profiles.last_name || ''}`.trim()
+                                                        : 'ไม่ทราบชื่อ'}
+                                                </p>
+                                                {currentActiveLoan.profiles?.department && (
+                                                    <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-white px-2 py-0.5 rounded-md border border-gray-200 font-medium">
+                                                        <Building className="w-3 h-3 text-gray-400" />
+                                                        {getDepartmentName(currentActiveLoan.profiles.department)}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {currentActiveLoan.profiles?.email && (
+                                                <p className="text-xs text-gray-500 mt-0.5">{currentActiveLoan.profiles.email}</p>
+                                            )}
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 text-xs bg-white/80 p-2.5 rounded-xl border border-blue-100/60">
+                                                <div className="flex items-center gap-1.5 text-gray-600">
+                                                    <Calendar className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                                                    <span className="font-medium">วันที่ยืม:</span>
+                                                    <span>{formatThaiDate(currentActiveLoan.start_date || currentActiveLoan.created_at)}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 text-gray-600">
+                                                    <Clock className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                                                    <span className="font-medium">กำหนดส่งคืน:</span>
+                                                    <span>{formatThaiDate(currentActiveLoan.end_date)}</span>
+                                                </div>
+                                            </div>
+
+                                            {currentActiveLoan.purpose && (
+                                                <p className="text-xs text-gray-600 mt-2 flex items-start gap-1.5">
+                                                    <FileText className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                                                    <span className="font-medium">วัตถุประสงค์:</span>
+                                                    <span>{currentActiveLoan.purpose}</span>
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {filteredRecords.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                                    <Package className="w-12 h-12 text-gray-200" />
+                                    <p className="text-gray-500 font-medium">ไม่พบประวัติการยืมอุปกรณ์</p>
+                                    <p className="text-xs text-gray-400">
+                                        {filterByDateRange ? 'ลองปิดตัวกรองช่วงวันที่เพื่อดูประวัติทั้งหมด' : 'อุปกรณ์นี้ยังไม่มีประวัติการยืม'}
+                                    </p>
+                                </div>
+                            ) : (() => {
+                                const totalPages = Math.ceil(filteredRecords.length / ITEMS_PER_PAGE)
+                                const startIdx = (currentPage - 1) * ITEMS_PER_PAGE
+                                const paginatedRecords = filteredRecords.slice(startIdx, startIdx + ITEMS_PER_PAGE)
+
+                                return (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                                ประวัติรายชื่อผู้ยืม ({filteredRecords.length} รายการ)
+                                            </h4>
+                                            {totalPages > 1 && (
+                                                <span className="text-xs text-gray-400">หน้า {currentPage}/{totalPages}</span>
+                                            )}
+                                        </div>
                                 {paginatedRecords.map((record) => {
                                     const userName = record.profiles
                                         ? `${record.profiles.first_name || ''} ${record.profiles.last_name || ''}`.trim()
@@ -429,6 +515,8 @@ function BorrowHistoryModal({
                             </div>
                         )
                     })()}
+                        </>
+                    )}
                 </div>
 
                 {/* Footer */}
@@ -669,6 +757,19 @@ export default function EquipmentTab({ data, isLoading, dateRange: parentDateRan
                                                 {config.label}
                                             </span>
 
+                                            {/* Current borrower pill when borrowed */}
+                                            {effectiveStatus === 'borrowed' && (
+                                                <div className="mt-2.5 pt-2 border-t border-blue-100/60 flex items-center gap-2 bg-blue-50/70 p-2 rounded-lg">
+                                                    <User className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-[10px] text-gray-500 leading-none">ผู้ยืมปัจจุบัน:</p>
+                                                        <p className="text-xs font-bold text-blue-900 truncate mt-0.5">
+                                                            {data?.borrowedEquipmentMap?.[eq.id]?.borrowerName || 'กำลังยืม'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             {/* Usage stats */}
                                             <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-50 text-xs text-gray-500">
                                                 <span>ยืม <span className="font-semibold text-gray-700">{usage.loan_count}</span></span>
@@ -677,8 +778,8 @@ export default function EquipmentTab({ data, isLoading, dateRange: parentDateRan
 
                                             {/* Click hint */}
                                             <div className="flex items-center gap-1 mt-2 text-[10px] text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
-                                                <History className="w-3 h-3" />
-                                                คลิกเพื่อดูประวัติ
+                                                <User className="w-3 h-3" />
+                                                คลิกเพื่อดูรายชื่อผู้ยืมและประวัติ
                                             </div>
                                         </button>
                                     )
