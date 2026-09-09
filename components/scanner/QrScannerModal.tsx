@@ -91,50 +91,74 @@ export default function QrScannerModal({
 
             scannerRef.current = html5QrCode
 
-            await html5QrCode.start(
-                { facingMode: 'environment' },
-                {
-                    fps: 10,
-                    qrbox: (viewfinderWidth, viewfinderHeight) => {
-                        const minEdge = Math.min(viewfinderWidth, viewfinderHeight)
-                        const edge = Math.floor(minEdge * 0.72)
-                        return { width: edge, height: edge }
-                    },
-                    aspectRatio: 1.0
+            const qrConfig = {
+                fps: 10,
+                qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight)
+                    const edge = Math.floor(minEdge * 0.72)
+                    return { width: edge, height: edge }
                 },
-                (decodedText) => {
-                    if (isStoppingRef.current) return
-                    isStoppingRef.current = true
+                aspectRatio: 1.0
+            }
 
-                    playSuccessBeep()
+            const onScanCallback = (decodedText: string) => {
+                if (isStoppingRef.current) return
+                isStoppingRef.current = true
 
-                    // Gracefully stop scanning
-                    if (html5QrCode.isScanning) {
-                        html5QrCode.stop().then(() => {
-                            html5QrCode.clear()
-                            onScanSuccess(decodedText)
-                            onClose()
-                        }).catch(() => {
-                            onScanSuccess(decodedText)
-                            onClose()
-                        })
-                    } else {
+                playSuccessBeep()
+
+                // Gracefully stop scanning
+                if (html5QrCode.isScanning) {
+                    html5QrCode.stop().then(() => {
+                        html5QrCode.clear()
                         onScanSuccess(decodedText)
                         onClose()
-                    }
-                },
-                () => {
-                    // Frame scan failed (normal while pointing)
+                    }).catch(() => {
+                        onScanSuccess(decodedText)
+                        onClose()
+                    })
+                } else {
+                    onScanSuccess(decodedText)
+                    onClose()
                 }
-            )
+            }
+
+            // Strategy 1: Enumerate available cameras
+            let started = false
+            try {
+                const cameras = await Html5Qrcode.getCameras()
+                if (cameras && cameras.length > 0) {
+                    // Look for rear/environment camera (phones/tablets), else first available camera (laptops/webcams)
+                    const backCam = cameras.find(c => {
+                        const label = (c.label || '').toLowerCase()
+                        return label.includes('back') || label.includes('rear') || label.includes('environment')
+                    })
+                    const targetCameraId = backCam ? backCam.id : cameras[0].id
+                    await html5QrCode.start(targetCameraId, qrConfig, onScanCallback, () => {})
+                    started = true
+                }
+            } catch (camErr) {
+                console.warn('[QrScanner] getCameras failed, attempting facingMode:', camErr)
+            }
+
+            // Strategy 2: If enumeration didn't start it, try environment facingMode with user fallback
+            if (!started) {
+                try {
+                    await html5QrCode.start({ facingMode: 'environment' }, qrConfig, onScanCallback, () => {})
+                } catch (envErr) {
+                    console.warn('[QrScanner] Environment camera not found, trying user camera:', envErr)
+                    await html5QrCode.start({ facingMode: 'user' }, qrConfig, onScanCallback, () => {})
+                }
+            }
         } catch (err: any) {
             console.error('[QrScanner] Start error:', err)
-            if (err?.name === 'NotAllowedError' || String(err).includes('Permission')) {
-                setErrorMsg('กรุณาอนุญาตให้เว็บเข้าถึงกล้อง (Camera Permission) ในการตั้งค่าบราวเซอร์')
-            } else if (err?.name === 'NotFoundError') {
-                setErrorMsg('ไม่พบกล้องบนอุปกรณ์นี้ หรือกล้องกำลังถูกใช้งานโดยแอปอื่น')
+            const errStr = String(err)
+            if (err?.name === 'NotAllowedError' || errStr.includes('Permission') || errStr.includes('Permissions policy')) {
+                setErrorMsg('สิทธิ์การเข้าถึงกล้องถูกปฏิเสธ กรุณากดอนุญาตการใช้กล้องในเบราว์เซอร์ หรือสลับไปแท็บ "กรอกรหัส"')
+            } else if (err?.name === 'NotFoundError' || errStr.includes('Requested device not found')) {
+                setErrorMsg('ไม่พบอุปกรณ์กล้องบนเครื่องนี้ กรุณาสลับไปแท็บ "กรอกรหัส" เพื่อระบุรหัสด้วยตนเอง')
             } else {
-                setErrorMsg(err?.message || 'ไม่สามารถเปิดกล้องได้ กรุณาลองใหม่อีกครั้ง')
+                setErrorMsg(err?.message || 'ไม่สามารถเปิดกล้องได้ กรุณาสลับไปแท็บ "กรอกรหัส"')
             }
         } finally {
             setIsStarting(false)

@@ -21,9 +21,9 @@ const securityHeaders = [
         value: 'strict-origin-when-cross-origin',
     },
     {
-        // Disable unused browser features
+        // Disable unused browser features, allow camera for QR scanning on same origin
         key: 'Permissions-Policy',
-        value: 'camera=(), microphone=(), geolocation=(), browsing-topics=()',
+        value: 'camera=(self), microphone=(), geolocation=(), browsing-topics=()',
     },
 ]
 
