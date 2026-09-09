@@ -116,6 +116,9 @@ export async function submitReservationRequest(formData: FormData) {
 
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
+        const timePickupStr = cleanPickupTime ? ` เวลา ${cleanPickupTime.slice(0, 5)} น.` : ''
+        const timeReturnStr = cleanReturnTime ? ` เวลา ${cleanReturnTime.slice(0, 5)} น.` : ''
+
         const message = `
 **📅 คำขอจองอุปกรณ์ใหม่**
 
@@ -126,8 +129,8 @@ export async function submitReservationRequest(formData: FormData) {
 📦 **อุปกรณ์:** ${equipmentName}
 🔖 **รหัส:** #${equipmentNumber}
 
-📅 **วันที่รับ:** ${formatThaiDate(startDate)}
-📅 **วันที่คืน:** ${formatThaiDate(endDate)}
+📅 **วันที่รับ:** ${formatThaiDate(startDate)}${timePickupStr}
+📅 **วันที่คืน:** ${formatThaiDate(endDate)}${timeReturnStr}
 ⏱️ **ระยะเวลา:** ${durationDays} วัน
 
 🔗 [ตรวจสอบคำขอ](${appUrl}/admin/reservations)
@@ -136,13 +139,28 @@ export async function submitReservationRequest(formData: FormData) {
         await notifyAndLog({
             eventKey: 'new_reservation_request',
             discordMessage: message,
+            discordEmbed: {
+                title: '📅 คำขอจองอุปกรณ์ใหม่',
+                description: `มีผู้ใช้ส่งคำขอจองอุปกรณ์ใหม่ กรุณาตรวจสอบและพิจารณาอนุมัติ`,
+                color: 0xEAB308,
+                fields: [
+                    { name: '👤 ผู้จอง', value: `${fullName}\n🏢 ${dept}`, inline: true },
+                    { name: '📦 อุปกรณ์', value: `${equipmentName}\n🔖 #${equipmentNumber}`, inline: true },
+                    { name: '⏱️ ระยะเวลา', value: `${durationDays} วัน`, inline: true },
+                    { name: '📅 วันที่รับ', value: `${formatThaiDate(startDate)}${timePickupStr}`, inline: true },
+                    { name: '📅 วันที่คืน', value: `${formatThaiDate(endDate)}${timeReturnStr}`, inline: true },
+                    { name: '🔗 ตรวจสอบคำขอ', value: `[คลิกเพื่อไปยังหน้ารายการจอง](${appUrl}/admin/reservations)`, inline: false }
+                ],
+                timestamp: new Date().toISOString(),
+                footer: { text: 'ระบบยืม-คืนอุปกรณ์ Notebook System' }
+            },
             discordType: 'reservation',
             welpruUserIds: profile.user_id ? [profile.user_id] : [],
             welpruVariables: {
                 reserver: fullName,
                 equipment: equipmentName,
-                start_date: formatThaiDate(startDate),
-                end_date: formatThaiDate(endDate),
+                start_date: `${formatThaiDate(startDate)}${timePickupStr}`,
+                end_date: `${formatThaiDate(endDate)}${timeReturnStr}`,
             },
             welpruLink: `${appUrl}/my-reservations`,
         })

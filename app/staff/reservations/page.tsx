@@ -9,6 +9,7 @@ import {
     Reservation
 } from '@/lib/reservations'
 import { convertReservationToLoanAction } from '@/app/reservations/actions'
+import { notifyReservationStatusChange } from '@/app/notifications/actions'
 import { useState, useMemo } from 'react'
 import StaffPageHeader from '@/components/staff/StaffPageHeader'
 import { formatThaiDate } from '@/lib/formatThaiDate'
@@ -75,6 +76,7 @@ export default function StaffReservationsPage() {
         if (result.success) {
             toast.success('อนุมัติการจองเรียบร้อยแล้ว')
             queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
+            await notifyReservationStatusChange(id, 'approved', userId)
         } else {
             toast.error(result.error || 'เกิดข้อผิดพลาด')
         }
@@ -89,12 +91,15 @@ export default function StaffReservationsPage() {
         setProcessing(rejectModal.id)
         const result = await rejectReservation(rejectModal.id, rejectReason, rejectModal.userId)
         setProcessing(null)
+        const rejectedId = rejectModal.id
+        const rejectedUserId = rejectModal.userId
         setRejectModal(null)
         setRejectReason('')
 
         if (result.success) {
             toast.success('ปฏิเสธการจองเรียบร้อยแล้ว')
             queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
+            await notifyReservationStatusChange(rejectedId, 'rejected', rejectedUserId)
         } else {
             toast.error(result.error || 'เกิดข้อผิดพลาด')
         }
@@ -108,6 +113,7 @@ export default function StaffReservationsPage() {
         if (result.success) {
             toast.success('เปลี่ยนสถานะเป็น "พร้อมรับ" แล้ว')
             queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
+            await notifyReservationStatusChange(id, 'ready', userId)
         } else {
             toast.error(result.error || 'เกิดข้อผิดพลาด')
         }

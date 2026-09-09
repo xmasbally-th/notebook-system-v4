@@ -174,3 +174,34 @@ export async function updateSystemConfigAction(updates: any) {
     }
 }
 
+export async function triggerDailyAutomationAction() {
+    try {
+        const supabase = await createClient()
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (!session?.user?.id) {
+            return { success: false, error: 'Unauthorized' }
+        }
+
+        // Verify admin
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single()
+
+        if (profile?.role !== 'admin') {
+            return { success: false, error: 'Permission denied' }
+        }
+
+        const { runDailyAutomation } = await import('@/lib/cron/dailyAutomation')
+        const result = await runDailyAutomation()
+
+        revalidatePath('/admin/settings')
+        return { success: true, result }
+    } catch (error: any) {
+        console.error('triggerDailyAutomationAction Error:', error)
+        return { success: false, error: error?.message || 'Failed to run daily automation' }
+    }
+}
+

@@ -19,7 +19,10 @@ export default async function PendingApprovalPage() {
         .eq('id', user.id)
         .single()
     
-    if (!profile) redirect('/register/complete-profile')
+    // If profile doesn't exist or is missing essential details (department, phone, or student/staff id),
+    // redirect to complete profile so user can submit their details and notify admin.
+    const isProfileIncomplete = !profile || !profile.department_id || !profile.phone_number || !profile.user_id
+    if (isProfileIncomplete) redirect('/register/complete-profile')
     if (profile.status === 'approved') redirect('/')
     
     return <PendingApprovalClient initialProfile={profile} />

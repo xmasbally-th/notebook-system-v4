@@ -9,6 +9,7 @@ import { useSystemConfig } from '@/hooks/useSystemConfig'
 import { X, Trash2, ShoppingCart, Send, Calendar, Clock, Loader2, AlertCircle, CheckCircle, Bookmark, AlertTriangle, RefreshCw, Star } from 'lucide-react'
 import { createReservation } from '@/lib/reservations'
 import { submitLoanRequest } from '@/app/equipment/actions'
+import { submitReservationRequest } from '@/app/reservations/actions'
 import { supabase } from '@/lib/supabase/client'
 
 interface CartDrawerProps {
@@ -382,16 +383,17 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     }
                 }
             } else {
-                // Submit reservations
+                // Submit reservations with notification & validation
                 for (const item of items) {
-                    const result = await createReservation(
-                        item.id,
-                        reserveStartDate,
-                        reserveEndDate,
-                        reservePickupTime || undefined,
-                        reserveReturnTime || undefined
-                    )
-                    if (!result.success) {
+                    const formData = new FormData()
+                    formData.set('equipmentId', item.id)
+                    formData.set('startDate', reserveStartDate)
+                    formData.set('endDate', reserveEndDate)
+                    if (reservePickupTime) formData.set('pickupTime', reservePickupTime)
+                    if (reserveReturnTime) formData.set('returnTime', reserveReturnTime)
+
+                    const result = await submitReservationRequest(formData)
+                    if (result?.error) {
                         throw new Error(result.error || `จองอุปกรณ์ ${item.name} ไม่สำเร็จ`)
                     }
                 }
@@ -403,7 +405,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             // Redirect after short delay
             setTimeout(() => {
                 onClose()
-                router.push('/my-loans')
+                router.push(mode === 'reserve' ? '/my-reservations' : '/my-loans')
             }, 2000)
 
         } catch (err: any) {

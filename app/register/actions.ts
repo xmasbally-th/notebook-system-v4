@@ -116,26 +116,53 @@ export async function notifyNewRegistration(userId: string) {
 
     const { data: profile } = await (supabase as any)
         .from('profiles')
-        .select('first_name, last_name, email, user_id, departments(name)')
+        .select('first_name, last_name, email, user_id, phone_number, user_type, departments(name)')
         .eq('id', userId)
         .single()
 
     if (profile) {
         const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
-        const dept = profile.departments?.name || 'N/A'
-        const userIdCode = profile.user_id || 'N/A'
+        const dept = profile.departments?.name || 'ไม่ระบุ'
+        const userIdCode = profile.user_id || 'ไม่ระบุ'
 
-        const discordMessage = `
-**🔔 New User Registration**
-**Name:** ${fullName}
-**Email:** ${profile.email}
-**Department:** ${dept}
-**Status:** Pending Approval
+        const userTypeThai: Record<string, string> = {
+            student: 'นักศึกษา',
+            lecturer: 'อาจารย์',
+            staff: 'บุคลากร'
+        }
+        const userTypeLabel = userTypeThai[profile.user_type] || profile.user_type || 'ผู้ใช้งาน'
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
+        const discordEmbed = {
+            title: '🔔 มีผู้ลงทะเบียนสมาชิกใหม่ (New Registration)',
+            description: `มีผู้ใช้ใหม่ลงทะเบียนและรอการอนุมัติสิทธิ์เข้าใช้งานระบบ`,
+            color: 0xEAB308, // Yellow/Amber
+            fields: [
+                { name: '👤 ชื่อ-นามสกุล', value: fullName || '-', inline: true },
+                { name: '🎓 ประเภท / รหัส', value: `${userTypeLabel} (${userIdCode})`, inline: true },
+                { name: '🏢 สังกัด / สาขาวิชา', value: dept, inline: false },
+                { name: '📞 เบอร์โทรศัพท์', value: profile.phone_number || '-', inline: true },
+                { name: '📧 อีเมล', value: profile.email || '-', inline: true },
+                { name: '🔗 จัดการผู้ใช้งาน', value: `[คลิกเพื่อตรวจสอบและอนุมัติ](${appUrl}/admin/users)`, inline: false }
+            ],
+            timestamp: new Date().toISOString(),
+            footer: { text: 'ระบบยืม-คืนอุปกรณ์ Notebook System' }
+        }
+
+        const fallbackMessage = `
+**🔔 มีผู้ลงทะเบียนสมาชิกใหม่ (New Registration)**
+👤 **ชื่อ-นามสกุล:** ${fullName}
+🎓 **ประเภท:** ${userTypeLabel} (#${userIdCode})
+🏢 **สังกัด:** ${dept}
+📞 **เบอร์โทร:** ${profile.phone_number || '-'}
+📧 **อีเมล:** ${profile.email}
+🔗 [ตรวจสอบและอนุมัติ](${appUrl}/admin/users)
         `.trim()
 
         await notifyAndLog({
             eventKey: 'new_registration',
-            discordMessage,
+            discordMessage: fallbackMessage,
+            discordEmbed,
             discordType: 'auth',
             welpruVariables: {
                 name: fullName,

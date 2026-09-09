@@ -99,7 +99,7 @@ export default function AdminReservationsPage() {
         if (result.success) {
             toast.success('อนุมัติการจองเรียบร้อยแล้ว')
             queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
-            notifyReservationStatusChange(id, 'approved')
+            await notifyReservationStatusChange(id, 'approved', userId)
         } else {
             toast.error(result.error || 'เกิดข้อผิดพลาด')
         }
@@ -120,7 +120,7 @@ export default function AdminReservationsPage() {
         if (result.success) {
             toast.success('ปฏิเสธการจองเรียบร้อยแล้ว')
             queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
-            notifyReservationStatusChange(rejectModal.id, 'rejected')
+            await notifyReservationStatusChange(rejectModal.id, 'rejected', rejectModal.userId)
         } else {
             toast.error(result.error || 'เกิดข้อผิดพลาด')
         }
@@ -134,7 +134,7 @@ export default function AdminReservationsPage() {
         if (result.success) {
             toast.success('เปลี่ยนสถานะเป็น "พร้อมรับ" แล้ว')
             queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
-            notifyReservationStatusChange(id, 'ready')
+            await notifyReservationStatusChange(id, 'ready', userId)
         } else {
             toast.error(result.error || 'เกิดข้อผิดพลาด')
         }
