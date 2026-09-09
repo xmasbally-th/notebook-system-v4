@@ -217,7 +217,7 @@ export default function EquipmentQrPrintPage() {
                                             : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                                     }`}
                                 >
-                                    กะทัดรัด (A4: 3 แถว)
+                                    กะทัดรัด (A4: 3 คอลัมน์)
                                 </button>
                                 <button
                                     type="button"
@@ -228,7 +228,7 @@ export default function EquipmentQrPrintPage() {
                                             : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                                     }`}
                                 >
-                                    มาตรฐาน (A4: 2 แถว)
+                                    มาตรฐาน (A4: 2 คอลัมน์, QR ใหญ่)
                                 </button>
                             </div>
                         </div>
@@ -245,7 +245,7 @@ export default function EquipmentQrPrintPage() {
                                     </>
                                 ) : (
                                     <>
-                                        <strong>แบบมาตรฐานสำหรับ A4:</strong> จัดวาง 2 คอลัมน์ x 5 แถว (~10-12 ดวง/แผ่น A4) ขนาดใหญ่พร้อมชื่อระบบ
+                                        <strong>แบบมาตรฐานสำหรับ A4:</strong> จัดวาง 2 คอลัมน์ (~10-12 ดวง/แผ่น A4) QR Code ขนาดใหญ่พิเศษ ชัดเจน สแกนติดง่าย มีเฉพาะ QR, รหัส และชื่ออุปกรณ์
                                     </>
                                 )}
                             </span>
@@ -400,43 +400,36 @@ export default function EquipmentQrPrintPage() {
                                     )}
                                 </div>
 
-                                {/* Sticker Header */}
-                                <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-gray-200 text-gray-800 pr-7 print:pr-0">
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="text-sm">💻</span>
-                                        <span className="text-[11px] font-bold tracking-wider uppercase text-gray-700">
-                                            Notebook System Service
-                                        </span>
-                                    </div>
-                                    <span className="text-[10px] px-2 py-0.5 rounded bg-gray-100 font-medium text-gray-600 print:border print:border-gray-400">
-                                        {eq.equipment_types?.name || 'ครุภัณฑ์'}
-                                    </span>
-                                </div>
-
-                                {/* Sticker Body */}
-                                <div className="flex items-center gap-3.5">
-                                    {/* High Resolution QR Code */}
-                                    <div className="p-1.5 bg-white rounded-xl border border-gray-200 shadow-xs print:border-black print:shadow-none shrink-0">
+                                {/* Standard Layout: Strictly QR CODE + รหัสครุภัณฑ์ + ชื่ออุปกรณ์ (Large size matching compact layout) */}
+                                <div className="flex items-center gap-4 h-full pr-4 print:pr-0">
+                                    {/* Large High Resolution QR Code */}
+                                    <div className="p-1 bg-white rounded-xl border border-gray-200 print:border-black shrink-0 flex items-center justify-center shadow-2xs print:shadow-none">
                                         <QRCodeSVG
                                             value={targetUrl}
-                                            size={104}
+                                            size={132}
                                             level="L"
                                             includeMargin={true}
                                         />
                                     </div>
 
-                                    {/* Equipment Info */}
-                                    <div className="min-w-0 flex-1 space-y-1 text-left">
-                                        <span className="text-[10px] text-gray-500 font-medium block leading-none">รหัสครุภัณฑ์</span>
-                                        <h3 className="text-sm sm:text-base font-extrabold font-mono text-gray-900 print:text-black leading-tight break-all">
-                                            {formattedEquipmentNumber}
-                                        </h3>
-                                        <p className="text-xs font-semibold text-indigo-700 print:text-black line-clamp-2">
-                                            {eq.name}
-                                        </p>
-                                        <p className="text-[10px] text-gray-400 pt-0.5 leading-snug">
-                                            📱 สแกนกล้องเพื่อยืม-คืนด่วน
-                                        </p>
+                                    {/* Equipment Info: รหัสครุภัณฑ์ & ชื่ออุปกรณ์ */}
+                                    <div className="min-w-0 flex-1 flex flex-col justify-center gap-2 text-left">
+                                        <div>
+                                            <span className="text-[10px] sm:text-xs font-semibold text-gray-500 print:text-gray-700 uppercase tracking-wider block leading-none mb-1">
+                                                รหัสครุภัณฑ์
+                                            </span>
+                                            <span className="text-base sm:text-lg print:text-sm font-extrabold font-mono text-gray-900 print:text-black leading-tight block break-all">
+                                                {formattedEquipmentNumber}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-[10px] sm:text-xs font-semibold text-gray-500 print:text-gray-700 uppercase tracking-wider block leading-none mb-1">
+                                                ชื่ออุปกรณ์
+                                            </span>
+                                            <p className="text-xs sm:text-sm print:text-xs font-semibold text-gray-800 print:text-black leading-snug line-clamp-2">
+                                                {eq.name}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -515,7 +508,8 @@ export default function EquipmentQrPrintPage() {
                         overflow: hidden !important;
                     }
                     .sticker-card-standard {
-                        min-height: 44mm !important;
+                        height: 48mm !important;
+                        max-height: 48mm !important;
                         padding: 3mm 4mm !important;
                         overflow: hidden !important;
                     }
