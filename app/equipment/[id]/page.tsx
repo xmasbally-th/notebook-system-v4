@@ -14,8 +14,16 @@ const STATUS_CONFIG = {
     retired: { label: 'ปลดระวาง', color: 'bg-gray-100 text-gray-500', icon: AlertTriangle },
 }
 
-export default async function EquipmentDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EquipmentDetailsPage({
+    params,
+    searchParams
+}: {
+    params: Promise<{ id: string }>,
+    searchParams?: Promise<{ mode?: string }>
+}) {
     const { id } = await params
+    const resolvedSearchParams = searchParams ? await searchParams : {}
+    const isCounterMode = resolvedSearchParams.mode === 'counter'
     const supabase = await createClient()
 
     // 1. Fetch Equipment with equipment_types
@@ -92,7 +100,8 @@ export default async function EquipmentDetailsPage({ params }: { params: Promise
                                     canBorrow ? (
                                         <BorrowTabs
                                             equipmentId={item.id}
-                                            loanForm={<LoanRequestForm equipmentId={item.id} />}
+                                            isCounterMode={isCounterMode}
+                                            loanForm={<LoanRequestForm equipmentId={item.id} isCounterMode={isCounterMode} />}
                                             reservationForm={<ReservationForm equipmentId={item.id} />}
                                         />
                                     ) : (

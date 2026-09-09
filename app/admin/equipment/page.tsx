@@ -10,7 +10,7 @@ import {
     Plus, Edit, Trash2, Search, Package,
     CheckCircle, Users, Wrench, Archive,
     AlertTriangle, Filter, Copy, Layers,
-    Calendar
+    Calendar, Printer
 } from 'lucide-react'
 import BatchAddModal from '@/components/admin/BatchAddModal'
 import { getPaginatedEquipment, deleteEquipmentAction } from './actions'
@@ -195,17 +195,24 @@ export default function AdminEquipmentList() {
                 <div className="p-4 border-b border-gray-200 space-y-4">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <h2 className="text-lg font-semibold text-gray-900">รายการอุปกรณ์</h2>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
+                            <Link
+                                href="/admin/equipment/qr-print"
+                                className="flex items-center gap-2 bg-indigo-600 text-white px-3.5 py-2 rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium shadow-sm"
+                            >
+                                <Printer className="w-4 h-4" />
+                                <span>พิมพ์สติกเกอร์ QR</span>
+                            </Link>
                             <button
                                 onClick={() => setShowBatchModal(true)}
-                                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium shadow-sm"
+                                className="flex items-center gap-2 bg-green-600 text-white px-3.5 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium shadow-sm"
                             >
                                 <Layers className="w-4 h-4" />
                                 เพิ่มหลายตัว
                             </button>
                             <Link
                                 href="/admin/equipment/new"
-                                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
+                                className="flex items-center gap-2 bg-blue-600 text-white px-3.5 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
                             >
                                 <Plus className="w-4 h-4" />
                                 เพิ่มอุปกรณ์

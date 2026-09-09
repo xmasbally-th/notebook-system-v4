@@ -6,10 +6,11 @@ import { useState, useMemo } from 'react'
 import StaffPageHeader from '@/components/staff/StaffPageHeader'
 import {
     RotateCcw, CheckCircle, AlertTriangle, User, Package,
-    Calendar, Search, ClipboardCheck
+    Calendar, Search, ClipboardCheck, Camera
 } from 'lucide-react'
 import { useToast } from '@/components/ui/toast'
 import { returnLoan } from './actions'
+import QrScannerModal from '@/components/scanner/QrScannerModal'
 
 type ConditionType = 'good' | 'damaged' | 'missing_parts'
 
@@ -125,6 +126,30 @@ export default function StaffReturnsPage() {
         }
     }
 
+    const [showScanner, setShowScanner] = useState(false)
+
+    const handleScanCode = (code: string) => {
+        let cleanCode = code.trim()
+        const urlMatch = cleanCode.match(/\/equipment\/([0-9a-fA-F-]{36})/)
+        if (urlMatch && urlMatch[1]) {
+            cleanCode = urlMatch[1]
+        }
+        const stripped = cleanCode.replace(/^#/, '').toLowerCase()
+
+        const matchedLoan = activeLoans?.find((loan: any) => {
+            return (
+                loan.equipment?.id === cleanCode ||
+                (loan.equipment?.equipment_number || '').toLowerCase() === stripped
+            )
+        })
+
+        if (matchedLoan) {
+            handleReturnClick(matchedLoan)
+        } else {
+            toast.error(`ไม่พบรายการยืมที่กำลังใช้งานของอุปกรณ์ "${cleanCode}"`)
+        }
+    }
+
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('th-TH', {
             day: 'numeric',
@@ -153,18 +178,26 @@ export default function StaffReturnsPage() {
     return (
         <div className="space-y-6">
             <StaffPageHeader title="รับคืนอุปกรณ์" subtitle="บันทึกการส่งคืนอุปกรณ์และตรวจสอบสภาพ" />
-            {/* Search */}
-            <div className="mb-6">
-                <div className="relative max-w-md">
+            {/* Search and Scan Toolbar */}
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between mb-6">
+                <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                         type="text"
                         placeholder="ค้นหาผู้ยืม หรืออุปกรณ์..."
-                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm bg-white"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
+                <button
+                    type="button"
+                    onClick={() => setShowScanner(true)}
+                    className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm hover:shadow transition-all whitespace-nowrap"
+                >
+                    <Camera className="w-4 h-4" />
+                    <span>สแกน QR รับคืน</span>
+                </button>
             </div>
 
             {/* Active Loans List */}
@@ -396,6 +429,14 @@ export default function StaffReturnsPage() {
                     </div>
                 </div>
             )}
+
+            {/* QR Scanner Modal */}
+            <QrScannerModal
+                isOpen={showScanner}
+                onClose={() => setShowScanner(false)}
+                onScanSuccess={handleScanCode}
+                title="สแกน QR รับคืนอุปกรณ์"
+            />
         </div>
     )
 }

@@ -325,3 +325,28 @@ export async function deleteEquipmentAction(id: string) {
 
     return { success: true }
 }
+
+/**
+ * Fetch all equipment for QR sticker generation and printing
+ */
+export async function getAllEquipmentForQrPrint(params?: { type?: string; status?: string }) {
+    const auth = await requireStaff()
+    if (auth.error) return { error: auth.error }
+
+    const supabase = await createClient()
+    let query = supabase
+        .from('equipment')
+        .select('id, name, equipment_number, status, equipment_types(name, icon)')
+        .order('equipment_number', { ascending: true })
+
+    if (params?.type && params.type !== 'all') {
+        query = query.eq('equipment_type_id', params.type)
+    }
+    if (params?.status && params.status !== 'all') {
+        query = query.eq('status', params.status)
+    }
+
+    const { data, error } = await query
+    if (error) return { error: error.message }
+    return { data }
+}

@@ -16,7 +16,8 @@ import {
     User,
     UserCheck,
     CalendarPlus,
-    BookOpen
+    BookOpen,
+    QrCode
 } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
@@ -33,6 +34,7 @@ function getSupabaseClient() {
 
 const menuItems = [
     { href: '/staff', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/staff/counter', label: 'จุดบริการเคาน์เตอร์', icon: QrCode },
     { href: '/staff/users', label: 'อนุมัติผู้ใช้งาน', icon: UserCheck },
     { href: '/staff/loans', label: 'จัดการคำขอยืม', icon: ClipboardList },
     { href: '/staff/reservations', label: 'จัดการการจอง', icon: CalendarPlus },

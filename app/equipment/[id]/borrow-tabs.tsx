@@ -7,10 +7,11 @@ interface BorrowTabsProps {
     equipmentId: string
     loanForm: React.ReactNode
     reservationForm: React.ReactNode
+    isCounterMode?: boolean
 }
 
-export default function BorrowTabs({ equipmentId, loanForm, reservationForm }: BorrowTabsProps) {
-    const [activeTab, setActiveTab] = useState<'loan' | 'reservation'>('loan')
+export default function BorrowTabs({ equipmentId, loanForm, reservationForm, isCounterMode }: BorrowTabsProps) {
+    const [activeTab, setActiveTab] = useState<'loan' | 'reservation'>(isCounterMode ? 'loan' : 'loan')
 
     return (
         <div className="space-y-4">

@@ -21,9 +21,10 @@ import {
 
 interface LoanRequestFormProps {
     equipmentId: string
+    isCounterMode?: boolean
 }
 
-export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
+export default function LoanRequestForm({ equipmentId, isCounterMode }: LoanRequestFormProps) {
     const router = useRouter()
     const { data: profile } = useProfile()
     const userType = profile?.user_type || 'student'
@@ -182,6 +183,23 @@ export default function LoanRequestForm({ equipmentId }: LoanRequestFormProps) {
 
     return (
         <div id="borrow-form" className="space-y-6">
+            {/* Counter Mode Badge */}
+            {isCounterMode && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-center gap-3">
+                    <div className="p-2 bg-emerald-100 rounded-lg text-emerald-700 shrink-0">
+                        <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <p className="text-xs font-semibold text-emerald-900">
+                            📍 ทำรายการยืมด่วน ณ จุดบริการเคาน์เตอร์
+                        </p>
+                        <p className="text-[11px] text-emerald-700">
+                            สแกนจาก QR Code บนตัวเครื่องสำเร็จ เริ่มยืมเวลาปัจจุบันทันที กรุณาระบุวันและเวลาส่งคืนที่ต้องการ
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Rules Section */}
             {config && (
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
