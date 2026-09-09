@@ -80,7 +80,6 @@ function UserBorrowHistoryModal({
                     returned_at,
                     return_condition,
                     return_notes,
-                    purpose,
                     equipment:equipment_id(name, equipment_number, brand, model, equipment_type:equipment_types(name, icon))
                 `)
                 .eq('user_id', user.id)
@@ -268,13 +267,7 @@ function UserBorrowHistoryModal({
                                                         )}
                                                     </div>
 
-                                                    {record.purpose && (
-                                                        <p className="text-xs text-gray-500 mt-2 flex items-start gap-1">
-                                                            <FileText className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
-                                                            <span className="font-medium text-gray-600">วัตถุประสงค์:</span> {record.purpose}
-                                                        </p>
-                                                    )}
-
+                                                    {/* Return Notes */}
                                                     {record.return_notes && (
                                                         <p className="text-xs text-amber-700 mt-1.5 flex items-start gap-1 bg-amber-50/60 px-2 py-1 rounded border border-amber-100">
                                                             <span className="font-semibold">หมายเหตุการคืน:</span> {record.return_notes}

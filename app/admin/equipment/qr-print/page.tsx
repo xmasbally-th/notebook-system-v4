@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
-import { ArrowLeft, Printer, CheckSquare, Square, Filter, Loader2, Sparkles, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, Printer, CheckSquare, Square, Filter, Loader2, Sparkles, SlidersHorizontal, Search, X, Tag } from 'lucide-react'
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { getAllEquipmentForQrPrint } from '../actions'
 import { getSupabaseCredentials } from '@/lib/supabase-helpers'
@@ -13,7 +13,8 @@ export default function EquipmentQrPrintPage() {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
     const [selectedType, setSelectedType] = useState('all')
     const [selectedStatus, setSelectedStatus] = useState('all')
-    const [stickerSize, setStickerSize] = useState<'standard' | 'compact'>('standard')
+    const [searchQuery, setSearchQuery] = useState('')
+    const [stickerSize, setStickerSize] = useState<'compact' | 'standard'>('compact')
     const [originUrl, setOriginUrl] = useState('')
 
     useEffect(() => {
@@ -50,12 +51,28 @@ export default function EquipmentQrPrintPage() {
         }
     })
 
-    // Auto-select all when loaded
+    // Auto-select all when equipment list is loaded
     useEffect(() => {
         if (equipmentList.length > 0) {
             setSelectedIds(new Set(equipmentList.map(e => e.id)))
         }
     }, [equipmentList])
+
+    // Filter equipment list by search keyword
+    const filteredEquipment = useMemo(() => {
+        if (!searchQuery.trim()) return equipmentList
+        const query = searchQuery.toLowerCase().trim()
+        return equipmentList.filter((eq: any) => {
+            const nameMatch = eq.name?.toLowerCase().includes(query)
+            const numberMatch = eq.equipment_number?.toLowerCase().includes(query)
+            return Boolean(nameMatch || numberMatch)
+        })
+    }, [equipmentList, searchQuery])
+
+    // Currently selected equipment list (for printing and badge count)
+    const selectedEquipment = useMemo(() => {
+        return equipmentList.filter(e => selectedIds.has(e.id))
+    }, [equipmentList, selectedIds])
 
     const toggleSelect = (id: string) => {
         const next = new Set(selectedIds)
@@ -64,43 +81,47 @@ export default function EquipmentQrPrintPage() {
         setSelectedIds(next)
     }
 
-    const selectAll = () => {
-        setSelectedIds(new Set(equipmentList.map(e => e.id)))
+    const selectAllFiltered = () => {
+        setSelectedIds(prev => {
+            const next = new Set(prev)
+            filteredEquipment.forEach(e => next.add(e.id))
+            return next
+        })
     }
 
-    const clearAll = () => {
-        setSelectedIds(new Set())
+    const clearAllFiltered = () => {
+        setSelectedIds(prev => {
+            const next = new Set(prev)
+            filteredEquipment.forEach(e => next.delete(e.id))
+            return next
+        })
     }
 
     const handlePrint = () => {
         window.print()
     }
 
-    const selectedEquipment = useMemo(() => {
-        return equipmentList.filter(e => selectedIds.has(e.id))
-    }, [equipmentList, selectedIds])
-
     return (
-        <div className="space-y-6 max-w-6xl mx-auto pb-16">
+        <div className="space-y-6 max-w-6xl mx-auto pb-16 print:max-w-none print:m-0 print:p-0 print:space-y-0">
             {/* Screen Header (Hidden on print) */}
             <div className="print:hidden">
                 <div className="flex items-center gap-2 mb-4">
                     <Link
                         href="/admin/equipment"
-                        className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 bg-white border border-gray-200 px-3 py-1.5 rounded-lg shadow-sm transition-all"
+                        className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 bg-white border border-gray-200 px-3 py-1.5 rounded-lg shadow-xs transition-all hover:bg-gray-50"
                     >
                         <ArrowLeft className="w-3.5 h-3.5" />
                         <span>กลับหน้ารายการอุปกรณ์</span>
                     </Link>
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-xs">
                     <div>
                         <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                             <span>🖨️ พิมพ์สติกเกอร์ QR Code ประจำอุปกรณ์</span>
                         </h1>
                         <p className="text-sm text-gray-500 mt-1">
-                            สร้างสติกเกอร์ QR Code พร้อมเลขครุภัณฑ์ สำหรับพิมพ์ติดบนตัวเครื่องโน้ตบุ๊ค
+                            สร้างสติกเกอร์ QR Code พร้อมรหัสครุภัณฑ์ สำหรับพิมพ์ติดบนตัวเครื่องหรืออุปกรณ์
                         </p>
                     </div>
 
@@ -108,7 +129,7 @@ export default function EquipmentQrPrintPage() {
                         type="button"
                         onClick={handlePrint}
                         disabled={selectedEquipment.length === 0}
-                        className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all font-medium text-sm disabled:opacity-50 disabled:bg-gray-400"
+                        className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all font-medium text-sm disabled:opacity-50 disabled:bg-gray-400 cursor-pointer disabled:cursor-not-allowed"
                     >
                         <Printer className="w-4 h-4" />
                         <span>สั่งพิมพ์สติกเกอร์ ({selectedEquipment.length} ชิ้น)</span>
@@ -116,8 +137,34 @@ export default function EquipmentQrPrintPage() {
                 </div>
 
                 {/* Filter and Print Settings Toolbar */}
-                <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm mt-4 space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-xs mt-4 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* Search Input */}
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1">
+                                ค้นหาอุปกรณ์
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="ชื่ออุปกรณ์, รหัสครุภัณฑ์..."
+                                    className="w-full text-xs sm:text-sm border border-gray-200 rounded-xl pl-9 pr-8 py-2 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                                />
+                                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                {searchQuery && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSearchQuery('')}
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-md"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
                         {/* Equipment Type Filter */}
                         <div>
                             <label className="block text-xs font-semibold text-gray-700 mb-1">
@@ -126,7 +173,7 @@ export default function EquipmentQrPrintPage() {
                             <select
                                 value={selectedType}
                                 onChange={(e) => setSelectedType(e.target.value)}
-                                className="w-full text-xs sm:text-sm border border-gray-200 rounded-xl px-3 py-2 bg-gray-50/50"
+                                className="w-full text-xs sm:text-sm border border-gray-200 rounded-xl px-3 py-2 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                             >
                                 <option value="all">ทุกประเภท ({equipmentTypes.length})</option>
                                 {equipmentTypes.map((t: any) => (
@@ -145,7 +192,7 @@ export default function EquipmentQrPrintPage() {
                             <select
                                 value={selectedStatus}
                                 onChange={(e) => setSelectedStatus(e.target.value)}
-                                className="w-full text-xs sm:text-sm border border-gray-200 rounded-xl px-3 py-2 bg-gray-50/50"
+                                className="w-full text-xs sm:text-sm border border-gray-200 rounded-xl px-3 py-2 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                             >
                                 <option value="all">ทุกสถานะ</option>
                                 <option value="ready">พร้อมใช้งาน (ready)</option>
@@ -155,7 +202,7 @@ export default function EquipmentQrPrintPage() {
                             </select>
                         </div>
 
-                        {/* Sticker Size Layout */}
+                        {/* Sticker Size Layout Toggle */}
                         <div>
                             <label className="block text-xs font-semibold text-gray-700 mb-1">
                                 รูปแบบขนาดสติกเกอร์
@@ -163,52 +210,73 @@ export default function EquipmentQrPrintPage() {
                             <div className="grid grid-cols-2 gap-2 text-xs font-medium">
                                 <button
                                     type="button"
+                                    onClick={() => setStickerSize('compact')}
+                                    className={`py-2 px-2.5 rounded-xl border text-center transition-all ${
+                                        stickerSize === 'compact'
+                                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-semibold shadow-xs'
+                                            : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    กะทัดรัด (มินิมอล)
+                                </button>
+                                <button
+                                    type="button"
                                     onClick={() => setStickerSize('standard')}
-                                    className={`py-2 px-3 rounded-xl border text-center transition-all ${
+                                    className={`py-2 px-2.5 rounded-xl border text-center transition-all ${
                                         stickerSize === 'standard'
-                                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-semibold'
+                                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-semibold shadow-xs'
                                             : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                                     }`}
                                 >
                                     มาตรฐาน (โน้ตบุ๊ค)
                                 </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setStickerSize('compact')}
-                                    className={`py-2 px-3 rounded-xl border text-center transition-all ${
-                                        stickerSize === 'compact'
-                                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-semibold'
-                                            : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
-                                    }`}
-                                >
-                                    กะทัดรัด (อุปกรณ์เล็ก)
-                                </button>
                             </div>
                         </div>
                     </div>
 
+                    {/* Quick description for current size mode */}
+                    <div className="text-[11px] text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg flex items-center justify-between">
+                        <span>
+                            {stickerSize === 'compact' ? (
+                                <>✨ <strong>แบบกะทัดรัด:</strong> มีเฉพาะ QR Code, รหัสครุภัณฑ์, และชื่ออุปกรณ์ (ตัดข้อมูลซ้ำ เหมาะกับอุปกรณ์ขนาดเล็ก/สติกเกอร์ 3 แถว)</>
+                            ) : (
+                                <>💻 <strong>แบบมาตรฐาน:</strong> ขนาดใหญ่สำหรับโน้ตบุ๊ค พร้อมโลโก้ระบบ (สติกเกอร์ 2 แถว)</>
+                            )}
+                        </span>
+                        <span className="font-mono text-gray-400">
+                            {stickerSize === 'compact' ? 'พิมพ์ 3 คอลัมน์/หน้า' : 'พิมพ์ 2 คอลัมน์/หน้า'}
+                        </span>
+                    </div>
+
                     {/* Selection Controls */}
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100 text-xs text-gray-600">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-3 border-t border-gray-100 text-xs text-gray-600 gap-2">
                         <div className="flex items-center gap-3">
                             <button
                                 type="button"
-                                onClick={selectAll}
-                                className="text-indigo-600 hover:text-indigo-800 font-medium hover:underline"
+                                onClick={selectAllFiltered}
+                                className="text-indigo-600 hover:text-indigo-800 font-medium hover:underline cursor-pointer"
                             >
-                                เลือกทั้งหมด ({equipmentList.length})
+                                เลือกทั้งหมด{searchQuery ? 'ในผลค้นหา' : ''} ({filteredEquipment.length})
                             </button>
                             <span>•</span>
                             <button
                                 type="button"
-                                onClick={clearAll}
-                                className="text-gray-500 hover:text-gray-700 hover:underline"
+                                onClick={clearAllFiltered}
+                                className="text-gray-500 hover:text-gray-700 hover:underline cursor-pointer"
                             >
                                 ล้างการเลือก
                             </button>
                         </div>
-                        <span className="font-medium text-gray-700">
-                            เลือกพิมพ์ {selectedEquipment.length} จาก {equipmentList.length} ชิ้น
-                        </span>
+                        <div className="flex items-center gap-2 font-medium text-gray-700">
+                            <span>
+                                เลือกพิมพ์ {selectedEquipment.length} จากทั้งหมด {equipmentList.length} ชิ้น
+                            </span>
+                            {searchQuery && (
+                                <span className="text-gray-400 text-[11px]">
+                                    (พบ {filteredEquipment.length} รายการที่ตรงกับการค้นหา)
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -219,39 +287,106 @@ export default function EquipmentQrPrintPage() {
                     <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
                     <p className="text-sm text-gray-500">กำลังโหลดรายการอุปกรณ์...</p>
                 </div>
-            ) : selectedEquipment.length === 0 ? (
+            ) : filteredEquipment.length === 0 ? (
                 <div className="p-12 text-center bg-white rounded-2xl border border-gray-100 text-gray-400">
-                    <p className="text-sm">ไม่มีอุปกรณ์ที่เลือกสำหรับพิมพ์สติกเกอร์</p>
+                    <p className="text-sm">
+                        {searchQuery ? 'ไม่พบอุปกรณ์ที่ตรงกับการค้นหา' : 'ไม่มีอุปกรณ์ในหมวดหมู่ที่เลือก'}
+                    </p>
                 </div>
             ) : (
                 <div
                     id="printable-stickers-grid"
                     className={`grid gap-3 sm:gap-4 print:gap-2 ${
-                        stickerSize === 'standard'
-                            ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 print:grid-cols-2'
-                            : 'grid-cols-1 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 print:grid-cols-3'
+                        stickerSize === 'compact'
+                            ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 print:grid-cols-3'
+                            : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 print:grid-cols-2'
                     }`}
                 >
-                    {selectedEquipment.map((eq: any) => {
+                    {filteredEquipment.map((eq: any) => {
                         const isSelected = selectedIds.has(eq.id)
                         const targetUrl = `${originUrl || 'https://notebook-system.app'}/equipment/${eq.id}?mode=counter`
+                        const formattedEquipmentNumber = eq.equipment_number?.startsWith('#')
+                            ? eq.equipment_number
+                            : `#${eq.equipment_number}`
 
+                        // If not selected, hide from print media completely
+                        if (stickerSize === 'compact') {
+                            return (
+                                <div
+                                    key={eq.id}
+                                    onClick={() => toggleSelect(eq.id)}
+                                    className={`
+                                        relative bg-white rounded-xl p-3 border transition-all cursor-pointer select-none
+                                        break-inside-avoid print:break-inside-avoid print:cursor-default
+                                        ${isSelected
+                                            ? 'border-indigo-300 ring-2 ring-indigo-500/10 shadow-xs print:border print:border-gray-500 print:border-dashed print:ring-0 print:shadow-none'
+                                            : 'border-dashed border-gray-300 opacity-45 hover:opacity-75 print:hidden'
+                                        }
+                                    `}
+                                    style={{ pageBreakInside: 'avoid' }}
+                                >
+                                    {/* Screen Selection Checkbox */}
+                                    <div className="absolute top-2.5 right-2.5 print:hidden z-10">
+                                        {isSelected ? (
+                                            <CheckSquare className="w-4 h-4 text-indigo-600" />
+                                        ) : (
+                                            <Square className="w-4 h-4 text-gray-300" />
+                                        )}
+                                    </div>
+
+                                    {/* Compact Layout: Strictly QR CODE + รหัสครุภัณฑ์ + ชื่ออุปกรณ์ (No duplicates, no fluff) */}
+                                    <div className="flex items-center gap-3 pr-4 print:pr-0">
+                                        {/* 1. High Resolution QR Code */}
+                                        <div className="p-1.5 bg-white rounded-lg border border-gray-200 print:border-black shrink-0 flex items-center justify-center">
+                                            <QRCodeSVG
+                                                value={targetUrl}
+                                                size={76}
+                                                level="M"
+                                                includeMargin={false}
+                                            />
+                                        </div>
+
+                                        {/* 2. รหัสครุภัณฑ์ & 3. ชื่ออุปกรณ์ */}
+                                        <div className="min-w-0 flex-1 space-y-1 text-left">
+                                            <div>
+                                                <span className="text-[10px] font-semibold text-gray-500 print:text-gray-700 uppercase tracking-wider block leading-tight">
+                                                    รหัสครุภัณฑ์
+                                                </span>
+                                                <span className="text-sm sm:text-base font-extrabold font-mono text-gray-900 print:text-black leading-tight block truncate">
+                                                    {formattedEquipmentNumber}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <span className="text-[10px] font-semibold text-gray-500 print:text-gray-700 uppercase tracking-wider block leading-tight">
+                                                    ชื่ออุปกรณ์
+                                                </span>
+                                                <p className="text-xs font-semibold text-gray-800 print:text-black leading-snug line-clamp-2">
+                                                    {eq.name}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        }
+
+                        // Standard Layout (Laptop size with full header)
                         return (
                             <div
                                 key={eq.id}
                                 onClick={() => toggleSelect(eq.id)}
                                 className={`
                                     relative bg-white rounded-2xl p-4 border transition-all cursor-pointer select-none
-                                    break-inside-avoid print:cursor-default print:border-black print:border-dashed
+                                    break-inside-avoid print:break-inside-avoid print:cursor-default
                                     ${isSelected
-                                        ? 'border-indigo-300 ring-2 ring-indigo-500/20 shadow-sm print:ring-0'
-                                        : 'border-dashed border-gray-300 opacity-60'
+                                        ? 'border-indigo-300 ring-2 ring-indigo-500/20 shadow-xs print:border print:border-gray-500 print:border-dashed print:ring-0 print:shadow-none'
+                                        : 'border-dashed border-gray-300 opacity-45 hover:opacity-75 print:hidden'
                                     }
                                 `}
                                 style={{ pageBreakInside: 'avoid' }}
                             >
                                 {/* Screen Selection Checkbox */}
-                                <div className="absolute top-3 right-3 print:hidden">
+                                <div className="absolute top-3.5 right-3.5 print:hidden z-10">
                                     {isSelected ? (
                                         <CheckSquare className="w-5 h-5 text-indigo-600" />
                                     ) : (
@@ -259,26 +394,26 @@ export default function EquipmentQrPrintPage() {
                                     )}
                                 </div>
 
-                                {/* Sticker Header */}
-                                <div className="flex items-center justify-between pb-2 mb-3 border-b border-gray-200 text-gray-800">
+                                {/* Sticker Header: Displays equipment type (no duplicate number) */}
+                                <div className="flex items-center justify-between pb-2 mb-3 border-b border-gray-200 text-gray-800 pr-7 print:pr-0">
                                     <div className="flex items-center gap-1.5">
                                         <span className="text-sm">💻</span>
                                         <span className="text-[11px] font-bold tracking-wider uppercase text-gray-700">
                                             Notebook System Service
                                         </span>
                                     </div>
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 font-mono text-gray-600 font-semibold print:border print:border-gray-400">
-                                        #{eq.equipment_number}
+                                    <span className="text-[10px] px-2 py-0.5 rounded bg-gray-100 font-medium text-gray-600 print:border print:border-gray-400">
+                                        {eq.equipment_types?.name || 'ครุภัณฑ์'}
                                     </span>
                                 </div>
 
                                 {/* Sticker Body */}
                                 <div className="flex items-center gap-4">
                                     {/* High Resolution QR Code */}
-                                    <div className="p-2 bg-white rounded-xl border border-gray-200 shadow-sm print:border-black print:shadow-none shrink-0">
+                                    <div className="p-2 bg-white rounded-xl border border-gray-200 shadow-xs print:border-black print:shadow-none shrink-0">
                                         <QRCodeSVG
                                             value={targetUrl}
-                                            size={stickerSize === 'compact' ? 88 : 112}
+                                            size={104}
                                             level="M"
                                             includeMargin={false}
                                         />
@@ -286,9 +421,9 @@ export default function EquipmentQrPrintPage() {
 
                                     {/* Equipment Info */}
                                     <div className="min-w-0 flex-1 space-y-1 text-left">
-                                        <p className="text-[11px] text-gray-500 font-medium">รหัสครุภัณฑ์</p>
-                                        <h3 className="text-base sm:text-lg font-extrabold text-gray-900 leading-tight truncate">
-                                            #{eq.equipment_number}
+                                        <span className="text-[11px] text-gray-500 font-medium block">รหัสครุภัณฑ์</span>
+                                        <h3 className="text-base sm:text-lg font-extrabold font-mono text-gray-900 leading-tight truncate">
+                                            {formattedEquipmentNumber}
                                         </h3>
                                         <p className="text-xs font-semibold text-indigo-700 print:text-black line-clamp-2">
                                             {eq.name}
@@ -297,13 +432,6 @@ export default function EquipmentQrPrintPage() {
                                             📱 สแกนกล้องเพื่อยืม-คืนด่วน
                                         </p>
                                     </div>
-                                </div>
-
-                                {/* Bottom Cut/Border Guide */}
-                                <div className="mt-3 pt-2 border-t border-dotted border-gray-200 text-center">
-                                    <span className="text-[9px] text-gray-400 font-mono">
-                                        ID: {eq.id.slice(0, 8)}...
-                                    </span>
                                 </div>
                             </div>
                         )
@@ -314,6 +442,10 @@ export default function EquipmentQrPrintPage() {
             {/* Print Stylesheet Injection */}
             <style jsx global>{`
                 @media print {
+                    @page {
+                        size: auto;
+                        margin: 8mm;
+                    }
                     /* Hide unnecessary browser/page elements */
                     header, nav, aside, footer, .print\\:hidden {
                         display: none !important;
@@ -330,8 +462,8 @@ export default function EquipmentQrPrintPage() {
                     #printable-stickers-grid {
                         width: 100% !important;
                         margin: 0 !important;
-                        padding: 0.5cm !important;
-                        gap: 0.4cm !important;
+                        padding: 0 !important;
+                        gap: 0.25cm !important;
                     }
                 }
             `}</style>

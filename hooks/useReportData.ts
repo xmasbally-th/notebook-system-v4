@@ -269,7 +269,7 @@ export function useReportData(dateRange: DateRange, activeTab: string = 'overvie
     const loansQuery = useQuery({
         queryKey: ['report-loans', fromDate, toDate],
         staleTime: 60000,
-        queryFn: () => fetchSupabase<any[]>(`loanRequests?select=id,status,created_at,start_date,end_date,return_time,returned_at,purpose,user_id,equipment_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`)
+        queryFn: () => fetchSupabase<any[]>(`loanRequests?select=id,status,created_at,start_date,end_date,return_time,returned_at,user_id,equipment_id&created_at=gte.${fromDate}&created_at=lte.${toDate}`)
     })
 
     // 2. Reservations query (core)
@@ -290,7 +290,7 @@ export function useReportData(dateRange: DateRange, activeTab: string = 'overvie
     const overdueQuery = useQuery({
         queryKey: ['report-overdue-raw'],
         staleTime: 60000,
-        queryFn: () => fetchSupabase<any[]>(`loanRequests?select=id,start_date,end_date,return_time,purpose,user_id,equipment_id,profiles!fk_loanrequests_profiles(first_name,last_name,email,avatar_url,department:departments(name)),equipment:equipment_id(name,equipment_number)&status=eq.approved`)
+        queryFn: () => fetchSupabase<any[]>(`loanRequests?select=id,start_date,end_date,return_time,user_id,equipment_id,profiles!fk_loanrequests_profiles(first_name,last_name,email,avatar_url,department:departments(name)),equipment:equipment_id(name,equipment_number)&status=eq.approved`)
     })
 
     // 5. Profiles query (core, 5 min cache)
@@ -426,8 +426,7 @@ export function useReportData(dateRange: DateRange, activeTab: string = 'overvie
                         borrowerAvatar: profile?.avatar_url,
                         startDate: loan.start_date,
                         endDate: loan.end_date,
-                        returnTime: loan.return_time,
-                        purpose: loan.purpose
+                        returnTime: loan.return_time
                     }
                 }
             })

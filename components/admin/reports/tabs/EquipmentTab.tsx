@@ -95,7 +95,7 @@ function BorrowHistoryModal({
         try {
             const { data, error: fetchErr } = await supabase
                 .from('loanRequests')
-                .select('id,status,created_at,start_date,end_date,return_time,returned_at,return_condition,return_notes,purpose,profiles:fk_loanrequests_profiles(first_name,last_name,email,avatar_url,department:departments(name))')
+                .select('id,status,created_at,start_date,end_date,return_time,returned_at,return_condition,return_notes,profiles:fk_loanrequests_profiles(first_name,last_name,email,avatar_url,department:departments(name))')
                 .eq('equipment_id', equipment.id)
                 .order('created_at', { ascending: false })
 
@@ -320,14 +320,6 @@ function BorrowHistoryModal({
                                                     <span>{formatThaiDate(currentActiveLoan.end_date)}</span>
                                                 </div>
                                             </div>
-
-                                            {currentActiveLoan.purpose && (
-                                                <p className="text-xs text-gray-600 mt-2 flex items-start gap-1.5">
-                                                    <FileText className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
-                                                    <span className="font-medium">วัตถุประสงค์:</span>
-                                                    <span>{currentActiveLoan.purpose}</span>
-                                                </p>
-                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -459,13 +451,7 @@ function BorrowHistoryModal({
                                                         )}
                                                     </div>
 
-                                                    {/* Purpose or Notes */}
-                                                    {record.purpose && (
-                                                        <p className="text-xs text-gray-500 mt-2 flex items-start gap-1">
-                                                            <FileText className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
-                                                            <span className="font-medium text-gray-600">วัตถุประสงค์:</span> {record.purpose}
-                                                        </p>
-                                                    )}
+                                                    {/* Return Notes */}
                                                     {record.return_notes && (
                                                         <p className="text-xs text-amber-700 mt-1 flex items-start gap-1 bg-amber-50/60 px-2 py-1 rounded border border-amber-100">
                                                             <span className="font-semibold">หมายเหตุการคืน:</span> {record.return_notes}
