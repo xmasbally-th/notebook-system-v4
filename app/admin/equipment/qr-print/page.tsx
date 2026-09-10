@@ -311,7 +311,8 @@ export default function EquipmentQrPrintPage() {
                 >
                     {filteredEquipment.map((eq: any) => {
                         const isSelected = selectedIds.has(eq.id)
-                        const targetUrl = `${originUrl || 'https://notebook-system.app'}/equipment/${eq.id}?mode=counter`
+                        // Short URL reduces payload by 20+ chars, dropping QR matrix density for ultra-fast mobile camera scans
+                        const targetUrl = `${originUrl || 'https://notebook-system.app'}/eq/${eq.id}`
                         // Remove leading '#' symbol and whitespace from equipment number
                         const formattedEquipmentNumber = (eq.equipment_number || '').replace(/^#+/, '').trim() || '-'
 
@@ -342,11 +343,11 @@ export default function EquipmentQrPrintPage() {
 
                                     {/* Compact Layout: Strictly QR CODE + รหัสครุภัณฑ์ + ชื่ออุปกรณ์ */}
                                     <div className="flex items-center gap-2.5 h-full pr-3 print:pr-0">
-                                        {/* 1. High Resolution QR Code (Enhanced for Instant Mobile Scanning) */}
-                                        <div className="p-0.5 bg-white rounded-lg border border-gray-200 print:border-black shrink-0 flex items-center justify-center shadow-2xs print:shadow-none">
+                                        {/* 1. High Resolution QR Code (Optimized for Instant Mobile Scanning) */}
+                                        <div className="qr-code-box p-0.5 bg-white rounded-lg border border-gray-200 print:border-black shrink-0 flex items-center justify-center shadow-2xs print:shadow-none">
                                             <QRCodeSVG
                                                 value={targetUrl}
-                                                size={78}
+                                                size={88}
                                                 level="L"
                                                 includeMargin={true}
                                             />
@@ -403,10 +404,10 @@ export default function EquipmentQrPrintPage() {
                                 {/* Standard Layout: Strictly QR CODE + รหัสครุภัณฑ์ + ชื่ออุปกรณ์ (Large size matching compact layout) */}
                                 <div className="flex items-center gap-4 h-full pr-4 print:pr-0">
                                     {/* Large High Resolution QR Code */}
-                                    <div className="p-1 bg-white rounded-xl border border-gray-200 print:border-black shrink-0 flex items-center justify-center shadow-2xs print:shadow-none">
+                                    <div className="qr-code-box-standard p-1 bg-white rounded-xl border border-gray-200 print:border-black shrink-0 flex items-center justify-center shadow-2xs print:shadow-none">
                                         <QRCodeSVG
                                             value={targetUrl}
-                                            size={132}
+                                            size={136}
                                             level="L"
                                             includeMargin={true}
                                         />
@@ -507,11 +508,29 @@ export default function EquipmentQrPrintPage() {
                         padding: 2.5mm 3mm !important;
                         overflow: hidden !important;
                     }
+                    .sticker-card-compact .qr-code-box {
+                        width: 27mm !important;
+                        height: 27mm !important;
+                        min-width: 27mm !important;
+                    }
+                    .sticker-card-compact .qr-code-box svg {
+                        width: 100% !important;
+                        height: 100% !important;
+                    }
                     .sticker-card-standard {
                         height: 48mm !important;
                         max-height: 48mm !important;
                         padding: 3mm 4mm !important;
                         overflow: hidden !important;
+                    }
+                    .sticker-card-standard .qr-code-box-standard {
+                        width: 41mm !important;
+                        height: 41mm !important;
+                        min-width: 41mm !important;
+                    }
+                    .sticker-card-standard .qr-code-box-standard svg {
+                        width: 100% !important;
+                        height: 100% !important;
                     }
                 }
             `}</style>

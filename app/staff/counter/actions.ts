@@ -37,10 +37,15 @@ export async function lookupEquipmentByCode(rawCode: string) {
 
     let cleanCode = rawCode.trim()
 
-    // If scanned a full URL (e.g. https://.../equipment/<uuid>?mode=counter)
-    const urlMatch = cleanCode.match(/\/equipment\/([0-9a-fA-F-]{36})/)
+    // If scanned a URL (e.g. /eq/<id> or /equipment/<uuid>?mode=counter)
+    const urlMatch = cleanCode.match(/\/(?:equipment|eq)\/([0-9a-fA-F-]{36})/)
     if (urlMatch && urlMatch[1]) {
         cleanCode = urlMatch[1]
+    } else {
+        const pathMatch = cleanCode.match(/\/(?:equipment|eq)\/([^\/\?#]+)/)
+        if (pathMatch && pathMatch[1]) {
+            cleanCode = decodeURIComponent(pathMatch[1])
+        }
     }
 
     const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(cleanCode)

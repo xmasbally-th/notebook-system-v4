@@ -50,15 +50,21 @@ export default function LoanRequestsSection({ initialData }: Props) {
 
     const handleScanCode = (code: string) => {
         let cleanCode = code.trim()
-        const urlMatch = cleanCode.match(/\/equipment\/([0-9a-fA-F-]{36})/)
+        const urlMatch = cleanCode.match(/\/(?:equipment|eq)\/([0-9a-fA-F-]{36})/)
         if (urlMatch && urlMatch[1]) {
             cleanCode = urlMatch[1]
+        } else {
+            const pathMatch = cleanCode.match(/\/(?:equipment|eq)\/([^\/\?#]+)/)
+            if (pathMatch && pathMatch[1]) {
+                cleanCode = decodeURIComponent(pathMatch[1])
+            }
         }
         const stripped = cleanCode.replace(/^#/, '')
 
-        const matched = initialData.find(item => {
+        const matched = initialData.find((item: any) => {
+            const eqId = item.equipment?.id || item.equipment_id || ''
             const eqNum = (item.equipment?.equipment_number || '').replace(/^#/, '').toLowerCase()
-            return eqNum === stripped.toLowerCase()
+            return eqId === cleanCode || eqNum === stripped.toLowerCase()
         })
 
         startTransition(() => {

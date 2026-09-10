@@ -130,9 +130,14 @@ export default function StaffReturnsPage() {
 
     const handleScanCode = (code: string) => {
         let cleanCode = code.trim()
-        const urlMatch = cleanCode.match(/\/equipment\/([0-9a-fA-F-]{36})/)
+        const urlMatch = cleanCode.match(/\/(?:equipment|eq)\/([0-9a-fA-F-]{36})/)
         if (urlMatch && urlMatch[1]) {
             cleanCode = urlMatch[1]
+        } else {
+            const pathMatch = cleanCode.match(/\/(?:equipment|eq)\/([^\/\?#]+)/)
+            if (pathMatch && pathMatch[1]) {
+                cleanCode = decodeURIComponent(pathMatch[1])
+            }
         }
         const stripped = cleanCode.replace(/^#/, '').toLowerCase()
 

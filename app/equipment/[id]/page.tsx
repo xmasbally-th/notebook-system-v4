@@ -35,18 +35,23 @@ export default async function EquipmentDetailsPage({
 
     if (!item) notFound()
 
-    // 2. Fetch User Status
+    // 2. Fetch User Status & Role
     const { data: { user } } = await supabase.auth.getUser()
     let userStatus = 'guest'
+    let userRole = 'user'
 
     if (user) {
         const { data: profile } = await (supabase as any)
             .from('profiles')
-            .select('status')
+            .select('status, role')
             .eq('id', user.id)
             .single()
-        if (profile) userStatus = profile.status
+        if (profile) {
+            userStatus = profile.status
+            userRole = profile.role || 'user'
+        }
     }
+    const isStaffOrAdmin = userRole === 'staff' || userRole === 'admin'
 
     const images = Array.isArray(item.images) ? item.images : []
     const imageUrl = images.length > 0 ? (images[0] as string) : 'https://placehold.co/800x600?text=No+Image'
@@ -94,6 +99,29 @@ export default async function EquipmentDetailsPage({
                                 <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{item.name}</h1>
                                 <p className="text-gray-500 font-mono text-sm">หมายเลขครุภัณฑ์: {item.equipment_number}</p>
                             </div>
+
+                            {/* Staff Quick Action Banner (When scanned by staff/admin) */}
+                            {isStaffOrAdmin && (
+                                <div className="p-3.5 bg-indigo-50/80 border border-indigo-200 rounded-xl flex items-center justify-between gap-3 shadow-2xs">
+                                    <div className="flex items-center gap-2.5">
+                                        <span className="text-base">⚡</span>
+                                        <div>
+                                            <p className="text-xs font-bold text-indigo-950">
+                                                เข้าสู่ระบบในฐานะเจ้าหน้าที่ ({userRole})
+                                            </p>
+                                            <p className="text-[11px] text-indigo-700">
+                                                ต้องการบันทึกการยืมด่วนให้ผู้ใช้อื่น หรือรับคืนที่เคาน์เตอร์?
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Link
+                                        href="/staff/counter"
+                                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold whitespace-nowrap shadow-xs transition-all"
+                                    >
+                                        เคาน์เตอร์ด่วน
+                                    </Link>
+                                </div>
+                            )}
 
                             <div className="border-t border-gray-100 pt-6">
                                 {userStatus === 'approved' ? (

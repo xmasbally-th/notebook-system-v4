@@ -23,13 +23,13 @@ export async function getLoanRequests() {
     const [activeRes, histRes] = await Promise.all([
         adminClient
             .from('loanRequests')
-            .select('*, profiles!fk_loanrequests_profiles(first_name,last_name,email,avatar_url), equipment(name,equipment_number,images)')
+            .select('*, profiles!fk_loanrequests_profiles(first_name,last_name,email,avatar_url), equipment(id,name,equipment_number,images)')
             .in('status', ['pending', 'approved'])
             .order('created_at', { ascending: false })
             .limit(80),
         adminClient
             .from('loanRequests')
-            .select('*, profiles!fk_loanrequests_profiles(first_name,last_name,email,avatar_url), equipment(name,equipment_number,images)')
+            .select('*, profiles!fk_loanrequests_profiles(first_name,last_name,email,avatar_url), equipment(id,name,equipment_number,images)')
             .in('status', ['rejected', 'returned'])
             .order('created_at', { ascending: false })
             .limit(70),

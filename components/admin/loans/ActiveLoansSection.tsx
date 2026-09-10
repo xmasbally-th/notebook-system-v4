@@ -50,10 +50,15 @@ export default function ActiveLoansSection({ initialData }: Props) {
 
     const handleScanCode = (code: string) => {
         let cleanCode = code.trim()
-        // Support URL format (e.g. /equipment/<uuid>?mode=counter)
-        const urlMatch = cleanCode.match(/\/equipment\/([0-9a-fA-F-]{36})/)
+        // Support URL formats (e.g. /eq/<id> or /equipment/<uuid>?mode=counter)
+        const urlMatch = cleanCode.match(/\/(?:equipment|eq)\/([0-9a-fA-F-]{36})/)
         if (urlMatch && urlMatch[1]) {
             cleanCode = urlMatch[1]
+        } else {
+            const pathMatch = cleanCode.match(/\/(?:equipment|eq)\/([^\/\?#]+)/)
+            if (pathMatch && pathMatch[1]) {
+                cleanCode = decodeURIComponent(pathMatch[1])
+            }
         }
         const stripped = cleanCode.replace(/^#/, '').toLowerCase()
 
