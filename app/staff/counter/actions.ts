@@ -296,6 +296,8 @@ export async function createFastCounterLoanAction(input: FastCounterLoanInput) {
             details: {
                 borrowerType,
                 externalName: externalBorrowerName,
+                equipment_name: equipment.name,
+                equipment_number: equipment.equipment_number,
                 equipmentNumber: equipment.equipment_number
             }
         }

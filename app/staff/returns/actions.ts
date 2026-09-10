@@ -114,7 +114,12 @@ export async function returnLoan(formData: {
                 targetId: loanId,
                 targetUserId: loan.user_id,
                 isSelfAction: loan.user_id === user.id,
-                details: { condition, notes },
+                details: {
+                    condition,
+                    notes,
+                    equipment_name: equipmentName,
+                    equipment_number: equipmentNumber,
+                },
             },
         })
 

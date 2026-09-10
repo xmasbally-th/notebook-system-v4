@@ -124,6 +124,10 @@ export async function approveLoan(loanId: string) {
                 targetId: loanId,
                 targetUserId: loan.user_id,
                 isSelfAction: loan.user_id === user.id,
+                details: {
+                    equipment_name: equipmentName,
+                    equipment_number: equipmentNumber,
+                },
             },
         })
 
@@ -244,7 +248,11 @@ export async function rejectLoan(loanId: string, reason: string) {
                 targetId: loanId,
                 targetUserId: loan.user_id,
                 isSelfAction: loan.user_id === user.id,
-                details: { reason },
+                details: {
+                    reason,
+                    equipment_name: equipmentName,
+                    equipment_number: equipmentNumber,
+                },
             },
         })
 

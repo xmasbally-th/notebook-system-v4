@@ -53,7 +53,7 @@ export default function AdminStaffActivityPage() {
             const targetName = `${log.target_profile?.first_name || ''} ${log.target_profile?.last_name || ''}`.toLowerCase()
             const targetEmail = (log.target_profile?.email || '').toLowerCase()
             const targetUserId = (log.target_profile?.user_id || '').toLowerCase()
-            const equipName = (log.equipment?.name || log.details?.equipment_name || '').toLowerCase()
+            const equipName = (log.equipment?.name || log.details?.equipment_name || log.details?.name || log.details?.equipment_type || '').toLowerCase()
             const equipNum = (log.equipment?.equipment_number || log.details?.equipment_number || '').toLowerCase()
             const note = (log.details?.reason || log.details?.note || '').toLowerCase()
 

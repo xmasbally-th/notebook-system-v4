@@ -171,6 +171,10 @@ export async function approveLoanRequests(loanIds: string[]) {
                         targetId: loan.id,
                         targetUserId: loan.user_id,
                         isSelfAction: loan.user_id === auth.user!.id,
+                        details: {
+                            equipment_name: equipmentName,
+                            equipment_number: equipmentNumber,
+                        },
                     },
                 })
             })
@@ -245,6 +249,10 @@ export async function rejectLoanRequests(loanIds: string[]) {
                         targetId: loan.id,
                         targetUserId: loan.user_id,
                         isSelfAction: loan.user_id === auth.user!.id,
+                        details: {
+                            equipment_name: equipmentName,
+                            equipment_number: equipmentNumber,
+                        },
                     },
                 })
             })
@@ -349,7 +357,12 @@ export async function processReturn(
             targetId: parsed.data.loanId,
             targetUserId: loanData?.user_id,
             isSelfAction: loanData?.user_id === auth.user!.id,
-            details: { condition: parsed.data.condition, notes: parsed.data.notes },
+            details: {
+                condition: parsed.data.condition,
+                notes: parsed.data.notes,
+                equipment_name: equipmentName,
+                equipment_number: equipmentNumber,
+            },
         },
     })
 

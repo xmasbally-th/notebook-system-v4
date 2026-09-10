@@ -237,7 +237,7 @@ export function useStaffActivityLog(filters?: {
 
             if (loanIds.length > 0) {
                 const loanRes = await fetch(
-                    `${url}/rest/v1/loanRequests?id=in.(${loanIds.join(',')})&select=id,equipment(name,equipment_number),profiles(first_name,last_name,email)`,
+                    `${url}/rest/v1/loanRequests?id=in.(${loanIds.join(',')})&select=id,equipment(name,equipment_number)`,
                     { headers: { 'apikey': key, 'Authorization': `Bearer ${accessToken}` } }
                 )
                 if (loanRes.ok) {
@@ -248,7 +248,7 @@ export function useStaffActivityLog(filters?: {
 
             if (reservationIds.length > 0) {
                 const resRes = await fetch(
-                    `${url}/rest/v1/reservations?id=in.(${reservationIds.join(',')})&select=id,equipment(name,equipment_number),profiles(first_name,last_name,email)`,
+                    `${url}/rest/v1/reservations?id=in.(${reservationIds.join(',')})&select=id,equipment(name,equipment_number)`,
                     { headers: { 'apikey': key, 'Authorization': `Bearer ${accessToken}` } }
                 )
                 if (resRes.ok) {
@@ -265,8 +265,24 @@ export function useStaffActivityLog(filters?: {
                         ? resDetailsMap.get(log.target_id)
                         : null
 
-                const targetProfile = profilesMap.get(log.target_user_id) || targetObj?.profiles || null
-                const equipment = targetObj?.equipment || (log.details?.equipment_name ? { name: log.details.equipment_name, equipment_number: log.details.equipment_number || '-' } : null)
+                const targetProfile = profilesMap.get(log.target_user_id) || null
+
+                // Extract equipment info: targetObj relation -> details (equipment/equipment_name) -> special_loan
+                let equipment = targetObj?.equipment || null
+                if (!equipment) {
+                    const equipName = log.details?.equipment_name || log.details?.name
+                    if (equipName) {
+                        equipment = {
+                            name: equipName,
+                            equipment_number: log.details?.equipment_number || '-'
+                        }
+                    } else if (log.target_type === 'special_loan' && log.details?.equipment_type) {
+                        equipment = {
+                            name: `${log.details.equipment_type} (${log.details.quantity || 1} ชิ้น)`,
+                            equipment_number: '-'
+                        }
+                    }
+                }
 
                 return {
                     ...log,
