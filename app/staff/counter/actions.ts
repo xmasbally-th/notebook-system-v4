@@ -5,6 +5,7 @@ import { requireStaff } from '@/lib/auth-guard'
 import { notifyAndLog } from '@/lib/serverNotify'
 import { formatThaiDate, formatThaiDateTime } from '@/lib/formatThaiDate'
 import { validateBooking } from '@/lib/domain/bookingValidator'
+import { sendDiscordNotification } from '@/lib/notifications'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
@@ -172,10 +173,21 @@ export async function createFastCounterLoanAction(input: FastCounterLoanInput) {
         equipmentId,
         startDate: now,
         endDate: endDateTime,
-        bookingType: 'loan'
+        bookingType: 'loan',
+        userRole: 'staff'
     })
 
     if (!validation.valid) {
+        if (validation.errorCode === 'TIME_CONFLICT') {
+            const conflict = validation.conflictInfo
+            const alertMsg = `⚠️ **แจ้งเตือนการพยายามยืมซ้อนทับคิวจองที่เคาน์เตอร์ (Counter Conflict Alert)**\n\n` +
+                `📦 **อุปกรณ์:** ${equipment.name} (#${equipment.equipment_number || '-'})\n` +
+                (conflict?.holder ? `👤 **ผู้จองไว้เดิม:** คุณ${conflict.holder.name} (${conflict.holder.department})\n` +
+                `📞 **ติดต่อผู้จอง:** ${conflict.holder.phone} (${conflict.holder.email})\n` : '') +
+                `⏱️ **เหตุการณ์:** มีการพยายามเปิดยืมที่เคาน์เตอร์ทับซ้อนช่วงเวลาคิวจอง\n` +
+                `ระบบได้ระงับการยืมนี้เพื่อปกป้องสิทธิ์ของผู้จองไว้เรียบร้อยแล้ว`
+            sendDiscordNotification(alertMsg, 'maintenance').catch(() => {})
+        }
         return { success: false, error: validation.error || 'ช่วงเวลานี้มีคิวจองอุปกรณ์อื่นอยู่แล้ว' }
     }
 

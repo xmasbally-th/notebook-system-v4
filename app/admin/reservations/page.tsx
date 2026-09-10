@@ -1,790 +1,382 @@
 'use client'
 
-import { useAllReservations } from '@/hooks/useReservations'
-import {
-    approveReservation,
-    rejectReservation,
-    markReservationReady,
-    cancelReservation,
-    adminUpdateReservation,
-    ReservationStatus
-} from '@/lib/reservations'
-import { convertReservationToLoanAction } from '@/app/reservations/actions'
-import { useState, useMemo } from 'react'
+import React, { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
-import { formatThaiDate } from '@/lib/formatThaiDate'
 import { useToast } from '@/components/ui/toast'
-import { useQueryClient } from '@tanstack/react-query'
-import {
-    Clock, CheckCircle, XCircle, Package, User,
-    Calendar, ArrowRight, Loader2, AlertTriangle,
-    Search, CalendarPlus, Bell, ArrowRightCircle,
-    MessageSquare, Timer, Ban, Trash2, BarChart3,
-    Download, Pencil, Save, X
-} from 'lucide-react'
-import { notifyReservationStatusChange } from '@/app/notifications/actions'
+import { Loader2, AlertTriangle, CalendarPlus, Ban, ArrowRightCircle } from 'lucide-react'
+import { useRealtimeInvalidator } from '@/hooks/useRealtimeInvalidator'
 
-const STATUS_CONFIG: Record<ReservationStatus, { label: string; color: string; icon: any }> = {
-    pending: { label: 'รออนุมัติ', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
-    approved: { label: 'อนุมัติแล้ว', color: 'bg-green-100 text-green-700', icon: CheckCircle },
-    ready: { label: 'พร้อมรับ', color: 'bg-blue-100 text-blue-700', icon: Bell },
-    completed: { label: 'เสร็จสิ้น', color: 'bg-gray-100 text-gray-600', icon: CheckCircle },
-    rejected: { label: 'ปฏิเสธ', color: 'bg-red-100 text-red-700', icon: XCircle },
-    cancelled: { label: 'ยกเลิก', color: 'bg-gray-100 text-gray-500', icon: Ban },
-    expired: { label: 'หมดเวลา', color: 'bg-orange-100 text-orange-700', icon: Timer },
-}
+import {
+    getReservationsAction,
+    approveReservationAction,
+    rejectReservationAction,
+    markReadyReservationAction,
+    adminUpdateReservationAction,
+    adminForceCancelReservationAction,
+    adminDeleteReservationAction,
+    convertReservationToLoanAction,
+    type ReservationItemData
+} from './actions'
+
+import ReservationStatsCards from '@/components/reservations/ReservationStatsCards'
+import ReservationFilterBar from '@/components/reservations/ReservationFilterBar'
+import ReservationItem from '@/components/reservations/ReservationItem'
+import {
+    RejectModal,
+    EditModal,
+    DeleteModal,
+    ConfirmActionModal,
+    ConflictDetailModal
+} from '@/components/reservations/ReservationModals'
+import type { BookingConflictInfo } from '@/lib/domain'
 
 export default function AdminReservationsPage() {
-    const [statusFilter, setStatusFilter] = useState<ReservationStatus | 'all'>('all')
-    const { data: reservations, isLoading, error } = useAllReservations(statusFilter)
-    const [searchTerm, setSearchTerm] = useState('')
-    const [processing, setProcessing] = useState<string | null>(null)
-    const [rejectModal, setRejectModal] = useState<{ id: string; userId: string } | null>(null)
-    const [rejectReason, setRejectReason] = useState('')
-    const [deleteModal, setDeleteModal] = useState<string | null>(null)
-    const [editModal, setEditModal] = useState<any | null>(null)
-    const [editForm, setEditForm] = useState<{
-        start_date: string
-        end_date: string
-        pickup_time: string
-        return_time: string
-        status: ReservationStatus
-        rejection_reason: string
-    } | null>(null)
-    const [currentPage, setCurrentPage] = useState(1)
-    const [pageSize, setPageSize] = useState(10)
-
     const toast = useToast()
     const queryClient = useQueryClient()
 
-    // Filter by search
-    const filteredReservations = useMemo(() => {
-        if (!reservations) return []
-        if (!searchTerm) return reservations
+    // Filter & Pagination State
+    const [statusFilter, setStatusFilter] = useState('all')
+    const [searchTerm, setSearchTerm] = useState('')
+    const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
 
-        const search = searchTerm.toLowerCase()
-        return reservations.filter((r: any) =>
-            r.profiles?.first_name?.toLowerCase().includes(search) ||
-            r.profiles?.last_name?.toLowerCase().includes(search) ||
-            r.profiles?.email?.toLowerCase().includes(search) ||
-            r.equipment?.name?.toLowerCase().includes(search) ||
-            r.equipment?.equipment_number?.toLowerCase().includes(search)
-        )
-    }, [reservations, searchTerm])
+    // Modals State
+    const [rejectModalItem, setRejectModalItem] = useState<ReservationItemData | null>(null)
+    const [editModalItem, setEditModalItem] = useState<ReservationItemData | null>(null)
+    const [deleteModalItem, setDeleteModalItem] = useState<ReservationItemData | null>(null)
+    const [conflictInfo, setConflictInfo] = useState<BookingConflictInfo | null>(null)
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean
+        title: string
+        description: string
+        confirmText: string
+        confirmColor: 'blue' | 'purple' | 'orange' | 'red'
+        icon?: any
+        onConfirm: () => void
+    }>({
+        isOpen: false,
+        title: '',
+        description: '',
+        confirmText: 'ยืนยัน',
+        confirmColor: 'blue',
+        onConfirm: () => {}
+    })
 
-    // Statistics
-    const stats = useMemo(() => {
-        if (!reservations) return { pending: 0, approved: 0, ready: 0, completed: 0, total: 0 }
-        return {
-            pending: reservations.filter((r: any) => r.status === 'pending').length,
-            approved: reservations.filter((r: any) => r.status === 'approved').length,
-            ready: reservations.filter((r: any) => r.status === 'ready').length,
-            completed: reservations.filter((r: any) => r.status === 'completed').length,
-            total: reservations.length,
-        }
-    }, [reservations])
+    const [processingId, setProcessingId] = useState<string | null>(null)
 
-    // Pagination
-    const totalPages = Math.ceil(filteredReservations.length / pageSize)
-    const paginatedItems = filteredReservations.slice(
-        (currentPage - 1) * pageSize,
-        currentPage * pageSize
-    )
+    // Realtime Sync: Invalidate when reservations table changes
+    useRealtimeInvalidator(['reservations'], [['admin-reservations']])
 
-    const handleApprove = async (id: string, userId: string) => {
-        setProcessing(id)
-        const result = await approveReservation(id, userId)
-        setProcessing(null)
+    // Fetch Reservations & Global Stats in a single server action roundtrip
+    const { data, isLoading, error } = useQuery({
+        queryKey: ['admin-reservations', statusFilter, searchTerm, currentPage, pageSize],
+        queryFn: () => getReservationsAction({
+            status: statusFilter,
+            search: searchTerm,
+            page: currentPage,
+            pageSize
+        }),
+        staleTime: 15000
+    })
+
+    const reservations = data?.items || []
+    const stats = data?.stats
+    const totalPages = data?.totalPages || 1
+    const totalItems = data?.total || 0
+
+    // Filter change handler (resets page to 1)
+    const handleStatusChange = (newStatus: string) => {
+        setStatusFilter(newStatus)
+        setCurrentPage(1)
+    }
+
+    const handleSearchChange = (newSearch: string) => {
+        setSearchTerm(newSearch)
+        setCurrentPage(1)
+    }
+
+    // Workflow: Approve
+    const handleApprove = async (id: string) => {
+        setProcessingId(id)
+        const result = await approveReservationAction(id)
+        setProcessingId(null)
 
         if (result.success) {
             toast.success('อนุมัติการจองเรียบร้อยแล้ว')
-            queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
-            await notifyReservationStatusChange(id, 'approved', userId)
+            queryClient.invalidateQueries({ queryKey: ['admin-reservations'] })
         } else {
-            toast.error(result.error || 'เกิดข้อผิดพลาด')
+            toast.error(result.error || 'เกิดข้อผิดพลาดในการอนุมัติ')
         }
     }
 
-    const handleRejectConfirm = async () => {
-        if (!rejectModal || !rejectReason.trim()) {
-            toast.error('กรุณาระบุเหตุผล')
-            return
-        }
-
-        setProcessing(rejectModal.id)
-        const result = await rejectReservation(rejectModal.id, rejectReason, rejectModal.userId)
-        setProcessing(null)
-        setRejectModal(null)
-        setRejectReason('')
+    // Workflow: Reject
+    const handleRejectConfirm = async (id: string, reason: string) => {
+        setProcessingId(id)
+        const result = await rejectReservationAction(id, reason)
+        setProcessingId(null)
+        setRejectModalItem(null)
 
         if (result.success) {
             toast.success('ปฏิเสธการจองเรียบร้อยแล้ว')
-            queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
-            await notifyReservationStatusChange(rejectModal.id, 'rejected', rejectModal.userId)
+            queryClient.invalidateQueries({ queryKey: ['admin-reservations'] })
         } else {
-            toast.error(result.error || 'เกิดข้อผิดพลาด')
+            toast.error(result.error || 'เกิดข้อผิดพลาดในการปฏิเสธ')
         }
     }
 
-    const handleMarkReady = async (id: string, userId: string) => {
-        setProcessing(id)
-        const result = await markReservationReady(id, userId)
-        setProcessing(null)
+    // Workflow: Mark Ready
+    const handleMarkReady = async (id: string) => {
+        setProcessingId(id)
+        const result = await markReadyReservationAction(id)
+        setProcessingId(null)
 
         if (result.success) {
             toast.success('เปลี่ยนสถานะเป็น "พร้อมรับ" แล้ว')
-            queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
-            await notifyReservationStatusChange(id, 'ready', userId)
+            queryClient.invalidateQueries({ queryKey: ['admin-reservations'] })
         } else {
             toast.error(result.error || 'เกิดข้อผิดพลาด')
         }
     }
 
-    const handleConvertToLoan = async (reservation: any) => {
-        if (!confirm('ยืนยันการแปลงการจองเป็นคำขอยืม?')) return
+    // Workflow: Convert to Loan
+    const handleConvertToLoan = (reservation: ReservationItemData) => {
+        const borrowerName = reservation.profiles
+            ? `${reservation.profiles.first_name || ''} ${reservation.profiles.last_name || ''}`.trim()
+            : 'ผู้ใช้'
 
-        setProcessing(reservation.id)
-        const result = await convertReservationToLoanAction(reservation.id)
-        setProcessing(null)
+        setConfirmModal({
+            isOpen: true,
+            title: 'แปลงการจองเป็นคำขอยืมใช้งาน',
+            description: `ยืนยันส่งมอบอุปกรณ์ ${reservation.equipment?.name} ให้คุณ ${borrowerName} และสร้างประวัติการยืมในระบบ?`,
+            confirmText: 'ยืนยันแปลงเป็นการยืม',
+            confirmColor: 'purple',
+            icon: ArrowRightCircle,
+            onConfirm: async () => {
+                setProcessingId(reservation.id)
+                setConfirmModal(prev => ({ ...prev, isOpen: false }))
+                const result = await convertReservationToLoanAction(reservation.id)
+                setProcessingId(null)
 
-        if (result.success) {
-            toast.success('แปลงเป็นคำขอยืมเรียบร้อยแล้ว')
-            queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
-            queryClient.invalidateQueries({ queryKey: ['staff-loan-requests'] })
-            notifyReservationStatusChange(reservation.id, 'completed')
-        } else {
-            toast.error(result.error || 'เกิดข้อผิดพลาด')
-        }
-    }
-
-    const handleOpenEdit = (reservation: any) => {
-        setEditModal(reservation)
-        setEditForm({
-            start_date: reservation.start_date?.substring(0, 10) || '',
-            end_date: reservation.end_date?.substring(0, 10) || '',
-            pickup_time: reservation.pickup_time?.substring(0, 5) || '',
-            return_time: reservation.return_time?.substring(0, 5) || '',
-            status: reservation.status as ReservationStatus,
-            rejection_reason: reservation.rejection_reason || '',
-        })
-    }
-
-    const handleEditSave = async () => {
-        if (!editModal || !editForm) return
-        if (!editForm.start_date || !editForm.end_date) {
-            toast.error('กรุณาระบุวันที่ให้ครบถ้วน')
-            return
-        }
-        if (editForm.end_date < editForm.start_date) {
-            toast.error('วันที่คืนต้องไม่ก่อนวันที่รับ')
-            return
-        }
-        setProcessing(editModal.id)
-        const result = await adminUpdateReservation(editModal.id, {
-            start_date: editForm.start_date,
-            end_date: editForm.end_date,
-            pickup_time: editForm.pickup_time || null,
-            return_time: editForm.return_time || null,
-            status: editForm.status,
-            rejection_reason: editForm.status === 'rejected' ? editForm.rejection_reason || null : null,
-        })
-        setProcessing(null)
-        if (result.success) {
-            toast.success('แก้ไขการจองเรียบร้อยแล้ว')
-            queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
-            setEditModal(null)
-            setEditForm(null)
-        } else {
-            toast.error(result.error || 'เกิดข้อผิดพลาด')
-        }
-    }
-
-    // Admin-only: Force cancel any reservation
-    const handleForceCancel = async (id: string) => {
-        if (!confirm('⚠️ ยืนยันการยกเลิกการจองนี้? (Admin Only)')) return
-
-        setProcessing(id)
-        const result = await cancelReservation(id)
-        setProcessing(null)
-
-        if (result.success) {
-            toast.success('ยกเลิกการจองเรียบร้อยแล้ว')
-            queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
-        } else {
-            toast.error(result.error || 'เกิดข้อผิดพลาด')
-        }
-    }
-
-    // Admin-only: Delete reservation from database
-    const handleDelete = async () => {
-        if (!deleteModal) return
-
-        setProcessing(deleteModal)
-        try {
-            const { getSupabaseCredentials } = await import('@/lib/supabase-helpers')
-            const { url, key } = getSupabaseCredentials()
-
-            const { createBrowserClient } = await import('@supabase/ssr')
-            const client = createBrowserClient(url, key)
-            const { data: { session } } = await client.auth.getSession()
-
-            const response = await fetch(
-                `${url}/rest/v1/reservations?id=eq.${deleteModal}`,
-                {
-                    method: 'DELETE',
-                    headers: {
-                        'apikey': key,
-                        'Authorization': `Bearer ${session?.access_token || key}`
-                    }
+                if (result.success) {
+                    toast.success('แปลงเป็นคำขอยืมเรียบร้อยแล้ว (สถานะอุปกรณ์: ถูกยืม)')
+                    queryClient.invalidateQueries({ queryKey: ['admin-reservations'] })
+                    queryClient.invalidateQueries({ queryKey: ['staff-loan-requests'] })
+                } else {
+                    toast.error(result.error || 'ไม่สามารถแปลงเป็นการยืมได้')
                 }
-            )
-
-            if (response.ok) {
-                toast.success('ลบการจองเรียบร้อยแล้ว')
-                queryClient.invalidateQueries({ queryKey: ['all-reservations'] })
-            } else {
-                toast.error('ไม่สามารถลบการจองได้')
             }
-        } catch (e) {
-            toast.error('เกิดข้อผิดพลาด')
-        }
-
-        setProcessing(null)
-        setDeleteModal(null)
+        })
     }
 
-    // Export to CSV
-    const handleExport = () => {
-        if (!filteredReservations.length) return
+    // Admin Action: Edit
+    const handleEditSave = async (editData: any) => {
+        setProcessingId(editData.reservationId)
+        const result = await adminUpdateReservationAction(editData)
+        setProcessingId(null)
 
-        const headers = ['ID', 'ผู้จอง', 'อีเมล', 'อุปกรณ์', 'วันที่เริ่ม', 'วันที่สิ้นสุด', 'สถานะ', 'วันที่สร้าง']
-        const rows = filteredReservations.map((r: any) => [
-            r.id,
-            `${r.profiles?.first_name || ''} ${r.profiles?.last_name || ''}`,
-            r.profiles?.email || '',
-            r.equipment?.name || '',
-            r.start_date,
-            r.end_date,
-            STATUS_CONFIG[r.status as ReservationStatus]?.label || r.status,
-            r.created_at
-        ])
+        if (result.success) {
+            toast.success('แก้ไขข้อมูลการจองเรียบร้อยแล้ว')
+            setEditModalItem(null)
+            queryClient.invalidateQueries({ queryKey: ['admin-reservations'] })
+        } else {
+            toast.error(result.error || 'เกิดข้อผิดพลาดในการบันทึก')
+        }
+    }
 
-        const csv = [headers, ...rows].map(row => row.join(',')).join('\n')
-        const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
-        const link = document.createElement('a')
-        link.href = URL.createObjectURL(blob)
-        link.download = `reservations_${new Date().toISOString().split('T')[0]}.csv`
-        link.click()
+    // Admin Action: Force Cancel
+    const handleForceCancel = (reservation: ReservationItemData) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'บังคับยกเลิกการจอง (Admin)',
+            description: `ยืนยันยกเลิกการจองอุปกรณ์ ${reservation.equipment?.name} นี้หรือไม่? อุปกรณ์จะถูกคืนสถานะเป็นพร้อมใช้งานทันที`,
+            confirmText: 'ยืนยันยกเลิกการจอง',
+            confirmColor: 'orange',
+            icon: Ban,
+            onConfirm: async () => {
+                setProcessingId(reservation.id)
+                setConfirmModal(prev => ({ ...prev, isOpen: false }))
+                const result = await adminForceCancelReservationAction(reservation.id)
+                setProcessingId(null)
+
+                if (result.success) {
+                    toast.success('ยกเลิกการจองเรียบร้อยแล้ว')
+                    queryClient.invalidateQueries({ queryKey: ['admin-reservations'] })
+                } else {
+                    toast.error(result.error || 'เกิดข้อผิดพลาด')
+                }
+            }
+        })
+    }
+
+    // Admin Action: Delete
+    const handleDeleteConfirm = async (id: string) => {
+        setProcessingId(id)
+        const result = await adminDeleteReservationAction(id)
+        setProcessingId(null)
+        setDeleteModalItem(null)
+
+        if (result.success) {
+            toast.success('ลบการจองออกจากระบบเรียบร้อยแล้ว')
+            queryClient.invalidateQueries({ queryKey: ['admin-reservations'] })
+        } else {
+            toast.error(result.error || 'ไม่สามารถลบการจองได้')
+        }
     }
 
     return (
         <>
-            <AdminPageHeader title="จัดการการจอง" subtitle="ดูแลและจัดการการจองล่วงหน้าทั้งหมด (Admin)"/>
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-50 rounded-lg">
-                            <BarChart3 className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-blue-600">{stats.total}</p>
-                            <p className="text-xs text-gray-500">ทั้งหมด</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-yellow-50 rounded-lg">
-                            <Clock className="w-5 h-5 text-yellow-600" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
-                            <p className="text-xs text-gray-500">รออนุมัติ</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-green-50 rounded-lg">
-                            <CheckCircle className="w-5 h-5 text-green-600" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
-                            <p className="text-xs text-gray-500">รอรับ</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-50 rounded-lg">
-                            <Bell className="w-5 h-5 text-purple-600" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-purple-600">{stats.ready}</p>
-                            <p className="text-xs text-gray-500">พร้อมรับ</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-gray-50 rounded-lg">
-                            <CheckCircle className="w-5 h-5 text-gray-600" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-gray-600">{stats.completed}</p>
-                            <p className="text-xs text-gray-500">เสร็จสิ้น</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <AdminPageHeader
+                title="จัดการการจอง"
+                subtitle="ดูแลและจัดการการจองอุปกรณ์ล่วงหน้าทั้งหมดในระบบ (Admin)"
+            />
 
-            {/* Main Content */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                {/* Filters */}
-                <div className="p-4 border-b border-gray-200">
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="ค้นหาชื่อผู้จอง, อุปกรณ์..."
-                                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        <select
-                            className="px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm min-w-[140px]"
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value as any)}
-                        >
-                            <option value="all">ทุกสถานะ</option>
-                            <option value="pending">รออนุมัติ</option>
-                            <option value="approved">อนุมัติแล้ว</option>
-                            <option value="ready">พร้อมรับ</option>
-                            <option value="completed">เสร็จสิ้น</option>
-                            <option value="rejected">ปฏิเสธ</option>
-                            <option value="cancelled">ยกเลิก</option>
-                            <option value="expired">หมดเวลา</option>
-                        </select>
-                        <button
-                            onClick={handleExport}
-                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium"
-                        >
-                            <Download className="w-4 h-4" />
-                            ส่งออก CSV
-                        </button>
-                    </div>
-                </div>
+            {/* Stats Cards (Global counts, immune to table filter) */}
+            <ReservationStatsCards
+                stats={stats}
+                isLoading={isLoading}
+                isAdmin={true}
+            />
 
-                {/* Content */}
+            {/* Main Content Box */}
+            <div className="bg-white rounded-2xl shadow-xs border border-gray-200 overflow-hidden mb-8">
+                {/* Filter & Search Bar */}
+                <ReservationFilterBar
+                    searchTerm={searchTerm}
+                    onSearchChange={handleSearchChange}
+                    statusFilter={statusFilter}
+                    onStatusChange={handleStatusChange}
+                    isAdmin={true}
+                    exportItems={reservations}
+                />
+
+                {/* Content Table / List */}
                 {isLoading ? (
-                    <div className="flex items-center justify-center py-20">
-                        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                    <div className="flex flex-col items-center justify-center py-24 text-gray-500">
+                        <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
+                        <span className="text-sm">กำลังโหลดข้อมูลการจอง...</span>
                     </div>
                 ) : error ? (
                     <div className="p-12 text-center">
-                        <AlertTriangle className="w-12 h-12 mx-auto text-red-300 mb-3" />
-                        <p className="text-red-500">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+                        <AlertTriangle className="w-12 h-12 mx-auto text-red-400 mb-3" />
+                        <p className="text-red-600 font-medium">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+                        <p className="text-xs text-gray-400 mt-1">{(error as any)?.message}</p>
                     </div>
-                ) : filteredReservations.length === 0 ? (
-                    <div className="p-12 text-center">
+                ) : reservations.length === 0 ? (
+                    <div className="p-16 text-center">
                         <CalendarPlus className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                        <p className="text-gray-500">ไม่มีรายการจอง</p>
+                        <p className="text-gray-600 font-medium">ไม่มีรายการจองตามเงื่อนไขที่เลือก</p>
+                        <p className="text-xs text-gray-400 mt-1">ลองเปลี่ยนคำค้นหาหรือตัวกรองสถานะ</p>
                     </div>
                 ) : (
-                    <>
-                        <div className="divide-y divide-gray-100">
-                            {paginatedItems.map((reservation: any) => {
-                                const status = reservation.status as ReservationStatus
-                                const statusConfig = STATUS_CONFIG[status]
-                                const StatusIcon = statusConfig.icon
-                                const isProcessing = processing === reservation.id
-                                const canCancel = ['pending', 'approved', 'ready'].includes(status)
+                    <div>
+                        {reservations.map((reservation) => (
+                            <ReservationItem
+                                key={reservation.id}
+                                reservation={reservation}
+                                isAdmin={true}
+                                processingId={processingId}
+                                onApprove={handleApprove}
+                                onReject={(r) => setRejectModalItem(r)}
+                                onMarkReady={handleMarkReady}
+                                onConvertToLoan={handleConvertToLoan}
+                                onEdit={(r) => setEditModalItem(r)}
+                                onForceCancel={handleForceCancel}
+                                onDelete={(r) => setDeleteModalItem(r)}
+                            />
+                        ))}
+                    </div>
+                )}
 
-                                return (
-                                    <div key={reservation.id} className="p-4 hover:bg-gray-50">
-                                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                                            {/* User & Equipment Info */}
-                                            <div className="flex items-start gap-4 flex-1">
-                                                <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
-                                                    {reservation.equipment?.images?.[0] ? (
-                                                        <img src={reservation.equipment.images[0]} alt="" className="w-12 h-12 object-cover" />
-                                                    ) : (
-                                                        <Package className="w-6 h-6 text-gray-400" />
-                                                    )}
-                                                </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <User className="w-4 h-4 text-gray-400" />
-                                                        <span className="font-medium text-gray-900">
-                                                            {reservation.profiles?.first_name} {reservation.profiles?.last_name}
-                                                        </span>
-                                                        <span className="text-xs text-gray-400">
-                                                            {reservation.profiles?.email}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-sm text-gray-600">{reservation.equipment?.name}</p>
-                                                    <p className="text-xs text-gray-400 font-mono">{reservation.equipment?.equipment_number}</p>
-                                                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                                                        <Calendar className="w-3 h-3" />
-                                                        <span>{formatThaiDate(reservation.start_date?.substring(0, 10))}</span>
-                                                        <ArrowRight className="w-3 h-3" />
-                                                        <span>{formatThaiDate(reservation.end_date?.substring(0, 10))}</span>
-                                                    </div>
-                                                    {reservation.pickup_time && (
-                                                        <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                                                            <Clock className="w-3 h-3" />
-                                                            <span>เวลารับ: {reservation.pickup_time.substring(0, 5)} น.</span>
-                                                            {reservation.return_time && (
-                                                                <span className="text-gray-400">| คืน: {reservation.return_time.substring(0, 5)} น.</span>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Status & Actions */}
-                                            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-                                                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full ${statusConfig.color}`}>
-                                                    <StatusIcon className="w-4 h-4" />
-                                                    {statusConfig.label}
-                                                </span>
-
-                                                {/* Action Buttons */}
-                                                {status === 'pending' && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => handleApprove(reservation.id, reservation.user_id)}
-                                                            disabled={isProcessing}
-                                                            className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 disabled:opacity-50"
-                                                            title="อนุมัติ"
-                                                        >
-                                                            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setRejectModal({ id: reservation.id, userId: reservation.user_id })}
-                                                            disabled={isProcessing}
-                                                            className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 disabled:opacity-50"
-                                                            title="ปฏิเสธ"
-                                                        >
-                                                            <XCircle className="w-4 h-4" />
-                                                        </button>
-                                                    </>
-                                                )}
-
-                                                {status === 'approved' && (
-                                                    <button
-                                                        onClick={() => handleMarkReady(reservation.id, reservation.user_id)}
-                                                        disabled={isProcessing}
-                                                        className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
-                                                    >
-                                                        {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
-                                                        พร้อมรับ
-                                                    </button>
-                                                )}
-
-                                                {status === 'ready' && (
-                                                    <button
-                                                        onClick={() => handleConvertToLoan(reservation)}
-                                                        disabled={isProcessing}
-                                                        className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 text-sm font-medium"
-                                                    >
-                                                        {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightCircle className="w-4 h-4" />}
-                                                        แปลงเป็นยืม
-                                                    </button>
-                                                )}
-
-                                                {/* Admin-only: Edit */}
-                                                <button
-                                                    onClick={() => handleOpenEdit(reservation)}
-                                                    disabled={isProcessing}
-                                                    className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 disabled:opacity-50"
-                                                    title="แก้ไขการจอง (Admin)"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                </button>
-
-                                                {/* Admin-only: Force Cancel */}
-                                                {canCancel && (
-                                                    <button
-                                                        onClick={() => handleForceCancel(reservation.id)}
-                                                        disabled={isProcessing}
-                                                        className="p-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 disabled:opacity-50"
-                                                        title="ยกเลิกการจอง (Admin)"
-                                                    >
-                                                        <Ban className="w-4 h-4" />
-                                                    </button>
-                                                )}
-
-                                                {/* Admin-only: Delete */}
-                                                <button
-                                                    onClick={() => setDeleteModal(reservation.id)}
-                                                    disabled={isProcessing}
-                                                    className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 disabled:opacity-50"
-                                                    title="ลบการจอง (Admin)"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Rejection reason */}
-                                        {status === 'rejected' && reservation.rejection_reason && (
-                                            <div className="mt-3 ml-16 flex items-start gap-2 text-sm text-red-600">
-                                                <MessageSquare className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                                                <span>{reservation.rejection_reason}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                )
-                            })}
+                {/* Pagination Controls */}
+                {totalItems > 0 && (
+                    <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/50">
+                        <div className="flex items-center gap-2 text-xs text-gray-600">
+                            <span>แสดง</span>
+                            <select
+                                value={pageSize}
+                                onChange={(e) => {
+                                    setPageSize(Number(e.target.value))
+                                    setCurrentPage(1)
+                                }}
+                                className="border border-gray-300 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                                <option value={10}>10</option>
+                                <option value={25}>25</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                            <span>รายการต่อหน้า | รายการที่ {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, totalItems)} จากทั้งหมด {totalItems}</span>
                         </div>
 
-                        {/* Pagination */}
-                        {filteredReservations.length > 0 && (
-                            <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                    <span>แสดง</span>
-                                    <select
-                                        value={pageSize}
-                                        onChange={(e) => {
-                                            setPageSize(Number(e.target.value))
-                                            setCurrentPage(1)
-                                        }}
-                                        className="border border-gray-300 rounded-lg px-2 py-1 text-sm"
-                                    >
-                                        <option value={10}>10</option>
-                                        <option value={25}>25</option>
-                                        <option value={50}>50</option>
-                                        <option value={100}>100</option>
-                                    </select>
-                                    <span>รายการ | {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, filteredReservations.length)} จาก {filteredReservations.length}</span>
-                                </div>
-                                {totalPages > 1 && (
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                            disabled={currentPage === 1}
-                                            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-50"
-                                        >
-                                            ก่อนหน้า
-                                        </button>
-                                        <span className="px-3 py-1.5 text-sm text-gray-600">
-                                            หน้า {currentPage} / {totalPages}
-                                        </span>
-                                        <button
-                                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                            disabled={currentPage === totalPages}
-                                            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-50"
-                                        >
-                                            ถัดไป
-                                        </button>
-                                    </div>
-                                )}
+                        {totalPages > 1 && (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    ก่อนหน้า
+                                </button>
+                                <span className="px-3 py-1.5 text-xs text-gray-600 font-medium">
+                                    หน้า {currentPage} / {totalPages}
+                                </span>
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    ถัดไป
+                                </button>
                             </div>
                         )}
-                    </>
+                    </div>
                 )}
             </div>
 
-            {/* Reject Modal */}
-            {rejectModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl p-6 max-w-md w-full">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">ปฏิเสธการจอง</h3>
-                        <p className="text-sm text-gray-500 mb-4">กรุณาระบุเหตุผลในการปฏิเสธ</p>
-                        <textarea
-                            value={rejectReason}
-                            onChange={(e) => setRejectReason(e.target.value)}
-                            placeholder="เหตุผล..."
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 mb-4"
-                            rows={3}
-                        />
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => {
-                                    setRejectModal(null)
-                                    setRejectReason('')
-                                }}
-                                className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                            >
-                                ยกเลิก
-                            </button>
-                            <button
-                                onClick={handleRejectConfirm}
-                                disabled={processing === rejectModal.id}
-                                className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
-                            >
-                                {processing === rejectModal.id ? 'กำลังดำเนินการ...' : 'ยืนยันปฏิเสธ'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Modals */}
+            <RejectModal
+                isOpen={!!rejectModalItem}
+                reservation={rejectModalItem}
+                isProcessing={processingId === rejectModalItem?.id}
+                onClose={() => setRejectModalItem(null)}
+                onConfirm={handleRejectConfirm}
+            />
 
-            {/* Delete Confirmation Modal */}
-            {deleteModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl p-6 max-w-md w-full">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-3 bg-red-100 rounded-full">
-                                <Trash2 className="w-6 h-6 text-red-600" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900">ลบการจอง</h3>
-                                <p className="text-sm text-gray-500">การดำเนินการนี้ไม่สามารถย้อนกลับได้</p>
-                            </div>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-4">
-                            ⚠️ คุณกำลังจะลบการจองนี้ออกจากระบบถาวร ข้อมูลจะไม่สามารถกู้คืนได้
-                        </p>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setDeleteModal(null)}
-                                className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                            >
-                                ยกเลิก
-                            </button>
-                            <button
-                                onClick={handleDelete}
-                                disabled={processing === deleteModal}
-                                className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
-                            >
-                                {processing === deleteModal ? 'กำลังลบ...' : 'ยืนยันลบ'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <EditModal
+                isOpen={!!editModalItem}
+                reservation={editModalItem}
+                isProcessing={processingId === editModalItem?.id}
+                onClose={() => setEditModalItem(null)}
+                onSave={handleEditSave}
+            />
 
-            {/* Edit Modal */}
-            {editModal && editForm && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl p-6 max-w-lg w-full shadow-xl">
-                        {/* Header */}
-                        <div className="flex items-center justify-between mb-5">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-100 rounded-lg">
-                                    <Pencil className="w-5 h-5 text-blue-600" />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-semibold text-gray-900">แก้ไขข้อมูลการจอง</h3>
-                                    <p className="text-xs text-gray-500">
-                                        {editModal.profiles?.first_name} {editModal.profiles?.last_name} · {editModal.equipment?.name}
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => { setEditModal(null); setEditForm(null) }}
-                                className="p-1.5 rounded-lg hover:bg-gray-100"
-                            >
-                                <X className="w-5 h-5 text-gray-500" />
-                            </button>
-                        </div>
+            <DeleteModal
+                isOpen={!!deleteModalItem}
+                reservation={deleteModalItem}
+                isProcessing={processingId === deleteModalItem?.id}
+                onClose={() => setDeleteModalItem(null)}
+                onConfirm={handleDeleteConfirm}
+            />
 
-                        <div className="space-y-4">
-                            {/* Dates */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">วันที่รับ</label>
-                                    <input
-                                        type="date"
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        value={editForm.start_date}
-                                        onChange={(e) => setEditForm({ ...editForm, start_date: e.target.value })}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">วันที่คืน</label>
-                                    <input
-                                        type="date"
-                                        min={editForm.start_date}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        value={editForm.end_date}
-                                        onChange={(e) => setEditForm({ ...editForm, end_date: e.target.value })}
-                                    />
-                                </div>
-                            </div>
+            <ConfirmActionModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                description={confirmModal.description}
+                confirmText={confirmModal.confirmText}
+                confirmColor={confirmModal.confirmColor}
+                icon={confirmModal.icon}
+                isProcessing={!!processingId}
+                onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmModal.onConfirm}
+            />
 
-                            {/* Times */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">เวลารับ (optional)</label>
-                                    <input
-                                        type="time"
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        value={editForm.pickup_time}
-                                        onChange={(e) => setEditForm({ ...editForm, pickup_time: e.target.value })}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">เวลาคืน (optional)</label>
-                                    <input
-                                        type="time"
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        value={editForm.return_time}
-                                        onChange={(e) => setEditForm({ ...editForm, return_time: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Status */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
-                                <select
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                    value={editForm.status}
-                                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value as ReservationStatus })}
-                                >
-                                    <option value="pending">รออนุมัติ</option>
-                                    <option value="approved">อนุมัติแล้ว</option>
-                                    <option value="ready">พร้อมรับ</option>
-                                    <option value="completed">เสร็จสิ้น</option>
-                                    <option value="rejected">ปฏิเสธ</option>
-                                    <option value="cancelled">ยกเลิก</option>
-                                    <option value="expired">หมดเวลา</option>
-                                </select>
-                            </div>
-
-                            {/* Rejection reason — only when status is rejected */}
-                            {editForm.status === 'rejected' && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">เหตุผลปฏิเสธ</label>
-                                    <textarea
-                                        rows={2}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="ระบุเหตุผล..."
-                                        value={editForm.rejection_reason}
-                                        onChange={(e) => setEditForm({ ...editForm, rejection_reason: e.target.value })}
-                                    />
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex gap-3 mt-6">
-                            <button
-                                onClick={() => { setEditModal(null); setEditForm(null) }}
-                                className="flex-1 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm font-medium"
-                            >
-                                ยกเลิก
-                            </button>
-                            <button
-                                onClick={handleEditSave}
-                                disabled={processing === editModal.id}
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
-                            >
-                                {processing === editModal.id
-                                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                                    : <Save className="w-4 h-4" />
-                                }
-                                บันทึกการแก้ไข
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <ConflictDetailModal
+                isOpen={!!conflictInfo}
+                conflictInfo={conflictInfo}
+                onClose={() => setConflictInfo(null)}
+                role="admin"
+            />
         </>
     )
 }

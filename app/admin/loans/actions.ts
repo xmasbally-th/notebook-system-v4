@@ -9,6 +9,7 @@ import {
 } from '@/lib/schemas/loanSchema'
 import { notifyAndLog } from '@/lib/serverNotify'
 import { formatThaiDate } from '@/lib/formatThaiDate'
+import { getBookingConflictDetails } from '@/lib/domain'
 
 // ─── Queries (used by Server Component) ──────────────────────────────────────
 
@@ -81,12 +82,15 @@ export async function approveLoanRequests(loanIds: string[]) {
 
     const adminClient = createAdminClient()
 
-    // 2.5 Concurrency Check: Ensure all requested equipment is still 'ready'
+    // 2.5 Concurrency & Conflict Check: Ensure all requested equipment is still 'ready' and has no reservation conflicts
     const { data: requestedLoans, error: checkError } = await adminClient
         .from('loanRequests')
         .select(`
             id,
             user_id,
+            equipment_id,
+            start_date,
+            end_date,
             equipment:equipment_id(id, status, name)
         `)
         .in('id', parsed.data.loanIds)
@@ -102,6 +106,25 @@ export async function approveLoanRequests(loanIds: string[]) {
         const names = unavailableItems.map((l: any) => l.equipment?.name).join(', ')
         console.log('[approveLoanRequests] Unavailable items found:', names)
         return { error: `ไม่สามารถอนุมัติได้: อุปกรณ์ต่อไปนี้ไม่ว่างแล้ว (${names})` }
+    }
+
+    // Check reservation/loan conflicts for each item
+    for (const loan of (requestedLoans || [])) {
+        if (loan.equipment_id && loan.start_date && loan.end_date) {
+            const conflict = await getBookingConflictDetails({
+                userId: loan.user_id,
+                equipmentId: loan.equipment_id,
+                startDate: new Date(loan.start_date),
+                endDate: new Date(loan.end_date),
+                bookingType: 'loan',
+                excludeLoanId: loan.id,
+                userRole: 'admin'
+            })
+            if (conflict.hasConflict) {
+                const eqName = (loan as any).equipment?.name || 'อุปกรณ์'
+                return { error: conflict.formattedMessage || `ไม่สามารถอนุมัติได้: ${eqName} ติดคิวจองล่วงหน้าของผู้อื่น` }
+            }
+        }
     }
 
     // [HOTFIX] Ensure all borrowers' profiles are 'approved' before approving their loan requests.

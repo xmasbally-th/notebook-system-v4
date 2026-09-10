@@ -124,21 +124,37 @@ const USER_EVENT_DEFAULTS: Partial<Record<NotificationEventKey, { title: string;
     special_loan_cancelled: { title: '⭐ ยกเลิกการยืมพิเศษ',       body: 'รายการยืมพิเศษ {equipment} ถูกยกเลิก' },
 }
 
+/** Default staff notification messages per event */
+export const STAFF_EVENT_DEFAULTS: Partial<Record<NotificationEventKey, { title: string; body: string; link: string }>> = {
+    new_loan_request:       { title: '📦 [Staff] มีคำขอยืมอุปกรณ์ใหม่',  body: '{borrower} ขอยืม {equipment} ตั้งแต่ {start_date} ถึง {end_date}', link: '/staff/loans' },
+    new_reservation_request:{ title: '📅 [Staff] มีคำขอจองอุปกรณ์ใหม่',  body: '{reserver} ขอจอง {equipment} ตั้งแต่ {start_date} ถึง {end_date}', link: '/staff/reservations' },
+    loan_approved:          { title: '✅ [Staff] อนุมัติการยืมแล้ว',       body: '{equipment} ของ {borrower} ได้รับการอนุมัติแล้ว', link: '/staff/loans' },
+    loan_rejected:          { title: '❌ [Staff] ปฏิเสธคำขอยืมแล้ว',      body: 'คำขอยืม {equipment} ของ {borrower} ถูกปฏิเสธ', link: '/staff/loans' },
+    loan_returned:          { title: '🔄 [Staff] รับคืนอุปกรณ์แล้ว',        body: '{borrower} คืน {equipment} เรียบร้อยแล้ว', link: '/staff/loans' },
+    reservation_approved:   { title: '✅ [Staff] อนุมัติการจองแล้ว',       body: '{equipment} ของ {reserver} ได้รับการอนุมัติแล้ว', link: '/staff/reservations' },
+    reservation_rejected:   { title: '❌ [Staff] ปฏิเสธคำขอจองแล้ว',      body: 'คำขอจอง {equipment} ของ {reserver} ถูกปฏิเสธ', link: '/staff/reservations' },
+    reservation_ready:      { title: '🟢 [Staff] อุปกรณ์พร้อมให้รับแล้ว', body: '{equipment} ของ {reserver} พร้อมให้มารับที่จุดบริการ', link: '/staff/reservations' },
+    reservation_converted:  { title: '🔄 [Staff] แปลงการจองเป็นการยืม',   body: '{reserver} รับ {equipment} เรียบร้อย (จากการจอง)', link: '/staff/loans' },
+    special_loan_created:   { title: '⭐ [Staff] สร้างการยืมพิเศษใหม่',   body: '{borrower} ยืม {equipment} (พิเศษ) ถึง {end_date}', link: '/staff/loans' },
+    special_loan_completed: { title: '⭐ [Staff] คืนการยืมพิเศษแล้ว',     body: '{borrower} คืน {equipment} (พิเศษ) เรียบร้อยแล้ว', link: '/staff/loans' },
+    special_loan_cancelled: { title: '⭐ [Staff] ยกเลิกการยืมพิเศษ',      body: '{borrower} ยกเลิกการยืม {equipment} (พิเศษ)', link: '/staff/loans' },
+}
+
 /** Default admin notification messages per event */
-const ADMIN_EVENT_DEFAULTS: Partial<Record<NotificationEventKey, { title: string; body: string; link: string }>> = {
-    new_registration:       { title: '🔔 มีผู้สมัครสมาชิกใหม่',  body: '{name} ({user_id}) จาก{department} รออนุมัติบัญชีอยู่', link: '/admin/users' },
-    new_loan_request:       { title: '📦 มีคำขอยืมอุปกรณ์ใหม่',  body: '{borrower} ขอยืม {equipment} ตั้งแต่ {start_date} ถึง {end_date}', link: '/admin/loans' },
-    new_reservation_request:{ title: '📅 มีคำขอจองอุปกรณ์ใหม่',  body: '{reserver} ขอจอง {equipment} ตั้งแต่ {start_date} ถึง {end_date}', link: '/admin/reservations' },
-    loan_approved:          { title: '✅ อนุมัติการยืมแล้ว',       body: '{equipment} ของ {borrower} ได้รับการอนุมัติแล้ว', link: '/admin/loans' },
-    loan_rejected:          { title: '❌ ปฏิเสธคำขอยืมแล้ว',      body: 'คำขอยืม {equipment} ของ {borrower} ถูกปฏิเสธ', link: '/admin/loans' },
-    loan_returned:          { title: '🔄 คืนอุปกรณ์แล้ว',          body: '{borrower} คืน {equipment} เรียบร้อยแล้ว', link: '/admin/loans' },
-    reservation_approved:   { title: '✅ อนุมัติการจองแล้ว',       body: '{equipment} ของ {reserver} ได้รับการอนุมัติแล้ว', link: '/admin/reservations' },
-    reservation_rejected:   { title: '❌ ปฏิเสธคำขอจองแล้ว',      body: 'คำขอจอง {equipment} ของ {reserver} ถูกปฏิเสธ', link: '/admin/reservations' },
-    reservation_ready:      { title: '🟢 อุปกรณ์พร้อมให้รับแล้ว', body: '{equipment} ของ {reserver} พร้อมให้มารับที่จุดรับ', link: '/admin/reservations' },
-    reservation_converted:  { title: '🔄 แปลงการจองเป็นการยืม',   body: '{reserver} รับ {equipment} เรียบร้อย (จากการจอง)', link: '/admin/loans' },
-    special_loan_created:   { title: '⭐ สร้างการยืมพิเศษใหม่',   body: '{borrower} ยืม {equipment} (พิเศษ) ถึง {end_date}', link: '/admin/loans' },
-    special_loan_completed: { title: '⭐ คืนการยืมพิเศษแล้ว',     body: '{borrower} คืน {equipment} (พิเศษ) เรียบร้อยแล้ว', link: '/admin/loans' },
-    special_loan_cancelled: { title: '⭐ ยกเลิกการยืมพิเศษ',      body: '{borrower} ยกเลิกการยืม {equipment} (พิเศษ)', link: '/admin/loans' },
+export const ADMIN_EVENT_DEFAULTS: Partial<Record<NotificationEventKey, { title: string; body: string; link: string }>> = {
+    new_registration:       { title: '🔔 [Admin] มีผู้สมัครสมาชิกใหม่',  body: '{name} ({user_id}) จาก{department} รออนุมัติบัญชีอยู่', link: '/admin/users' },
+    new_loan_request:       { title: '📦 [Admin] มีคำขอยืมอุปกรณ์ใหม่',  body: '{borrower} ขอยืม {equipment} ตั้งแต่ {start_date} ถึง {end_date}', link: '/admin/loans' },
+    new_reservation_request:{ title: '📅 [Admin] มีคำขอจองอุปกรณ์ใหม่',  body: '{reserver} ขอจอง {equipment} ตั้งแต่ {start_date} ถึง {end_date}', link: '/admin/reservations' },
+    loan_approved:          { title: '✅ [Admin] อนุมัติการยืมแล้ว',       body: '{equipment} ของ {borrower} ได้รับการอนุมัติแล้ว', link: '/admin/loans' },
+    loan_rejected:          { title: '❌ [Admin] ปฏิเสธคำขอยืมแล้ว',      body: 'คำขอยืม {equipment} ของ {borrower} ถูกปฏิเสธ', link: '/admin/loans' },
+    loan_returned:          { title: '🔄 [Admin] คืนอุปกรณ์แล้ว',          body: '{borrower} คืน {equipment} เรียบร้อยแล้ว', link: '/admin/loans' },
+    reservation_approved:   { title: '✅ [Admin] อนุมัติการจองแล้ว',       body: '{equipment} ของ {reserver} ได้รับการอนุมัติแล้ว', link: '/admin/reservations' },
+    reservation_rejected:   { title: '❌ [Admin] ปฏิเสธคำขอจองแล้ว',      body: 'คำขอจอง {equipment} ของ {reserver} ถูกปฏิเสธ', link: '/admin/reservations' },
+    reservation_ready:      { title: '🟢 [Admin] อุปกรณ์พร้อมให้รับแล้ว', body: '{equipment} ของ {reserver} พร้อมให้มารับที่จุดรับ', link: '/admin/reservations' },
+    reservation_converted:  { title: '🔄 [Admin] แปลงการจองเป็นการยืม',   body: '{reserver} รับ {equipment} เรียบร้อย (จากการจอง)', link: '/admin/loans' },
+    special_loan_created:   { title: '⭐ [Admin] สร้างการยืมพิเศษใหม่',   body: '{borrower} ยืม {equipment} (พิเศษ) ถึง {end_date}', link: '/admin/loans' },
+    special_loan_completed: { title: '⭐ [Admin] คืนการยืมพิเศษแล้ว',     body: '{borrower} คืน {equipment} (พิเศษ) เรียบร้อยแล้ว', link: '/admin/loans' },
+    special_loan_cancelled: { title: '⭐ [Admin] ยกเลิกการยืมพิเศษ',      body: '{borrower} ยกเลิกการยืม {equipment} (พิเศษ)', link: '/admin/loans' },
 }
 
 /**

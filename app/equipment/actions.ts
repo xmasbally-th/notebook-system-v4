@@ -137,7 +137,8 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
         equipmentId,
         startDate: start,
         endDate: end,
-        bookingType: 'loan'
+        bookingType: 'loan',
+        userRole: (profile.role as any) || 'user'
     })
 
     if (!validation.valid) {

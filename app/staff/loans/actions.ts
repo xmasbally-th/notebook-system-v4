@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { notifyAndLog } from '@/lib/serverNotify'
 import { loanActionSchema, rejectLoanSchema } from '@/lib/schemas'
 import { requireStaff } from '@/lib/auth-guard'
+import { getBookingConflictDetails } from '@/lib/domain'
 
 export async function approveLoan(loanId: string) {
     // Validate input with Zod
@@ -41,7 +42,7 @@ export async function approveLoan(loanId: string) {
         console.log('[approveLoan] Fetching loan details for validation...')
         const { data: loanToValidate, error: fetchError } = await supabase
             .from('loanRequests')
-            .select('start_date, end_date, status')
+            .select('user_id, equipment_id, start_date, end_date, status')
             .eq('id', loanId)
             .single()
 
@@ -69,6 +70,25 @@ export async function approveLoan(loanId: string) {
         if (endDateOnly < startDateOnly) {
             console.error('[approveLoan] Invalid date range:', { start: loanToValidate.start_date, end: loanToValidate.end_date })
             throw new Error(`ไม่สามารถอนุมัติได้: วันที่คืน (${endDate.toLocaleDateString('th-TH')}) ก่อนวันที่ยืม (${startDate.toLocaleDateString('th-TH')})`)
+        }
+
+        // 2.5 Conflict Guard: ตรวจสอบว่าอุปกรณ์ติดคิวจองล่วงหน้าของผู้อื่นหรือไม่
+        const conflict = await getBookingConflictDetails({
+            userId: loanToValidate.user_id,
+            equipmentId: loanToValidate.equipment_id,
+            startDate,
+            endDate,
+            bookingType: 'loan',
+            excludeLoanId: loanId,
+            userRole: 'staff'
+        })
+
+        if (conflict.hasConflict) {
+            console.warn('[approveLoan] Conflict detected:', conflict)
+            return {
+                success: false,
+                error: conflict.formattedMessage || 'ไม่สามารถอนุมัติได้: อุปกรณ์นี้ติดคิวจองหรือยืมของผู้อื่นในช่วงเวลาดังกล่าว'
+            }
         }
 
         // 3. Update loan status

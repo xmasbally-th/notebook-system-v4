@@ -38,6 +38,64 @@ export const convertReservationSchema = z.object({
     reservationId: uuidSchema,
 })
 
+// Schema สำหรับอนุมัติการจอง
+export const approveReservationSchema = z.object({
+    reservationId: uuidSchema,
+})
+
+// Schema สำหรับปฏิเสธการจอง
+export const rejectReservationSchema = z.object({
+    reservationId: uuidSchema,
+    reason: z.string().trim().min(1, 'กรุณาระบุเหตุผลในการปฏิเสธ'),
+})
+
+// Schema สำหรับเปลี่ยนสถานะเป็นพร้อมรับ
+export const markReadyReservationSchema = z.object({
+    reservationId: uuidSchema,
+})
+
+// Schema สำหรับผู้ดูแลระบบแก้ไขการจอง
+export const adminUpdateReservationSchema = z.object({
+    reservationId: uuidSchema,
+    startDate: isoDateStringSchema.optional(),
+    endDate: isoDateStringSchema.optional(),
+    pickupTime: timeStringSchema.nullable().optional(),
+    returnTime: timeStringSchema.nullable().optional(),
+    status: z.enum(['pending', 'approved', 'ready', 'completed', 'rejected', 'cancelled', 'expired']).optional(),
+    rejectionReason: z.string().trim().nullable().optional(),
+}).refine(
+    (data) => {
+        if (data.startDate && data.endDate) {
+            const start = new Date(data.startDate)
+            const end = new Date(data.endDate)
+            start.setHours(0, 0, 0, 0)
+            end.setHours(0, 0, 0, 0)
+            return end >= start
+        }
+        return true
+    },
+    { message: 'วันที่คืนต้องไม่ก่อนวันที่รับ', path: ['endDate'] }
+)
+
+// Schema สำหรับผู้ดูแลระบบยกเลิกการจอง
+export const adminForceCancelReservationSchema = z.object({
+    reservationId: uuidSchema,
+    reason: z.string().trim().optional(),
+})
+
+// Schema สำหรับผู้ดูแลระบบลบการจองถาวร
+export const adminDeleteReservationSchema = z.object({
+    reservationId: uuidSchema,
+})
+
+// Schema สำหรับ Query รายการจอง
+export const getReservationsQuerySchema = z.object({
+    status: z.enum(['all', 'pending', 'approved', 'ready', 'completed', 'rejected', 'cancelled', 'expired']).optional().default('all'),
+    search: z.string().trim().optional().default(''),
+    page: z.number().int().min(1).optional().default(1),
+    pageSize: z.number().int().min(1).max(100).optional().default(10),
+})
+
 // Helper: ดึงข้อมูลจาก FormData แล้ว Parse ผ่าน submitReservationSchema
 export function parseReservationFormData(formData: FormData) {
     const raw = {
@@ -49,3 +107,4 @@ export function parseReservationFormData(formData: FormData) {
     }
     return submitReservationSchema.safeParse(raw)
 }
+

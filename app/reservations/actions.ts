@@ -52,7 +52,8 @@ export async function submitReservationRequest(formData: FormData) {
         equipmentId,
         startDate: start,
         endDate: end,
-        bookingType: 'reservation'
+        bookingType: 'reservation',
+        userRole: (profile.role as any) || 'user'
     })
 
     if (!validation.valid) {
