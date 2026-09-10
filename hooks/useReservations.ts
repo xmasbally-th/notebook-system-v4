@@ -170,6 +170,7 @@ export function useStaffActivityLog(filters?: {
     actionType?: string
     startDate?: string
     endDate?: string
+    limit?: number
 }) {
     return useQuery({
         queryKey: ['staff-activity-log', filters],
@@ -181,8 +182,67 @@ export function useStaffActivityLog(filters?: {
             const accessToken = await getAccessToken()
             if (!accessToken) return []
 
-            // Fetch activity logs without the problematic join
-            let queryUrl = `${url}/rest/v1/staff_activity_log?select=*&order=created_at.desc&limit=100`
+            const limit = filters?.limit ?? 500
+
+            // 1. Try single-query from staff_activity_log_view for maximum performance
+            let viewUrl = `${url}/rest/v1/staff_activity_log_view?select=*&order=created_at.desc&limit=${limit}`
+            if (filters?.staffId) {
+                viewUrl += `&staff_id=eq.${filters.staffId}`
+            }
+            if (filters?.actionType) {
+                viewUrl += `&action_type=eq.${filters.actionType}`
+            }
+            if (filters?.startDate) {
+                viewUrl += `&created_at=gte.${filters.startDate}`
+            }
+            if (filters?.endDate) {
+                viewUrl += `&created_at=lte.${filters.endDate}`
+            }
+
+            try {
+                const viewResponse = await fetch(viewUrl, {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                })
+
+                if (viewResponse.ok) {
+                    const viewData = await viewResponse.json()
+                    return viewData.map((row: any) => ({
+                        id: row.id,
+                        staff_id: row.staff_id,
+                        staff_role: row.staff_role,
+                        action_type: row.action_type,
+                        target_type: row.target_type,
+                        target_id: row.target_id,
+                        target_user_id: row.target_user_id,
+                        is_self_action: row.is_self_action,
+                        details: row.details || {},
+                        created_at: row.created_at,
+                        profiles: row.staff_first_name ? {
+                            first_name: row.staff_first_name,
+                            last_name: row.staff_last_name,
+                            email: row.staff_email
+                        } : null,
+                        target_profile: row.target_first_name ? {
+                            first_name: row.target_first_name,
+                            last_name: row.target_last_name,
+                            email: row.target_email,
+                            user_id: row.target_user_student_id
+                        } : null,
+                        equipment: row.equipment_name ? {
+                            name: row.equipment_name,
+                            equipment_number: row.equipment_number || '-'
+                        } : null
+                    }))
+                }
+            } catch (err) {
+                console.warn('[useStaffActivityLog] View fetch failed, falling back to multi-fetch:', err)
+            }
+
+            // 2. Fallback: Multi-fetch with parallel execution
+            let queryUrl = `${url}/rest/v1/staff_activity_log?select=*&order=created_at.desc&limit=${limit}`
 
             if (filters?.staffId) {
                 queryUrl += `&staff_id=eq.${filters.staffId}`
@@ -211,50 +271,44 @@ export function useStaffActivityLog(filters?: {
             const targetUserIds = Array.from(new Set(logs.map((log: any) => log.target_user_id).filter(Boolean))) as string[]
             const allUserIds = Array.from(new Set([...staffIds, ...targetUserIds])) as string[]
 
-            let profilesMap = new Map()
-            if (allUserIds.length > 0) {
-                const profilesResponse = await fetch(
-                    `${url}/rest/v1/profiles?id=in.(${allUserIds.join(',')})&select=id,first_name,last_name,email,user_id`,
-                    {
-                        headers: {
-                            'apikey': key,
-                            'Authorization': `Bearer ${accessToken}`
-                        }
-                    }
-                )
-                if (profilesResponse.ok) {
-                    const profiles = await profilesResponse.json()
-                    profilesMap = new Map(profiles.map((p: any) => [p.id, p]))
-                }
-            }
-
-            // Hydrate loan & reservation target details (equipment name & number)
             const loanIds = logs.filter((l: any) => l.target_type === 'loan' && l.target_id).map((l: any) => l.target_id)
             const reservationIds = logs.filter((l: any) => l.target_type === 'reservation' && l.target_id).map((l: any) => l.target_id)
 
-            const loanDetailsMap = new Map()
-            const resDetailsMap = new Map()
+            // Run hydration queries in parallel
+            const [profilesRes, loanRes, resRes] = await Promise.all([
+                allUserIds.length > 0
+                    ? fetch(`${url}/rest/v1/profiles?id=in.(${allUserIds.join(',')})&select=id,first_name,last_name,email,user_id`, {
+                        headers: { 'apikey': key, 'Authorization': `Bearer ${accessToken}` }
+                    })
+                    : Promise.resolve(null),
+                loanIds.length > 0
+                    ? fetch(`${url}/rest/v1/loanRequests?id=in.(${loanIds.join(',')})&select=id,equipment(name,equipment_number)`, {
+                        headers: { 'apikey': key, 'Authorization': `Bearer ${accessToken}` }
+                    })
+                    : Promise.resolve(null),
+                reservationIds.length > 0
+                    ? fetch(`${url}/rest/v1/reservations?id=in.(${reservationIds.join(',')})&select=id,equipment(name,equipment_number)`, {
+                        headers: { 'apikey': key, 'Authorization': `Bearer ${accessToken}` }
+                    })
+                    : Promise.resolve(null)
+            ])
 
-            if (loanIds.length > 0) {
-                const loanRes = await fetch(
-                    `${url}/rest/v1/loanRequests?id=in.(${loanIds.join(',')})&select=id,equipment(name,equipment_number)`,
-                    { headers: { 'apikey': key, 'Authorization': `Bearer ${accessToken}` } }
-                )
-                if (loanRes.ok) {
-                    const loansData = await loanRes.json()
-                    loansData.forEach((ld: any) => loanDetailsMap.set(ld.id, ld))
-                }
+            let profilesMap = new Map()
+            if (profilesRes && profilesRes.ok) {
+                const profiles = await profilesRes.json()
+                profilesMap = new Map(profiles.map((p: any) => [p.id, p]))
             }
 
-            if (reservationIds.length > 0) {
-                const resRes = await fetch(
-                    `${url}/rest/v1/reservations?id=in.(${reservationIds.join(',')})&select=id,equipment(name,equipment_number)`,
-                    { headers: { 'apikey': key, 'Authorization': `Bearer ${accessToken}` } }
-                )
-                if (resRes.ok) {
-                    const resData = await resRes.json()
-                    resData.forEach((rd: any) => resDetailsMap.set(rd.id, rd))
-                }
+            const loanDetailsMap = new Map()
+            if (loanRes && loanRes.ok) {
+                const loansData = await loanRes.json()
+                loansData.forEach((ld: any) => loanDetailsMap.set(ld.id, ld))
+            }
+
+            const resDetailsMap = new Map()
+            if (resRes && resRes.ok) {
+                const resData = await resRes.json()
+                resData.forEach((rd: any) => resDetailsMap.set(rd.id, rd))
             }
 
             // Merge profiles and equipment into logs

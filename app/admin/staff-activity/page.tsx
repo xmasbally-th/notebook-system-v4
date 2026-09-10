@@ -24,14 +24,32 @@ export default function AdminStaffActivityPage() {
         actionType: actionFilter || undefined,
         startDate: dateRange.start || undefined,
         endDate: dateRange.end || undefined,
+        limit: 500,
     })
 
     const { data: staffList } = useStaffList()
 
-    const actionTypes: ActionType[] = [
-        'approve_loan', 'reject_loan', 'mark_returned',
-        'approve_reservation', 'reject_reservation', 'mark_ready',
-        'convert_to_loan', 'cancel_reservation', 'self_borrow', 'self_reserve'
+    const actionGroups: { label: string; types: ActionType[] }[] = [
+        {
+            label: 'การยืม-คืนอุปกรณ์',
+            types: ['approve_loan', 'reject_loan', 'mark_returned', 'self_borrow']
+        },
+        {
+            label: 'การจองอุปกรณ์',
+            types: ['approve_reservation', 'reject_reservation', 'mark_ready', 'convert_to_loan', 'cancel_reservation', 'edit_reservation', 'self_reserve']
+        },
+        {
+            label: 'การยืมพิเศษ (Special Loans)',
+            types: ['create_special_loan', 'complete_special_loan', 'cancel_special_loan']
+        },
+        {
+            label: 'การจัดการอุปกรณ์',
+            types: ['create_equipment', 'update_equipment', 'delete_equipment']
+        },
+        {
+            label: 'การจัดการข้อมูลและระบบ',
+            types: ['export_data', 'import_data', 'soft_delete_data', 'hard_delete_notifications', 'restore_data']
+        }
     ]
 
     const formatTime = (dateStr: string) => {
@@ -134,11 +152,15 @@ export default function AdminStaffActivityPage() {
                                 setCurrentPage(1)
                             }}
                         >
-                            <option value="">ทั้งหมด</option>
-                            {actionTypes.map((type) => (
-                                <option key={type} value={type}>
-                                    {getActionTypeIcon(type)} {getActionTypeLabel(type)}
-                                </option>
+                            <option value="">ทั้งหมด (ทุกการดำเนินการ)</option>
+                            {actionGroups.map((group) => (
+                                <optgroup key={group.label} label={group.label}>
+                                    {group.types.map((type) => (
+                                        <option key={type} value={type}>
+                                            {getActionTypeIcon(type)} {getActionTypeLabel(type)}
+                                        </option>
+                                    ))}
+                                </optgroup>
                             ))}
                         </select>
                     </div>
@@ -305,8 +327,14 @@ export default function AdminStaffActivityPage() {
                         {/* Mobile Cards List */}
                         <div className="lg:hidden divide-y divide-gray-150">
                             {paginatedLogs.map((log: any) => {
-                                const isActionSuccess = ['approve_loan', 'approve_reservation', 'mark_returned', 'mark_ready', 'convert_to_loan'].includes(log.action_type)
-                                const isActionDanger = ['reject_loan', 'reject_reservation', 'cancel_reservation'].includes(log.action_type)
+                                const isActionSuccess = [
+                                    'approve_loan', 'approve_reservation', 'mark_returned', 'mark_ready',
+                                    'convert_to_loan', 'complete_special_loan', 'restore_data', 'create_equipment'
+                                ].includes(log.action_type)
+                                const isActionDanger = [
+                                    'reject_loan', 'reject_reservation', 'cancel_reservation', 'cancel_special_loan',
+                                    'soft_delete_data', 'delete_equipment', 'hard_delete_notifications'
+                                ].includes(log.action_type)
 
                                 const actionBadgeColor = isActionSuccess
                                     ? 'bg-green-50 text-green-750 border-green-200'
