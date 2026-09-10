@@ -1,0 +1,7 @@
+export { default as LimitsTab } from './LimitsTab'
+export { default as HoursTab } from './HoursTab'
+export { default as FeaturesTab } from './FeaturesTab'
+export { default as NotificationsTab } from './NotificationsTab'
+export { default as AutomationTab } from './AutomationTab'
+export { default as DocumentsTab } from './DocumentsTab'
+export { default as ThemeTab } from './ThemeTab'

@@ -1,25 +1,25 @@
 'use client'
 
-import Image from 'next/image'
+import React, { useState, useMemo, useEffect, useCallback, startTransition } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
+import { useQuery } from '@tanstack/react-query'
+import { Search, Package } from 'lucide-react'
 import { useEquipment } from '@/hooks/useEquipment'
 import { useRecentlyBorrowed, isRecentlyBorrowed, sortByRecentlyBorrowed } from '@/hooks/useRecentlyBorrowed'
-import { useState, useMemo, useEffect, startTransition } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import dynamic from 'next/dynamic'
 import { Database } from '@/supabase/types'
-import { Search, X, Package, Plus, Check, Clock, CheckCircle, Users, Wrench, AlertTriangle } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
 import { CartProvider, useCart } from '@/components/cart/CartContext'
 import CartButton from '@/components/cart/CartButton'
-import Link from 'next/link'
+import EquipmentFilterBar from './EquipmentFilterBar'
+import EquipmentTableRow from './EquipmentTableRow'
+import EquipmentGridCard from './EquipmentGridCard'
 
 // Dynamic import: CartDrawer loaded only when user opens it
 const CartDrawer = dynamic(
     () => import('@/components/cart/CartDrawer'),
     { ssr: false }
 )
-import { cn } from '@/lib/utils'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase/client'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 type EquipmentType = {
@@ -30,14 +30,6 @@ type EquipmentType = {
 
 interface EquipmentListWithFiltersProps {
     equipmentTypes: EquipmentType[]
-}
-
-const STATUS_CONFIG = {
-    active: { label: 'พร้อมให้ยืม', color: 'bg-green-100 text-green-700', icon: CheckCircle, canBorrow: true },
-    ready: { label: 'พร้อมให้ยืม', color: 'bg-green-100 text-green-700', icon: CheckCircle, canBorrow: true },
-    borrowed: { label: 'กำลังถูกยืม', color: 'bg-orange-100 text-orange-700', icon: Users, canBorrow: false },
-    maintenance: { label: 'ซ่อมบำรุง', color: 'bg-yellow-100 text-yellow-700', icon: Wrench, canBorrow: false },
-    retired: { label: 'เลิกใช้งาน', color: 'bg-gray-100 text-gray-600', icon: Package, canBorrow: false },
 }
 
 function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps) {
@@ -76,7 +68,7 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
     }, [searchTerm])
 
     // Determine if we should fetch data
-    const shouldFetch = !!(selectedTypeId || debouncedSearch)
+    const shouldFetch = Boolean(selectedTypeId || debouncedSearch)
 
     // Fetch Data
     const { data: equipment, isLoading, error } = useEquipment(null, {
@@ -88,8 +80,8 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
     const { data: recentlyBorrowed = [] } = useRecentlyBorrowed()
     const { isInCart, addItem, removeItem, isAtLimit } = useCart()
 
-    // Query equipment IDs that have active loans (pending/approved)
-    const { data: activeLoanEquipmentIds = [] } = useQuery({
+    // Fast O(1) Set lookup for active loan equipment IDs
+    const { data: activeLoanEquipmentIdSet = new Set<string>() } = useQuery({
         queryKey: ['active-loan-equipment-ids'],
         staleTime: 1000 * 30, // 30 seconds
         queryFn: async () => {
@@ -99,13 +91,11 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                 .in('status', ['pending', 'approved'])
             if (error) {
                 console.error('[EquipmentList] Failed to fetch active loans:', error)
-                return []
+                return new Set<string>()
             }
-            return (data || []).map((d: any) => d.equipment_id as string)
+            return new Set<string>((data || []).map((d: any) => d.equipment_id as string))
         },
     })
-
-    const hasActiveLoan = (equipmentId: string) => activeLoanEquipmentIds.includes(equipmentId)
 
     // Update URL when filters change
     useEffect(() => {
@@ -116,21 +106,17 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
 
         const queryString = params.toString()
         if (queryString !== searchParams.toString()) {
-            // Use replace to update URL without adding history entry for every char
-            // But we only update when debouncedSearch changes, so push is fine? 
-            // Actually better to replace for filters.
             router.replace(`/equipment?${queryString}`, { scroll: false })
         }
     }, [debouncedSearch, selectedTypeId, selectedStatus, router, searchParams])
-
 
     // Filter logic (status and sorting)
     const filteredItems = useMemo(() => {
         if (!equipment) return []
 
-        let items = (equipment as Equipment[])
+        let items = equipment as Equipment[]
 
-        // Status filter (Client-side for now)
+        // Status filter
         if (selectedStatus !== 'all') {
             items = items.filter(item => {
                 if (selectedStatus === 'ready') {
@@ -146,17 +132,16 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
 
     // Pagination
     const totalPages = Math.ceil(filteredItems.length / pageSize)
-    const paginatedItems = filteredItems.slice(
-        (currentPage - 1) * pageSize,
-        currentPage * pageSize
-    )
+    const paginatedItems = useMemo(() => {
+        return filteredItems.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    }, [filteredItems, currentPage, pageSize])
 
     // Reset page when filters change
     useEffect(() => {
         setCurrentPage(1)
     }, [debouncedSearch, selectedTypeId, selectedStatus])
 
-    const clearFilters = () => {
+    const clearFilters = useCallback(() => {
         startTransition(() => {
             setSearchTerm('')
             setDebouncedSearch('')
@@ -165,9 +150,9 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
             setCurrentPage(1)
         })
         router.replace('/equipment')
-    }
+    }, [router])
 
-    const handleCartToggle = (item: Equipment, imageUrl: string) => {
+    const handleCartToggle = useCallback((item: Equipment, imageUrl: string) => {
         if (isInCart(item.id)) {
             removeItem(item.id)
         } else {
@@ -178,7 +163,7 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                 imageUrl,
             })
         }
-    }
+    }, [isInCart, removeItem, addItem])
 
     // View: Category Selection (when no filters active)
     if (!shouldFetch) {
@@ -207,6 +192,7 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                         {equipmentTypes.map((type) => (
                             <button
                                 key={type.id}
+                                type="button"
                                 onClick={() => setSelectedTypeId(type.id)}
                                 className="group flex flex-col items-center justify-center p-6 bg-white rounded-xl border-2 border-transparent hover:border-blue-500 shadow-sm hover:shadow-md transition-all duration-200 gap-3"
                             >
@@ -248,6 +234,7 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
             <div className="text-center py-12 bg-red-50 rounded-xl">
                 <p className="text-red-600">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
                 <button
+                    type="button"
                     onClick={() => window.location.reload()}
                     className="mt-4 text-blue-600 hover:underline"
                 >
@@ -261,71 +248,23 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
     return (
         <div className="space-y-6">
             {/* Header & Filters Bar */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sticky top-4 z-10">
-                <div className="flex flex-col lg:flex-row gap-4">
-                    {/* Search */}
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="ค้นหา..."
-                            className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                        {searchTerm && (
-                            <button
-                                onClick={() => { setSearchTerm(''); setDebouncedSearch(''); }}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="flex gap-2 overflow-x-auto pb-2 lg:pb-0">
-                        {/* Type Selector */}
-                        <select
-                            className="px-3 py-2 rounded-lg border border-gray-300 bg-white"
-                            value={selectedTypeId || ''}
-                            onChange={(e) => {
-                                const val = e.target.value
-                                setSelectedTypeId(val === 'all' ? null : val)
-                            }}
-                        >
-                            <option value="all">ทั้งหมด</option>
-                            {equipmentTypes?.map(type => (
-                                <option key={type.id} value={type.id}>
-                                    {type.icon} {type.name}
-                                </option>
-                            ))}
-                        </select>
-
-                        {/* Status Selector */}
-                        <select
-                            className="px-3 py-2 rounded-lg border border-gray-300 bg-white"
-                            value={selectedStatus}
-                            onChange={(e) => setSelectedStatus(e.target.value)}
-                        >
-                            <option value="all">ทุกสถานะ</option>
-                            <option value="ready">พร้อมให้ยืม</option>
-                            <option value="borrowed">กำลังถูกยืม</option>
-                            <option value="maintenance">ซ่อมบำรุง</option>
-                        </select>
-
-                        <button
-                            onClick={clearFilters}
-                            className="px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg whitespace-nowrap font-medium transition-colors"
-                        >
-                            ล้างตัวกรอง
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <EquipmentFilterBar
+                searchTerm={searchTerm}
+                onSearchChange={(val) => {
+                    setSearchTerm(val)
+                    if (!val) setDebouncedSearch('')
+                }}
+                selectedTypeId={selectedTypeId}
+                onTypeChange={setSelectedTypeId}
+                selectedStatus={selectedStatus}
+                onStatusChange={setSelectedStatus}
+                equipmentTypes={equipmentTypes}
+                onClearFilters={clearFilters}
+            />
 
             {/* Results Info */}
             <div className="flex items-center justify-between px-2">
-                <h3 className="font-medium text-gray-700">
+                <h3 className="font-medium text-gray-700 text-sm">
                     {filteredItems.length > 0
                         ? `พบ ${filteredItems.length} รายการ`
                         : 'ไม่พบรายการที่ค้นหา'
@@ -333,12 +272,13 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                 </h3>
             </div>
 
-            {/* List/Table */}
+            {/* List / Table */}
             {filteredItems.length === 0 ? (
                 <div className="p-12 text-center bg-white rounded-xl border border-dashed border-gray-300">
                     <Package className="w-12 h-12 mx-auto text-gray-300 mb-3" />
                     <p className="text-gray-500">ไม่พบอุปกรณ์ที่คุณค้นหา</p>
                     <button
+                        type="button"
                         onClick={clearFilters}
                         className="text-blue-600 hover:underline text-sm mt-2"
                     >
@@ -347,7 +287,7 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                 </div>
             ) : (
                 <>
-                    {/* Desktop Table (Reuse existing structure) */}
+                    {/* Desktop Table */}
                     <div className="hidden lg:block bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
@@ -361,191 +301,52 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {paginatedItems.map((item) => {
-                                    const images = Array.isArray(item.images) ? item.images : []
-                                    const imageUrl = images.length > 0 ? (images[0] as string) : 'https://placehold.co/100x100?text=No+Image'
-                                    const statusConfig = STATUS_CONFIG[item.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.ready
-                                    const StatusIcon = statusConfig.icon
+                                    const canBorrow = item.status === 'ready' || item.status === 'active'
+                                    const isUnavailable = !canBorrow || activeLoanEquipmentIdSet.has(item.id)
                                     const inCart = isInCart(item.id)
-                                    const isUnavailable = !statusConfig.canBorrow || hasActiveLoan(item.id)
                                     const isRecent = isRecentlyBorrowed(item.id, recentlyBorrowed)
 
                                     return (
-                                        <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-12 w-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 relative">
-                                                        <Image
-                                                            src={imageUrl}
-                                                            alt={item.name}
-                                                            fill
-                                                            sizes="48px"
-                                                            className="object-cover"
-                                                        />
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <Link href={`/equipment/${item.id}`} className="text-sm font-medium text-gray-900 hover:text-blue-600">
-                                                            {item.name}
-                                                        </Link>
-                                                        {isRecent && (
-                                                            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700">
-                                                                <Clock className="w-3 h-3" />
-                                                                ยืมล่าสุด
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className="text-sm text-gray-900 font-mono">{item.equipment_number}</span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm text-gray-900">{item.brand || '-'}</div>
-                                                <div className="text-xs text-gray-500">{item.model || ''}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={cn(
-                                                    "inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full",
-                                                    statusConfig.color
-                                                )}>
-                                                    <StatusIcon className="w-3 h-3" />
-                                                    {statusConfig.label}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    {!isUnavailable ? (
-                                                        <button
-                                                            onClick={() => handleCartToggle(item, imageUrl)}
-                                                            disabled={!inCart && isAtLimit}
-                                                            className={cn(
-                                                                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
-                                                                inCart
-                                                                    ? "bg-green-600 text-white hover:bg-green-700"
-                                                                    : isAtLimit
-                                                                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                                                        : "bg-blue-600 text-white hover:bg-blue-700"
-                                                            )}
-                                                        >
-                                                            {inCart ? (
-                                                                <>
-                                                                    <Check className="w-4 h-4" />
-                                                                    เลือกแล้ว
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <Plus className="w-4 h-4" />
-                                                                    เลือก
-                                                                </>
-                                                            )}
-                                                        </button>
-                                                    ) : (
-                                                        <span className="inline-flex items-center gap-1 text-sm text-orange-500">
-                                                            <AlertTriangle className="w-3.5 h-3.5" />
-                                                            ไม่พร้อมยืม
-                                                        </span>
-                                                    )}
-
-                                                </div>
-                                            </td>
-                                        </tr>
+                                        <EquipmentTableRow
+                                            key={item.id}
+                                            item={item}
+                                            inCart={inCart}
+                                            isAtLimit={isAtLimit}
+                                            isUnavailable={isUnavailable}
+                                            isRecent={isRecent}
+                                            onCartToggle={handleCartToggle}
+                                        />
                                     )
                                 })}
                             </tbody>
                         </table>
                     </div>
 
-                    {/* Mobile Cards (Reuse existing structure) */}
+                    {/* Mobile Cards */}
                     <div className="lg:hidden space-y-3">
                         {paginatedItems.map((item) => {
-                            const images = Array.isArray(item.images) ? item.images : []
-                            const imageUrl = images.length > 0 ? (images[0] as string) : 'https://placehold.co/100x100?text=No+Image'
-                            const statusConfig = STATUS_CONFIG[item.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.ready
-                            const StatusIcon = statusConfig.icon
+                            const canBorrow = item.status === 'ready' || item.status === 'active'
+                            const isUnavailable = !canBorrow || activeLoanEquipmentIdSet.has(item.id)
                             const inCart = isInCart(item.id)
-                            const isUnavailable = !statusConfig.canBorrow || hasActiveLoan(item.id)
                             const isRecent = isRecentlyBorrowed(item.id, recentlyBorrowed)
 
                             return (
-                                <div key={item.id} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-                                    <div className="flex items-start gap-3">
-                                        <div className="h-16 w-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 relative">
-                                            <Image
-                                                src={imageUrl}
-                                                alt={item.name}
-                                                fill
-                                                sizes="64px"
-                                                className="object-cover"
-                                            />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div className="min-w-0">
-                                                    <div className="flex items-center gap-2">
-                                                        <Link href={`/equipment/${item.id}`} className="font-medium text-gray-900 truncate hover:text-blue-600">
-                                                            {item.name}
-                                                        </Link>
-                                                        {isRecent && (
-                                                            <Clock className="w-4 h-4 text-blue-600" />
-                                                        )}
-                                                    </div>
-                                                    <p className="text-xs text-gray-500 font-mono">{item.equipment_number}</p>
-                                                </div>
-                                                <span className={cn(
-                                                    "flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full",
-                                                    statusConfig.color
-                                                )}>
-                                                    <StatusIcon className="w-3 h-3" />
-                                                </span>
-                                            </div>
-                                            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
-                                                {(item.brand || item.model) && (
-                                                    <span>{item.brand} {item.model}</span>
-                                                )}
-                                            </div>
-                                            <div className="mt-3 flex gap-2">
-                                                {!isUnavailable ? (
-                                                    <button
-                                                        onClick={() => handleCartToggle(item, imageUrl)}
-                                                        disabled={!inCart && isAtLimit}
-                                                        className={cn(
-                                                            "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                                                            inCart
-                                                                ? "bg-green-600 text-white"
-                                                                : isAtLimit
-                                                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                                                    : "bg-blue-600 text-white"
-                                                        )}
-                                                    >
-                                                        {inCart ? (
-                                                            <>
-                                                                <Check className="w-4 h-4" />
-                                                                เลือกแล้ว
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Plus className="w-4 h-4" />
-                                                                เลือก
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                ) : (
-                                                    <span className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-orange-50 text-orange-500 rounded-lg text-sm">
-                                                        <AlertTriangle className="w-3.5 h-3.5" />
-                                                        ไม่พร้อมยืม
-                                                    </span>
-                                                )}
-
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <EquipmentGridCard
+                                    key={item.id}
+                                    item={item}
+                                    inCart={inCart}
+                                    isAtLimit={isAtLimit}
+                                    isUnavailable={isUnavailable}
+                                    isRecent={isRecent}
+                                    onCartToggle={handleCartToggle}
+                                />
                             )
                         })}
                     </div>
                 </>
             )}
 
-            {/* Pagination (Reuse existing structure) */}
+            {/* Pagination */}
             {filteredItems.length > 0 && (
                 <div className="bg-white rounded-xl border border-gray-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
                     <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -563,10 +364,13 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                             <option value={50}>50</option>
                             <option value={100}>100</option>
                         </select>
-                        <span>รายการ | {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, filteredItems.length)} จาก {filteredItems.length}</span>
+                        <span>
+                            รายการ | {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, filteredItems.length)} จาก {filteredItems.length}
+                        </span>
                     </div>
                     <div className="flex gap-2">
                         <button
+                            type="button"
                             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                             disabled={currentPage === 1}
                             className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-50"
@@ -583,6 +387,7 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                                 return (
                                     <button
                                         key={pageNum}
+                                        type="button"
                                         onClick={() => setCurrentPage(pageNum)}
                                         className={`w-8 h-8 rounded-lg text-sm font-medium ${currentPage === pageNum
                                             ? 'bg-blue-600 text-white'
@@ -595,6 +400,7 @@ function EquipmentListContent({ equipmentTypes }: EquipmentListWithFiltersProps)
                             })}
                         </div>
                         <button
+                            type="button"
                             onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                             disabled={currentPage === totalPages || totalPages === 0}
                             className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm disabled:opacity-50 hover:bg-gray-50"

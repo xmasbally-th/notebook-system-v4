@@ -1,16 +1,29 @@
 'use client'
 
-import Image from 'next/image'
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCart } from './CartContext'
 import { useProfile } from '@/hooks/useProfile'
 import { useSystemConfig } from '@/hooks/useSystemConfig'
-import { X, Trash2, ShoppingCart, Send, Calendar, Clock, Loader2, AlertCircle, CheckCircle, Bookmark, AlertTriangle, RefreshCw, Star } from 'lucide-react'
-import { createReservation } from '@/lib/reservations'
+import {
+    X,
+    ShoppingCart,
+    Send,
+    Bookmark,
+    RefreshCw,
+    AlertTriangle,
+    AlertCircle,
+    CheckCircle,
+    Loader2
+} from 'lucide-react'
 import { submitLoanRequest } from '@/app/equipment/actions'
 import { submitReservationRequest } from '@/app/reservations/actions'
 import { supabase } from '@/lib/supabase/client'
+import CartDrawerItem from './CartDrawerItem'
+import CartBorrowForm from './CartBorrowForm'
+import CartReserveForm from './CartReserveForm'
+import CartConfirmModal from './CartConfirmModal'
+import CartEvaluationAlert from './CartEvaluationAlert'
 
 interface CartDrawerProps {
     isOpen: boolean
@@ -34,11 +47,11 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     // Mode state
     const [mode, setMode] = useState<CartMode>('borrow')
 
-    // Borrow mode: only end date + return time (start = today)
+    // Borrow mode
     const [endDate, setEndDate] = useState('')
     const [returnTime, setReturnTime] = useState('')
 
-    // Reserve mode: start date + pickup time + end date + return time
+    // Reserve mode
     const [reserveStartDate, setReserveStartDate] = useState('')
     const [reservePickupTime, setReservePickupTime] = useState('')
     const [reserveEndDate, setReserveEndDate] = useState('')
@@ -48,60 +61,55 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState(false)
 
-    // Bug 2: Track unavailable equipment in cart
+    // Availability tracking
     const [unavailableIds, setUnavailableIds] = useState<Set<string>>(new Set())
     const [isCheckingAvailability, setIsCheckingAvailability] = useState(false)
 
-    // Bug 3: Confirmation dialog state
+    // Confirmation dialog
     const [showConfirmation, setShowConfirmation] = useState(false)
 
-    // Pending evaluations check
+    // Pending evaluations
     const [pendingEvaluationCount, setPendingEvaluationCount] = useState(0)
 
-    // Get max loan days based on user type
-    const getMaxDays = () => {
+    // Max loan days based on user type
+    const maxDays = useMemo(() => {
         if (!config?.loan_limits_by_type || !profile?.user_type) return 7
         const limits = config.loan_limits_by_type as LoanLimitsByType
         return limits[profile.user_type as keyof LoanLimitsByType]?.max_days || 7
-    }
+    }, [config?.loan_limits_by_type, profile?.user_type])
 
-    const maxDays = getMaxDays()
     const today = new Date().toISOString().split('T')[0]
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
 
-    // Operating hours from config
+    // Operating hours
     const openingTime = config?.opening_time?.slice(0, 5) || '09:00'
     const closingTime = config?.closing_time?.slice(0, 5) || '17:00'
     const breakStartTime = config?.break_start_time?.slice(0, 5) || null
     const breakEndTime = config?.break_end_time?.slice(0, 5) || null
 
-    // Calculate max end date for borrow mode
-    // Example: if start=today(26th) and maxDays=3, maxEnd=28th (26=day1, 27=day2, 28=day3)
-    const getMaxEndDate = () => {
+    // Max end date calculation
+    const maxEndDate = useMemo(() => {
         const start = new Date(today)
         start.setDate(start.getDate() + maxDays - 1)
         return start.toISOString().split('T')[0]
-    }
+    }, [today, maxDays])
 
-    // Calculate max end date for reserve mode
-    // Example: if start=26th and maxDays=3, maxEnd=28th (26=day1, 27=day2, 28=day3)
-    const getReserveMaxEndDate = () => {
+    const reserveMaxEndDate = useMemo(() => {
         if (!reserveStartDate) return ''
         const start = new Date(reserveStartDate)
         start.setDate(start.getDate() + maxDays - 1)
         return start.toISOString().split('T')[0]
-    }
+    }, [reserveStartDate, maxDays])
 
-    // Max advance booking days
     const maxAdvanceBookingDays = (config as any)?.max_advance_booking_days || 30
-    const getMaxAdvanceDate = () => {
+    const maxAdvanceDate = useMemo(() => {
         const date = new Date()
         date.setDate(date.getDate() + maxAdvanceBookingDays)
         return date.toISOString().split('T')[0]
-    }
+    }, [maxAdvanceBookingDays])
 
-    // Validate time against break and closing hours
-    const validateTime = (time: string): string | null => {
+    // Validate time against operating hours and lunch break
+    const validateTime = useCallback((time: string): string | null => {
         if (!time) return null
 
         const [hours, minutes] = time.split(':').map(Number)
@@ -115,12 +123,10 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         if (timeMinutes < openMinutes) {
             return `เวลาต้องไม่ก่อน ${openingTime} น.`
         }
-
         if (timeMinutes > closeMinutes) {
             return `เวลาต้องไม่เกิน ${closingTime} น.`
         }
 
-        // Check break time
         if (breakStartTime && breakEndTime) {
             const [breakStartH, breakStartM] = breakStartTime.split(':').map(Number)
             const [breakEndH, breakEndM] = breakEndTime.split(':').map(Number)
@@ -133,9 +139,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         }
 
         return null
-    }
+    }, [openingTime, closingTime, breakStartTime, breakEndTime])
 
-    // Bug 2: Check availability of all cart items when drawer opens
+    // Check availability of cart items
     const checkCartAvailability = useCallback(async () => {
         if (items.length === 0) {
             setUnavailableIds(new Set())
@@ -146,20 +152,17 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         try {
             const equipmentIds = items.map(item => item.id)
 
-            // Check equipment status
             const { data: equipmentData } = await supabase
                 .from('equipment')
                 .select('id, status')
                 .in('id', equipmentIds)
 
-            // Check active loans
             const { data: activeLoanData } = await supabase
                 .from('loanRequests')
                 .select('equipment_id')
                 .in('equipment_id', equipmentIds)
                 .in('status', ['pending', 'approved'])
 
-            // Check active reservations (pending/approved/ready)
             const { data: activeReservationData } = await supabase
                 .from('reservations')
                 .select('equipment_id')
@@ -168,19 +171,16 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
             const unavailable = new Set<string>()
 
-            // Mark equipment that is not in 'ready'/'active' status
             equipmentData?.forEach((eq: any) => {
                 if (eq.status !== 'ready' && eq.status !== 'active') {
                     unavailable.add(eq.id)
                 }
             })
 
-            // Mark equipment that has active loans
             activeLoanData?.forEach((loan: any) => {
                 unavailable.add(loan.equipment_id)
             })
 
-            // Mark equipment that has active reservations
             activeReservationData?.forEach((res: any) => {
                 unavailable.add(res.equipment_id)
             })
@@ -193,14 +193,13 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         }
     }, [items])
 
-    // Check availability when drawer opens or items change
     useEffect(() => {
         if (isOpen) {
             checkCartAvailability()
         }
     }, [isOpen, items.length, checkCartAvailability])
 
-    // Check for pending evaluations when drawer opens
+    // Check pending evaluations
     useEffect(() => {
         if (!isOpen) return
         const checkPendingEvaluations = async () => {
@@ -208,7 +207,6 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 const { data: { session } } = await supabase.auth.getSession()
                 if (!session) return
 
-                // Get cutoff date via RPC to bypass RLS lockout
                 const { data: cutoffDateRaw, error: configError } = await supabase
                     .rpc('get_evaluation_cutoff_date')
 
@@ -237,11 +235,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     }, [isOpen])
 
     const hasPendingEvaluations = pendingEvaluationCount > 0
-
     const hasUnavailableItems = unavailableIds.size > 0
-    const availableItems = items.filter(item => !unavailableIds.has(item.id))
 
-    // Validation errors for display
+    // Validation errors
     const validationErrors = useMemo(() => {
         const errors: string[] = []
 
@@ -252,7 +248,6 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 if (timeError) errors.push(timeError)
             }
         } else {
-            // Reserve mode
             if (reserveStartDate && reserveStartDate <= today) {
                 errors.push('วันที่รับต้องเป็นวันพรุ่งนี้เป็นต้นไป')
             }
@@ -267,9 +262,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         }
 
         return errors
-    }, [mode, endDate, returnTime, reserveStartDate, reservePickupTime, reserveReturnTime, today])
+    }, [mode, endDate, returnTime, reserveStartDate, reservePickupTime, reserveReturnTime, today, validateTime])
 
-    // Bug 3: Show confirmation dialog instead of submitting immediately
     const handleShowConfirmation = () => {
         setError(null)
 
@@ -278,13 +272,11 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             return
         }
 
-        // Check for unavailable items
         if (hasUnavailableItems) {
             setError('กรุณานำอุปกรณ์ที่ไม่พร้อมให้ยืมออกจากรายการก่อน')
             return
         }
 
-        // Validate based on mode
         if (mode === 'borrow') {
             if (!endDate) {
                 setError('กรุณาระบุวันที่คืน')
@@ -308,7 +300,6 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 setError('กรุณาระบุเวลารับและเวลาคืน')
                 return
             }
-            // Validate times
             const pickupError = validateTime(reservePickupTime)
             if (pickupError) {
                 setError(`เวลารับ: ${pickupError}`)
@@ -321,7 +312,6 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             }
         }
 
-        // All validated — show confirmation dialog
         setShowConfirmation(true)
     }
 
@@ -331,10 +321,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         setError(null)
 
         try {
-            // Re-check availability before submitting
             await checkCartAvailability()
 
-            // Check again after re-check
             const currentUnavailable = new Set<string>()
             const equipmentIds = items.map(item => item.id)
             const { data: activeLoanData } = await supabase
@@ -343,7 +331,6 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 .in('equipment_id', equipmentIds)
                 .in('status', ['pending', 'approved'])
 
-            // Also check active reservations
             const { data: activeReservationData } = await supabase
                 .from('reservations')
                 .select('equipment_id')
@@ -353,7 +340,6 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             activeLoanData?.forEach((loan: any) => {
                 currentUnavailable.add(loan.equipment_id)
             })
-
             activeReservationData?.forEach((res: any) => {
                 currentUnavailable.add(res.equipment_id)
             })
@@ -366,24 +352,19 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             }
 
             if (mode === 'borrow') {
-                // Use server action for each item
-                const startDate = today
-
                 for (const item of items) {
                     const formData = new FormData()
                     formData.set('equipmentId', item.id)
-                    formData.set('startDate', startDate)
+                    formData.set('startDate', today)
                     formData.set('endDate', endDate)
                     formData.set('returnTime', returnTime)
 
                     const result = await submitLoanRequest(null, formData)
-
                     if (result?.error) {
                         throw new Error(result.error)
                     }
                 }
             } else {
-                // Submit reservations with notification & validation
                 for (const item of items) {
                     const formData = new FormData()
                     formData.set('equipmentId', item.id)
@@ -402,7 +383,6 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             setSuccess(true)
             clearCart()
 
-            // Redirect after short delay
             setTimeout(() => {
                 onClose()
                 router.push(mode === 'reserve' ? '/my-reservations' : '/my-loans')
@@ -419,10 +399,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     if (!isOpen) return null
 
     const isFormValid = mode === 'borrow'
-        ? (endDate && returnTime && validationErrors.length === 0 && !hasUnavailableItems && !hasPendingEvaluations)
-        : (reserveStartDate && reserveEndDate && reservePickupTime && reserveReturnTime && validationErrors.length === 0 && !hasUnavailableItems && !hasPendingEvaluations)
+        ? (Boolean(endDate && returnTime) && validationErrors.length === 0 && !hasUnavailableItems && !hasPendingEvaluations)
+        : (Boolean(reserveStartDate && reserveEndDate && reservePickupTime && reserveReturnTime) && validationErrors.length === 0 && !hasUnavailableItems && !hasPendingEvaluations)
 
-    // Format date for Thai display
     const formatThaiDateShort = (dateStr: string) => {
         if (!dateStr) return '-'
         return new Date(dateStr).toLocaleDateString('th-TH', {
@@ -450,6 +429,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                         <span className="text-sm text-gray-500">({items.length}/{maxItems})</span>
                     </div>
                     <button
+                        type="button"
                         onClick={() => { setShowConfirmation(false); onClose(); }}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                     >
@@ -459,29 +439,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-4">
-                    {/* Pending evaluations warning */}
-                    {hasPendingEvaluations && (
-                        <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                            <div className="flex items-start gap-2">
-                                <Star className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="text-sm font-medium text-orange-800">
-                                        กรุณาประเมินอุปกรณ์ก่อนยืม/จองใหม่
-                                    </p>
-                                    <p className="text-xs text-orange-600 mt-1">
-                                        คุณมีอุปกรณ์ที่คืนแล้วแต่ยังไม่ได้ประเมิน {pendingEvaluationCount} รายการ
-                                    </p>
-                                    <a
-                                        href="/my-loans"
-                                        className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-orange-700 hover:text-orange-900 underline"
-                                    >
-                                        <Star className="w-3 h-3" />
-                                        ไปประเมินเลย
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {/* Pending evaluations alert */}
+                    <CartEvaluationAlert pendingEvaluationCount={pendingEvaluationCount} />
 
                     {success ? (
                         <div className="flex flex-col items-center justify-center h-full text-center">
@@ -494,116 +453,22 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                             <p className="text-gray-500">กำลังนำท่านไปยังหน้าประวัติ...</p>
                         </div>
                     ) : showConfirmation ? (
-                        /* Bug 3: Confirmation Dialog */
-                        <div className="space-y-4 animate-in fade-in duration-200">
-                            <div className="text-center mb-2">
-                                <h3 className="text-lg font-bold text-gray-900">
-                                    ยืนยันการ{mode === 'borrow' ? 'ยืม' : 'จอง'}อุปกรณ์
-                                </h3>
-                                <p className="text-sm text-gray-500 mt-1">กรุณาตรวจสอบข้อมูลก่อนส่งคำขอ</p>
-                            </div>
-
-                            {/* Summary: Equipment List */}
-                            <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                                <h4 className="text-sm font-semibold text-gray-700">📦 รายการอุปกรณ์</h4>
-                                {items.map((item) => (
-                                    <div key={item.id} className="flex items-center gap-2 text-sm">
-                                        <div className="w-8 h-8 rounded relative flex-shrink-0 bg-white overflow-hidden">
-                                            <Image
-                                                src={item.imageUrl}
-                                                alt={item.name}
-                                                fill
-                                                sizes="32px"
-                                                className="object-contain"
-                                            />
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="font-medium text-gray-900 truncate">{item.name}</p>
-                                            <p className="text-xs text-gray-500 font-mono">{item.equipment_number}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Summary: Date & Time */}
-                            <div className="bg-blue-50 rounded-xl p-4 space-y-2">
-                                <h4 className="text-sm font-semibold text-blue-800">📅 กำหนดการ</h4>
-                                {mode === 'borrow' ? (
-                                    <>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-blue-700">วันที่รับ:</span>
-                                            <span className="font-medium text-blue-900">{formatThaiDateShort(today)} (วันนี้)</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-blue-700">วันที่คืน:</span>
-                                            <span className="font-medium text-blue-900">{formatThaiDateShort(endDate)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-blue-700">⏰ เวลาคืน:</span>
-                                            <span className="font-bold text-lg text-blue-900">{returnTime} น.</span>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-blue-700">วันที่รับ:</span>
-                                            <span className="font-medium text-blue-900">{formatThaiDateShort(reserveStartDate)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-blue-700">เวลารับ:</span>
-                                            <span className="font-medium text-blue-900">{reservePickupTime} น.</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-blue-700">วันที่คืน:</span>
-                                            <span className="font-medium text-blue-900">{formatThaiDateShort(reserveEndDate)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-blue-700">⏰ เวลาคืน:</span>
-                                            <span className="font-bold text-lg text-blue-900">{reserveReturnTime} น.</span>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Confirm / Cancel Buttons */}
-                            <div className="space-y-2 pt-2">
-                                <button
-                                    onClick={handleSubmit}
-                                    disabled={isSubmitting}
-                                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 font-medium rounded-lg transition-colors ${mode === 'borrow'
-                                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                        : 'bg-purple-600 text-white hover:bg-purple-700'
-                                        } disabled:opacity-60`}
-                                >
-                                    {isSubmitting ? (
-                                        <>
-                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                            กำลังส่งคำขอ...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <CheckCircle className="w-5 h-5" />
-                                            ยืนยัน {mode === 'borrow' ? 'ส่งคำขอยืม' : 'ส่งคำขอจอง'}
-                                        </>
-                                    )}
-                                </button>
-                                <button
-                                    onClick={() => setShowConfirmation(false)}
-                                    disabled={isSubmitting}
-                                    className="w-full px-4 py-2 text-gray-600 font-medium hover:bg-gray-100 rounded-lg transition-colors"
-                                >
-                                    ย้อนกลับแก้ไข
-                                </button>
-                            </div>
-
-                            {/* Error in confirmation */}
-                            {error && (
-                                <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm flex items-start gap-2">
-                                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                                    <span>{error}</span>
-                                </div>
-                            )}
-                        </div>
+                        <CartConfirmModal
+                            items={items}
+                            mode={mode}
+                            today={today}
+                            endDate={endDate}
+                            returnTime={returnTime}
+                            reserveStartDate={reserveStartDate}
+                            reservePickupTime={reservePickupTime}
+                            reserveEndDate={reserveEndDate}
+                            reserveReturnTime={reserveReturnTime}
+                            isSubmitting={isSubmitting}
+                            error={error}
+                            onConfirm={handleSubmit}
+                            onCancel={() => setShowConfirmation(false)}
+                            formatThaiDateShort={formatThaiDateShort}
+                        />
                     ) : items.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-center">
                             <ShoppingCart className="w-16 h-16 text-gray-300 mb-4" />
@@ -612,31 +477,35 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {/* Tab Switch */}
+                            {/* Mode Toggle */}
                             <div className="flex bg-gray-100 rounded-lg p-1">
                                 <button
+                                    type="button"
                                     onClick={() => setMode('borrow')}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${mode === 'borrow'
-                                        ? 'bg-white text-blue-600 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                        }`}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${
+                                        mode === 'borrow'
+                                            ? 'bg-white text-blue-600 shadow-sm'
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    }`}
                                 >
                                     <Send className="w-4 h-4" />
                                     ยืมทันที
                                 </button>
                                 <button
+                                    type="button"
                                     onClick={() => setMode('reserve')}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${mode === 'reserve'
-                                        ? 'bg-white text-purple-600 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                        }`}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all ${
+                                        mode === 'reserve'
+                                            ? 'bg-white text-purple-600 shadow-sm'
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    }`}
                                 >
                                     <Bookmark className="w-4 h-4" />
                                     จองล่วงหน้า
                                 </button>
                             </div>
 
-                            {/* Bug 2: Unavailable Items Warning */}
+                            {/* Unavailable warning */}
                             {hasUnavailableItems && (
                                 <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg text-sm">
                                     <div className="flex items-start gap-2">
@@ -649,51 +518,21 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                 </div>
                             )}
 
-                            {/* Item List */}
+                            {/* Item list */}
                             <div className="space-y-3">
-                                {items.map((item) => {
-                                    const isUnavailable = unavailableIds.has(item.id)
-                                    return (
-                                        <div
-                                            key={item.id}
-                                            className={`flex items-center gap-3 p-3 rounded-lg ${isUnavailable
-                                                ? 'bg-red-50 border border-red-200'
-                                                : 'bg-gray-50'
-                                                }`}
-                                        >
-                                            <div className={`w-16 h-16 rounded-lg bg-white relative flex-shrink-0 overflow-hidden ${isUnavailable ? 'opacity-50' : ''}`}>
-                                                <Image
-                                                    src={item.imageUrl}
-                                                    alt={item.name}
-                                                    fill
-                                                    sizes="64px"
-                                                    className="object-contain"
-                                                />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <h4 className={`font-medium truncate ${isUnavailable ? 'text-red-700' : 'text-gray-900'}`}>{item.name}</h4>
-                                                <p className="text-xs text-gray-500 font-mono">{item.equipment_number}</p>
-                                                {isUnavailable && (
-                                                    <span className="inline-flex items-center gap-1 text-xs text-red-600 mt-1">
-                                                        <AlertTriangle className="w-3 h-3" />
-                                                        ไม่พร้อมให้ยืม / ถูกยืมแล้ว
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <button
-                                                onClick={() => removeItem(item.id)}
-                                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                                title="นำออกจากรายการ"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    )
-                                })}
+                                {items.map((item) => (
+                                    <CartDrawerItem
+                                        key={item.id}
+                                        item={item}
+                                        isUnavailable={unavailableIds.has(item.id)}
+                                        onRemove={removeItem}
+                                    />
+                                ))}
                             </div>
 
-                            {/* Refresh Availability Button */}
+                            {/* Refresh availability */}
                             <button
+                                type="button"
                                 onClick={checkCartAvailability}
                                 disabled={isCheckingAvailability}
                                 className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -702,10 +541,12 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                 {isCheckingAvailability ? 'กำลังตรวจสอบ...' : 'ตรวจสอบความพร้อมอุปกรณ์'}
                             </button>
 
-                            {/* User Limits Info */}
+                            {/* User limits info */}
                             <div className="p-3 bg-blue-50 rounded-lg text-sm space-y-1">
                                 <p className="text-blue-800">
-                                    <strong>{profile?.user_type === 'student' ? 'นักศึกษา' : profile?.user_type === 'lecturer' ? 'อาจารย์' : 'บุคลากร'}</strong>:
+                                    <strong>
+                                        {profile?.user_type === 'student' ? 'นักศึกษา' : profile?.user_type === 'lecturer' ? 'อาจารย์' : 'บุคลากร'}
+                                    </strong>:
                                     {' '}ยืมได้สูงสุด {maxItems} ชิ้น, {maxDays} วัน
                                 </p>
                                 <p className="text-blue-700 text-xs">
@@ -714,156 +555,38 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                 </p>
                             </div>
 
-                            {/* Form Fields */}
+                            {/* Forms */}
                             {mode === 'borrow' ? (
-                                /* Borrow Mode Form */
-                                <div className="space-y-3 pt-2">
-                                    {/* Start Date - Auto today */}
-                                    <div className="p-3 bg-gray-50 rounded-lg">
-                                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                                            <Calendar className="w-4 h-4" />
-                                            <span>วันที่รับอุปกรณ์:</span>
-                                            <strong className="text-gray-900">
-                                                {new Date().toLocaleDateString('th-TH', {
-                                                    day: 'numeric',
-                                                    month: 'long',
-                                                    year: 'numeric'
-                                                })} (วันนี้)
-                                            </strong>
-                                        </div>
-                                    </div>
-
-                                    {/* End Date */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            <Calendar className="w-4 h-4 inline mr-1" />
-                                            วันที่คืนอุปกรณ์
-                                        </label>
-                                        <input
-                                            type="date"
-                                            value={endDate}
-                                            onChange={(e) => setEndDate(e.target.value)}
-                                            min={today}
-                                            max={getMaxEndDate()}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                    </div>
-
-                                    {/* Return Time */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            <Clock className="w-4 h-4 inline mr-1" />
-                                            เวลาคืนอุปกรณ์ <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="time"
-                                            value={returnTime}
-                                            onChange={(e) => setReturnTime(e.target.value)}
-                                            min={openingTime}
-                                            max={closingTime}
-                                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${!returnTime ? 'border-amber-400 bg-amber-50' : 'border-gray-300'
-                                                }`}
-                                            placeholder="กรุณาเลือกเวลาคืน"
-                                        />
-                                        {!returnTime && (
-                                            <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                                                <AlertCircle className="w-3 h-3" />
-                                                กรุณาระบุเวลาที่จะนำอุปกรณ์มาคืน
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
+                                <CartBorrowForm
+                                    today={today}
+                                    endDate={endDate}
+                                    onEndDateChange={setEndDate}
+                                    returnTime={returnTime}
+                                    onReturnTimeChange={setReturnTime}
+                                    maxEndDate={maxEndDate}
+                                    openingTime={openingTime}
+                                    closingTime={closingTime}
+                                />
                             ) : (
-                                /* Reserve Mode Form */
-                                <div className="space-y-3 pt-2">
-                                    {/* Reserve Start Date */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            <Calendar className="w-4 h-4 inline mr-1" />
-                                            วันที่รับอุปกรณ์
-                                        </label>
-                                        <input
-                                            type="date"
-                                            value={reserveStartDate}
-                                            onChange={(e) => {
-                                                setReserveStartDate(e.target.value)
-                                                // Auto-set end date if not set or invalid
-                                                if (!reserveEndDate || new Date(reserveEndDate) < new Date(e.target.value)) {
-                                                    const start = new Date(e.target.value)
-                                                    start.setDate(start.getDate() + 1)
-                                                    setReserveEndDate(start.toISOString().split('T')[0])
-                                                }
-                                            }}
-                                            min={tomorrow}
-                                            max={getMaxAdvanceDate()}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                        />
-                                    </div>
-
-                                    {/* Pickup Time */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            <Clock className="w-4 h-4 inline mr-1" />
-                                            เวลารับอุปกรณ์
-                                        </label>
-                                        <input
-                                            type="time"
-                                            value={reservePickupTime}
-                                            onChange={(e) => setReservePickupTime(e.target.value)}
-                                            min={openingTime}
-                                            max={closingTime}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                        />
-                                    </div>
-
-                                    {/* Reserve End Date */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            <Calendar className="w-4 h-4 inline mr-1" />
-                                            วันที่คืนอุปกรณ์
-                                        </label>
-                                        <input
-                                            type="date"
-                                            value={reserveEndDate}
-                                            onChange={(e) => setReserveEndDate(e.target.value)}
-                                            min={reserveStartDate || tomorrow}
-                                            max={getReserveMaxEndDate()}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                        />
-                                    </div>
-
-                                    {/* Return Time */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            <Clock className="w-4 h-4 inline mr-1" />
-                                            เวลาคืนอุปกรณ์ <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="time"
-                                            value={reserveReturnTime}
-                                            onChange={(e) => setReserveReturnTime(e.target.value)}
-                                            min={openingTime}
-                                            max={closingTime}
-                                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${!reserveReturnTime ? 'border-amber-400 bg-amber-50' : 'border-gray-300'
-                                                }`}
-                                            placeholder="กรุณาเลือกเวลาคืน"
-                                        />
-                                        {!reserveReturnTime && (
-                                            <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                                                <AlertCircle className="w-3 h-3" />
-                                                กรุณาระบุเวลาที่จะนำอุปกรณ์มาคืน
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* Reserve Mode Info */}
-                                    <div className="p-3 bg-purple-50 rounded-lg text-sm text-purple-700">
-                                        <p>📅 สามารถจองล่วงหน้าได้สูงสุด {maxAdvanceBookingDays} วัน</p>
-                                    </div>
-                                </div>
+                                <CartReserveForm
+                                    reserveStartDate={reserveStartDate}
+                                    onReserveStartDateChange={setReserveStartDate}
+                                    reservePickupTime={reservePickupTime}
+                                    onReservePickupTimeChange={setReservePickupTime}
+                                    reserveEndDate={reserveEndDate}
+                                    onReserveEndDateChange={setReserveEndDate}
+                                    reserveReturnTime={reserveReturnTime}
+                                    onReserveReturnTimeChange={setReserveReturnTime}
+                                    tomorrow={tomorrow}
+                                    maxAdvanceDate={maxAdvanceDate}
+                                    maxAdvanceBookingDays={maxAdvanceBookingDays}
+                                    reserveMaxEndDate={reserveMaxEndDate}
+                                    openingTime={openingTime}
+                                    closingTime={closingTime}
+                                />
                             )}
 
-                            {/* Validation Errors */}
+                            {/* Validation errors */}
                             {validationErrors.length > 0 && (
                                 <div className="p-3 bg-amber-50 text-amber-700 rounded-lg text-sm">
                                     <div className="flex items-start gap-2">
@@ -877,7 +600,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                 </div>
                             )}
 
-                            {/* Error Message */}
+                            {/* Error display */}
                             {error && (
                                 <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm flex items-start gap-2">
                                     <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -892,12 +615,14 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                 {!success && !showConfirmation && items.length > 0 && (
                     <div className="p-4 border-t border-gray-200 space-y-3">
                         <button
+                            type="button"
                             onClick={handleShowConfirmation}
                             disabled={isSubmitting || !isFormValid}
-                            className={`w-full flex items-center justify-center gap-2 px-4 py-3 font-medium rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors ${mode === 'borrow'
-                                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                : 'bg-purple-600 text-white hover:bg-purple-700'
-                                }`}
+                            className={`w-full flex items-center justify-center gap-2 px-4 py-3 font-medium rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors ${
+                                mode === 'borrow'
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-purple-600 text-white hover:bg-purple-700'
+                            }`}
                         >
                             {isSubmitting ? (
                                 <>
@@ -917,6 +642,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                             )}
                         </button>
                         <button
+                            type="button"
                             onClick={clearCart}
                             className="w-full px-4 py-2 text-red-600 font-medium hover:bg-red-50 rounded-lg transition-colors"
                         >
