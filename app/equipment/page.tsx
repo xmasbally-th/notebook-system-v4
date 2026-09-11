@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import EquipmentListWithFilters from '@/components/equipment/EquipmentListWithFilters'
+import EquipmentScanBanner from '@/components/equipment/EquipmentScanBanner'
 
 export default async function EquipmentListPage() {
     const supabase = await createClient()
@@ -38,14 +39,16 @@ export default async function EquipmentListPage() {
                             รายการอุปกรณ์
                         </h1>
                         <p className="mt-2 text-blue-100">
-                            เลือกอุปกรณ์ที่ต้องการและส่งคำขอยืมได้ทันที
+                            เลือกดูอุปกรณ์และจองล่วงหน้า หรือสแกน QR Code บนตัวเครื่องเพื่อยืมทันที
                         </p>
                     </div>
                 </div>
 
                 {/* Equipment List with Filters */}
-                <section className="py-8 md:py-12">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <section className="py-6 md:py-10">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+                        {/* Quick Equipment QR Scan Banner */}
+                        <EquipmentScanBanner />
                         <Suspense fallback={
                             <div className="space-y-4 animate-pulse">
                                 <div className="h-12 bg-gray-200 rounded-xl" />

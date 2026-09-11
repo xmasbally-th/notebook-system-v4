@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { submitLoanRequest } from '../actions'
 import { useLoanValidation } from '@/hooks/useLoanValidation'
 import { useProfile } from '@/hooks/useProfile'
 import { useEquipmentAvailability } from '@/hooks/useReservations'
 import { formatThaiDate } from '@/lib/formatThaiDate'
+import { extractEquipmentIdentifier } from '@/lib/qr-scan-resolver'
 import {
     Loader2,
     AlertCircle,
@@ -16,8 +18,14 @@ import {
     AlertTriangle,
     Info,
     ShieldCheck,
-    CalendarX
+    CalendarX,
+    Camera
 } from 'lucide-react'
+
+const QrScannerModal = dynamic(
+    () => import('@/components/scanner/QrScannerModal'),
+    { ssr: false }
+)
 
 interface LoanRequestFormProps {
     equipmentId: string
@@ -36,6 +44,15 @@ export default function LoanRequestForm({ equipmentId, isCounterMode, counterTok
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState(false)
+    const [isScannerOpen, setIsScannerOpen] = useState(false)
+
+    const handleScanSuccess = (decodedText: string) => {
+        setIsScannerOpen(false)
+        const target = extractEquipmentIdentifier(decodedText)
+        if (target) {
+            router.push(`/eq/${encodeURIComponent(target)}`)
+        }
+    }
 
     // Form values (instant loan starts today)
     const today = new Date().toISOString().split('T')[0]
@@ -208,13 +225,23 @@ export default function LoanRequestForm({ equipmentId, isCounterMode, counterTok
                         <div className="p-2 bg-amber-100 rounded-xl text-amber-700 shrink-0 mt-0.5">
                             <AlertTriangle className="w-5 h-5" />
                         </div>
-                        <div className="space-y-1">
+                        <div className="space-y-2 flex-1">
                             <h4 className="text-sm font-bold text-amber-900">
-                                📱 การยืมทันทีต้องสแกน QR Code บนตัวเครื่องด้วยมือถือ
+                                📱 การยืมทันทีต้องสแกน QR Code บนตัวเครื่องจริง
                             </h4>
                             <p className="text-xs text-amber-700 leading-relaxed">
-                                เพื่อป้องกันการกดยืมอุปกรณ์ค้างไว้โดยไม่ได้มารับจริง กรุณาใช้โทรศัพท์มือถือสแกนสติกเกอร์ QR Code ที่ติดอยู่บนตัวเครื่องอุปกรณ์ ณ จุดบริการ
+                                เพื่อลดขั้นตอนและป้องกันการกดยืมทิ้งไว้ก่อนมารับ กรุณาสแกน QR Code ที่ติดอยู่บนตัวเครื่องอุปกรณ์ชิ้นนี้
                             </p>
+                            <div className="pt-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsScannerOpen(true)}
+                                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+                                >
+                                    <Camera className="w-4 h-4" />
+                                    <span>เปิดกล้องสแกน QR Code บนเครื่องนี้ทันที</span>
+                                </button>
+                            </div>
                             <p className="text-xs text-amber-800 font-medium pt-1">
                                 💡 หากท่านต้องการวางแผนยืมในอนาคต กรุณาเลือกแท็บ <strong>&ldquo;จองล่วงหน้า&rdquo;</strong> ด้านบน
                             </p>
@@ -419,6 +446,17 @@ export default function LoanRequestForm({ equipmentId, isCounterMode, counterTok
                     )}
                 </button>
             </form>
+
+            {/* In-app QR Scanner Modal */}
+            {isScannerOpen && (
+                <QrScannerModal
+                    isOpen={isScannerOpen}
+                    onClose={() => setIsScannerOpen(false)}
+                    onScanSuccess={handleScanSuccess}
+                    title="สแกน QR Code บนตัวเครื่อง"
+                    subtitle="ส่องกล้องไปที่สติกเกอร์ QR Code บนเครื่องเพื่อปลดล็อกการยืมทันที"
+                />
+            )}
         </div>
     )
 }

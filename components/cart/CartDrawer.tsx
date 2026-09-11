@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { useCart } from './CartContext'
 import { useProfile } from '@/hooks/useProfile'
 import { useSystemConfig } from '@/hooks/useSystemConfig'
@@ -14,12 +15,19 @@ import {
     AlertTriangle,
     AlertCircle,
     CheckCircle,
-    Loader2
+    Loader2,
+    Camera
 } from 'lucide-react'
 import { submitLoanRequest } from '@/app/equipment/actions'
 import { submitReservationRequest } from '@/app/reservations/actions'
 import { supabase } from '@/lib/supabase/client'
+import { extractEquipmentIdentifier } from '@/lib/qr-scan-resolver'
 import CartDrawerItem from './CartDrawerItem'
+
+const QrScannerModal = dynamic(
+    () => import('@/components/scanner/QrScannerModal'),
+    { ssr: false }
+)
 import CartBorrowForm from './CartBorrowForm'
 import CartReserveForm from './CartReserveForm'
 import CartConfirmModal from './CartConfirmModal'
@@ -60,6 +68,16 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState(false)
+    const [isScannerOpen, setIsScannerOpen] = useState(false)
+
+    const handleScanSuccess = (decodedText: string) => {
+        setIsScannerOpen(false)
+        onClose()
+        const target = extractEquipmentIdentifier(decodedText)
+        if (target) {
+            router.push(`/eq/${encodeURIComponent(target)}`)
+        }
+    }
 
     // Availability tracking
     const [unavailableIds, setUnavailableIds] = useState<Set<string>>(new Set())
@@ -508,7 +526,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
                             {/* Mode Warning for Borrow */}
                             {mode === 'borrow' && (
-                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-1">
+                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-2">
                                     <p className="font-bold text-amber-900 flex items-center gap-1.5">
                                         <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                                         📍 การยืมทันทีต้องสแกน QR Code บนตัวเครื่องอุปกรณ์จริงด้วยมือถือ
@@ -516,6 +534,16 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                     <p className="text-amber-700 leading-relaxed">
                                         เพื่อลดขั้นตอนและป้องกันการกดยืมทิ้งไว้ก่อนมารับ หากท่านเลือกอุปกรณ์ผ่านหน้าเว็บ กรุณาเลือก <strong>&ldquo;จองล่วงหน้า&rdquo;</strong> เพื่อส่งคำขอ
                                     </p>
+                                    <div className="pt-0.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsScannerOpen(true)}
+                                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer"
+                                        >
+                                            <Camera className="w-3.5 h-3.5" />
+                                            <span>เปิดกล้องสแกน QR บนตัวเครื่อง</span>
+                                        </button>
+                                    </div>
                                 </div>
                             )}
 
@@ -665,6 +693,17 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     </div>
                 )}
             </div>
+
+            {/* In-app QR Scanner Modal for Cart */}
+            {isScannerOpen && (
+                <QrScannerModal
+                    isOpen={isScannerOpen}
+                    onClose={() => setIsScannerOpen(false)}
+                    onScanSuccess={handleScanSuccess}
+                    title="สแกน QR Code บนตัวเครื่อง"
+                    subtitle="ส่องกล้องไปที่สติกเกอร์ QR Code บนเครื่องโน้ตบุ๊คเพื่อปลดล็อกการยืมทันที"
+                />
+            )}
         </>
     )
 }

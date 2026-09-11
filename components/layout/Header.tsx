@@ -3,23 +3,38 @@
 import React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Laptop, LogIn, LogOut, User, Menu, X, Package, Monitor, HelpCircle } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { Laptop, LogIn, LogOut, User, Menu, X, Package, Monitor, HelpCircle, Camera } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useTransition } from 'react'
 import UserNotificationBell from '@/components/ui/UserNotificationBell'
 import { useSystemConfig } from '@/hooks/useSystemConfig'
 import ThemeToggle from '@/components/ThemeToggle'
-
+import { extractEquipmentIdentifier } from '@/lib/qr-scan-resolver'
 import { getSupabaseBrowserClient } from '@/lib/supabase-helpers'
+
+const QrScannerModal = dynamic(
+    () => import('@/components/scanner/QrScannerModal'),
+    { ssr: false }
+)
 
 export default function Header() {
     const [user, setUser] = useState<any>(null)
     const [accessToken, setAccessToken] = useState<string | null>(null)
     const [isMenuOpen, setIsMenuOpen] = useState(false)
+    const [isScannerOpen, setIsScannerOpen] = useState(false)
     const [, startTransition] = useTransition()
     const router = useRouter()
     const { data: systemConfig } = useSystemConfig()
+
+    const handleScanSuccess = (decodedText: string) => {
+        setIsScannerOpen(false)
+        const target = extractEquipmentIdentifier(decodedText)
+        if (target) {
+            router.push(`/eq/${encodeURIComponent(target)}`)
+        }
+    }
 
     useEffect(() => {
         const checkUser = async () => {
@@ -104,6 +119,15 @@ export default function Header() {
                                     Profile
                                 </Link>
                                 <button
+                                    type="button"
+                                    onClick={() => setIsScannerOpen(true)}
+                                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg transition-all shadow-2xs cursor-pointer"
+                                    title="สแกน QR Code บนตัวเครื่องเพื่อยืมทันที"
+                                >
+                                    <Camera className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                    <span>สแกน QR ยืมเครื่อง</span>
+                                </button>
+                                <button
                                     onClick={handleSignOut}
                                     className="flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700 px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
                                 >
@@ -122,15 +146,26 @@ export default function Header() {
                         )}
                     </div>
 
-                    {/* Mobile Menu Button */}
-                    <button
-                        className="md:hidden p-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white z-50 relative"
-                        onClick={() => startTransition(() => setIsMenuOpen(!isMenuOpen))}
-                        aria-label={isMenuOpen ? "ปิดเมนู" : "เปิดเมนู"}
-                        aria-expanded={isMenuOpen}
-                    >
-                        {isMenuOpen ? <X className="w-6 h-6" aria-hidden="true" /> : <Menu className="w-6 h-6" aria-hidden="true" />}
-                    </button>
+                    {/* Mobile Top Actions: QR Scanner & Menu Button */}
+                    <div className="md:hidden flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setIsScannerOpen(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer"
+                            aria-label="สแกน QR Code ยืมเครื่อง"
+                        >
+                            <Camera className="w-4 h-4" />
+                            <span>สแกน QR</span>
+                        </button>
+                        <button
+                            className="p-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white z-50 relative"
+                            onClick={() => startTransition(() => setIsMenuOpen(!isMenuOpen))}
+                            aria-label={isMenuOpen ? "ปิดเมนู" : "เปิดเมนู"}
+                            aria-expanded={isMenuOpen}
+                        >
+                            {isMenuOpen ? <X className="w-6 h-6" aria-hidden="true" /> : <Menu className="w-6 h-6" aria-hidden="true" />}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -145,9 +180,22 @@ export default function Header() {
                         </div>
                         {user ? (
                             <>
-                                <div className="py-4 border-b border-gray-100 dark:border-slate-800">
-                                    <p className="text-sm text-gray-500 dark:text-slate-400 mb-1">Signed in as</p>
-                                    <p className="font-medium text-gray-900 dark:text-white truncate">{user.email}</p>
+                                <div className="py-4 border-b border-gray-100 dark:border-slate-800 space-y-3">
+                                    <div>
+                                        <p className="text-sm text-gray-500 dark:text-slate-400 mb-1">Signed in as</p>
+                                        <p className="font-medium text-gray-900 dark:text-white truncate">{user.email}</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsMenuOpen(false)
+                                            setIsScannerOpen(true)
+                                        }}
+                                        className="flex items-center justify-center gap-2.5 w-full p-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-md active:scale-95 transition-all text-sm cursor-pointer"
+                                    >
+                                        <Camera className="w-5 h-5" />
+                                        <span>สแกน QR Code เพื่อยืมทันที</span>
+                                    </button>
                                 </div>
                                 <Link
                                     href="/equipment"
@@ -206,6 +254,17 @@ export default function Header() {
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* In-app QR Scanner Modal for Users */}
+            {isScannerOpen && (
+                <QrScannerModal
+                    isOpen={isScannerOpen}
+                    onClose={() => setIsScannerOpen(false)}
+                    onScanSuccess={handleScanSuccess}
+                    title="สแกน QR Code บนตัวเครื่อง"
+                    subtitle="ส่องกล้องไปที่สติกเกอร์ QR Code บนเครื่องโน้ตบุ๊คเพื่อปลดล็อกการยืมทันที"
+                />
             )}
         </header>
     )
