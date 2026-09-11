@@ -5,6 +5,7 @@ import { ArrowLeft, CheckCircle, AlertTriangle, Clock, Wrench } from 'lucide-rea
 import LoanRequestForm from './loan-form'
 import ReservationForm from './reservation-form'
 import BorrowTabs from './borrow-tabs'
+import { verifyCounterToken } from '@/lib/counter-session'
 
 const STATUS_CONFIG = {
     ready: { label: 'พร้อมให้ยืม', color: 'bg-green-100 text-green-700', icon: CheckCircle },
@@ -19,11 +20,26 @@ export default async function EquipmentDetailsPage({
     searchParams
 }: {
     params: Promise<{ id: string }>,
-    searchParams?: Promise<{ mode?: string }>
+    searchParams?: Promise<{ mode?: string; token?: string }>
 }) {
     const { id } = await params
     const resolvedSearchParams = searchParams ? await searchParams : {}
-    const isCounterMode = resolvedSearchParams.mode === 'counter'
+    const rawToken = resolvedSearchParams.token
+
+    let isCounterMode = false
+    let verifiedToken: string | undefined = undefined
+
+    if (rawToken) {
+        const check = verifyCounterToken(rawToken)
+        if (check.valid && (!check.equipmentId || check.equipmentId === id)) {
+            isCounterMode = true
+            verifiedToken = rawToken
+        }
+    } else if (resolvedSearchParams.mode === 'counter') {
+        // Fallback for staff
+        isCounterMode = true
+    }
+
     const supabase = await createClient()
 
     // 1. Fetch Equipment with equipment_types
@@ -129,7 +145,7 @@ export default async function EquipmentDetailsPage({
                                         <BorrowTabs
                                             equipmentId={item.id}
                                             isCounterMode={isCounterMode}
-                                            loanForm={<LoanRequestForm equipmentId={item.id} isCounterMode={isCounterMode} />}
+                                            loanForm={<LoanRequestForm equipmentId={item.id} isCounterMode={isCounterMode} counterToken={verifiedToken} />}
                                             reservationForm={<ReservationForm equipmentId={item.id} />}
                                         />
                                     ) : (

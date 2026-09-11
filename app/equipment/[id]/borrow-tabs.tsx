@@ -11,7 +11,7 @@ interface BorrowTabsProps {
 }
 
 export default function BorrowTabs({ equipmentId, loanForm, reservationForm, isCounterMode }: BorrowTabsProps) {
-    const [activeTab, setActiveTab] = useState<'loan' | 'reservation'>(isCounterMode ? 'loan' : 'loan')
+    const [activeTab, setActiveTab] = useState<'loan' | 'reservation'>(isCounterMode ? 'loan' : 'reservation')
 
     return (
         <div className="space-y-4">

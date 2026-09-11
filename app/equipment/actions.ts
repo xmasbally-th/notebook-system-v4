@@ -8,6 +8,7 @@ import { formatThaiDate, formatThaiTime, formatThaiDateTime } from '@/lib/format
 import { parseLoanFormData } from '@/lib/schemas'
 import { validateBooking } from '@/lib/domain'
 import { requireApprovedUser } from '@/lib/auth-guard'
+import { verifyCounterToken } from '@/lib/counter-session'
 
 type LoanLimitsByType = {
     [key: string]: {
@@ -29,7 +30,7 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
     // Fetch extended profile info for business logic & notifications
     const { data: profile } = await (supabase as any)
         .from('profiles')
-        .select('status, first_name, last_name, email, user_type, user_id, departments(name)')
+        .select('status, role, first_name, last_name, email, user_type, user_id, departments(name)')
         .eq('id', user.id)
         .single()
 
@@ -45,6 +46,22 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
     }
 
     const { equipmentId, startDate, endDate, returnTime } = parsed.data
+
+    // 2.5 Verify Equipment QR Scan (Prevent Remote Instant Loan Abuse)
+    const counterToken = formData.get('counterToken') as string | null
+    const isStaffOrAdmin = profile.role === 'admin' || profile.role === 'staff'
+    let isCounterVerified = false
+
+    if (counterToken) {
+        const tokenCheck = verifyCounterToken(counterToken)
+        if (tokenCheck.valid && (!tokenCheck.equipmentId || tokenCheck.equipmentId === equipmentId)) {
+            isCounterVerified = true
+        }
+    }
+
+    if (!isStaffOrAdmin && !isCounterVerified) {
+        return { error: 'การยืมอุปกรณ์ทันที ต้องทำรายการโดยสแกน QR Code บนตัวเครื่องอุปกรณ์ด้วยมือถือเท่านั้น' }
+    }
 
     // 3. Get System Config for Validation
     const { data: config } = await (supabase as any)
@@ -171,7 +188,8 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
         start_date: start.toISOString(),
         end_date: end.toISOString(),
         return_time: cleanReturnTime,
-        status: 'pending'
+        status: 'pending',
+        reason: isCounterVerified ? '📱 [สแกน QR บนตัวเครื่อง]' : (isStaffOrAdmin ? '⚡ [สร้างโดยเจ้าหน้าที่]' : null)
     }
     const { data: insertedLoan, error } = await (supabase as any)
         .from('loanRequests')

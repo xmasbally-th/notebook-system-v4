@@ -22,9 +22,10 @@ import {
 interface LoanRequestFormProps {
     equipmentId: string
     isCounterMode?: boolean
+    counterToken?: string
 }
 
-export default function LoanRequestForm({ equipmentId, isCounterMode }: LoanRequestFormProps) {
+export default function LoanRequestForm({ equipmentId, isCounterMode, counterToken }: LoanRequestFormProps) {
     const router = useRouter()
     const { data: profile } = useProfile()
     const userType = profile?.user_type || 'student'
@@ -139,6 +140,9 @@ export default function LoanRequestForm({ equipmentId, isCounterMode }: LoanRequ
             formData.append('startDate', startDate || today)
             formData.append('endDate', endDate)
             formData.append('returnTime', returnTime)
+            if (counterToken) {
+                formData.append('counterToken', counterToken)
+            }
 
             const submitResult = await submitLoanRequest(null, formData)
             if (submitResult?.error) {
@@ -183,19 +187,38 @@ export default function LoanRequestForm({ equipmentId, isCounterMode }: LoanRequ
 
     return (
         <div id="borrow-form" className="space-y-6">
-            {/* Counter Mode Badge */}
-            {isCounterMode && (
+            {/* Counter Mode Badge or Restriction Warning */}
+            {isCounterMode ? (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-center gap-3">
                     <div className="p-2 bg-emerald-100 rounded-lg text-emerald-700 shrink-0">
                         <CheckCircle2 className="w-5 h-5" />
                     </div>
                     <div>
-                        <p className="text-xs font-semibold text-emerald-900">
-                            📍 ทำรายการยืมด่วน ณ จุดบริการเคาน์เตอร์
+                        <p className="text-xs font-bold text-emerald-950">
+                            📱 สแกน QR Code บนตัวเครื่องสำเร็จ
                         </p>
                         <p className="text-[11px] text-emerald-700">
-                            สแกนจาก QR Code บนตัวเครื่องสำเร็จ เริ่มยืมเวลาปัจจุบันทันที กรุณาระบุวันและเวลาส่งคืนที่ต้องการ
+                            ยืนยันอุปกรณ์เรียบร้อยแล้ว เริ่มยืมเวลาปัจจุบันทันที กรุณาระบุวันและเวลาส่งคืนที่ต้องการ
                         </p>
+                    </div>
+                </div>
+            ) : (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 space-y-3">
+                    <div className="flex items-start gap-3">
+                        <div className="p-2 bg-amber-100 rounded-xl text-amber-700 shrink-0 mt-0.5">
+                            <AlertTriangle className="w-5 h-5" />
+                        </div>
+                        <div className="space-y-1">
+                            <h4 className="text-sm font-bold text-amber-900">
+                                📱 การยืมทันทีต้องสแกน QR Code บนตัวเครื่องด้วยมือถือ
+                            </h4>
+                            <p className="text-xs text-amber-700 leading-relaxed">
+                                เพื่อป้องกันการกดยืมอุปกรณ์ค้างไว้โดยไม่ได้มารับจริง กรุณาใช้โทรศัพท์มือถือสแกนสติกเกอร์ QR Code ที่ติดอยู่บนตัวเครื่องอุปกรณ์ ณ จุดบริการ
+                            </p>
+                            <p className="text-xs text-amber-800 font-medium pt-1">
+                                💡 หากท่านต้องการวางแผนยืมในอนาคต กรุณาเลือกแท็บ <strong>&ldquo;จองล่วงหน้า&rdquo;</strong> ด้านบน
+                            </p>
+                        </div>
                     </div>
                 </div>
             )}
@@ -375,13 +398,18 @@ export default function LoanRequestForm({ equipmentId, isCounterMode }: LoanRequ
                 {/* Submit Button */}
                 <button
                     type="submit"
-                    disabled={loading || validationLoading || validationErrors.length > 0}
+                    disabled={!isCounterMode || loading || validationLoading || validationErrors.length > 0}
                     className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                     {loading || validationLoading ? (
                         <>
                             <Loader2 className="w-5 h-5 animate-spin" />
                             {loading ? 'กำลังส่งคำขอ...' : 'กำลังตรวจสอบ...'}
+                        </>
+                    ) : !isCounterMode ? (
+                        <>
+                            <AlertCircle className="w-5 h-5" />
+                            ต้องสแกน QR Code ณ จุดบริการเพื่อยืมทันที
                         </>
                     ) : (
                         <>

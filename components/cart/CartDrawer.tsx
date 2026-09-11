@@ -44,8 +44,8 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     const { data: profile } = useProfile()
     const { data: config } = useSystemConfig()
 
-    // Mode state
-    const [mode, setMode] = useState<CartMode>('borrow')
+    // Mode state (Default to reserve for remote users)
+    const [mode, setMode] = useState<CartMode>('reserve')
 
     // Borrow mode
     const [endDate, setEndDate] = useState('')
@@ -398,8 +398,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
     if (!isOpen) return null
 
+    // Instant borrow cannot be submitted remotely; users must use reserve mode
     const isFormValid = mode === 'borrow'
-        ? (Boolean(endDate && returnTime) && validationErrors.length === 0 && !hasUnavailableItems && !hasPendingEvaluations)
+        ? false
         : (Boolean(reserveStartDate && reserveEndDate && reservePickupTime && reserveReturnTime) && validationErrors.length === 0 && !hasUnavailableItems && !hasPendingEvaluations)
 
     const formatThaiDateShort = (dateStr: string) => {
@@ -504,6 +505,19 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                     จองล่วงหน้า
                                 </button>
                             </div>
+
+                            {/* Mode Warning for Borrow */}
+                            {mode === 'borrow' && (
+                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-1">
+                                    <p className="font-bold text-amber-900 flex items-center gap-1.5">
+                                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                                        📍 การยืมทันทีต้องทำรายการ ณ จุดบริการเคาน์เตอร์
+                                    </p>
+                                    <p className="text-amber-700 leading-relaxed">
+                                        หากท่านไม่ได้อยู่ที่เคาน์เตอร์ กรุณาเลือก <strong>&ldquo;จองล่วงหน้า&rdquo;</strong> เพื่อวางแผนมารับอุปกรณ์ตามวันและเวลาที่สะดวก
+                                    </p>
+                                </div>
+                            )}
 
                             {/* Unavailable warning */}
                             {hasUnavailableItems && (
@@ -616,28 +630,28 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     <div className="p-4 border-t border-gray-200 space-y-3">
                         <button
                             type="button"
-                            onClick={handleShowConfirmation}
-                            disabled={isSubmitting || !isFormValid}
+                            onClick={mode === 'borrow' ? () => setMode('reserve') : handleShowConfirmation}
+                            disabled={isSubmitting || (mode !== 'borrow' && !isFormValid)}
                             className={`w-full flex items-center justify-center gap-2 px-4 py-3 font-medium rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors ${
                                 mode === 'borrow'
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
                                     : 'bg-purple-600 text-white hover:bg-purple-700'
                             }`}
                         >
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="w-5 h-5 animate-spin" />
-                                    กำลังส่งคำขอ...
+                                    กำลังดำเนินการ...
                                 </>
                             ) : mode === 'borrow' ? (
                                 <>
-                                    <Send className="w-5 h-5" />
-                                    ตรวจสอบและส่งคำขอยืม ({items.length} รายการ)
+                                    <Bookmark className="w-4 h-4" />
+                                    เปลี่ยนเป็น &ldquo;จองล่วงหน้า&rdquo; เพื่อส่งคำขอ
                                 </>
                             ) : (
                                 <>
                                     <Bookmark className="w-5 h-5" />
-                                    ตรวจสอบและส่งคำขอจอง ({items.length} รายการ)
+                                    ยืนยันการจองอุปกรณ์ ({items.length} รายการ)
                                 </>
                             )}
                         </button>
