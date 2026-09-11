@@ -228,6 +228,52 @@ export async function getReservationsAction(params: {
 }
 
 /**
+ * ดึงข้อมูลการจองพร้อมรายละเอียดอุปกรณ์และโปรไฟล์ผู้จอง (Hydration Pattern)
+ * เนื่องจาก reservations.user_id ผูกกับ auth.users ไม่ใช่ public.profiles ทำให้ PostgREST ไม่สามารถ Join profiles อัตโนมัติได้
+ */
+async function getReservationWithBorrower(adminClient: any, reservationId: string) {
+    const { data: reservation, error: fetchErr } = await adminClient
+        .from('reservations')
+        .select('*, equipment(id, name, equipment_number, status)')
+        .eq('id', reservationId)
+        .single()
+
+    if (fetchErr || !reservation) {
+        return { reservation: null, error: fetchErr }
+    }
+
+    let borrowerProfile: {
+        id: string
+        first_name: string | null
+        last_name: string | null
+        email: string | null
+        user_id: string | null
+        phone_number?: string | null
+        departments?: { name: string } | null
+    } | null = null
+
+    if (reservation.user_id) {
+        const { data: profile } = await adminClient
+            .from('profiles')
+            .select('id, first_name, last_name, email, user_id, phone_number, departments(name)')
+            .eq('id', reservation.user_id)
+            .single()
+
+        if (profile) {
+            borrowerProfile = profile
+        }
+    }
+
+    return {
+        reservation: {
+            ...reservation,
+            profiles: borrowerProfile
+        },
+        error: null
+    }
+}
+
+/**
  * อนุมัติการจอง (Staff/Admin)
  */
 export async function approveReservationAction(reservationId: string): Promise<{ success: boolean; error?: string; conflictInfo?: any }> {
@@ -241,11 +287,7 @@ export async function approveReservationAction(reservationId: string): Promise<{
 
     try {
         // 1. ดึงข้อมูลการจองเพื่อตรวจสอบ
-        const { data: reservation, error: fetchErr } = await adminClient
-            .from('reservations')
-            .select('*, equipment(name, equipment_number), profiles:user_id(id, first_name, last_name, email, user_id, departments(name))')
-            .eq('id', reservationId)
-            .single()
+        const { reservation, error: fetchErr } = await getReservationWithBorrower(adminClient, reservationId)
 
         if (fetchErr || !reservation) {
             return { success: false, error: 'ไม่พบข้อมูลการจอง' }
@@ -366,11 +408,7 @@ export async function rejectReservationAction(reservationId: string, reason: str
     const adminClient = createAdminClient()
 
     try {
-        const { data: reservation, error: fetchErr } = await adminClient
-            .from('reservations')
-            .select('*, equipment(name, equipment_number), profiles:user_id(id, first_name, last_name, user_id)')
-            .eq('id', reservationId)
-            .single()
+        const { reservation, error: fetchErr } = await getReservationWithBorrower(adminClient, reservationId)
 
         if (fetchErr || !reservation) return { success: false, error: 'ไม่พบข้อมูลการจอง' }
 
@@ -451,11 +489,7 @@ export async function markReadyReservationAction(reservationId: string): Promise
     const adminClient = createAdminClient()
 
     try {
-        const { data: reservation, error: fetchErr } = await adminClient
-            .from('reservations')
-            .select('*, equipment(name, equipment_number), profiles:user_id(id, first_name, last_name, user_id)')
-            .eq('id', reservationId)
-            .single()
+        const { reservation, error: fetchErr } = await getReservationWithBorrower(adminClient, reservationId)
 
         if (fetchErr || !reservation) return { success: false, error: 'ไม่พบข้อมูลการจอง' }
 

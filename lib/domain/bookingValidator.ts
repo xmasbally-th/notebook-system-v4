@@ -470,7 +470,7 @@ export async function getBookingConflictDetails(
         // 3. ตรวจสอบตารางยืมพิเศษ (special_loan_requests)
         const startDateStr = startDate.toISOString().split('T')[0]
         const endDateStr = endDate.toISOString().split('T')[0]
-        const slUrl = `${url}/rest/v1/special_loan_requests?status=eq.active&loan_date=lte.${endDateStr}&return_date=gte.${startDateStr}&select=id,equipment_ids,borrower_name,project_name,loan_date,return_date`
+        const slUrl = `${url}/rest/v1/special_loan_requests?status=eq.active&loan_date=lte.${endDateStr}&return_date=gte.${startDateStr}&select=id,equipment_ids,borrower_name,purpose,loan_date,return_date`
         const slResponse = await fetch(slUrl, { headers: authHeader })
         if (slResponse.ok) {
             const sls = await slResponse.json()
@@ -480,7 +480,7 @@ export async function getBookingConflictDetails(
                         equipName: 'อุปกรณ์ในโครงการ',
                         equipNumber: '-',
                         equipmentId,
-                        projectName: sl.project_name || 'กิจกรรมองค์กร',
+                        projectName: sl.purpose || 'กิจกรรมองค์กร',
                         borrowerName: sl.borrower_name || '-',
                         loanDate: sl.loan_date,
                         returnDate: sl.return_date,
