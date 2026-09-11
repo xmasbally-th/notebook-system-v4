@@ -511,10 +511,10 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-1">
                                     <p className="font-bold text-amber-900 flex items-center gap-1.5">
                                         <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                                        📍 การยืมทันทีต้องทำรายการ ณ จุดบริการเคาน์เตอร์
+                                        📍 การยืมทันทีต้องสแกน QR Code บนตัวเครื่องอุปกรณ์จริงด้วยมือถือ
                                     </p>
                                     <p className="text-amber-700 leading-relaxed">
-                                        หากท่านไม่ได้อยู่ที่เคาน์เตอร์ กรุณาเลือก <strong>&ldquo;จองล่วงหน้า&rdquo;</strong> เพื่อวางแผนมารับอุปกรณ์ตามวันและเวลาที่สะดวก
+                                        เพื่อลดขั้นตอนและป้องกันการกดยืมทิ้งไว้ก่อนมารับ หากท่านเลือกอุปกรณ์ผ่านหน้าเว็บ กรุณาเลือก <strong>&ldquo;จองล่วงหน้า&rdquo;</strong> เพื่อส่งคำขอ
                                     </p>
                                 </div>
                             )}

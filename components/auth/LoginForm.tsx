@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { Laptop, Loader2, ExternalLink, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 // Get Supabase client for auth operations
 function getSupabaseClient() {
@@ -33,6 +33,8 @@ interface LoginFormProps {
 
 export default function LoginForm({ logoUrl }: LoginFormProps) {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const redirectParam = searchParams.get('redirect') || searchParams.get('next')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [inAppInfo, setInAppInfo] = useState<{ isInApp: boolean; appName: string }>({ isInApp: false, appName: '' })
@@ -62,10 +64,14 @@ export default function LoginForm({ logoUrl }: LoginFormProps) {
         try {
             setLoading(true)
             setError(null)
+            const callbackUrl = redirectParam
+                ? `${location.origin}/auth/callback?next=${encodeURIComponent(redirectParam)}`
+                : `${location.origin}/auth/callback`
+
             const { error } = await client.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: `${location.origin}/auth/callback`,
+                    redirectTo: callbackUrl,
                 },
             })
             if (error) throw error

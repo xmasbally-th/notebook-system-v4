@@ -35,9 +35,6 @@ export default async function EquipmentDetailsPage({
             isCounterMode = true
             verifiedToken = rawToken
         }
-    } else if (resolvedSearchParams.mode === 'counter') {
-        // Fallback for staff
-        isCounterMode = true
     }
 
     const supabase = await createClient()
@@ -68,6 +65,11 @@ export default async function EquipmentDetailsPage({
         }
     }
     const isStaffOrAdmin = userRole === 'staff' || userRole === 'admin'
+    if (!isCounterMode && isStaffOrAdmin && resolvedSearchParams.mode === 'counter') {
+        isCounterMode = true
+    }
+
+    const redirectTarget = `/equipment/${id}${rawToken ? `?mode=counter&token=${encodeURIComponent(rawToken)}` : ''}`
 
     const images = Array.isArray(item.images) ? item.images : []
     const imageUrl = images.length > 0 ? (images[0] as string) : 'https://placehold.co/800x600?text=No+Image'
@@ -154,10 +156,27 @@ export default async function EquipmentDetailsPage({
                                         </div>
                                     )
                                 ) : (
-                                    <div className="bg-yellow-50 text-yellow-800 p-4 rounded-lg text-sm">
-                                        {userStatus === 'pending'
-                                            ? 'บัญชีของคุณอยู่ระหว่างการอนุมัติ ไม่สามารถยืมอุปกรณ์ได้'
-                                            : 'กรุณาเข้าสู่ระบบเพื่อยืมอุปกรณ์'}
+                                    <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-xl text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <div>
+                                            <p className="font-semibold">
+                                                {userStatus === 'pending'
+                                                    ? 'บัญชีของคุณอยู่ระหว่างการรออนุมัติ'
+                                                    : 'กรุณาเข้าสู่ระบบเพื่อทำรายการยืมอุปกรณ์'}
+                                            </p>
+                                            <p className="text-xs text-amber-700 mt-0.5">
+                                                {userStatus === 'pending'
+                                                    ? 'ไม่สามารถยืมหรือจองอุปกรณ์ได้ในขณะนี้'
+                                                    : 'เข้าสู่ระบบด้วยบัญชี Google ของมหาวิทยาลัยเพื่อดำเนินการต่อ'}
+                                            </p>
+                                        </div>
+                                        {userStatus !== 'pending' && (
+                                            <Link
+                                                href={`/login?redirect=${encodeURIComponent(redirectTarget)}`}
+                                                className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold whitespace-nowrap shadow-xs transition-all shrink-0"
+                                            >
+                                                เข้าสู่ระบบ
+                                            </Link>
+                                        )}
                                     </div>
                                 )}
 

@@ -409,7 +409,7 @@ export default function LoanRequestForm({ equipmentId, isCounterMode, counterTok
                     ) : !isCounterMode ? (
                         <>
                             <AlertCircle className="w-5 h-5" />
-                            ต้องสแกน QR Code ณ จุดบริการเพื่อยืมทันที
+                            ต้องสแกน QR Code บนตัวเครื่องเพื่อยืมทันที
                         </>
                     ) : (
                         <>
