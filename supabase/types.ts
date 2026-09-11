@@ -150,6 +150,7 @@ export interface Database {
                     return_condition: string | null
                     return_notes: string | null
                     status: 'pending' | 'approved' | 'rejected' | 'returned'
+                    reason: string | null
                     created_at: string
                     updated_at: string
                 }
@@ -164,6 +165,7 @@ export interface Database {
                     return_condition?: string | null
                     return_notes?: string | null
                     status?: 'pending' | 'approved' | 'rejected' | 'returned'
+                    reason?: string | null
                     created_at?: string
                     updated_at?: string
                 }
@@ -178,6 +180,7 @@ export interface Database {
                     return_condition?: string | null
                     return_notes?: string | null
                     status?: 'pending' | 'approved' | 'rejected' | 'returned'
+                    reason?: string | null
                     created_at?: string
                     updated_at?: string
                 }
