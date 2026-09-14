@@ -64,11 +64,17 @@ interface Props {
 export default function ActiveLoansSection({ initialData }: Props) {
     const router = useRouter()
     const toast = useToast()
+    const [loans, setLoans] = useState<ActiveLoan[]>(initialData)
     const [isPending, startTransition] = useTransition()
     const [searchTerm, setSearchTerm] = useState('')
     const [overdueOnly, setOverdueOnly] = useState(false)
     const [selectedLoan, setSelectedLoan] = useState<ActiveLoan | null>(null)
     const [showScanner, setShowScanner] = useState(false)
+
+    // Sync loans when initialData updates from server
+    useEffect(() => {
+        setLoans(initialData)
+    }, [initialData])
 
     // Realtime update
     useEffect(() => {
@@ -101,7 +107,7 @@ export default function ActiveLoansSection({ initialData }: Props) {
         }
         const stripped = cleanCode.replace(/^#/, '').toLowerCase()
 
-        const matchedLoan = initialData.find((loan: any) => {
+        const matchedLoan = loans.find((loan: any) => {
             const eqId = loan.equipment?.id || ''
             const eqNum = (loan.equipment?.equipment_number || '').replace(/^#/, '').toLowerCase()
             return eqId === cleanCode || eqNum === stripped
@@ -120,11 +126,11 @@ export default function ActiveLoansSection({ initialData }: Props) {
     }
 
     const overdueCount = useMemo(() => {
-        return initialData.filter(isOverdue).length
-    }, [initialData])
+        return loans.filter(isOverdue).length
+    }, [loans])
 
     const filteredLoans = useMemo(() => {
-        let list = initialData
+        let list = loans
         if (overdueOnly) {
             list = list.filter(isOverdue)
         }
@@ -137,7 +143,7 @@ export default function ActiveLoansSection({ initialData }: Props) {
             (loan.equipment?.name || '').toLowerCase().includes(s) ||
             (loan.equipment?.equipment_number || '').toLowerCase().includes(s)
         )
-    }, [initialData, searchTerm, overdueOnly])
+    }, [loans, searchTerm, overdueOnly])
 
     const handleReturn = (loan: ActiveLoan) => {
         setSelectedLoan(loan)
@@ -145,9 +151,10 @@ export default function ActiveLoansSection({ initialData }: Props) {
 
     const handleReturnConfirm = (condition: 'good' | 'damaged' | 'missing_parts', notes: string) => {
         if (!selectedLoan?.equipment?.id) return
+        const currentLoanId = selectedLoan.id
         startTransition(async () => {
             const result = await processReturn(
-                selectedLoan.id,
+                currentLoanId,
                 selectedLoan.equipment!.id!,
                 condition,
                 notes
@@ -155,7 +162,9 @@ export default function ActiveLoansSection({ initialData }: Props) {
             if (result.error) {
                 toast.error(result.error)
             } else {
+                setLoans(prev => prev.filter(l => l.id !== currentLoanId))
                 setSelectedLoan(null)
+                router.refresh()
                 if (result.condition === 'good') {
                     toast.success('บันทึกการคืนเรียบร้อยแล้ว — อุปกรณ์พร้อมให้ยืมใหม่')
                 } else {

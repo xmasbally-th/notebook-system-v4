@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+﻿import { Suspense } from 'react'
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { getLoanRequests, getActiveLoans } from './actions'
 import LoanRequestsSection from '@/components/admin/loans/LoanRequestsSection'
@@ -10,13 +10,10 @@ export const metadata = {
     title: 'จัดการการยืม-คืน | Admin',
 }
 
-// Cache 30 วินาที — revalidatePath() ในทุก action จะ purge cache ทันที
-export const revalidate = 30
+// บังคับ dynamic เพื่อให้ข้อมูลเป็น real-time สดใหม่เสมอหลังอนุมัติหรือรับคืน
+export const dynamic = 'force-dynamic'
 
 // ─── Independent async fetchers ──────────────────────────────────────────────
-// แต่ละ fetcher stream อิสระ ไม่รอกัน
-// Tab ที่ user อยู่จะ resolve ก่อน ซึ่งทำให้ TTI เร็วขึ้น
-
 async function LoanRequestsFetcher() {
     const data = await getLoanRequests()
     return <LoanRequestsSection initialData={data} />
@@ -60,4 +57,3 @@ export default async function LoansPage({
         </>
     )
 }
-

@@ -68,6 +68,7 @@ interface Props {
 export default function LoanRequestsSection({ initialData }: Props) {
     const router = useRouter()
     const toast = useToast()
+    const [items, setItems] = useState<LoanRequest[]>(initialData)
     const [isPending, startTransition] = useTransition()
     const [processingId, setProcessingId] = useState<string | null>(null)
     const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -77,6 +78,11 @@ export default function LoanRequestsSection({ initialData }: Props) {
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
     const [showScanner, setShowScanner] = useState(false)
+
+    // Sync items when initialData changes (e.g. from server re-render / router.refresh())
+    useEffect(() => {
+        setItems(initialData)
+    }, [initialData])
 
     // Reject Modal state
     const [rejectModalItem, setRejectModalItem] = useState<LoanRequest | null>(null)
@@ -122,7 +128,7 @@ export default function LoanRequestsSection({ initialData }: Props) {
         }
         const stripped = cleanCode.replace(/^#/, '')
 
-        const matched = initialData.find((item: any) => {
+        const matched = items.find((item: any) => {
             const eqId = item.equipment?.id || item.equipment_id || ''
             const eqNum = (item.equipment?.equipment_number || '').replace(/^#/, '').toLowerCase()
             return eqId === cleanCode || eqNum === stripped.toLowerCase()
@@ -152,19 +158,19 @@ export default function LoanRequestsSection({ initialData }: Props) {
 
     // Stats
     const stats = useMemo(() => {
-        const pendingItems = initialData.filter(r => r.status === 'pending')
+        const pendingItems = items.filter(r => r.status === 'pending')
         return {
-            total: initialData.length,
+            total: items.length,
             pending: pendingItems.length,
             pendingCounter: pendingItems.filter(isCounterVerified).length,
-            approved: initialData.filter(r => r.status === 'approved').length,
-            rejected: initialData.filter(r => r.status === 'rejected').length,
+            approved: items.filter(r => r.status === 'approved').length,
+            rejected: items.filter(r => r.status === 'rejected').length,
         }
-    }, [initialData])
+    }, [items])
 
     // Filter Items
     const filteredItems = useMemo(() => {
-        return initialData.filter(item => {
+        return items.filter(item => {
             const s = searchTerm.toLowerCase()
             const matchesSearch = !searchTerm ||
                 (item.profiles?.first_name || '').toLowerCase().includes(s) ||
@@ -183,7 +189,7 @@ export default function LoanRequestsSection({ initialData }: Props) {
 
             return matchesSearch && matchesStatus && matchesVerification
         })
-    }, [initialData, searchTerm, statusFilter, verificationFilter])
+    }, [items, searchTerm, statusFilter, verificationFilter])
 
     const totalPages = Math.ceil(filteredItems.length / pageSize) || 1
     const paginatedItems = filteredItems.slice((currentPage - 1) * pageSize, currentPage * pageSize)
@@ -208,7 +214,9 @@ export default function LoanRequestsSection({ initialData }: Props) {
                     toast.error(result.error)
                 } else {
                     toast.success(`อนุมัติและส่งมอบ ${eqName} สำเร็จ`)
+                    setItems(prev => prev.map(item => item.id === req.id ? { ...item, status: 'approved' } : item))
                     setSelectedIds(prev => prev.filter(x => x !== req.id))
+                    router.refresh()
                 }
             } catch (err: any) {
                 toast.error(err?.message || 'เกิดข้อผิดพลาดในการอนุมัติ')
@@ -236,8 +244,10 @@ export default function LoanRequestsSection({ initialData }: Props) {
                     toast.error(result.error)
                 } else {
                     toast.success('ปฏิเสธคำขอยืมเรียบร้อยแล้ว')
+                    setItems(prev => prev.map(item => item.id === id ? { ...item, status: 'rejected' } : item))
                     setSelectedIds(prev => prev.filter(x => x !== id))
                     setRejectModalItem(null)
+                    router.refresh()
                 }
             } catch (err: any) {
                 toast.error(err?.message || 'เกิดข้อผิดพลาดในการปฏิเสธ')
@@ -258,7 +268,9 @@ export default function LoanRequestsSection({ initialData }: Props) {
                 toast.error(result.error)
             } else {
                 toast.success(`${action === 'approved' ? 'อนุมัติ' : 'ปฏิเสธ'} ${result.count} รายการสำเร็จ`)
+                setItems(prev => prev.map(item => selectedIds.includes(item.id) ? { ...item, status: action } : item))
                 setSelectedIds([])
+                router.refresh()
             }
         })
     }
