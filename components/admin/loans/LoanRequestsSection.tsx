@@ -133,6 +133,10 @@ export default function LoanRequestsSection({ initialData }: Props) {
             setCurrentPage(1)
         })
 
+        setTimeout(() => {
+            setShowScanner(false)
+        }, 400)
+
         if (matched) {
             toast.success(`กรองคำขอตามอุปกรณ์: ${matched.equipment?.name || ''} (${matched.equipment?.equipment_number || ''})`)
         } else {
@@ -750,6 +754,7 @@ export default function LoanRequestsSection({ initialData }: Props) {
                     isOpen={showScanner}
                     onClose={() => setShowScanner(false)}
                     onScanSuccess={handleScanCode}
+                    autoCloseDelayMs={400}
                     title="สแกน QR ค้นหาคำขอยืม"
                     subtitle="ส่องกล้องไปที่ QR Code บนตัวเครื่องอุปกรณ์เพื่อค้นหารายการคำขอยืม"
                 />

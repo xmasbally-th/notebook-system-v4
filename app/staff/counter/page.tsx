@@ -299,6 +299,7 @@ export default function StaffCounterPage() {
                 isOpen={scannerAction !== null}
                 onClose={() => setScannerAction(null)}
                 onScanSuccess={(code) => handleCodeDetected(code)}
+                autoCloseDelayMs={400}
                 title={scannerAction === 'return' ? 'สแกน QR เพื่อรับคืนอุปกรณ์' : 'สแกน QR เพื่อบันทึกการยืมด่วน'}
                 subtitle="ส่องกล้องสมาร์ทโฟนไปที่สติกเกอร์บนตัวเครื่องโน้ตบุ๊ค"
             />

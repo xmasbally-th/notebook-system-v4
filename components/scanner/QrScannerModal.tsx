@@ -11,6 +11,7 @@ interface QrScannerModalProps {
     title?: string
     subtitle?: string
     processingText?: string
+    autoCloseDelayMs?: number
 }
 
 export default function QrScannerModal({
@@ -19,7 +20,8 @@ export default function QrScannerModal({
     onScanSuccess,
     title = 'สแกน QR Code / บาร์โค้ดอุปกรณ์',
     subtitle = 'ส่องกล้องสมาร์ทโฟนไปที่สติกเกอร์บนตัวเครื่องโน้ตบุ๊ค',
-    processingText
+    processingText,
+    autoCloseDelayMs
 }: QrScannerModalProps) {
     const rawId = useId()
     const containerId = `qr-reader-${rawId.replace(/[:]/g, '')}`
@@ -140,6 +142,13 @@ export default function QrScannerModal({
                     onScanSuccess(decodedText)
                 } catch (err) {
                     console.error('[QrScanner] onScanSuccess callback error:', err)
+                }
+
+                // 5. Auto close if autoCloseDelayMs is configured
+                if (typeof autoCloseDelayMs === 'number' && autoCloseDelayMs > 0) {
+                    setTimeout(() => {
+                        handleClose()
+                    }, autoCloseDelayMs)
                 }
             }
 
@@ -288,6 +297,12 @@ export default function QrScannerModal({
             console.error('[QrScanner] Manual submit onScanSuccess error:', err)
         }
         setManualCode('')
+
+        if (typeof autoCloseDelayMs === 'number' && autoCloseDelayMs > 0) {
+            setTimeout(() => {
+                handleClose()
+            }, autoCloseDelayMs)
+        }
     }
 
     if (!isOpen) return null

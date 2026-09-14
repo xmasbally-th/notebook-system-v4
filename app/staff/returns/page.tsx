@@ -148,11 +148,14 @@ export default function StaffReturnsPage() {
             )
         })
 
-        if (matchedLoan) {
-            handleReturnClick(matchedLoan)
-        } else {
-            toast.error(`ไม่พบรายการยืมที่กำลังใช้งานของอุปกรณ์ "${cleanCode}"`)
-        }
+        setTimeout(() => {
+            setShowScanner(false)
+            if (matchedLoan) {
+                handleReturnClick(matchedLoan)
+            } else {
+                toast.error(`ไม่พบรายการยืมที่กำลังใช้งานของอุปกรณ์ "${cleanCode}"`)
+            }
+        }, 400)
     }
 
     const formatDate = (dateString: string) => {
@@ -440,6 +443,7 @@ export default function StaffReturnsPage() {
                 isOpen={showScanner}
                 onClose={() => setShowScanner(false)}
                 onScanSuccess={handleScanCode}
+                autoCloseDelayMs={400}
                 title="สแกน QR รับคืนอุปกรณ์"
             />
         </div>

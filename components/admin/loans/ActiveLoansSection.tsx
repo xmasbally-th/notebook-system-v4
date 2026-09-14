@@ -107,12 +107,16 @@ export default function ActiveLoansSection({ initialData }: Props) {
             return eqId === cleanCode || eqNum === stripped
         })
 
-        if (matchedLoan) {
-            handleReturn(matchedLoan)
-            toast.success(`พบอุปกรณ์ ${matchedLoan.equipment?.name || ''} (${matchedLoan.equipment?.equipment_number || ''})`)
-        } else {
-            toast.error(`ไม่พบรายการยืมที่กำลังใช้งานของอุปกรณ์ "${cleanCode}"`)
-        }
+        // Auto-close scanner and open return modal after 400ms so admin sees the success confirmation briefly
+        setTimeout(() => {
+            setShowScanner(false)
+            if (matchedLoan) {
+                handleReturn(matchedLoan)
+                toast.success(`พบอุปกรณ์ ${matchedLoan.equipment?.name || ''} (${matchedLoan.equipment?.equipment_number || ''})`)
+            } else {
+                toast.error(`ไม่พบรายการยืมที่กำลังใช้งานของอุปกรณ์ "${cleanCode}"`)
+            }
+        }, 400)
     }
 
     const overdueCount = useMemo(() => {
@@ -365,6 +369,7 @@ export default function ActiveLoansSection({ initialData }: Props) {
                     isOpen={showScanner}
                     onClose={() => setShowScanner(false)}
                     onScanSuccess={handleScanCode}
+                    autoCloseDelayMs={400}
                     title="สแกน QR เพื่อรับคืนอุปกรณ์"
                     subtitle="ส่องกล้องไปที่ QR Code บนตัวเครื่องอุปกรณ์เพื่อค้นหาและทำรายการรับคืนด่วน"
                 />
