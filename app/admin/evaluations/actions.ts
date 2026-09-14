@@ -3,12 +3,15 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { requireAdmin } from '@/lib/auth-guard'
 import { sendWeLPRUNotification } from '@/lib/notifications'
-import { notifyAndLog } from '@/lib/serverNotify'
 import { revalidatePath } from 'next/cache'
 
 export async function sendEvaluationReminder(loanId: string) {
     try {
-        const staff = await requireAdmin()
+        const { user, error: authError } = await requireAdmin()
+        if (authError || !user) {
+            return { success: false, error: authError || 'Unauthorized: ไม่มีสิทธิ์เข้าถึง' }
+        }
+
         const adminClient = createAdminClient()
 
         // 1. Fetch loan with borrower profile and equipment
@@ -74,24 +77,6 @@ export async function sendEvaluationReminder(loanId: string) {
                 link: `${appUrl}/my-loans`
             })
         }
-
-        // 4. Log activity
-        await notifyAndLog({
-            activity: {
-                staffId: staff.id,
-                staffRole: 'admin',
-                actionType: 'notification_sent',
-                targetType: 'loan',
-                targetId: loanId,
-                targetUserId: loan.user_id,
-                details: {
-                    type: 'evaluation_reminder',
-                    equipmentName,
-                    equipmentNumber,
-                    recipientName: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim()
-                }
-            }
-        })
 
         revalidatePath('/admin/evaluations')
         return { success: true, message: `ส่งแจ้งเตือนให้ ${profile?.first_name || 'ผู้ยืม'} เรียบร้อยแล้ว` }
