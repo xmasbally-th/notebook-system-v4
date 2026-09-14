@@ -73,6 +73,7 @@ export async function updateUserStatus(
 
     revalidatePath('/admin/users')
     revalidatePath('/staff/users')
+    revalidatePath('/admin')
     return { success: true }
 }
 
@@ -183,6 +184,7 @@ export async function updateMultipleUserStatus(
 
     revalidatePath('/admin/users')
     revalidatePath('/staff/users')
+    revalidatePath('/admin')
     return { success: true, count: userIds.length }
 }
 
