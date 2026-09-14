@@ -6,7 +6,9 @@ import {
     Activity, Box, UserPlus, Edit, FileStack,
     LayoutDashboard, ClipboardList, CalendarPlus, RotateCcw,
     AlertTriangle, CheckCircle2, XCircle, Search, HelpCircle,
-    ArrowRight, Clock, Users, FileText, Package, Printer
+    ArrowRight, Clock, Users, FileText, Package, Printer,
+    QrCode, UserCheck, ShieldCheck, Check, Sparkles, AlertCircle,
+    Camera, Smartphone
 } from 'lucide-react'
 import React from 'react'
 
@@ -14,389 +16,491 @@ export default function StaffManualPage() {
     return (
         <div className="space-y-6">
             <StaffPageHeader
-                title="คู่มือการใช้งาน (สำหรับเจ้าหน้าที่)"
-                subtitle="แนะนำการใช้งานระบบสำหรับเจ้าหน้าที่ปฏิบัติการ (Staff) — Notebook System V5"
+                title="คู่มือการใช้งาน (สำหรับเจ้าหน้าที่ปฏิบัติการ)"
+                subtitle="แนะนำการใช้งานระบบทุกฟังก์ชันสำหรับเจ้าหน้าที่ (Staff) — Notebook System V5"
             />
+
             <div className="max-w-5xl mx-auto">
-                {/* Introduction */}
-                <div className="bg-gradient-to-r from-teal-600 to-teal-800 rounded-2xl p-8 mb-8 text-white shadow-lg">
-                    <div className="flex items-start gap-6">
-                        <div className="p-3 bg-white/20 rounded-xl hidden sm:block">
+                {/* Introduction Banner */}
+                <div className="bg-gradient-to-r from-teal-700 via-teal-800 to-emerald-800 rounded-2xl p-6 sm:p-8 mb-8 text-white shadow-lg">
+                    <div className="flex items-start gap-5">
+                        <div className="p-3 bg-white/15 backdrop-blur-md rounded-2xl border border-white/20 hidden sm:block shadow-inner shrink-0">
                             <HelpCircle className="w-8 h-8 text-white" />
                         </div>
-                        <div>
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3 w-full">
-                                <h2 className="text-2xl font-bold">ยินดีต้อนรับสู่ระบบปฏิบัติการเจ้าหน้าที่</h2>
-                                <button 
+                        <div className="w-full">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2.5 w-full">
+                                <div>
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-500/40 text-teal-100 text-xs font-medium border border-teal-400/30 mb-1">
+                                        <Sparkles className="w-3 h-3" /> Staff Operations Guide
+                                    </div>
+                                    <h2 className="text-2xl font-bold tracking-tight">คู่มือปฏิบัติการสำหรับเจ้าหน้าที่ (Staff)</h2>
+                                </div>
+                                <button
                                     onClick={() => window.print()}
-                                    className="print-hidden inline-flex items-center justify-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors border border-white/20 backdrop-blur-sm self-start sm:self-auto text-sm font-medium"
+                                    className="print-hidden inline-flex items-center justify-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all border border-white/25 backdrop-blur-sm self-start sm:self-auto text-sm font-medium shadow-sm active:scale-95"
                                 >
                                     <Printer className="w-4 h-4" />
-                                    Export PDF
+                                    พิมพ์ / Export PDF
                                 </button>
                             </div>
-                            <p className="text-teal-100 leading-relaxed text-lg">
-                                คู่มือนี้ครอบคลุมหน้าที่หลักของ Staff ตั้งแต่การอนุมัติคำขอยืม,
-                                การรับคืนอุปกรณ์, การจัดการการจอง ไปจนถึงการติดตามรายการค้างคืน
+                            <p className="text-teal-100 leading-relaxed text-sm sm:text-base max-w-3xl">
+                                คู่มือนี้รวบรวมหน้าที่หลักของเจ้าหน้าที่ปฏิบัติการ ได้แก่ การให้บริการยืม-คืนด่วนหน้าเคาน์เตอร์,
+                                การอนุมัติผู้ใช้งานใหม่, การอนุมัติคำขอยืม-การจอง, การตรวจสภาพอุปกรณ์เมื่อรับคืน และการติดตามอุปกรณ์ค้างคืน
                             </p>
                         </div>
                     </div>
                 </div>
 
-                {/* Role Note */}
-                <div className="mb-8 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-                    <strong>⚠️ สิทธิ์ของ Staff:</strong> จัดการคำขอยืม, รับคืนอุปกรณ์, จัดการการจอง — แต่ <strong>ไม่มีสิทธิ์</strong> จัดการผู้ใช้, เพิ่ม/ลบอุปกรณ์, ดูรายงาน หรือตั้งค่าระบบ
-                </div>
-
-                {/* Quick Nav */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-10">
-                    <QuickNavLink href="#dashboard" icon={LayoutDashboard} label="Dashboard" color="blue" />
-                    <QuickNavLink href="#loans" icon={ClipboardList} label="จัดการคำขอ" color="indigo" />
-                    <QuickNavLink href="#reservations" icon={CalendarPlus} label="การจอง" color="purple" />
-                    <QuickNavLink href="#returns" icon={RotateCcw} label="รับคืน" color="green" />
-                    <QuickNavLink href="#overdue" icon={AlertTriangle} label="ค้างคืน" color="red" />
-                </div>
-
-                <div className="space-y-12">
-                    {/* Dashboard Section */}
-                    <Section id="dashboard" title="1. ภาพรวม (Dashboard)" icon={LayoutDashboard} color="blue">
-                        <div className="prose max-w-none text-gray-600">
-                            <p className="mb-4">
-                                เมื่อเข้าสู่ <strong>Staff Panel</strong> หน้าแรกจะแสดงสถานะภาพรวมของระบบ
-                                เพื่อให้เจ้าหน้าที่วางแผนการทำงานได้ทันที
-                            </p>
-                            <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 list-none pl-0">
-                                <FeatureItem
-                                    title="คำขอรออนุมัติ"
-                                    description="จำนวนคำขอใหม่ที่ต้องดำเนินการ — ตัวเลขสีแดงแสดงว่ามีงานรอ"
-                                />
-                                <FeatureItem
-                                    title="อุปกรณ์ที่กำลังยืม"
-                                    description="รายการอุปกรณ์ที่ออกไปแล้ว พร้อมวันที่ครบกำหนดคืน"
-                                />
-                                <FeatureItem
-                                    title="รายการค้างคืน"
-                                    description="อุปกรณ์ที่เลยกำหนดคืนแล้ว — ต้องติดตามผู้ยืมโดยด่วน"
-                                />
-                                <FeatureItem
-                                    title="การจองวันนี้"
-                                    description="การจองที่มีกำหนดรับ-คืนในวันนี้ เพื่อเตรียมอุปกรณ์ล่วงหน้า"
-                                />
-                            </ul>
-                        </div>
-                    </Section>
-
-                    {/* Loans Management Section */}
-                    <Section id="loans" title="2. การจัดการคำขอยืม (Loans)" icon={ClipboardList} color="indigo">
-                        <p className="mb-6 text-gray-600">
-                            เมนู <strong>"จัดการคำขอยืม"</strong> เป็นส่วนที่ตรวจสอบและอนุมัติคำขอที่ผู้ใช้ส่งเข้ามา
-                        </p>
-
-                        <div className="bg-indigo-50 rounded-xl p-6 border border-indigo-100 mb-6">
-                            <h4 className="font-semibold text-indigo-900 mb-4 flex items-center gap-2">
-                                <CheckCircle2 className="w-5 h-5" />
-                                ขั้นตอนการอนุมัติ
-                            </h4>
-                            <div className="space-y-3">
-                                <Step number={1} text="ตรวจสอบรายละเอียดคำขอ: ผู้ยืม, อุปกรณ์, วันที่ยืม-คืน, เวลาคืน, เหตุผล" />
-                                <Step number={2} text="ตรวจสอบสถานะอุปกรณ์ว่ายังคง 'ว่าง' หรือไม่" />
-                                <Step number={3} text="กดปุ่ม 'อนุมัติ' (สีเขียว) หากข้อมูลถูกต้องและอุปกรณ์พร้อม" />
-                                <Step number={4} text="หากต้องปฏิเสธ กด 'ปฏิเสธ' (สีแดง) และระบุเหตุผลให้ผู้ใช้ทราบ" />
-                                <Step number={5} text="ระบบจะส่งการแจ้งเตือนให้ผู้ยืมอัตโนมัติหลังดำเนินการ" />
+                {/* Role & Permissions Note */}
+                <div className="mb-8 bg-emerald-50/80 border border-emerald-200 rounded-2xl p-5 shadow-xs">
+                    <div className="flex items-start gap-3">
+                        <ShieldCheck className="w-5 h-5 text-emerald-700 mt-0.5 shrink-0" />
+                        <div className="text-xs sm:text-sm text-emerald-900 leading-relaxed">
+                            <strong className="font-bold text-emerald-950">ขอบเขตสิทธิ์ของเจ้าหน้าที่ (Staff Permissions):</strong>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 text-xs">
+                                <span className="flex items-center gap-1.5 text-emerald-800">
+                                    ✅ <strong>จุดบริการเคาน์เตอร์:</strong> สแกน/คีย์รหัสยืม-คืนด่วน
+                                </span>
+                                <span className="flex items-center gap-1.5 text-emerald-800">
+                                    ✅ <strong>อนุมัติผู้ใช้งาน:</strong> ตรวจสอบและอนุมัติบัญชีใหม่
+                                </span>
+                                <span className="flex items-center gap-1.5 text-emerald-800">
+                                    ✅ <strong>จัดการคำขอยืม:</strong> อนุมัติ/ปฏิเสธ (รองรับ Bulk)
+                                </span>
+                                <span className="flex items-center gap-1.5 text-emerald-800">
+                                    ✅ <strong>จัดการการจอง:</strong> อนุมัติและจัดเตรียมเครื่องพร้อมจ่าย
+                                </span>
+                                <span className="flex items-center gap-1.5 text-emerald-800">
+                                    ✅ <strong>รับคืน & ตรวจสภาพ:</strong> บันทึกสภาพสมบูรณ์/ชำรุด/ขาด
+                                </span>
+                                <span className="flex items-center gap-1.5 text-slate-500">
+                                    🔒 <em>สงวนสิทธิ์ Admin: เพิ่ม/ลบอุปกรณ์, ตั้งค่าระบบ, ลบฐานข้อมูล</em>
+                                </span>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                            <StatusCard status="pending" label="รออนุมัติ" desc="คำขอใหม่ที่ต้องดำเนินการ" />
-                            <StatusCard status="approved" label="อนุมัติแล้ว" desc="รออุปกรณ์ออก / กำลังยืม" />
-                            <StatusCard status="rejected" label="ปฏิเสธ" desc="คำขอที่ไม่ผ่านการพิจารณา" />
+                {/* Quick Navigation */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5 mb-10 text-center">
+                    <QuickNavLink href="#dashboard" icon={LayoutDashboard} label="Dashboard" color="blue" />
+                    <QuickNavLink href="#counter" icon={QrCode} label="เคาน์เตอร์บริการ" color="teal" />
+                    <QuickNavLink href="#users" icon={UserCheck} label="อนุมัติผู้ใช้" color="green" />
+                    <QuickNavLink href="#loans" icon={ClipboardList} label="คำขอยืม" color="indigo" />
+                    <QuickNavLink href="#reservations" icon={CalendarPlus} label="การจอง" color="purple" />
+                    <QuickNavLink href="#returns" icon={RotateCcw} label="รับคืนอุปกรณ์" color="amber" />
+                    <QuickNavLink href="#overdue" icon={AlertTriangle} label="รายการค้างคืน" color="red" />
+                </div>
+
+                {/* Content Sections */}
+                <div className="space-y-10">
+                    {/* 1. Dashboard */}
+                    <Section id="dashboard" title="1. ภาพรวมระบบ (Staff Dashboard)" icon={LayoutDashboard} color="blue">
+                        <p className="mb-4 text-slate-600 text-sm leading-relaxed">
+                            หน้าแรกของ <strong>Staff Panel (`/staff`)</strong> ออกแบบมาเพื่อให้เจ้าหน้าที่เห็นภาระงานเร่งด่วนในแต่ละวันได้ทันที:
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-4">
+                            <DashboardStatCard
+                                title="คำขอรออนุมัติ"
+                                desc="คำขอยืมใหม่ที่ส่งเข้ามา ต้องตรวจสอบและอนุมัติก่อนจ่ายเครื่อง"
+                                color="border-amber-200 bg-amber-50/60 text-amber-800"
+                            />
+                            <DashboardStatCard
+                                title="กำลังยืมใช้งาน"
+                                desc="จำนวนอุปกรณ์ที่อยู่ระหว่างการยืม พร้อมระบุวันครบกำหนดส่งคืน"
+                                color="border-blue-200 bg-blue-50/60 text-blue-800"
+                            />
+                            <DashboardStatCard
+                                title="รายการค้างคืน"
+                                desc="อุปกรณ์ที่เลยกำหนดส่งคืนแล้ว ต้องเร่งรัดติดต่อผู้ยืมทันที"
+                                color="border-rose-200 bg-rose-50/60 text-rose-800"
+                            />
+                            <DashboardStatCard
+                                title="การจองวันนี้"
+                                desc="รายการจองล่วงหน้าที่มีกำหนดรับเครื่องในวันนี้ เพื่อจัดเตรียมล่วงหน้า"
+                                color="border-purple-200 bg-purple-50/60 text-purple-800"
+                            />
                         </div>
-
-                        <div className="bg-green-50 border border-green-100 rounded-lg p-4 text-sm text-green-800">
-                            💡 <strong>Auto-Approve:</strong> เมื่อ Staff หรือ Admin ยืมเอง ระบบ<strong>อนุมัติอัตโนมัติทันที</strong> ไม่ต้องรอขั้นตอนนี้
+                        <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                            💡 ข้อมูลบน Dashboard มีระบบ Real-time Cache Refresh เมื่อมีการกระทำจากผู้ใช้หรือเจ้าหน้าที่อื่น หน้าจอจะอัปเดตตัวเลขโดยอัตโนมัติ
                         </div>
                     </Section>
 
-                    {/* Reservations Section */}
-                    <Section id="reservations" title="3. การจัดการการจอง (Reservations)" icon={CalendarPlus} color="purple">
-                        <p className="mb-6 text-gray-600">
-                            เมนู <strong>"จัดการการจอง"</strong> ใช้สำหรับดูและอนุมัติการจองล่วงหน้า
-                        </p>
-                        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mb-4">
-                            <ul className="space-y-3">
-                                <li className="flex items-start gap-3">
-                                    <Clock className="w-5 h-5 text-purple-500 mt-0.5 shrink-0" />
-                                    <span>
-                                        <strong>ดูรายการจอง:</strong> แสดงรายการจองทั้งหมดพร้อมสถานะ (รออนุมัติ / อนุมัติแล้ว / ยกเลิก)
-                                    </span>
-                                </li>
-                                <li className="flex items-start gap-3">
-                                    <CheckCircle2 className="w-5 h-5 text-purple-500 mt-0.5 shrink-0" />
-                                    <span>
-                                        <strong>อนุมัติ:</strong> คลิกรายการ → คลิก "อนุมัติ" → ยืนยัน — ระบบแจ้งเตือนผู้จองอัตโนมัติ
-                                    </span>
-                                </li>
-                                <li className="flex items-start gap-3">
-                                    <XCircle className="w-5 h-5 text-purple-500 mt-0.5 shrink-0" />
-                                    <span>
-                                        <strong>ปฏิเสธ:</strong> คลิก "ปฏิเสธ" → ระบุเหตุผล (บังคับ) → ยืนยัน
-                                    </span>
-                                </li>
-                            </ul>
-                        </div>
-                        <div className="bg-purple-50 border border-purple-100 rounded-lg p-4 text-sm text-purple-800">
-                            💡 Staff และ Admin ที่จองเอง จะได้รับการ<strong>อนุมัติอัตโนมัติ</strong> ไม่ต้องผ่านขั้นตอนนี้
-                        </div>
-                    </Section>
-
-                    {/* Returns Section */}
-                    <Section id="returns" title="4. การรับคืนอุปกรณ์ (Returns)" icon={RotateCcw} color="green">
-                        <p className="mb-6 text-gray-600">
-                            เมื่อผู้ใช้นำอุปกรณ์มาคืน ให้เข้าเมนู <strong>"รับคืนอุปกรณ์"</strong> และบันทึกทุกครั้ง
+                    {/* 2. Counter Service (NEW & CRITICAL) */}
+                    <Section id="counter" title="2. จุดบริการเคาน์เตอร์ (Counter Service & Quick Lookup)" icon={QrCode} color="teal">
+                        <p className="mb-4 text-slate-600 text-sm leading-relaxed">
+                            เมนู <strong>"จุดบริการเคาน์เตอร์ (`/staff/counter`)"</strong> คือเครื่องมืออำนวยความสะดวกสูงสุดสำหรับการทำงานหน้าเคาน์เตอร์
+                            ช่วยให้เจ้าหน้าที่ทำงานได้อย่างรวดเร็ว ไม่ต้องค้นหาจากตารางยาวๆ:
                         </p>
 
-                        <div className="space-y-4 mb-6">
-                            <ReturnStep number={1} title="ค้นหารายการ" desc="ค้นหาจากชื่อผู้ยืม หรือ Serial Number ของอุปกรณ์" />
-                            <ReturnStep number={2} title="ตรวจสอบสภาพอุปกรณ์" desc="เช็คสภาพภายนอก, รอยเสียหาย, และความครบถ้วนของอุปกรณ์เสริม (สายชาร์จ, กระเป๋า ฯลฯ)" />
-                            <ReturnStep number={3} title="บันทึกหมายเหตุ (ถ้ามีความเสียหาย)" desc="ระบุรายละเอียดความเสียหายในช่อง 'หมายเหตุ' ก่อนบันทึก" />
-                            <ReturnStep number={4} title="ยืนยันการคืน" desc="กดปุ่ม 'บันทึกการคืน' → ระบบเปลี่ยนสถานะอุปกรณ์เป็น 'ว่าง' อัตโนมัติ และส่งแจ้งเตือน Discord" />
-                        </div>
-
-                        <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 text-sm text-amber-800">
-                            ⚠️ <strong>สำคัญ:</strong> ต้องบันทึกการคืนในระบบทุกครั้ง ไม่เช่นนั้นสถานะอุปกรณ์จะยังแสดงว่า "ถูกยืม" อยู่
-                        </div>
-                    </Section>
-
-                    {/* Overdue Section */}
-                    <Section id="overdue" title="5. รายการค้างคืน (Overdue)" icon={AlertTriangle} color="red">
-                        <p className="mb-6 text-gray-600">
-                            เมนู <strong>"รายการค้างคืน"</strong> แสดงรายการที่เลยกำหนดส่งคืนแล้ว — ควรตรวจสอบทุกวัน
-                        </p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-red-50 p-6 rounded-xl border border-red-100">
-                                <h4 className="font-semibold text-red-800 mb-3 flex items-center gap-2">
-                                    <AlertTriangle className="w-5 h-5" />
-                                    ข้อมูลที่แสดง
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                            <div className="bg-teal-50/60 border border-teal-200 p-4 rounded-xl">
+                                <h4 className="font-bold text-teal-950 text-sm mb-2 flex items-center gap-2">
+                                    <Camera className="w-4 h-4 text-teal-600" />
+                                    การค้นหาด้วยการสแกนหรือพิมพ์รหัส
                                 </h4>
-                                <ul className="space-y-1 text-red-900/80 text-sm">
-                                    <li>👤 ชื่อผู้ยืม และเบอร์ติดต่อ</li>
-                                    <li>📦 อุปกรณ์ที่ค้างคืน</li>
-                                    <li>📅 วันที่/เวลาที่ควรคืน</li>
-                                    <li>⏰ จำนวนวัน/ชั่วโมงที่เกินกำหนด</li>
+                                <ul className="text-xs text-teal-800 space-y-1.5 list-disc list-inside">
+                                    <li>กดปุ่ม <strong>"สแกน QR / Barcode"</strong> เพื่อใช้กล้องสแกนจากตัวเครื่อง</li>
+                                    <li>หรือพิมพ์ <strong>หมายเลขครุภัณฑ์ / รหัสอุปกรณ์ / Serial Number</strong> ลงในช่องค้นหาด่วน</li>
+                                    <li>ระบบจะค้นหาและตรวจสอบสถานะของอุปกรณ์นั้นทันทีใน 1 วินาที</li>
                                 </ul>
                             </div>
-                            <div className="bg-white p-6 rounded-xl border border-gray-200">
-                                <h4 className="font-semibold text-gray-800 mb-3">สิ่งที่ควรทำ</h4>
-                                <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
-                                    <li>ตรวจสอบรายการค้างคืนทุกวัน</li>
-                                    <li>ติดต่อผู้ยืมโดยตรง (โทร / LINE / อีเมล)</li>
-                                    <li>บันทึกหมายเหตุการติดต่อในระบบ</li>
-                                    <li>เมื่อนำมาคืน → ไปที่ <strong>"รับคืนอุปกรณ์"</strong></li>
+
+                            <div className="bg-white border border-slate-200 p-4 rounded-xl">
+                                <h4 className="font-bold text-slate-900 text-sm mb-2 flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-amber-500" />
+                                    การทำงานอัตโนมัติตามสถานะอุปกรณ์
+                                </h4>
+                                <ul className="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
+                                    <li><strong>หากเครื่องมีสถานะ 'ว่าง':</strong> ระบบจะเปิดหน้าต่าง <em>"ยืมด่วนหน้าเคาน์เตอร์ (Fast Borrow)"</em> ให้เลือกผู้ยืมและจ่ายเครื่องทันที</li>
+                                    <li><strong>หากเครื่องมีสถานะ 'กำลังยืม':</strong> ระบบจะเปิดหน้าต่าง <em>"รับคืนด่วน (Fast Return)"</em> เพื่อตรวจสภาพและบันทึกรับคืนทันที</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700">
+                            <strong>ขั้นตอนแนะนำ:</strong> เมื่อผู้ใช้นำเครื่องมาคืนที่เคาน์เตอร์ เพียงยิงบาร์โค้ดหรือพิมพ์รหัสเครื่อง ระบบจะดึงข้อมูลผู้ยืมขึ้นมาอัตโนมัติ เจ้าหน้าที่เพียงตรวจสภาพเครื่องและกด "ยืนยันรับคืน" ก็เสร็จสิ้นทันที
+                        </div>
+                    </Section>
+
+                    {/* 3. User Approval (NEW & CRITICAL) */}
+                    <Section id="users" title="3. การอนุมัติผู้ใช้งานใหม่ (User Approval)" icon={UserCheck} color="green">
+                        <p className="mb-4 text-slate-600 text-sm leading-relaxed">
+                            เมนู <strong>"อนุมัติผู้ใช้งาน (`/staff/users`)"</strong> เจ้าหน้าที่มีสิทธิ์ตรวจสอบผู้ลงทะเบียนใหม่และอนุมัติให้เข้าใช้งานระบบ:
+                        </p>
+
+                        <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-4 mb-4">
+                            <h4 className="font-bold text-emerald-950 text-sm mb-3 flex items-center gap-2">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> ขั้นตอนการตรวจสอบและอนุมัติบัญชี
+                            </h4>
+                            <div className="space-y-2.5 text-xs text-emerald-900">
+                                <StepInline num={1} text="คลิกแท็บ 'รอการอนุมัติ (Pending)' เพื่อดูรายชื่อผู้ใช้ที่เพิ่งลงทะเบียน" />
+                                <StepInline num={2} text="ตรวจสอบความถูกต้องของ: ชื่อ-นามสกุล, รหัสนักศึกษา/บุคลากร, คณะ/สาขา, เบอร์โทรศัพท์" />
+                                <StepInline num={3} text="กดปุ่ม 'อนุมัติ (Approve)' สีเขียว เพื่อเปิดสิทธิ์การใช้งาน — ผู้ใช้จะได้รับแจ้งเตือนและสามารถยืมอุปกรณ์ได้ทันที" />
+                                <StepInline num={4} text="หากข้อมูลไม่ถูกต้อง ให้กด 'ปฏิเสธ (Reject)' เพื่อไม่อนุมัติบัญชีนั้น" />
+                            </div>
+                        </div>
+                    </Section>
+
+                    {/* 4. Loan Requests Management */}
+                    <Section id="loans" title="4. การจัดการคำขอยืม (Loans Management)" icon={ClipboardList} color="indigo">
+                        <p className="mb-4 text-slate-600 text-sm leading-relaxed">
+                            เมนู <strong>"จัดการคำขอยืม (`/staff/loans`)"</strong> ใช้สำหรับตรวจสอบและอนุมัติคำขอที่ผู้ใช้ส่งมาจากหน้าเว็บ:
+                        </p>
+
+                        <div className="space-y-3 mb-5">
+                            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                                <h4 className="font-bold text-slate-800 text-sm mb-2">ขั้นตอนการอนุมัติคำขอ:</h4>
+                                <ol className="list-decimal list-inside space-y-1.5 text-xs text-slate-600">
+                                    <li>ตรวจสอบข้อมูล: ผู้ยืม, อุปกรณ์ที่ขอ, วันที่ยืม-คืน, เวลาคืน และวัตถุประสงค์</li>
+                                    <li>ตรวจเช็คว่าอุปกรณ์เครื่องนั้นยังมีสภาพสมบูรณ์และพร้อมจ่ายหรือไม่</li>
+                                    <li>คลิก <strong>"อนุมัติ (Approve)"</strong> — ระบบจะเปลี่ยนสถานะเป็นอนุมัติ และส่งแจ้งเตือนหาผู้ยืม</li>
+                                    <li>หากต้องไม่อนุมัติ ให้คลิก <strong>"ปฏิเสธ (Reject)"</strong> และ <u>จำเป็นต้องระบุเหตุผล</u> ให้ผู้ยืมทราบ</li>
+                                </ol>
+                            </div>
+
+                            <div className="p-4 bg-indigo-50/70 border border-indigo-200 rounded-xl">
+                                <h4 className="font-bold text-indigo-950 text-sm mb-1.5 flex items-center gap-2">
+                                    <Check className="w-4 h-4 text-indigo-600" />
+                                    ฟังก์ชันอนุมัติหลายรายการพร้อมกัน (Bulk Approve)
+                                </h4>
+                                <p className="text-xs text-indigo-900 leading-relaxed">
+                                    ในกรณีที่มีคำขอเข้ามาเป็นจำนวนมาก เจ้าหน้าที่สามารถติ๊กเลือกเช็คบ็อกซ์หน้ารายการที่ต้องการ แล้วคลิกปุ่ม <strong>"อนุมัติที่เลือก"</strong> ด้านบนตาราง เพื่ออนุมัติทั้งหมดในคลิกเดียว
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900">
+                            💡 <strong>Auto-Approve:</strong> หากเจ้าหน้าที่ (Staff) หรือ Admin เป็นผู้ส่งคำขอยืมของตนเอง ระบบจะทำการ<strong>อนุมัติอัตโนมัติทันที</strong>โดยไม่ต้องรอขั้นตอนตรวจสอบ
+                        </div>
+                    </Section>
+
+                    {/* 5. Reservations Management */}
+                    <Section id="reservations" title="5. การจัดการการจองล่วงหน้า (Reservations)" icon={CalendarPlus} color="purple">
+                        <p className="mb-4 text-slate-600 text-sm leading-relaxed">
+                            เมนู <strong>"จัดการการจอง (`/staff/reservations`)"</strong> ใช้สำหรับตรวจสอบคิวการจองอุปกรณ์ในอนาคต:
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                            <ReservationActionCard
+                                title="1. อนุมัติการจอง"
+                                desc="ตรวจสอบช่วงวันเวลาว่าไม่มีการซ้อนทับ แล้วกดยืนยันการจอง สถานะจะเปลี่ยนเป็น 'จองสำเร็จ'"
+                                badge="Approved"
+                                badgeColor="bg-blue-100 text-blue-800"
+                            />
+                            <ReservationActionCard
+                                title="2. เตรียมเครื่องพร้อมรับ"
+                                desc="เมื่อถึงวันนัดหมาย ให้จัดเตรียมอุปกรณ์และปรับสถานะเป็น 'พร้อมรับ' เพื่อแจ้งเตือนผู้จอง"
+                                badge="Ready"
+                                badgeColor="bg-emerald-100 text-emerald-800"
+                            />
+                            <ReservationActionCard
+                                title="3. ส่งมอบ & แปลงเป็นการยืม"
+                                desc="เมื่อผู้จองมารับเครื่อง ให้กดยืนยันส่งมอบ ระบบจะแปลงรายการจองเป็นการยืมใช้งานจริงทันที"
+                                badge="Completed"
+                                badgeColor="bg-indigo-100 text-indigo-800"
+                            />
+                        </div>
+                    </Section>
+
+                    {/* 6. Returns & Inspection */}
+                    <Section id="returns" title="6. การรับคืนอุปกรณ์และตรวจสภาพ (Returns & Condition Inspection)" icon={RotateCcw} color="amber">
+                        <p className="mb-4 text-slate-600 text-sm leading-relaxed">
+                            เมื่อผู้ใช้นำอุปกรณ์มาส่งคืน ให้เข้าเมนู <strong>"รับคืนอุปกรณ์ (`/staff/returns`)"</strong> หรือใช้จุดบริการเคาน์เตอร์:
+                        </p>
+
+                        <div className="bg-amber-50/60 border border-amber-200 p-5 rounded-xl mb-4">
+                            <h4 className="font-bold text-amber-950 text-sm mb-3">
+                                🔍 การตรวจสภาพอุปกรณ์ 3 ระดับ (Condition Check):
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                                <div className="p-3 bg-white rounded-lg border border-emerald-200">
+                                    <span className="font-bold text-emerald-800 block mb-1">🟢 สภาพสมบูรณ์ (Good)</span>
+                                    <p className="text-slate-600">ตัวเครื่อง อุปกรณ์เสริมครบ ใช้งานได้ปกติ อุปกรณ์จะกลับสู่สถานะ 'ว่าง' ทันที</p>
+                                </div>
+                                <div className="p-3 bg-white rounded-lg border border-amber-200">
+                                    <span className="font-bold text-amber-800 block mb-1">🟡 ชำรุดเสียหาย (Damaged)</span>
+                                    <p className="text-slate-600">มีรอยแตก จอเสีย ปุ่มหลุด ต้องกรอกรายละเอียดความเสียหายในช่องหมายเหตุ</p>
+                                </div>
+                                <div className="p-3 bg-white rounded-lg border border-rose-200">
+                                    <span className="font-bold text-rose-800 block mb-1">🔴 อุปกรณ์เสริมไม่ครบ (Missing)</span>
+                                    <p className="text-slate-600">ขาดสายชาร์จ กระเป๋า อะแดปเตอร์ ต้องบันทึกว่าขาดรายการใดเพื่อติดตาม</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800">
+                            ⚠️ <strong>สำคัญมาก:</strong> ต้องกดบันทึกการคืนในระบบทุกครั้ง ไม่รับคืนเฉพาะเครื่องโดยไม่กดในระบบ เพราะสถานะจะยังค้างเป็น 'กำลังยืม' และทำให้ระบบแจ้งเตือนค้างคืนแก่ผู้ใช้
+                        </div>
+                    </Section>
+
+                    {/* 7. Overdue Items */}
+                    <Section id="overdue" title="7. รายการค้างคืน (Overdue Management)" icon={AlertTriangle} color="red">
+                        <p className="mb-4 text-slate-600 text-sm leading-relaxed">
+                            เมนู <strong>"รายการค้างคืน (`/staff/overdue`)"</strong> รวบรวมอุปกรณ์ทั้งหมดที่เลยกำหนดส่งคืนแล้ว เจ้าหน้าที่ควรเข้ามาตรวจสอบทุกวัน:
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div className="p-4 bg-rose-50/70 border border-rose-200 rounded-xl">
+                                <h4 className="font-bold text-rose-950 text-sm mb-2">ข้อมูลที่ระบบแสดง</h4>
+                                <ul className="text-xs text-rose-900 space-y-1 list-disc list-inside">
+                                    <li>ชื่อ-นามสกุล และเบอร์โทรศัพท์ของผู้ยืม</li>
+                                    <li>ชื่ออุปกรณ์และหมายเลขครุภัณฑ์</li>
+                                    <li>วันที่และเวลาที่ครบกำหนดส่งคืน</li>
+                                    <li>จำนวนวันและชั่วโมงที่เกินกำหนดส่งคืน (Overdue Time)</li>
+                                </ul>
+                            </div>
+                            <div className="p-4 bg-white border border-slate-200 rounded-xl">
+                                <h4 className="font-bold text-slate-900 text-sm mb-2">แนวทางการดำเนินงานของเจ้าหน้าที่</h4>
+                                <ol className="list-decimal list-inside text-xs text-slate-600 space-y-1">
+                                    <li>ติดต่อผู้ยืมโดยตรงผ่านทางเบอร์โทรศัพท์ หรือข้อความ</li>
+                                    <li>ตรวจสอบเหตุผลและนัดหมายเวลาส่งคืนใหม่</li>
+                                    <li>หากผู้ใช้นำมาคืน ให้ไปที่เมนู <strong>"รับคืนอุปกรณ์"</strong> เพื่อปลดสถานะค้างคืน</li>
                                 </ol>
                             </div>
                         </div>
                     </Section>
-                
-                    {/* Workflows */}
-                    <Section id="workflows" title="6. ขั้นตอนการทำงานของระบบ (Workflows)" icon={Activity} color="teal">
-                        <div className="space-y-8">
-                            {/* Loan System */}
-                            <div>
-                                <h4 className="font-semibold text-teal-900 mb-4 flex items-center gap-2">
-                                    <ClipboardList className="w-5 h-5" />
-                                    ระบบยืม-คืน (Loan & Return)
-                                </h4>
-                                <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 overflow-x-auto">
-                                    <div className="flex items-center min-w-max gap-4 text-sm font-medium">
-                                        <WorkflowStep title="ผู้ใช้ส่งคำขอ" desc="ระบุวันคืน" icon={FileStack} color="indigo" />
-                                        <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
-                                        <WorkflowStep title="รออนุมัติ" desc="Pending" icon={Clock} color="orange" />
-                                        <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
-                                        <div className="flex flex-col gap-4">
-                                            <div className="flex items-center gap-4">
-                                                <WorkflowStep title="อนุมัติ" desc="รับอุปกรณ์" icon={CheckCircle2} color="green" />
-                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
-                                                <WorkflowStep title="กำลังยืม" desc="ใช้งาน" icon={Activity} color="teal" />
-                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
-                                                <WorkflowStep title="รับคืนอุปกรณ์" desc="ตรวจสภาพ" icon={RotateCcw} color="orange" />
-                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
-                                                <WorkflowStep title="เสร็จสิ้น" desc="อุปกรณ์ว่าง" icon={CheckCircle2} color="green" />
-                                            </div>
-                                            <div className="flex items-center gap-4">
-                                                <WorkflowStep title="ปฏิเสธ" desc="ไม่อนุมัติคำขอ" icon={XCircle} color="red" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            {/* Reservation System */}
-                            <div>
-                                <h4 className="font-semibold text-teal-900 mb-4 flex items-center gap-2">
-                                    <CalendarPlus className="w-5 h-5" />
-                                    ระบบจองล่วงหน้า (Reservation)
-                                </h4>
-                                <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 overflow-x-auto">
-                                    <div className="flex items-center min-w-max gap-4 text-sm font-medium">
-                                        <WorkflowStep title="ผู้ใช้จอง" desc="ระบุวันที่" icon={CalendarPlus} color="indigo" />
-                                        <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
-                                        <WorkflowStep title="รออนุมัติ" desc="Pending" icon={Clock} color="orange" />
-                                        <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
-                                        <div className="flex flex-col gap-4">
-                                            <div className="flex items-center gap-4">
-                                                <WorkflowStep title="อนุมัติ" desc="จองสำเร็จ" icon={CheckCircle2} color="green" />
-                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
-                                                <WorkflowStep title="ถึงวันจอง" desc="มารับอุปกรณ์" icon={Box} color="indigo" />
-                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
-                                                <WorkflowStep title="พร้อมรับ" desc="กดรับอุปกรณ์" icon={CheckCircle2} color="teal" />
-                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
-                                                <WorkflowStep title="แปลงเป็นยืม" desc="สถานะยืม" icon={Activity} color="blue" />
-                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
-                                                <WorkflowStep title="รับคืนอุปกรณ์" desc="ตรวจสภาพ" icon={RotateCcw} color="orange" />
-                                                <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
-                                                <WorkflowStep title="เสร็จสิ้น" desc="สำเร็จ" icon={CheckCircle2} color="green" />
-                                            </div>
-                                            <div className="flex items-center gap-4">
-                                                <WorkflowStep title="ปฏิเสธ" desc="ยกเลิกการจอง" icon={XCircle} color="red" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+
+                    {/* 8. Staff Workflows */}
+                    <Section id="workflows" title="8. แผนผังขั้นตอนการทำงานของเจ้าหน้าที่ (Staff Workflows)" icon={Activity} color="teal">
+                        <div className="space-y-6">
+                            {/* Workflow 1: User Verification */}
+                            <WorkflowCard
+                                title="ขั้นตอนที่ 1: การตรวจสอบและอนุมัติผู้ใช้งานใหม่ (User Onboarding)"
+                                icon={UserCheck}
+                                steps={[
+                                    { title: 'ผู้ใช้ลงทะเบียน', desc: 'สถานะ Pending', color: 'amber' },
+                                    { title: 'Staff ตรวจข้อมูล', desc: 'เช็ครหัส/คณะ', color: 'blue' },
+                                    { title: 'กดอนุมัติ', desc: 'Approved', color: 'emerald' },
+                                    { title: 'ผู้ใช้เข้าสู่ระบบ', desc: 'พร้อมขอยืม', color: 'teal' },
+                                ]}
+                            />
+
+                            {/* Workflow 2: Loan Approval & Handover */}
+                            <WorkflowCard
+                                title="ขั้นตอนที่ 2: การอนุมัติคำขอยืมและจ่ายเครื่อง (Loan & Handover)"
+                                icon={ClipboardList}
+                                steps={[
+                                    { title: 'รับคำขอยืม', desc: 'ตรวจสอบวัน-เวลา', color: 'blue' },
+                                    { title: 'กดอนุมัติ', desc: 'Single / Bulk', color: 'indigo' },
+                                    { title: 'ผู้ใช้มารับที่เคาน์เตอร์', desc: 'ตรวจสภาพร่วมกัน', color: 'amber' },
+                                    { title: 'ส่งมอบเครื่อง', desc: 'สถานะ กำลังยืม', color: 'emerald' },
+                                ]}
+                            />
+
+                            {/* Workflow 3: Fast Counter */}
+                            <WorkflowCard
+                                title="ขั้นตอนที่ 3: บริการด่วนหน้าเคาน์เตอร์ (Fast Counter Service)"
+                                icon={QrCode}
+                                steps={[
+                                    { title: 'สแกน/พิมพ์รหัส', desc: 'ค้นหาอุปกรณ์', color: 'blue' },
+                                    { title: 'ระบบตรวจสถานะ', desc: 'อัตโนมัติใน 1 วิ', color: 'indigo' },
+                                    { title: 'เลือกโหมด', desc: 'ยืมด่วน / รับคืนด่วน', color: 'purple' },
+                                    { title: 'บันทึกรายการ', desc: 'อัปเดตทันที', color: 'emerald' },
+                                ]}
+                            />
+
+                            {/* Workflow 4: Returns & Condition Check */}
+                            <WorkflowCard
+                                title="ขั้นตอนที่ 4: การรับคืนและตรวจสภาพอุปกรณ์ (Returns & Inspection)"
+                                icon={RotateCcw}
+                                steps={[
+                                    { title: 'ผู้ใช้นำเครื่องส่ง', desc: 'แจ้งชื่อ/รหัสเครื่อง', color: 'slate' },
+                                    { title: 'ตรวจสภาพ 3 ระดับ', desc: 'Good/Damage/Missing', color: 'amber' },
+                                    { title: 'บันทึกหมายเหตุ', desc: 'กรณีมีรอยชำรุด', color: 'orange' },
+                                    { title: 'กดยืนยันการคืน', desc: 'เครื่องกลับสู่สถานะว่าง', color: 'emerald' },
+                                ]}
+                            />
                         </div>
                     </Section>
-
                 </div>
 
-                {/* Footer Help */}
-                <div className="mt-16 text-center border-t border-gray-200 pt-10">
-                    <p className="text-gray-500 mb-4">หากพบปัญหาการใช้งานหรือต้องการความช่วยเหลือเพิ่มเติม</p>
-                    <p className="text-gray-400 text-sm">ติดต่อ Admin ผ่านระบบ หรือแจ้งโดยตรง — Notebook System V5 อัปเดตล่าสุด 2 เมษายน 2569</p>
+                {/* Footer Note */}
+                <div className="mt-14 text-center border-t border-slate-200 pt-8 pb-4">
+                    <p className="text-slate-500 text-xs sm:text-sm mb-1">
+                        คู่มือปฏิบัติการสำหรับเจ้าหน้าที่ (Staff) — Notebook System V5
+                    </p>
+                    <p className="text-slate-400 text-xs">
+                        หากพบปัญหาทางเทคนิคหรือข้อผิดพลาดของระบบ กรุณาติดต่อผู้ดูแลระบบ (Admin)
+                    </p>
                 </div>
             </div>
         </div>
     )
 }
 
+/* ─── Helper Components ─── */
+
 function QuickNavLink({ href, icon: Icon, label, color }: { href: string; icon: any; label: string; color: string }) {
     const colorClasses: Record<string, string> = {
-        blue: 'bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200',
-        indigo: 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-indigo-200',
-        purple: 'bg-purple-50 text-purple-600 hover:bg-purple-100 border-purple-200',
-        green: 'bg-green-50 text-green-600 hover:bg-green-100 border-green-200',
-        red: 'bg-red-50 text-red-600 hover:bg-red-100 border-red-200',
+        blue: 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200',
+        teal: 'bg-teal-50 text-teal-700 hover:bg-teal-100 border-teal-200',
+        green: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200',
+        indigo: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200',
+        purple: 'bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200',
+        amber: 'bg-amber-50 text-amber-800 hover:bg-amber-100 border-amber-200',
+        red: 'bg-rose-50 text-rose-700 hover:bg-rose-100 border-rose-200',
     }
 
     return (
-        <a href={href} className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${colorClasses[color]}`}>
-            <Icon className="w-6 h-6 mb-2" />
-            <span className="text-sm font-medium">{label}</span>
+        <a href={href} className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${colorClasses[color]} shadow-2xs active:scale-95`}>
+            <Icon className="w-5 h-5 mb-1.5 shrink-0" />
+            <span className="text-xs font-semibold leading-tight">{label}</span>
         </a>
     )
 }
 
 function Section({ id, title, icon: Icon, children, color }: { id: string; title: string; icon: any; children: React.ReactNode; color: string }) {
     const headerColors: Record<string, string> = {
-        blue: 'text-blue-700',
-        indigo: 'text-indigo-700',
-        purple: 'text-purple-700',
-        green: 'text-green-700',
-        red: 'text-red-700',
+        blue: 'text-blue-800',
+        teal: 'text-teal-800',
+        green: 'text-emerald-800',
+        indigo: 'text-indigo-800',
+        purple: 'text-purple-800',
+        amber: 'text-amber-800',
+        red: 'text-rose-800',
     }
     const bgColors: Record<string, string> = {
-        blue: 'bg-blue-100',
-        indigo: 'bg-indigo-100',
-        purple: 'bg-purple-100',
-        green: 'bg-green-100',
-        red: 'bg-red-100',
+        blue: 'bg-blue-100 text-blue-700',
+        teal: 'bg-teal-100 text-teal-700',
+        green: 'bg-emerald-100 text-emerald-700',
+        indigo: 'bg-indigo-100 text-indigo-700',
+        purple: 'bg-purple-100 text-purple-700',
+        amber: 'bg-amber-100 text-amber-700',
+        red: 'bg-rose-100 text-rose-700',
     }
 
     return (
-        <section id={id} className="scroll-mt-28">
-            <div className="flex items-center gap-3 mb-6">
-                <div className={`p-2 rounded-lg ${bgColors[color]}`}>
-                    <Icon className={`w-6 h-6 ${headerColors[color]}`} />
+        <section id={id} className="scroll-mt-24">
+            <div className="flex items-center gap-3 mb-4">
+                <div className={`p-2 rounded-xl ${bgColors[color]} shrink-0 shadow-2xs`}>
+                    <Icon className="w-5 h-5" />
                 </div>
-                <h3 className={`text-xl font-bold ${headerColors[color]}`}>{title}</h3>
+                <h3 className={`text-lg sm:text-xl font-bold ${headerColors[color]} tracking-tight`}>{title}</h3>
             </div>
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
                 {children}
             </div>
         </section>
     )
 }
 
-function FeatureItem({ title, description }: { title: string; description: string }) {
+function DashboardStatCard({ title, desc, color }: { title: string; desc: string; color: string }) {
     return (
-        <li className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
-            <div className="w-2 h-2 mt-2 rounded-full bg-teal-500 shrink-0" />
-            <div>
-                <strong className="block text-gray-900 mb-1">{title}</strong>
-                <span className="text-sm text-gray-600">{description}</span>
-            </div>
-        </li>
+        <div className={`p-3.5 rounded-xl border ${color}`}>
+            <h5 className="font-bold text-sm mb-1">{title}</h5>
+            <p className="text-xs opacity-90 leading-relaxed">{desc}</p>
+        </div>
     )
 }
 
-function Step({ number, text }: { number: number; text: string }) {
+function StepInline({ num, text }: { num: number; text: string }) {
     return (
-        <div className="flex items-start gap-3">
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-200 text-indigo-700 text-xs font-bold shrink-0 mt-0.5">
-                {number}
+        <div className="flex items-start gap-2.5">
+            <span className="w-5 h-5 rounded-full bg-emerald-200 text-emerald-800 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                {num}
             </span>
-            <span className="text-indigo-900/80 text-sm leading-relaxed">{text}</span>
+            <span className="leading-relaxed">{text}</span>
         </div>
     )
 }
 
-function ReturnStep({ number, title, desc }: { number: number; title: string; desc: string }) {
+function ReservationActionCard({ title, desc, badge, badgeColor }: { title: string; desc: string; badge: string; badgeColor: string }) {
     return (
-        <div className="flex items-center gap-4 p-4 bg-green-50 rounded-lg border border-green-100">
-            <div className="w-10 h-10 bg-green-200 rounded-full flex items-center justify-center flex-shrink-0 text-green-700 font-bold">
-                {number}
-            </div>
+        <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between">
             <div>
-                <h5 className="font-semibold text-gray-900">{title}</h5>
-                <p className="text-sm text-gray-600">{desc}</p>
+                <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mb-2 ${badgeColor}`}>
+                    {badge}
+                </span>
+                <h5 className="font-bold text-xs sm:text-sm text-slate-900 mb-1">{title}</h5>
+                <p className="text-xs text-slate-500 leading-relaxed">{desc}</p>
             </div>
         </div>
     )
 }
 
-function StatusCard({ status, label, desc }: { status: string; label: string; desc: string }) {
-    const styles: Record<string, string> = {
-        pending: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-        approved: 'bg-green-50 border-green-200 text-green-800',
-        rejected: 'bg-red-50 border-red-200 text-red-800',
+function WorkflowCard({ title, icon: Icon, steps }: {
+    title: string
+    icon: any
+    steps: { title: string; desc: string; color: string }[]
+}) {
+    const colorMap: Record<string, { bg: string; text: string; border: string }> = {
+        blue: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+        indigo: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
+        amber: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+        purple: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+        emerald: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+        orange: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+        teal: { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
+        slate: { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-300' },
     }
 
     return (
-        <div className={`p-4 rounded-xl border ${styles[status]}`}>
-            <span className="block font-bold mb-1">{label}</span>
-            <span className="text-xs opacity-80">{desc}</span>
-        </div>
-    )
-}
-
-function WorkflowStep({ title, desc, icon: Icon, color }: { title: string; desc: string; icon: any; color: string }) {
-    const bgColors: Record<string, string> = {
-        blue: 'bg-blue-100 text-blue-700',
-        indigo: 'bg-indigo-100 text-indigo-700',
-        purple: 'bg-purple-100 text-purple-700',
-        green: 'bg-green-100 text-green-700',
-        red: 'bg-red-100 text-red-700',
-        teal: 'bg-teal-100 text-teal-700',
-        orange: 'bg-orange-100 text-orange-700',
-    }
-
-    return (
-        <div className="flex flex-col items-center text-center gap-2 w-28">
-            <div className={`p-3 rounded-full ${bgColors[color]}`}>
-                <Icon className="w-6 h-6" />
-            </div>
-            <div>
-                <div className="font-semibold text-gray-900 text-sm whitespace-nowrap">{title}</div>
-                <div className="text-xs text-gray-500 whitespace-nowrap">{desc}</div>
+        <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+            <h4 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-2">
+                <Icon className="w-4 h-4 text-teal-600" />
+                {title}
+            </h4>
+            <div className="overflow-x-auto pb-1">
+                <div className="flex items-center min-w-max gap-2 sm:gap-3">
+                    {steps.map((step, idx) => {
+                        const style = colorMap[step.color] || colorMap.blue
+                        return (
+                            <React.Fragment key={idx}>
+                                <div className={`p-3 rounded-xl border ${style.bg} ${style.border} text-center w-32 shrink-0 shadow-2xs`}>
+                                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
+                                        Step {idx + 1}
+                                    </div>
+                                    <div className={`font-bold text-xs ${style.text} truncate`}>{step.title}</div>
+                                    <div className="text-[10px] text-slate-500 truncate mt-0.5">{step.desc}</div>
+                                </div>
+                                {idx < steps.length - 1 && (
+                                    <ArrowRight className="w-4 h-4 text-slate-300 shrink-0" />
+                                )}
+                            </React.Fragment>
+                        )
+                    })}
+                </div>
             </div>
         </div>
     )
