@@ -2,14 +2,15 @@
 
 import React, { useEffect, useRef, useState, useId } from 'react'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
-import { X, Camera, Keyboard, AlertCircle, RefreshCw, Volume2, VolumeX, Zap, ZapOff } from 'lucide-react'
+import { X, Camera, Keyboard, AlertCircle, RefreshCw, Volume2, VolumeX, Zap, ZapOff, CheckCircle2, Loader2, Smartphone, Sparkles } from 'lucide-react'
 
 interface QrScannerModalProps {
     isOpen: boolean
     onClose: () => void
-    onScanSuccess: (decodedText: string) => void
+    onScanSuccess: (decodedText: string) => void | Promise<void>
     title?: string
     subtitle?: string
+    processingText?: string
 }
 
 export default function QrScannerModal({
@@ -17,7 +18,8 @@ export default function QrScannerModal({
     onClose,
     onScanSuccess,
     title = 'สแกน QR Code / บาร์โค้ดอุปกรณ์',
-    subtitle = 'ส่องกล้องสมาร์ทโฟนไปที่สติกเกอร์บนตัวเครื่องโน้ตบุ๊ค'
+    subtitle = 'ส่องกล้องสมาร์ทโฟนไปที่สติกเกอร์บนตัวเครื่องโน้ตบุ๊ค',
+    processingText
 }: QrScannerModalProps) {
     const rawId = useId()
     const containerId = `qr-reader-${rawId.replace(/[:]/g, '')}`
@@ -26,6 +28,8 @@ export default function QrScannerModal({
     const [manualCode, setManualCode] = useState('')
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
     const [isStarting, setIsStarting] = useState(false)
+    const [isProcessing, setIsProcessing] = useState(false)
+    const [scannedCode, setScannedCode] = useState<string | null>(null)
     const [hasAudio, setHasAudio] = useState(true)
     const [hasTorch, setHasTorch] = useState(false)
     const [isTorchOn, setIsTorchOn] = useState(false)
@@ -100,16 +104,11 @@ export default function QrScannerModal({
 
             // Highly optimized camera configuration:
             // - 24 FPS: Instantaneous frame sampling without lag
-            // - 720p constraints: 4-9x less data volume than 4K/1080p, reducing mobile CPU decode latency from 100ms to <15ms
-            // - 75% Reticle qrbox: Focuses scanning squarely on target
+            // - Full-Frame detection: Omit restrictive qrbox so off-center, tilted, or 4:3 tablet QR codes decode reliably
+            // - Flexible Aspect Ratio: Adapts naturally to 4:3 on iPad/tablets and 16:9 on smartphones
+            // - 720p constraints: Best balance between sharpness for existing stickers and zero CPU decode lag
             const qrConfig = {
                 fps: 24,
-                qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight)
-                    const edge = Math.floor(minEdge * 0.75)
-                    return { width: edge, height: edge }
-                },
-                aspectRatio: 1.0,
                 disableFlip: true,
                 videoConstraints: {
                     facingMode: { ideal: 'environment' },
@@ -125,15 +124,22 @@ export default function QrScannerModal({
                 // 1. Instant sound & tactile haptic feedback
                 playSuccessBeep()
 
-                // 2. Zero-latency action: Trigger success & close modal immediately without waiting for stop()
-                onScanSuccess(decodedText)
-                onClose()
+                // 2. Set processing state immediately so user sees the success checkmark and loading spinner
+                setIsProcessing(true)
+                setScannedCode(decodedText)
 
-                // 3. Gracefully stop camera asynchronously in background
+                // 3. Gracefully stop camera in background so camera LED turns off and battery is preserved
                 if (html5QrCode.isScanning) {
                     html5QrCode.stop().then(() => {
                         html5QrCode.clear()
                     }).catch(() => {})
+                }
+
+                // 4. Trigger caller's onScanSuccess handler
+                try {
+                    onScanSuccess(decodedText)
+                } catch (err) {
+                    console.error('[QrScanner] onScanSuccess callback error:', err)
                 }
             }
 
@@ -246,9 +252,13 @@ export default function QrScannerModal({
     }
 
     useEffect(() => {
-        if (isOpen && activeTab === 'camera') {
+        if (isOpen) {
+            setIsProcessing(false)
+            setScannedCode(null)
             isStoppingRef.current = false
-            startScanner()
+            if (activeTab === 'camera') {
+                startScanner()
+            }
         } else {
             stopScanner()
         }
@@ -258,32 +268,50 @@ export default function QrScannerModal({
         }
     }, [isOpen, activeTab])
 
+    const handleClose = () => {
+        setIsProcessing(false)
+        setScannedCode(null)
+        onClose()
+    }
+
     const handleManualSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         const trimmed = manualCode.trim()
         if (!trimmed) return
+        isStoppingRef.current = true
+        setIsProcessing(true)
+        setScannedCode(trimmed)
         playSuccessBeep()
-        onScanSuccess(trimmed)
+        try {
+            onScanSuccess(trimmed)
+        } catch (err) {
+            console.error('[QrScanner] Manual submit onScanSuccess error:', err)
+        }
         setManualCode('')
-        onClose()
     }
 
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white w-full max-w-md sm:max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
                 {/* Header */}
                 <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                     <div>
                         <h3 className="font-semibold text-gray-900 text-base sm:text-lg flex items-center gap-2">
-                            <Camera className="w-5 h-5 text-indigo-600" />
-                            <span>{title}</span>
+                            {isProcessing ? (
+                                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                            ) : (
+                                <Camera className="w-5 h-5 text-indigo-600" />
+                            )}
+                            <span>{isProcessing ? 'สแกนสำเร็จแล้ว' : title}</span>
                         </h3>
-                        <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                            {isProcessing ? 'ระบบกำลังประมวลผลคำขอ...' : subtitle}
+                        </p>
                     </div>
                     <div className="flex items-center gap-1">
-                        {hasTorch && (
+                        {!isProcessing && hasTorch && (
                             <button
                                 type="button"
                                 onClick={toggleTorch}
@@ -297,58 +325,94 @@ export default function QrScannerModal({
                                 {isTorchOn ? <Zap className="w-4 h-4 fill-amber-500" /> : <ZapOff className="w-4 h-4" />}
                             </button>
                         )}
+                        {!isProcessing && (
+                            <button
+                                type="button"
+                                onClick={() => setHasAudio(!hasAudio)}
+                                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-all"
+                                title={hasAudio ? 'ปิดเสียงแจ้งเตือน' : 'เปิดเสียงแจ้งเตือน'}
+                            >
+                                {hasAudio ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-gray-300" />}
+                            </button>
+                        )}
                         <button
                             type="button"
-                            onClick={() => setHasAudio(!hasAudio)}
-                            className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-all"
-                            title={hasAudio ? 'ปิดเสียงแจ้งเตือน' : 'เปิดเสียงแจ้งเตือน'}
-                        >
-                            {hasAudio ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-gray-300" />}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-all"
+                            onClick={handleClose}
+                            className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-all cursor-pointer"
+                            title="ปิดหน้าต่าง"
                         >
                             <X className="w-5 h-5" />
                         </button>
                     </div>
                 </div>
 
-                {/* Tab Switcher (Camera vs Manual Input) */}
-                <div className="grid grid-cols-2 p-1.5 bg-gray-100/80 mx-4 mt-4 rounded-xl text-xs font-medium">
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('camera')}
-                        className={`flex items-center justify-center gap-1.5 py-2 rounded-lg transition-all ${
-                            activeTab === 'camera'
-                                ? 'bg-white text-indigo-600 shadow-sm font-semibold'
-                                : 'text-gray-500 hover:text-gray-700'
-                        }`}
-                    >
-                        <Camera className="w-3.5 h-3.5" />
-                        <span>เปิดกล้องสแกน</span>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('manual')}
-                        className={`flex items-center justify-center gap-1.5 py-2 rounded-lg transition-all ${
-                            activeTab === 'manual'
-                                ? 'bg-white text-indigo-600 shadow-sm font-semibold'
-                                : 'text-gray-500 hover:text-gray-700'
-                        }`}
-                    >
-                        <Keyboard className="w-3.5 h-3.5" />
-                        <span>พิมพ์รหัสเอง</span>
-                    </button>
-                </div>
+                {/* Tab Switcher (Visible only when not processing) */}
+                {!isProcessing && (
+                    <div className="grid grid-cols-2 p-1.5 bg-gray-100/80 mx-4 mt-4 rounded-xl text-xs font-medium">
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('camera')}
+                            className={`flex items-center justify-center gap-1.5 py-2 rounded-lg transition-all cursor-pointer ${
+                                activeTab === 'camera'
+                                    ? 'bg-white text-indigo-600 shadow-sm font-semibold'
+                                    : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            <Camera className="w-3.5 h-3.5" />
+                            <span>เปิดกล้องสแกน</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('manual')}
+                            className={`flex items-center justify-center gap-1.5 py-2 rounded-lg transition-all cursor-pointer ${
+                                activeTab === 'manual'
+                                    ? 'bg-white text-indigo-600 shadow-sm font-semibold'
+                                    : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            <Keyboard className="w-3.5 h-3.5" />
+                            <span>พิมพ์รหัสเอง</span>
+                        </button>
+                    </div>
+                )}
 
                 {/* Body Content */}
-                <div className="p-4 flex-1 overflow-y-auto flex flex-col justify-center">
-                    {activeTab === 'camera' ? (
+                <div className="p-4 sm:p-5 flex-1 overflow-y-auto flex flex-col justify-center min-h-[300px]">
+                    {isProcessing ? (
+                        /* Processing / Loading State */
+                        <div className="py-6 px-3 flex flex-col items-center justify-center text-center space-y-4 animate-fade-in">
+                            <div className="relative">
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 ring-8 ring-emerald-50 shadow-inner">
+                                    <CheckCircle2 className="w-10 h-10 sm:w-12 sm:h-12" />
+                                </div>
+                                <div className="absolute -inset-1.5 rounded-full border-2 border-emerald-500/30 animate-ping pointer-events-none" />
+                            </div>
+
+                            <div className="space-y-1.5 max-w-xs sm:max-w-sm">
+                                <h4 className="text-base sm:text-lg font-bold text-gray-900 flex items-center justify-center gap-1.5">
+                                    <span>สแกน QR Code สำเร็จแล้ว!</span>
+                                </h4>
+                                {scannedCode && (
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-mono font-semibold max-w-full">
+                                        <span className="text-gray-400">รหัส:</span>
+                                        <span className="text-indigo-600 truncate max-w-[200px]">{scannedCode}</span>
+                                    </div>
+                                )}
+                                <p className="text-xs text-gray-500 leading-relaxed pt-1">
+                                    {processingText || 'กำลังตรวจสอบข้อมูลอุปกรณ์และนำท่านไปยังหน้ารายการยืม...'}
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-2.5 text-xs font-semibold text-indigo-700 bg-indigo-50 px-4 py-2.5 rounded-xl border border-indigo-200/60 shadow-2xs">
+                                <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
+                                <span>กรุณารอสักครู่ ระบบกำลังประมวลผล</span>
+                            </div>
+                        </div>
+                    ) : activeTab === 'camera' ? (
+                        /* Camera View */
                         <div className="flex flex-col items-center">
-                            {/* Camera Viewport Container */}
-                            <div className="relative w-full aspect-square max-w-[300px] bg-black rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
+                            {/* Camera Viewport Container (Responsive for Mobile & Tablet/iPad) */}
+                            <div className="relative w-full aspect-[4/3] sm:aspect-square max-w-[340px] sm:max-w-[380px] md:max-w-[400px] bg-black rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
                                 <div id={containerId} className="w-full h-full" />
 
                                 {isStarting && (
@@ -360,12 +424,12 @@ export default function QrScannerModal({
 
                                 {/* Target Reticle Overlay */}
                                 {!errorMsg && !isStarting && (
-                                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                                        <div className="w-[65%] h-[65%] border-2 border-indigo-400/80 rounded-2xl relative animate-pulse">
-                                            <div className="absolute -top-1 -left-1 w-4 h-4 border-t-4 border-l-4 border-indigo-500 rounded-tl" />
-                                            <div className="absolute -top-1 -right-1 w-4 h-4 border-t-4 border-r-4 border-indigo-500 rounded-tr" />
-                                            <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-4 border-l-4 border-indigo-500 rounded-bl" />
-                                            <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-4 border-r-4 border-indigo-500 rounded-br" />
+                                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-6">
+                                        <div className="w-[80%] h-[80%] border-2 border-indigo-400/80 rounded-2xl relative animate-pulse">
+                                            <div className="absolute -top-1 -left-1 w-5 h-5 border-t-4 border-l-4 border-indigo-500 rounded-tl-lg" />
+                                            <div className="absolute -top-1 -right-1 w-5 h-5 border-t-4 border-r-4 border-indigo-500 rounded-tr-lg" />
+                                            <div className="absolute -bottom-1 -left-1 w-5 h-5 border-b-4 border-l-4 border-indigo-500 rounded-bl-lg" />
+                                            <div className="absolute -bottom-1 -right-1 w-5 h-5 border-b-4 border-r-4 border-indigo-500 rounded-br-lg" />
                                         </div>
                                     </div>
                                 )}
@@ -373,14 +437,14 @@ export default function QrScannerModal({
 
                             {/* Error State */}
                             {errorMsg && (
-                                <div className="mt-4 p-3.5 bg-red-50 border border-red-100 rounded-xl text-left flex items-start gap-2.5 w-full max-w-[300px]">
+                                <div className="mt-4 p-3.5 bg-red-50 border border-red-100 rounded-xl text-left flex items-start gap-2.5 w-full max-w-[340px] sm:max-w-[380px]">
                                     <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
                                     <div className="flex-1">
                                         <p className="text-xs text-red-700 font-medium">{errorMsg}</p>
                                         <button
                                             type="button"
                                             onClick={startScanner}
-                                            className="mt-2 text-xs text-indigo-600 font-semibold hover:underline flex items-center gap-1"
+                                            className="mt-2 text-xs text-indigo-600 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                                         >
                                             <RefreshCw className="w-3 h-3" /> ลองใหม่อีกครั้ง
                                         </button>
@@ -388,12 +452,20 @@ export default function QrScannerModal({
                                 </div>
                             )}
 
-                            <p className="text-xs text-gray-500 text-center mt-3">
-                                จัดตำแหน่ง QR Code ให้อยู่ภายในกรอบสี่เหลี่ยม
-                            </p>
+                            {/* Guidance Tips */}
+                            <div className="mt-3 text-center space-y-1 max-w-[340px] sm:max-w-[380px]">
+                                <p className="text-xs text-gray-600 font-medium flex items-center justify-center gap-1.5">
+                                    <Smartphone className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                    <span>ถือห่าง 15–25 ซม. และเอียงหลบแสงสะท้อนจากหลอดไฟ</span>
+                                </p>
+                                <p className="text-[11px] text-gray-400">
+                                    สแกนได้เต็มจออัตโนมัติ ทั้งมือถือและแท็บเล็ต / iPad
+                                </p>
+                            </div>
                         </div>
                     ) : (
-                        <form onSubmit={handleManualSubmit} className="space-y-4 py-4">
+                        /* Manual Input Form */
+                        <form onSubmit={handleManualSubmit} className="space-y-4 py-2">
                             <div>
                                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                                     หมายเลขครุภัณฑ์ หรือรหัสอุปกรณ์
@@ -406,7 +478,7 @@ export default function QrScannerModal({
                                     onChange={(e) => setManualCode(e.target.value)}
                                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-medium"
                                 />
-                                <p className="text-xs text-gray-400 mt-1">
+                                <p className="text-xs text-gray-400 mt-1.5">
                                     คุณสามารถพิมพ์หมายเลขครุภัณฑ์ที่ระบุบนตัวเครื่องได้โดยตรง
                                 </p>
                             </div>
@@ -414,7 +486,7 @@ export default function QrScannerModal({
                             <button
                                 type="submit"
                                 disabled={!manualCode.trim()}
-                                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl shadow-md disabled:opacity-50 disabled:bg-gray-400 transition-all"
+                                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl shadow-md disabled:opacity-50 disabled:bg-gray-400 transition-all cursor-pointer"
                             >
                                 ดำเนินการต่อ
                             </button>
@@ -423,10 +495,17 @@ export default function QrScannerModal({
                 </div>
 
                 {/* Footer Tip */}
-                <div className="p-3 bg-gray-50 border-t border-gray-100 text-center">
-                    <span className="text-[11px] text-gray-400">
-                        💡 รองรับทั้ง QR Code และบาร์โค้ดสติกเกอร์ครุภัณฑ์ทุกรุ่น
-                    </span>
+                <div className={`p-3 border-t text-center ${isProcessing ? 'bg-emerald-50/60 border-emerald-100' : 'bg-gray-50 border-gray-100'}`}>
+                    {isProcessing ? (
+                        <span className="text-[11px] text-emerald-800 font-medium flex items-center justify-center gap-1.5">
+                            <Sparkles className="w-3 h-3 text-emerald-600" />
+                            <span>ระบบกำลังนำท่านเข้าสู่ขั้นตอนถัดไปอัตโนมัติ</span>
+                        </span>
+                    ) : (
+                        <span className="text-[11px] text-gray-400">
+                            💡 หากสติกเกอร์มีแสงสะท้อน สามารถกดแท็บ &ldquo;พิมพ์รหัสเอง&rdquo; ได้ทันที
+                        </span>
+                    )}
                 </div>
             </div>
         </div>

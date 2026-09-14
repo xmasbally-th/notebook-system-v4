@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -16,10 +16,11 @@ export default function EquipmentScanBanner() {
     const [isScannerOpen, setIsScannerOpen] = useState(false)
 
     const handleScanSuccess = (decodedText: string) => {
-        setIsScannerOpen(false)
         const target = extractEquipmentIdentifier(decodedText)
         if (target) {
             router.push(`/eq/${encodeURIComponent(target)}`)
+        } else {
+            setIsScannerOpen(false)
         }
     }
 

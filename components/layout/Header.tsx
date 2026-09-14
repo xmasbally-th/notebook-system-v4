@@ -29,10 +29,11 @@ export default function Header() {
     const { data: systemConfig } = useSystemConfig()
 
     const handleScanSuccess = (decodedText: string) => {
-        setIsScannerOpen(false)
         const target = extractEquipmentIdentifier(decodedText)
         if (target) {
             router.push(`/eq/${encodeURIComponent(target)}`)
+        } else {
+            setIsScannerOpen(false)
         }
     }
 

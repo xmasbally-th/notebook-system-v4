@@ -348,7 +348,7 @@ export default function EquipmentQrPrintPage() {
                                             <QRCodeSVG
                                                 value={targetUrl}
                                                 size={88}
-                                                level="L"
+                                                level="M"
                                                 includeMargin={true}
                                             />
                                         </div>
@@ -408,7 +408,7 @@ export default function EquipmentQrPrintPage() {
                                         <QRCodeSVG
                                             value={targetUrl}
                                             size={136}
-                                            level="L"
+                                            level="M"
                                             includeMargin={true}
                                         />
                                     </div>

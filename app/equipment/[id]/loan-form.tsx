@@ -47,10 +47,11 @@ export default function LoanRequestForm({ equipmentId, isCounterMode, counterTok
     const [isScannerOpen, setIsScannerOpen] = useState(false)
 
     const handleScanSuccess = (decodedText: string) => {
-        setIsScannerOpen(false)
         const target = extractEquipmentIdentifier(decodedText)
         if (target) {
             router.push(`/eq/${encodeURIComponent(target)}`)
+        } else {
+            setIsScannerOpen(false)
         }
     }
 

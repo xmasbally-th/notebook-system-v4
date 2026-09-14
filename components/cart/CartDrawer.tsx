@@ -71,11 +71,12 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     const [isScannerOpen, setIsScannerOpen] = useState(false)
 
     const handleScanSuccess = (decodedText: string) => {
-        setIsScannerOpen(false)
-        onClose()
         const target = extractEquipmentIdentifier(decodedText)
         if (target) {
             router.push(`/eq/${encodeURIComponent(target)}`)
+        } else {
+            setIsScannerOpen(false)
+            onClose()
         }
     }
 
