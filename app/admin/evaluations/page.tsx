@@ -57,7 +57,7 @@ export default function EvaluationsPage() {
         }
     })
 
-    const cutoffDate = (systemConfig as any)?.evaluation_cutoff_date || new Date().toISOString().split('T')[0]
+    const cutoffDate = (systemConfig as any)?.evaluation_cutoff_date || '2026-05-01'
 
     // Fetch completed evaluations within date range (optimized database-level query)
     const { data: evaluations, isLoading } = useQuery({
@@ -153,6 +153,7 @@ export default function EvaluationsPage() {
                 addScore('service', details.service_staff || 0)
                 
                 addScore('equipment', details.equipment_quality || 0)
+                addScore('overall', details.overall_satisfaction || 0)
             } else {
                 // Old nested format (10 questions)
                 const addScores = (category: string) => {
@@ -168,6 +169,11 @@ export default function EvaluationsPage() {
                 addScores('system')
                 addScores('service')
                 addScores('equipment')
+                if (curr.rating > 0) {
+                    if (!acc['overall']) acc['overall'] = { sum: 0, count: 0 }
+                    acc['overall'].sum += curr.rating
+                    acc['overall'].count++
+                }
             }
             return acc
         }, {})
@@ -257,18 +263,45 @@ export default function EvaluationsPage() {
     const handleExportCSV = () => {
         if (!filteredEvaluations.length) return
 
-        const headers = ['วันที่', 'ผู้ประเมิน', 'อีเมล', 'อุปกรณ์', 'รหัสครุภัณฑ์', 'คะแนนรวม', 'ข้อเสนอแนะ']
+        const headers = [
+            'วันที่',
+            'ผู้ประเมิน',
+            'อีเมล',
+            'อุปกรณ์',
+            'รหัสครุภัณฑ์',
+            'คะแนนรวม',
+            'ระบบออนไลน์ (1-5)',
+            'ความเร็วรับ-คืน (1-5)',
+            'การบริการเจ้าหน้าที่ (1-5)',
+            'คุณภาพอุปกรณ์ (1-5)',
+            'ความพึงพอใจภาพรวม (1-5)',
+            'ข้อเสนอแนะ'
+        ]
         const csvContent = [
             headers.join(','),
-            ...filteredEvaluations.map((item: any) => [
-                `"${format(parseISO(item.created_at), 'dd/MM/yyyy HH:mm')}"`,
-                `"${sanitizeCSVField(`${item.profiles?.first_name || ''} ${item.profiles?.last_name || ''}`).replace(/"/g, '""')}"`,
-                `"${sanitizeCSVField(item.profiles?.email || '').replace(/"/g, '""')}"`,
-                `"${sanitizeCSVField(item.loanRequests?.equipment?.name || '').replace(/"/g, '""')}"`,
-                `"${sanitizeCSVField(item.loanRequests?.equipment?.equipment_number || '').replace(/"/g, '""')}"`,
-                item.rating,
-                `"${sanitizeCSVField(item.suggestions || '').replace(/"/g, '""')}"`
-            ].join(','))
+            ...filteredEvaluations.map((item: any) => {
+                const d = item.details || {}
+                const systemScore = d.system_overall ?? (d.system ? Object.values(d.system)[0] : '') ?? ''
+                const speedScore = d.service_speed ?? ''
+                const staffScore = d.service_staff ?? ''
+                const equipScore = d.equipment_quality ?? (d.equipment ? Object.values(d.equipment)[0] : '') ?? ''
+                const overallScore = d.overall_satisfaction ?? item.rating ?? ''
+
+                return [
+                    `"${format(parseISO(item.created_at), 'dd/MM/yyyy HH:mm')}"`,
+                    `"${sanitizeCSVField(`${item.profiles?.first_name || ''} ${item.profiles?.last_name || ''}`).replace(/"/g, '""')}"`,
+                    `"${sanitizeCSVField(item.profiles?.email || '').replace(/"/g, '""')}"`,
+                    `"${sanitizeCSVField(item.loanRequests?.equipment?.name || '').replace(/"/g, '""')}"`,
+                    `"${sanitizeCSVField(item.loanRequests?.equipment?.equipment_number || '').replace(/"/g, '""')}"`,
+                    item.rating,
+                    systemScore,
+                    speedScore,
+                    staffScore,
+                    equipScore,
+                    overallScore,
+                    `"${sanitizeCSVField(item.suggestions || '').replace(/"/g, '""')}"`
+                ].join(',')
+            })
         ].join('\n')
 
         const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' })
@@ -325,15 +358,30 @@ export default function EvaluationsPage() {
 
     const totalPending = pendingEvaluations?.length || 0
 
-    // Compute star distribution counts
-    const starDistribution = useMemo(() => {
+    // Compute star distribution counts from all evaluations in date range (unbiased by ratingFilter)
+    const { starDistribution, starTotal } = useMemo(() => {
         const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
-        filteredEvaluations.forEach((e: any) => {
+        if (!evaluations) return { starDistribution: counts, starTotal: 0 }
+
+        const baseEvaluations = searchTerm
+            ? evaluations.filter((e: any) => {
+                const searchLower = searchTerm.toLowerCase()
+                return (
+                    e.profiles?.first_name?.toLowerCase().includes(searchLower) ||
+                    e.profiles?.last_name?.toLowerCase().includes(searchLower) ||
+                    e.profiles?.email?.toLowerCase().includes(searchLower) ||
+                    e.loanRequests?.equipment?.name?.toLowerCase().includes(searchLower) ||
+                    e.loanRequests?.equipment?.equipment_number?.toLowerCase().includes(searchLower)
+                )
+            })
+            : evaluations
+
+        baseEvaluations.forEach((e: any) => {
             const r = Math.min(Math.max(Math.round(e.rating), 1), 5) as 1 | 2 | 3 | 4 | 5
             counts[r]++
         })
-        return counts
-    }, [filteredEvaluations])
+        return { starDistribution: counts, starTotal: baseEvaluations.length }
+    }, [evaluations, searchTerm])
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
@@ -453,9 +501,10 @@ export default function EvaluationsPage() {
                         </h4>
                         <div className="space-y-3.5">
                             {[
-                                { key: 'system', label: 'ด้านระบบปฏิบัติการ (System)' },
+                                { key: 'system', label: 'ด้านระบบออนไลน์ (System)' },
                                 { key: 'service', label: 'ด้านการให้บริการ (Service)' },
                                 { key: 'equipment', label: 'ด้านอุปกรณ์ (Equipment)' },
+                                { key: 'overall', label: 'ความพึงพอใจภาพรวม (Overall)' },
                             ].map(({ key, label }) => {
                                 const avg = stats.sectionAvgs?.[key]
                                     ? (stats.sectionAvgs[key].sum / stats.sectionAvgs[key].count)
@@ -491,7 +540,7 @@ export default function EvaluationsPage() {
                         <div className="space-y-2">
                             {[5, 4, 3, 2, 1].map((stars) => {
                                 const count = starDistribution[stars as 1|2|3|4|5] || 0
-                                const total = filteredEvaluations.length || 1
+                                const total = starTotal || 1
                                 const percentage = (count / total) * 100
                                 return (
                                     <div key={stars} className="flex items-center gap-3 text-xs font-semibold text-gray-600">
@@ -601,6 +650,7 @@ export default function EvaluationsPage() {
                         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                             type="text"
+                            aria-label="ค้นหาผู้ใช้ อีเมล หรือชื่ออุปกรณ์"
                             placeholder="ค้นหาผู้ใช้, อีเมล, ชื่ออุปกรณ์, รหัสครุภัณฑ์..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -614,6 +664,7 @@ export default function EvaluationsPage() {
                                 <span className="text-xs font-semibold text-gray-500 whitespace-nowrap">ตัวกรองคะแนน:</span>
                                 <select
                                     value={ratingFilter}
+                                    aria-label="ตัวกรองคะแนนประเมิน"
                                     onChange={(e) => setRatingFilter(e.target.value as RatingFilter)}
                                     className="px-3 py-1.5 border border-gray-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium bg-white"
                                 >
@@ -653,6 +704,7 @@ export default function EvaluationsPage() {
                             <span className="text-xs font-semibold text-gray-500 whitespace-nowrap">แสดงหน้าละ:</span>
                             <select
                                 value={pageSize}
+                                aria-label="แสดงหน้าละ"
                                 onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
                                 className="px-2 py-1.5 border border-gray-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium bg-white"
                             >
@@ -762,6 +814,7 @@ export default function EvaluationsPage() {
                                             <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-3 flex flex-col gap-3">
                                                 <button
                                                     onClick={() => toggleExpand(item.id)}
+                                                    aria-expanded={isExpanded}
                                                     className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
                                                 >
                                                     <span>{isExpanded ? 'ซ่อนคะแนนประเมินรายข้อ' : 'แสดงคะแนนประเมินรายข้อ'}</span>
@@ -770,11 +823,12 @@ export default function EvaluationsPage() {
 
                                                 {isExpanded && (
                                                     <div className="space-y-3 pt-2 animate-in slide-in-from-top-2 duration-200">
-                                                        <div className="grid grid-cols-3 gap-2">
+                                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                                             {[
                                                                 { category: 'system', title: 'ระบบ (System)' },
                                                                 { category: 'service', title: 'บริการ (Service)' },
-                                                                { category: 'equipment', title: 'อุปกรณ์ (Equip)' }
+                                                                { category: 'equipment', title: 'อุปกรณ์ (Equip)' },
+                                                                { category: 'overall', title: 'ภาพรวม (Overall)' }
                                                             ].map((section) => {
                                                                 let categoryAvg = 0
                                                                 
@@ -787,19 +841,25 @@ export default function EvaluationsPage() {
                                                                         categoryAvg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0
                                                                     } else if (section.category === 'equipment') {
                                                                         categoryAvg = item.details.equipment_quality || 0
+                                                                    } else if (section.category === 'overall') {
+                                                                        categoryAvg = item.details.overall_satisfaction || item.rating || 0
                                                                     }
                                                                 } else {
                                                                     // Old nested format
-                                                                    const scores = item.details?.[section.category] || {}
-                                                                    const values = Object.values(scores).filter((s: any) => typeof s === 'number' && s > 0) as number[]
-                                                                    const categorySum = values.reduce((acc: number, cur: number) => acc + cur, 0)
-                                                                    const categoryCount = values.length || 1
-                                                                    categoryAvg = categorySum / categoryCount
+                                                                    if (section.category === 'overall') {
+                                                                        categoryAvg = item.rating || 0
+                                                                    } else {
+                                                                        const scores = item.details?.[section.category] || {}
+                                                                        const values = Object.values(scores).filter((s: any) => typeof s === 'number' && s > 0) as number[]
+                                                                        const categorySum = values.reduce((acc: number, cur: number) => acc + cur, 0)
+                                                                        const categoryCount = values.length || 1
+                                                                        categoryAvg = categorySum / categoryCount
+                                                                    }
                                                                 }
 
                                                                 return (
                                                                     <div key={section.category} className="bg-white p-2.5 rounded-xl border border-gray-100 shadow-sm space-y-1.5 text-center">
-                                                                        <span className="text-[9px] font-bold text-gray-500 block truncate">{section.title}</span>
+                                                                        <span className="text-[10px] font-bold text-gray-500 block truncate">{section.title}</span>
                                                                         <div className="flex items-center justify-center gap-1 font-extrabold text-xs text-gray-800 bg-gray-50 py-0.5 rounded-lg border border-gray-100">
                                                                             <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
                                                                             {categoryAvg ? categoryAvg.toFixed(1) : '-'}
