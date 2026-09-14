@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getSupabaseCredentials, getSupabaseBrowserClient } from '@/lib/supabase-helpers'
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
-import { useState, useMemo, Fragment, useEffect } from 'react'
+import { useState, useMemo, Fragment, useEffect, useDeferredValue } from 'react'
 import {
     Star, MessageSquare, ChevronDown, ChevronUp,
     Search, AlertTriangle, Clock, CheckCircle, Info, Archive,
@@ -24,6 +24,7 @@ type RatingFilter = 'all' | 'high' | 'medium' | 'low'
 
 export default function EvaluationsPage() {
     const [searchTerm, setSearchTerm] = useState('')
+    const deferredSearchTerm = useDeferredValue(searchTerm)
     const [expandedRows, setExpandedRows] = useState<string[]>([])
     const [activeTab, setActiveTab] = useState<TabType>('completed')
     const [showScoringInfo, setShowScoringInfo] = useState(false)
@@ -114,6 +115,7 @@ export default function EvaluationsPage() {
                 `)
                 .eq('status', 'returned')
                 .order('updated_at', { ascending: false })
+                .limit(200)
 
             if (error) {
                 console.error('Error fetching pending evaluations:', error)
@@ -214,7 +216,7 @@ export default function EvaluationsPage() {
         } else if (preset === 'thisMonth') {
             start = startOfMonth(end)
         } else if (preset === 'allTime') {
-            start = new Date('2020-01-01')
+            start = new Date('2025-01-01')
         }
 
         setDateRange({
@@ -228,8 +230,8 @@ export default function EvaluationsPage() {
         if (!evaluations) return []
 
         return evaluations.filter((e: any) => {
-            const searchLower = searchTerm.toLowerCase()
-            const matchesSearch = !searchTerm || (
+            const searchLower = deferredSearchTerm.toLowerCase()
+            const matchesSearch = !deferredSearchTerm || (
                 e.profiles?.first_name?.toLowerCase().includes(searchLower) ||
                 e.profiles?.last_name?.toLowerCase().includes(searchLower) ||
                 e.profiles?.email?.toLowerCase().includes(searchLower) ||
@@ -248,7 +250,7 @@ export default function EvaluationsPage() {
 
             return matchesSearch && matchesRating
         })
-    }, [evaluations, searchTerm, ratingFilter])
+    }, [evaluations, deferredSearchTerm, ratingFilter])
 
     // Sanitization logic to prevent CSV formula injection (CWE-1236)
     const sanitizeCSVField = (val: any) => {
@@ -316,9 +318,9 @@ export default function EvaluationsPage() {
 
     const displayedPending = useMemo(() => {
         const source = pendingFilter === 'mandatory' ? mandatoryPending : (pendingEvaluations || [])
-        const searchLower = searchTerm.toLowerCase()
+        const searchLower = deferredSearchTerm.toLowerCase()
         return source.filter((loan: any) =>
-            !searchTerm || (
+            !deferredSearchTerm || (
                 loan.profiles?.first_name?.toLowerCase().includes(searchLower) ||
                 loan.profiles?.last_name?.toLowerCase().includes(searchLower) ||
                 loan.profiles?.email?.toLowerCase().includes(searchLower) ||
@@ -326,7 +328,7 @@ export default function EvaluationsPage() {
                 loan.equipment?.equipment_number?.toLowerCase().includes(searchLower)
             )
         )
-    }, [pendingEvaluations, mandatoryPending, pendingFilter, searchTerm])
+    }, [pendingEvaluations, mandatoryPending, pendingFilter, deferredSearchTerm])
 
     // Pagination calculations
     const paginatedEvaluations = useMemo(() => {
@@ -363,9 +365,9 @@ export default function EvaluationsPage() {
         const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
         if (!evaluations) return { starDistribution: counts, starTotal: 0 }
 
-        const baseEvaluations = searchTerm
+        const baseEvaluations = deferredSearchTerm
             ? evaluations.filter((e: any) => {
-                const searchLower = searchTerm.toLowerCase()
+                const searchLower = deferredSearchTerm.toLowerCase()
                 return (
                     e.profiles?.first_name?.toLowerCase().includes(searchLower) ||
                     e.profiles?.last_name?.toLowerCase().includes(searchLower) ||
@@ -381,7 +383,7 @@ export default function EvaluationsPage() {
             counts[r]++
         })
         return { starDistribution: counts, starTotal: baseEvaluations.length }
-    }, [evaluations, searchTerm])
+    }, [evaluations, deferredSearchTerm])
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300">

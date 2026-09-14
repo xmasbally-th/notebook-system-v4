@@ -5,7 +5,11 @@ import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     BarChart, Bar, Cell, Legend
 } from 'recharts'
-import { format, parseISO, startOfDay, endOfDay, eachDayOfInterval, isSameDay } from 'date-fns'
+import {
+    format, parseISO, startOfDay, endOfDay,
+    eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval,
+    differenceInDays, startOfWeek
+} from 'date-fns'
 import { th } from 'date-fns/locale'
 
 interface EvaluationChartsProps {
@@ -14,9 +18,9 @@ interface EvaluationChartsProps {
 }
 
 export default function EvaluationCharts({ evaluations, dateRange }: EvaluationChartsProps) {
-    // Process data for charts
+    // Process data for charts with O(N) single-pass bucket aggregation
     const chartData = useMemo(() => {
-        if (!evaluations.length) return { trend: [], distribution: [] }
+        if (!evaluations.length) return { trend: [], distribution: [], granularity: 'daily' as const }
 
         // 1. Rating Distribution (1-5 Stars)
         const distribution = [
@@ -28,49 +32,118 @@ export default function EvaluationCharts({ evaluations, dateRange }: EvaluationC
         ]
 
         evaluations.forEach(ev => {
-            const rating = Math.min(Math.max(ev.rating, 1), 5)
+            const rating = Math.min(Math.max(Math.round(ev.rating || 1), 1), 5)
             if (distribution[rating - 1]) {
                 distribution[rating - 1].count++
             }
         })
 
-        // 2. Average Rating Trend (Daily)
+        // 2. Average Rating Trend (Smart Binning: Daily / Weekly / Monthly)
         const startDate = startOfDay(parseISO(dateRange.start))
         const endDate = endOfDay(parseISO(dateRange.end))
+        const totalDays = Math.max(differenceInDays(endDate, startDate), 1)
 
-        let daysInterval: Date[] = []
-        try {
-            daysInterval = eachDayOfInterval({ start: startDate, end: endDate })
-        } catch (e) {
-            // Fallback if date range is invalid
-            daysInterval = []
-        }
+        // Select grouping granularity
+        const granularity: 'daily' | 'weekly' | 'monthly' =
+            totalDays <= 31 ? 'daily' : totalDays <= 180 ? 'weekly' : 'monthly'
 
-        const trend = daysInterval.map(day => {
-            const dayEvals = evaluations.filter(ev => isSameDay(parseISO(ev.created_at), day))
-            const avg = dayEvals.length > 0
-                ? dayEvals.reduce((acc: number, curr: any) => acc + curr.rating, 0) / dayEvals.length
-                : 0
+        // 1-Pass Hash Map bucket: key -> { sum, count }
+        const buckets = new Map<string, { sum: number; count: number }>()
 
-            return {
-                date: format(day, 'd MMM', { locale: th }),
-                fullDate: format(day, 'd MMMM yyyy', { locale: th }),
-                avg: avg > 0 ? Number(avg.toFixed(1)) : null,
-                count: dayEvals.length
+        evaluations.forEach(ev => {
+            if (!ev.created_at) return
+            try {
+                const date = parseISO(ev.created_at)
+                let key = ''
+                if (granularity === 'daily') {
+                    key = format(date, 'yyyy-MM-dd')
+                } else if (granularity === 'weekly') {
+                    key = format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd')
+                } else {
+                    key = format(date, 'yyyy-MM')
+                }
+
+                const current = buckets.get(key) || { sum: 0, count: 0 }
+                current.sum += ev.rating
+                current.count++
+                buckets.set(key, current)
+            } catch (err) {
+                // Ignore invalid date strings
             }
         })
 
-        return { distribution, trend }
+        // Generate intervals based on granularity
+        let intervals: Date[] = []
+        try {
+            if (granularity === 'daily') {
+                intervals = eachDayOfInterval({ start: startDate, end: endDate })
+            } else if (granularity === 'weekly') {
+                intervals = eachWeekOfInterval({ start: startDate, end: endDate }, { weekStartsOn: 1 })
+            } else {
+                intervals = eachMonthOfInterval({ start: startDate, end: endDate })
+            }
+        } catch (e) {
+            intervals = []
+        }
+
+        const trend = intervals.map(period => {
+            let key = ''
+            let displayDate = ''
+            let fullDate = ''
+
+            if (granularity === 'daily') {
+                key = format(period, 'yyyy-MM-dd')
+                displayDate = format(period, 'd MMM', { locale: th })
+                fullDate = format(period, 'd MMMM yyyy', { locale: th })
+            } else if (granularity === 'weekly') {
+                key = format(startOfWeek(period, { weekStartsOn: 1 }), 'yyyy-MM-dd')
+                displayDate = `สัปดาห์ที่ ${format(period, 'w', { locale: th })}`
+                fullDate = `สัปดาห์ของวันที่ ${format(period, 'd MMMM yyyy', { locale: th })}`
+            } else {
+                key = format(period, 'yyyy-MM')
+                displayDate = format(period, 'MMM yy', { locale: th })
+                fullDate = format(period, 'MMMM yyyy', { locale: th })
+            }
+
+            const bucket = buckets.get(key)
+            const avg = bucket && bucket.count > 0 ? Number((bucket.sum / bucket.count).toFixed(2)) : null
+
+            return {
+                date: displayDate,
+                fullDate,
+                avg,
+                count: bucket?.count || 0
+            }
+        })
+
+        return { distribution, trend, granularity }
     }, [evaluations, dateRange])
+
+    const trendTitle = chartData.granularity === 'daily'
+        ? 'แนวโน้มคะแนนเฉลี่ยรายวัน'
+        : chartData.granularity === 'weekly'
+            ? 'แนวโน้มคะแนนเฉลี่ยรายสัปดาห์'
+            : 'แนวโน้มคะแนนเฉลี่ยรายเดือน'
+
+    const trendBadge = chartData.granularity === 'daily'
+        ? 'รายวัน'
+        : chartData.granularity === 'weekly'
+            ? 'รายสัปดาห์'
+            : 'รายเดือน'
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             {/* Rating Trend Area Chart - Premium Area Gradient */}
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-                <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                    แนวโน้มคะแนนเฉลี่ยรายวัน
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                        {trendTitle}
+                    </h3>
+                    <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                        {trendBadge}
+                    </span>
+                </div>
                 <div className="h-[280px]">
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={chartData.trend} margin={{ top: 5, right: 15, left: -20, bottom: 5 }}>
