@@ -10,9 +10,11 @@ import {
     Archive, Printer, UserPlus, Clock, XCircle, Check, Box, Calendar,
     Tag, Sparkles, Filter, Sliders, ShieldCheck, Smartphone
 } from 'lucide-react'
-import React from 'react'
+import React, { useState } from 'react'
 
 export default function AdminManualPage() {
+    const [activeAdminWorkflow, setActiveAdminWorkflow] = useState<'rbac' | 'special' | 'retention'>('rbac')
+
     return (
         <div className="space-y-6">
             <AdminPageHeader
@@ -332,41 +334,234 @@ export default function AdminManualPage() {
                     {/* 13. Workflows Pipeline */}
                     <Section id="workflows" title="13. แผนผังขั้นตอนการทำงานภาพรวม (Master Workflows Pipeline)" icon={FileStack} color="teal">
                         <div className="space-y-6">
-                            {/* Workflow 1: User Lifecycle */}
-                            <WorkflowCard
-                                title="วงจรชีวิตผู้ใช้งาน (User Lifecycle & Role Assignment)"
-                                icon={Users}
-                                steps={[
-                                    { title: 'ผู้ใช้สมัคร', desc: 'สถานะ Pending', color: 'amber' },
-                                    { title: 'Admin อนุมัติ', desc: 'กำหนด Role & Type', color: 'blue' },
-                                    { title: 'ใช้งานปกติ', desc: 'Status Approved', color: 'emerald' },
-                                    { title: 'ระงับสิทธิ์', desc: 'หากทำผิดกฎ', color: 'red' },
-                                ]}
-                            />
+                            <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
+                                แผนผังกระบวนการระดับบริหารจัดการ (Master Admin Operations) ในระบบ Notebook System V5 แสดงขั้นตอนการควบคุมระบบ การจัดสรรทรัพยากร และ <strong>จุดแยกตัดสินใจ (Decision Branches)</strong> ทั้งหมด:
+                            </p>
 
-                            {/* Workflow 2: Special Loan Lifecycle */}
-                            <WorkflowCard
-                                title="วงจรการยืมพิเศษ (Special Loan Lifecycle)"
-                                icon={FileStack}
-                                steps={[
-                                    { title: 'สร้างคำขอยืมพิเศษ', desc: 'ระบุผู้ยืม/หน่วยงาน', color: 'blue' },
-                                    { title: 'เลือกอุปกรณ์', desc: 'Manual / Bulk', color: 'indigo' },
-                                    { title: 'จ่ายอุปกรณ์', desc: 'สถานะ Active', color: 'purple' },
-                                    { title: 'รับคืนพิเศษ', desc: 'ตรวจสภาพ & จบรายการ', color: 'emerald' },
-                                ]}
-                            />
+                            {/* Touch-friendly Workflow Tabs */}
+                            <div className="flex overflow-x-auto no-scrollbar gap-2 pb-2 border-b border-slate-100">
+                                <button
+                                    onClick={() => setActiveAdminWorkflow('rbac')}
+                                    className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${activeAdminWorkflow === 'rbac' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                >
+                                    <Users className="w-3.5 h-3.5" />
+                                    <span>สิทธิ์ผู้ใช้ & โควตา (RBAC & Lifecycle)</span>
+                                </button>
+                                <button
+                                    onClick={() => setActiveAdminWorkflow('special')}
+                                    className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${activeAdminWorkflow === 'special' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                >
+                                    <FileStack className="w-3.5 h-3.5" />
+                                    <span>การยืมพิเศษ (Special Loans)</span>
+                                </button>
+                                <button
+                                    onClick={() => setActiveAdminWorkflow('retention')}
+                                    className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${activeAdminWorkflow === 'retention' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                >
+                                    <Database className="w-3.5 h-3.5" />
+                                    <span>บำรุงรักษาข้อมูล (Data Retention)</span>
+                                </button>
+                            </div>
 
-                            {/* Workflow 3: Data & Archival Lifecycle */}
-                            <WorkflowCard
-                                title="วงจรการบำรุงรักษาข้อมูล (Data Maintenance & Auto-Archive)"
-                                icon={Database}
-                                steps={[
-                                    { title: 'ระบบทำงาน', desc: 'บันทึก Log ปกติ', color: 'blue' },
-                                    { title: 'กำหนด Retention', desc: 'เช่น เก่าเกิน 90 วัน', color: 'indigo' },
-                                    { title: 'Run Archive Now', desc: 'ลบ Notifications เก่า', color: 'amber' },
-                                    { title: 'ฐานข้อมูลสะอาด', desc: 'ระบบเร็ว & ปลอดภัย', color: 'emerald' },
-                                ]}
-                            />
+                            {/* Admin Workflow 1: User RBAC & Lifecycle */}
+                            {activeAdminWorkflow === 'rbac' && (
+                                <div className="space-y-5 animate-fadeIn">
+                                    <WorkflowMetaBar
+                                        title="วงจรชีวิตผู้ใช้งานและการจัดการสิทธิ์ตามบทบาท (User RBAC, Quota & Approval Lifecycle)"
+                                        actors="👤 ผู้ลงทะเบียน (User), 🛡️ Admin, 🤖 ระบบ Auth"
+                                        channels="Discord Webhook (ห้อง Auth), WeLPRU Mobile Push, Supabase RLS"
+                                    />
+                                    <ResponsiveWorkflowFlowchart
+                                        steps={[
+                                            {
+                                                stepNum: 1,
+                                                actor: '👤 ผู้ใช้งาน',
+                                                actorRole: 'user',
+                                                title: 'ลงทะเบียนผ่าน Google OAuth & ส่งโปรไฟล์',
+                                                desc: 'ผู้ใช้เข้าสู่ระบบด้วย Google และกรอกข้อมูลโปรไฟล์ รหัสนักศึกษา/บุคลากร สถานะเริ่มต้นเป็น Pending',
+                                                statusBadge: '🟡 pending',
+                                            },
+                                            {
+                                                stepNum: 2,
+                                                actor: '🛡️ Admin',
+                                                actorRole: 'staff',
+                                                title: 'ตรวจสอบข้อมูล & กำหนดบทบาทใน /admin/users',
+                                                desc: 'ตรวจสอบความถูกต้องของรหัสและคณะ จากนั้นกำหนด Role (User / Staff / Admin) และ User Type (Student / Lecturer / Staff) ซึ่งจะผูกกับโควตายืมอุปกรณ์โดยอัตโนมัติ',
+                                                branches: [
+                                                    {
+                                                        type: 'success',
+                                                        label: '🟢 อนุมัติบัญชี (Approved)',
+                                                        text: 'เปิดสิทธิ์การใช้งานทันที ผู้ใช้จะสามารถเริ่มยืมและจองอุปกรณ์ได้ตามโควตาที่กำหนด',
+                                                        status: '🟢 approved',
+                                                    },
+                                                    {
+                                                        type: 'danger',
+                                                        label: '🔴 ไม่อนุมัติ (Rejected)',
+                                                        text: 'ข้อมูลไม่ถูกต้อง ระบุเหตุผลการไม่อนุมัติ บัญชีจะถูกปฏิเสธและแจ้งเตือนกลับไปยังผู้ใช้',
+                                                        status: '🔴 rejected',
+                                                    },
+                                                ],
+                                            },
+                                            {
+                                                stepNum: 3,
+                                                actor: '👤 ผู้ใช้ + 🤖 ระบบ',
+                                                actorRole: 'user',
+                                                title: 'การใช้งานระบบตามขีดจำกัดโควตา (Enforced Quotas)',
+                                                desc: 'ระบบกั้นสิทธิ์ตามโควตาสูงสุด: นักศึกษา 1 เครื่อง (คืนวันต่อวัน), อาจารย์ 2 เครื่อง (ยืมได้สูงสุด 7 วัน), เจ้าหน้าที่ 2 เครื่อง (ยืมได้สูงสุด 5 วัน)',
+                                                statusBadge: 'Active Enforcement',
+                                            },
+                                            {
+                                                stepNum: 4,
+                                                actor: '🛡️ Admin',
+                                                actorRole: 'staff',
+                                                title: 'การควบคุมกำกับดูแลและระงับสิทธิ์ (Governance & Suspension)',
+                                                desc: 'Admin สามารถบริหารจัดการและลงโทษบัญชีผู้ใช้เมื่อพบพฤติกรรมผิดระเบียบ:',
+                                                branches: [
+                                                    {
+                                                        type: 'alert',
+                                                        label: '🟡 ปรับเปลี่ยน Role / ข้อมูล',
+                                                        text: 'เลื่อนขั้นเป็น Staff หรือแก้ไขข้อมูลคณะ/เบอร์โทรศัพท์ที่ผู้ใช้แจ้งขอเปลี่ยนแปลง',
+                                                    },
+                                                    {
+                                                        type: 'danger',
+                                                        label: '🔴 สั่งระงับบัญชี (Suspended)',
+                                                        text: 'กรณีมีรายการค้างส่งนาน หรือไม่ชำระค่าเสียหาย ระงับสิทธิ์การยืม-จองอุปกรณ์ทั้งหมดในระบบทันที',
+                                                        status: '🔴 suspended',
+                                                    },
+                                                ],
+                                            },
+                                        ]}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Admin Workflow 2: Special Loans */}
+                            {activeAdminWorkflow === 'special' && (
+                                <div className="space-y-5 animate-fadeIn">
+                                    <WorkflowMetaBar
+                                        title="วงจรการยืมอุปกรณ์กรณีพิเศษสำหรับโครงการ/หน่วยงาน (Special Project Loan Lifecycle)"
+                                        actors="🛡️ Admin, 🏢 หน่วยงาน / โครงการพิเศษ, 🤖 Audit Trail"
+                                        channels="Discord Webhook (ห้อง Special Loans), Staff Activity Log View"
+                                    />
+                                    <ResponsiveWorkflowFlowchart
+                                        steps={[
+                                            {
+                                                stepNum: 1,
+                                                actor: '🛡️ Admin',
+                                                actorRole: 'staff',
+                                                title: 'สร้างสัญญาการยืมพิเศษ (/admin/special-loans/new)',
+                                                desc: 'ระบุชื่อโครงการ หน่วยงานผู้รับผิดชอบ ผู้ติดต่อ และช่วงวันที่ยืม-คืนตามหนังสือขอความอนุเคราะห์จากหน่วยงาน',
+                                                statusBadge: 'Draft',
+                                            },
+                                            {
+                                                stepNum: 2,
+                                                actor: '🛡️ Admin',
+                                                actorRole: 'staff',
+                                                title: 'เลือกอุปกรณ์แบบเดี่ยวหรือแบบกลุ่ม (Bulk Equipment Selection)',
+                                                desc: 'เลือกอุปกรณ์หลายเครื่องพร้อมกัน ระบบจะปรับสถานะอุปกรณ์ทั้งหมดที่เลือกเป็น "ถูกยืม (borrowed)" ทันทีเพื่อกันสิทธิ์',
+                                                statusBadge: '🔵 borrowed',
+                                            },
+                                            {
+                                                stepNum: 3,
+                                                actor: '🛡️ Admin + 🏢 หน่วยงาน',
+                                                actorRole: 'counter',
+                                                title: 'ส่งมอบอุปกรณ์ & บันทึกสัญญา Active',
+                                                desc: 'ตรวจเช็คอุปกรณ์ร่วมกับผู้แทนโครงการ พิมพ์เอกสารส่งมอบ และบันทึกสัญญาเป็น Active ในระบบ',
+                                                statusBadge: '🟢 Active Loan',
+                                            },
+                                            {
+                                                stepNum: 4,
+                                                actor: '🛡️ Admin',
+                                                actorRole: 'staff',
+                                                title: 'ปิดสัญญาการยืมพิเศษ (Closure & Condition Check)',
+                                                desc: 'เมื่อสิ้นสุดโครงการ ตรวจรับอุปกรณ์คืนตามรายการ:',
+                                                branches: [
+                                                    {
+                                                        type: 'success',
+                                                        label: '🟢 อุปกรณ์ครบถ้วนสมบูรณ์',
+                                                        text: 'อุปกรณ์ทั้งหมดกลับสู่สถานะว่าง (available) ทันที -> ปิดสัญญาเป็น Completed',
+                                                        status: '⚪ completed',
+                                                    },
+                                                    {
+                                                        type: 'alert',
+                                                        label: '🟡 มีอุปกรณ์ชำรุด หรือสูญหาย',
+                                                        text: 'แยกบันทึกเครื่องที่ชำรุดส่งฝ่ายซ่อมบำรุง (maintenance) และดำเนินการติดตามชดใช้ตามระเบียบ',
+                                                        status: '🟡 maintenance',
+                                                    },
+                                                    {
+                                                        type: 'danger',
+                                                        label: '⚪ ขอยกเลิกสัญญาก่อนส่งมอบ (Cancelled)',
+                                                        text: 'ยกเลิกรายการ อุปกรณ์ทั้งหมดถูกปลดล็อกกลับมาว่างทันที',
+                                                        status: '⚪ cancelled',
+                                                    },
+                                                ],
+                                            },
+                                        ]}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Admin Workflow 3: Data Retention & Audit Trail */}
+                            {activeAdminWorkflow === 'retention' && (
+                                <div className="space-y-5 animate-fadeIn">
+                                    <WorkflowMetaBar
+                                        title="วงจรการบำรุงรักษาข้อมูลและประวัติการปฏิบัติงาน (Data Retention & Audit Trail Lifecycle)"
+                                        actors="🛡️ Admin, 🤖 Supabase Engine, 🤖 Smart Cron"
+                                        channels="staff_activity_log_view, Security Alerts, Performance Monitor"
+                                    />
+                                    <ResponsiveWorkflowFlowchart
+                                        steps={[
+                                            {
+                                                stepNum: 1,
+                                                actor: '🤖 ระบบ Supabase',
+                                                actorRole: 'system',
+                                                title: 'บันทึก Audit Log ทุกความเคลื่อนไหว',
+                                                desc: 'ทุกการกดอนุมัติ ส่งมอบ รับคืน หรือแก้ไขข้อมูล จะถูกบันทึกลง staff_activity_log โดยอัตโนมัติพร้อม IP และ User ID',
+                                                statusBadge: 'Real-time Log',
+                                            },
+                                            {
+                                                stepNum: 2,
+                                                actor: '🛡️ Admin',
+                                                actorRole: 'staff',
+                                                title: 'เรียกดู Audit Trail ผ่าน staff_activity_log_view',
+                                                desc: 'ตรวจสอบความโปร่งใส ค้นหาย้อนหลังตามชื่อเจ้าหน้าที่ หมายเลขครุภัณฑ์ หรือช่วงเวลา โดยใช้ Database View ที่ปรับแต่งความเร็วแล้ว',
+                                            },
+                                            {
+                                                stepNum: 3,
+                                                actor: '🛡️ Admin',
+                                                actorRole: 'staff',
+                                                title: 'กำหนดนโยบาย Data Retention ใน /admin/data-retention',
+                                                desc: 'ตั้งค่าระยะเวลาเก็บรักษาข้อมูลแจ้งเตือน (เช่น 30 วัน, 60 วัน, 90 วัน หรือ 180 วัน) เพื่อรักษาขนาดฐานข้อมูลให้อยู่ในเกณฑ์เหมาะสม',
+                                            },
+                                            {
+                                                stepNum: 4,
+                                                actor: '🤖 Smart Cron / 🛡️ Admin',
+                                                actorRole: 'system',
+                                                title: 'กระบวนการ Archive & Clean-up ข้อมูล',
+                                                desc: 'ดำเนินการกวาดล้างข้อมูลเก่าตามเงื่อนไขที่กำหนด:',
+                                                branches: [
+                                                    {
+                                                        type: 'special',
+                                                        label: '⚡ รันอัตโนมัติ (Automated Retention)',
+                                                        text: 'ระบบลบการแจ้งเตือนที่เก่าเกินกำหนดอย่างปลอดภัย โดยไม่ลบประวัติคำขอยืมจริงหรือ Audit Log',
+                                                    },
+                                                    {
+                                                        type: 'alert',
+                                                        label: '🧹 กดปุ่ม "Run Archive Now"',
+                                                        text: 'Admin สั่งรันกวาดล้างทันทีเพื่อลดพื้นที่จัดเก็บ พร้อมแสดงสรุปจำนวนแถวที่ถูกทำความสะอาด',
+                                                    },
+                                                    {
+                                                        type: 'success',
+                                                        label: '🟢 ฐานข้อมูลสะอาด & ปลอดภัย',
+                                                        text: 'ลด Index bloat ระบบตอบสนองรวดเร็ว ปฏิบัติตามมาตรฐาน PDPA อย่างเคร่งครัด',
+                                                        status: 'Optimal DB',
+                                                    },
+                                                ],
+                                            },
+                                        ]}
+                                    />
+                                </div>
+                            )}
                         </div>
                     </Section>
                 </div>
@@ -488,46 +683,186 @@ function ActionBox({ title, icon: Icon, color, children }: { title: string; icon
     )
 }
 
-function WorkflowCard({ title, icon: Icon, steps }: {
-    title: string
-    icon: any
-    steps: { title: string; desc: string; color: string }[]
-}) {
-    const colorMap: Record<string, { bg: string; text: string; border: string }> = {
-        blue: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-        indigo: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
-        amber: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
-        purple: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
-        emerald: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-        red: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200' },
-    }
-
+function WorkflowMetaBar({ title, actors, channels }: { title: string; actors: string; channels: string }) {
     return (
-        <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
-            <h4 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-2">
-                <Icon className="w-4 h-4 text-indigo-600" />
-                {title}
-            </h4>
-            <div className="overflow-x-auto pb-1">
-                <div className="flex items-center min-w-max gap-2 sm:gap-3">
-                    {steps.map((step, idx) => {
-                        const style = colorMap[step.color] || colorMap.blue
-                        return (
-                            <React.Fragment key={idx}>
-                                <div className={`p-3 rounded-xl border ${style.bg} ${style.border} text-center w-32 shrink-0 shadow-2xs`}>
-                                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
-                                        Step {idx + 1}
-                                    </div>
-                                    <div className={`font-bold text-xs ${style.text} truncate`}>{step.title}</div>
-                                    <div className="text-[10px] text-slate-500 truncate mt-0.5">{step.desc}</div>
-                                </div>
-                                {idx < steps.length - 1 && (
-                                    <ArrowRight className="w-4 h-4 text-slate-300 shrink-0" />
-                                )}
-                            </React.Fragment>
-                        )
-                    })}
+        <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <h4 className="font-bold text-slate-900 text-sm sm:text-base mb-2">{title}</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div className="flex items-start gap-1.5 text-slate-600">
+                    <span className="font-semibold text-slate-700 shrink-0">👥 ผู้เกี่ยวข้อง:</span>
+                    <span>{actors}</span>
                 </div>
+                <div className="flex items-start gap-1.5 text-slate-600">
+                    <span className="font-semibold text-slate-700 shrink-0">📡 ช่องทางแจ้งเตือน:</span>
+                    <span className="text-teal-700 font-medium">{channels}</span>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+interface FlowchartBranch {
+    type: 'success' | 'danger' | 'alert' | 'special' | 'neutral'
+    label: string
+    text: string
+    status?: string
+}
+
+interface FlowchartStep {
+    stepNum: number
+    actor: string
+    actorRole?: 'user' | 'staff' | 'counter' | 'system'
+    title: string
+    desc: string
+    statusBadge?: string
+    branches?: FlowchartBranch[]
+}
+
+const branchStyles: Record<string, { bg: string; border: string; text: string; badge: string }> = {
+    success: {
+        bg: 'bg-emerald-50/70',
+        border: 'border-emerald-200',
+        text: 'text-emerald-900',
+        badge: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    },
+    danger: {
+        bg: 'bg-rose-50/70',
+        border: 'border-rose-200',
+        text: 'text-rose-900',
+        badge: 'bg-rose-100 text-rose-800 border-rose-200',
+    },
+    alert: {
+        bg: 'bg-amber-50/70',
+        border: 'border-amber-200',
+        text: 'text-amber-900',
+        badge: 'bg-amber-100 text-amber-800 border-amber-200',
+    },
+    special: {
+        bg: 'bg-indigo-50/70',
+        border: 'border-indigo-200',
+        text: 'text-indigo-900',
+        badge: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    },
+    neutral: {
+        bg: 'bg-slate-50',
+        border: 'border-slate-200',
+        text: 'text-slate-800',
+        badge: 'bg-slate-100 text-slate-700 border-slate-200',
+    },
+}
+
+const actorRoleStyles: Record<string, string> = {
+    user: 'bg-blue-50 text-blue-700 border-blue-200',
+    staff: 'bg-teal-50 text-teal-700 border-teal-200',
+    counter: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    system: 'bg-purple-50 text-purple-700 border-purple-200',
+}
+
+function ResponsiveWorkflowFlowchart({ steps }: { steps: FlowchartStep[] }) {
+    return (
+        <div>
+            {/* Mobile View: Vertical Connected Timeline (320px - 767px) */}
+            <div className="block md:hidden relative pl-6 border-l-2 border-slate-200 ml-3.5 space-y-5">
+                {steps.map((step) => {
+                    const actorStyle = actorRoleStyles[step.actorRole || 'user'] || actorRoleStyles.user
+                    return (
+                        <div key={step.stepNum} className="relative">
+                            {/* Step Badge positioned on the timeline line */}
+                            <div className="absolute -left-[35px] top-0 w-7 h-7 rounded-full bg-blue-700 text-white font-bold text-xs flex items-center justify-center shadow-xs ring-4 ring-white">
+                                {step.stepNum}
+                            </div>
+
+                            <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-200/80">
+                                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                                    <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${actorStyle}`}>
+                                        {step.actor}
+                                    </span>
+                                    {step.statusBadge && (
+                                        <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-white text-slate-700 border border-slate-200 shadow-2xs">
+                                            {step.statusBadge}
+                                        </span>
+                                    )}
+                                </div>
+                                <h5 className="font-bold text-slate-900 text-sm">{step.title}</h5>
+                                <p className="text-xs text-slate-600 leading-relaxed mt-0.5">{step.desc}</p>
+
+                                {step.branches && step.branches.length > 0 && (
+                                    <div className="mt-2.5 pt-2 border-t border-slate-200/60 space-y-2">
+                                        {step.branches.map((b, bIdx) => {
+                                            const bStyle = branchStyles[b.type] || branchStyles.neutral
+                                            return (
+                                                <div key={bIdx} className={`p-2.5 rounded-lg border ${bStyle.bg} ${bStyle.border} ${bStyle.text}`}>
+                                                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                                                        <span className="font-bold text-xs">{b.label}</span>
+                                                        {b.status && (
+                                                            <span className={`text-[10px] font-medium px-2 py-0.5 rounded border ${bStyle.badge}`}>
+                                                                {b.status}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[11px] opacity-90 leading-relaxed">{b.text}</p>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+
+            {/* Desktop View: Expanded Stepper with Decision Branches (768px+) */}
+            <div className="hidden md:block space-y-3.5">
+                {steps.map((step) => {
+                    const actorStyle = actorRoleStyles[step.actorRole || 'user'] || actorRoleStyles.user
+                    return (
+                        <div key={step.stepNum} className="bg-white rounded-xl border border-slate-200 p-4 hover:border-slate-300 transition-colors shadow-2xs">
+                            <div className="flex items-start gap-3.5">
+                                <div className="w-8 h-8 rounded-full bg-blue-700 text-white font-bold text-sm flex items-center justify-center shadow-xs shrink-0 mt-0.5">
+                                    {step.stepNum}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`px-2.5 py-0.5 rounded-md text-xs font-semibold border ${actorStyle}`}>
+                                                {step.actor}
+                                            </span>
+                                            <h5 className="font-bold text-slate-900 text-sm">{step.title}</h5>
+                                        </div>
+                                        {step.statusBadge && (
+                                            <span className="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-200">
+                                                {step.statusBadge}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-slate-600 leading-relaxed">{step.desc}</p>
+
+                                    {step.branches && step.branches.length > 0 && (
+                                        <div className={`mt-3 pt-3 border-t border-slate-100 grid gap-2.5 ${step.branches.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                            {step.branches.map((b, bIdx) => {
+                                                const bStyle = branchStyles[b.type] || branchStyles.neutral
+                                                return (
+                                                    <div key={bIdx} className={`p-2.5 rounded-lg border ${bStyle.bg} ${bStyle.border} ${bStyle.text}`}>
+                                                        <div className="flex items-center justify-between gap-1 mb-1">
+                                                            <span className="font-bold text-xs">{b.label}</span>
+                                                            {b.status && (
+                                                                <span className={`text-[10px] font-medium px-2 py-0.5 rounded border ${bStyle.badge}`}>
+                                                                    {b.status}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs opacity-90 leading-relaxed">{b.text}</p>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )
+                })}
             </div>
         </div>
     )
