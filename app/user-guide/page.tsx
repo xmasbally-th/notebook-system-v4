@@ -10,7 +10,7 @@ import {
     Monitor, ClipboardList, ArrowLeft, HelpCircle, Search,
     User, Bell, MessageSquare, LogIn, RotateCcw, ShoppingCart,
     Printer, Star, Shield, Smartphone, Check, Sparkles, AlertCircle,
-    Zap, CornerDownRight, GitBranch
+    Zap, CornerDownRight, GitBranch, QrCode, Camera
 } from 'lucide-react'
 import React, { useState } from 'react'
 
@@ -66,7 +66,7 @@ export default function UserGuidePage() {
                             <QuickNavChip href="#overview" label="ภาพรวม & ประเภทผู้ใช้" color="slate" />
                             <QuickNavChip href="#login" label="เข้าสู่ระบบ & ลงทะเบียน" color="gray" />
                             <QuickNavChip href="#find" label="ค้นหาอุปกรณ์" color="indigo" />
-                            <QuickNavChip href="#borrow" label="ขอยืมอุปกรณ์ทันที" color="blue" />
+                            <QuickNavChip href="#borrow" label="ขอยืมทันที & สแกน QR" color="blue" />
                             <QuickNavChip href="#reserve" label="จองอุปกรณ์ล่วงหน้า" color="purple" />
                             <QuickNavChip href="#statuses" label="ความหมายของทุกสถานะ" color="emerald" />
                             <QuickNavChip href="#return" label="การส่งคืน & ประเมินผล" color="amber" />
@@ -173,14 +173,14 @@ export default function UserGuidePage() {
                                 ไปที่เมนู <Link href="/equipment" className="text-blue-600 font-semibold hover:underline">อุปกรณ์</Link> เพื่อดูรายการอุปกรณ์ทั้งหมดของสถาบัน ระบบมีเครื่องมือช่วยค้นหาอย่างรวดเร็ว:
                             </p>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                                     <div className="flex items-center gap-2 font-semibold text-slate-800 text-sm mb-1.5">
                                         <Search className="w-4 h-4 text-blue-600" />
                                         ค้นหาด่วน (Quick Search)
                                     </div>
                                     <p className="text-xs text-slate-600 leading-relaxed">
-                                        พิมพ์ชื่ออุปกรณ์, รุ่น, แบรนด์ หรือหมายเลขครุภัณฑ์ เช่น "MacBook", "Dell", "iPad" ผลการค้นหาจะแสดงแบบ Real-time ทันที
+                                        พิมพ์ชื่ออุปกรณ์, รุ่น, แบรนด์ หรือหมายเลขครุภัณฑ์ เช่น "MacBook", "Dell", "iPad" ผลการค้นหาจะแสดงทันที
                                     </p>
                                 </div>
                                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
@@ -189,7 +189,16 @@ export default function UserGuidePage() {
                                         กรองตามหมวดหมู่และสถานะ
                                     </div>
                                     <p className="text-xs text-slate-600 leading-relaxed">
-                                        คลิกเลือกหมวดหมู่อุปกรณ์ (เช่น โน้ตบุ๊ก, แท็บเล็ต, โปรเจกเตอร์) หรือกรองเฉพาะเครื่องที่มีสถานะ "ว่าง" เพื่อยืมได้ทันที
+                                        คลิกเลือกหมวดหมู่อุปกรณ์ (เช่น โน้ตบุ๊ก, แท็บเล็ต, โปรเจกเตอร์) หรือกรองเฉพาะเครื่องที่มีสถานะ "ว่าง"
+                                    </p>
+                                </div>
+                                <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200">
+                                    <div className="flex items-center gap-2 font-semibold text-blue-900 text-sm mb-1.5">
+                                        <QrCode className="w-4 h-4 text-blue-600" />
+                                        สแกน QR บนตัวเครื่องจริง
+                                    </div>
+                                    <p className="text-xs text-blue-800 leading-relaxed">
+                                        เปิดกล้องมือถือสแกนสติกเกอร์ QR Code บนเครื่องจริง เพื่อเปิดดูรายละเอียดและเริ่มขอยืมได้ทันที
                                     </p>
                                 </div>
                             </div>
@@ -231,21 +240,78 @@ export default function UserGuidePage() {
 
                     {/* Section 4: Borrowing Now */}
                     <section id="borrow" className="mb-12 scroll-mt-24">
-                        <SectionHeader icon={Send} iconColor="text-blue-600" iconBg="bg-blue-100" title="3. ขั้นตอนการขอยืมอุปกรณ์ทันที (Direct Loan)" />
+                        <SectionHeader icon={Send} iconColor="text-blue-600" iconBg="bg-blue-100" title="3. ขั้นตอนการขอยืมอุปกรณ์ทันที & การสแกน QR บนเครื่อง (Direct Loan & QR Scan)" />
+
+                        {/* QR Code Requirement Alert Callout */}
+                        <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-amber-50/90 border-2 border-amber-300 text-amber-950 shadow-sm">
+                            <div className="flex items-start gap-3.5">
+                                <div className="p-2.5 bg-amber-500 text-white rounded-xl shrink-0 mt-0.5 shadow-sm">
+                                    <QrCode className="w-6 h-6" />
+                                </div>
+                                <div className="space-y-2.5">
+                                    <div>
+                                        <h4 className="font-bold text-base sm:text-lg text-amber-950 flex items-center gap-2">
+                                            <span>📱 ข้อกำหนดสำคัญ: การยืมทันทีต้องสแกน QR Code บนตัวเครื่องอุปกรณ์จริง</span>
+                                        </h4>
+                                        <p className="text-xs sm:text-sm text-amber-900 leading-relaxed mt-1">
+                                            ระบบกำหนดให้การยืมทันที (Direct Loan) เป็นการทำรายการรับเครื่อง <strong>ณ จุดให้บริการเคาน์เตอร์จริงเท่านั้น</strong> เพื่อป้องกันการกดยืมกักตุนอุปกรณ์ล่วงหน้าจากที่อื่น ผู้ใช้จำเป็นต้องสแกน QR Code ที่ติดอยู่บนตัวเครื่องจริงเพื่อยืนยันสิทธิ์:
+                                        </p>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                        <div className="bg-white/90 p-3.5 rounded-xl border border-amber-200/90 shadow-2xs">
+                                            <strong className="text-amber-950 flex items-center gap-1.5 mb-1.5 font-bold text-xs sm:text-sm">
+                                                <Smartphone className="w-4 h-4 text-blue-600 shrink-0" /> วิธีที่ 1: สแกนสติกเกอร์ QR บนเครื่องด้วยมือถือ
+                                            </strong>
+                                            <p className="text-slate-600 leading-relaxed">
+                                                เปิดแอปกล้องในโทรศัพท์มือถือ หรือแอปสแกนเนอร์ ส่องไปที่สติกเกอร์ QR Code บนตัวเครื่องโน้ตบุ๊ค ระบบจะนำท่านเข้าสู่หน้ายืมเครื่องนั้นทันทีพร้อมรับสิทธิ์ <em>Verified On-site Token</em>
+                                            </p>
+                                        </div>
+                                        <div className="bg-white/90 p-3.5 rounded-xl border border-amber-200/90 shadow-2xs">
+                                            <strong className="text-amber-950 flex items-center gap-1.5 mb-1.5 font-bold text-xs sm:text-sm">
+                                                <Camera className="w-4 h-4 text-indigo-600 shrink-0" /> วิธีที่ 2: กดปุ่มสแกน QR ในหน้าคำขอยืม
+                                            </strong>
+                                            <p className="text-slate-600 leading-relaxed">
+                                                เมื่อเลือกอุปกรณ์ผ่านหน้าเว็บและเข้าสู่ฟอร์มคำขอ ให้คลิกปุ่ม <strong>"เปิดกล้องสแกน QR Code บนเครื่องนี้ทันที"</strong> เพื่อเปิดกล้องในเว็บสแกนสติกเกอร์ยืนยันว่าท่านอยู่ต่อหน้าอุปกรณ์จริง
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-2.5 bg-amber-100/70 rounded-lg text-xs text-amber-900 flex items-center gap-2 font-medium">
+                                        <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                                        <span>💡 หากท่านยังไม่ได้อยู่หน้าเคาน์เตอร์ หรือต้องการวางแผนยืมใช้งานในวันข้างหน้า กรุณาเลือกแท็บ <strong>"จองล่วงหน้า (Advance Reservation)"</strong> แทน</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                             <div className="divide-y divide-slate-100">
                                 <Step
                                     number={1}
-                                    title="เลือกอุปกรณ์ที่ต้องการยืม"
+                                    title="สแกน QR Code บนตัวเครื่องจริง หรือค้นหาเครื่องสถานะว่าง"
                                     description={
-                                        <span>
-                                            เข้าไปที่หน้า <Link href="/equipment" className="text-blue-600 font-semibold hover:underline">อุปกรณ์</Link> ค้นหาและเลือกเครื่องที่มีสถานะ <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800">🟢 ว่าง</span> จากนั้นกดปุ่ม <strong>"เพิ่มลงตะกร้า"</strong>
-                                        </span>
+                                        <div className="space-y-1.5 text-slate-600 text-xs sm:text-sm">
+                                            <p>
+                                                • <strong>สแกนสติกเกอร์ QR บนตัวเครื่องจริง:</strong> เปิดกล้องมือถือสแกนสติกเกอร์ QR Code ที่ติดอยู่บนตัวเครื่องเพื่อเข้าสู่หน้าขอยืมเครื่องนั้นทันที (แนะนำ)
+                                            </p>
+                                            <p>
+                                                • <strong>หรือเลือกผ่านหน้าเว็บ:</strong> ไปที่หน้า <Link href="/equipment" className="text-blue-600 font-semibold hover:underline">อุปกรณ์</Link> ค้นหาเครื่องที่มีสถานะ <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800">🟢 ว่าง</span> แล้วกดปุ่ม <strong>"เพิ่มลงตะกร้า"</strong>
+                                            </p>
+                                        </div>
                                     }
                                 />
                                 <Step
                                     number={2}
+                                    title="สแกน QR ยืนยันการมีตัวเครื่องจริง (On-site QR Verification)"
+                                    description={
+                                        <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
+                                            หากเข้าผ่านหน้าเว็บ ระบบจะขึ้นแจ้งเตือนให้ยืนยันตัวตนหน้างาน ให้กดปุ่ม <strong>"เปิดกล้องสแกน QR Code บนเครื่องนี้ทันที"</strong> ส่องกล้องไปที่สติกเกอร์ QR บนเครื่องเพื่อรับสิทธิ์ทำรายการยืมทันที
+                                        </p>
+                                    }
+                                />
+                                <Step
+                                    number={3}
                                     title={
                                         <span className="flex items-center gap-2 flex-wrap">
                                             เปิดตะกร้า <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-600 text-white rounded-full text-xs font-semibold"><ShoppingCart className="w-3 h-3" /> รายการที่เลือก</span>
@@ -254,10 +320,10 @@ export default function UserGuidePage() {
                                     description="คลิกที่ไอคอนตะกร้าหรือปุ่ม 'รายการที่เลือก' บริเวณแถบนำทาง เพื่อเปิดแผงบันทึกรายละเอียดคำขอยืม (Cart Drawer)"
                                 />
                                 <Step
-                                    number={3}
+                                    number={4}
                                     title="ระบุวัน-เวลา และวัตถุประสงค์การยืม"
                                     description={
-                                        <div className="space-y-1.5 mt-1 text-slate-600">
+                                        <div className="space-y-1.5 mt-1 text-slate-600 text-xs sm:text-sm">
                                             <p>• <strong>วันที่ยืม & วันที่คืน:</strong> เลือกช่วงวันที่ต้องการใช้งาน (ต้องไม่เกินจำนวนวันสูงสุดตามประเภทผู้ใช้)</p>
                                             <p>• <strong>เวลาที่จะคืน (Return Time):</strong> จำเป็นต้องระบุอย่างชัดเจน เพื่อให้เจ้าหน้าที่วางแผนการรับคืน</p>
                                             <p>• <strong>วัตถุประสงค์:</strong> ระบุการนำไปใช้งาน เช่น ใช้ในการเรียนวิชา..., ทำการทดลอง, อบรมสัมมนา</p>
@@ -265,14 +331,9 @@ export default function UserGuidePage() {
                                     }
                                 />
                                 <Step
-                                    number={4}
-                                    title="ส่งคำขอยืม (Submit Request)"
-                                    description="ตรวจสอบความถูกต้อง และคลิกปุ่ม 'ส่งคำขอยืม' — ระบบจะบันทึกสถานะเป็น 'รอการอนุมัติ (Pending)' พร้อมแจ้งเตือนเจ้าหน้าที่ทันที (หากเป็น Staff/Admin ยืมเอง ระบบจะอนุมัติอัตโนมัติ)"
-                                />
-                                <Step
                                     number={5}
-                                    title="รับอุปกรณ์ที่เคาน์เตอร์บริการ"
-                                    description="เมื่อได้รับการอนุมัติ (แจ้งเตือนผ่านเว็บและ WeLPRU) ให้เดินทางไปรับอุปกรณ์ที่เคาน์เตอร์บริการ ตรวจสอบสภาพเครื่องและอุปกรณ์เสริมต่อหน้าเจ้าหน้าที่ จากนั้นสถานะจะเปลี่ยนเป็น 'กำลังยืม'"
+                                    title="ส่งคำขอยืม & รับมอบอุปกรณ์ที่เคาน์เตอร์"
+                                    description="ตรวจสอบความถูกต้องและคลิกปุ่ม 'ส่งคำขอยืม' — ระบบจะบันทึกสถานะ รอการอนุมัติ (หากเป็น Staff/Admin ยืมเอง ระบบจะ Auto-Approve ทันที) จากนั้นเจ้าหน้าที่ตรวจสภาพและส่งมอบเครื่อง สถานะจะเปลี่ยนเป็น 'กำลังยืม (borrowed)'"
                                     isLast
                                 />
                             </div>
@@ -282,6 +343,14 @@ export default function UserGuidePage() {
                     {/* Section 5: Reservation */}
                     <section id="reserve" className="mb-12 scroll-mt-24">
                         <SectionHeader icon={CalendarPlus} iconColor="text-purple-600" iconBg="bg-purple-100" title="4. ขั้นตอนการจองอุปกรณ์ล่วงหน้า (Advance Reservation)" />
+
+                        {/* No QR Needed Info Box */}
+                        <div className="mb-4 p-3.5 bg-purple-50/80 border border-purple-200 rounded-xl text-xs sm:text-sm text-purple-900 flex items-start gap-2.5">
+                            <Sparkles className="w-4 h-4 text-purple-600 mt-0.5 shrink-0" />
+                            <div>
+                                <strong>ทำรายการได้จากทุกที่ (ไม่ต้องสแกน QR Code บนเครื่อง):</strong> สำหรับการจองล่วงหน้า ท่านสามารถกดจองผ่านเว็บไซต์ได้จากที่บ้านหรือห้องเรียนล่วงหน้า เพื่อล็อกคิวอุปกรณ์ไว้ใช้งานในวันนัดหมาย โดยไม่ต้องเดินทางมาสแกนเครื่องที่เคาน์เตอร์ก่อน
+                            </div>
+                        </div>
 
                         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                             <div className="divide-y divide-slate-100">
@@ -727,17 +796,23 @@ export default function UserGuidePage() {
                                                 stepNum: 1,
                                                 actor: '👤 ผู้ใช้งาน',
                                                 actorRole: 'user',
-                                                title: 'เลือกอุปกรณ์ที่สถานะว่าง',
-                                                desc: 'ค้นหาในหน้า /equipment เลือกเครื่องที่พร้อมใช้งาน กดเพิ่มลงตะกร้า',
+                                                title: 'สแกน QR บนตัวเครื่อง หรือเลือกเครื่องว่าง',
+                                                desc: 'สแกนสติกเกอร์ QR Code บนตัวเครื่องจริง (แนะนำ) เพื่อรับสิทธิ์หน้างาน หรือเลือกเครื่องสถานะว่างผ่านหน้ารายการอุปกรณ์',
                                                 statusBadge: '🟢 ว่าง (available)',
                                             },
                                             {
                                                 stepNum: 2,
                                                 actor: '👤 ผู้ใช้งาน',
                                                 actorRole: 'user',
-                                                title: 'เปิดตะกร้า ระบุวัน-เวลาคืน และวัตถุประสงค์',
-                                                desc: 'กำหนดวันที่ยืม-คืน ระบุเวลาคืนชัดเจน กรอกเหตุผล แล้วกดยืนยันคำขอ',
+                                                title: 'สแกน QR ยืนยันเครื่องจริง & ระบุวัน-เวลาคืน',
+                                                desc: 'สแกน QR ยืนยันการมีตัวเครื่องจริง (On-site Verification) กำหนดวัน-เวลาคืน วัตถุประสงค์ แล้วกดยืนยันคำขอ',
                                                 branches: [
+                                                    {
+                                                        type: 'special',
+                                                        label: '📱 การยืนยันสิทธิ์หน้างาน (On-site QR)',
+                                                        text: 'การยืมทันทีต้องสแกน QR Code บนตัวเครื่องจริง หากไม่ได้อยู่หน้าเครื่องให้เลือก "จองล่วงหน้า"',
+                                                        status: '⚡ on-site token'
+                                                    },
                                                     {
                                                         type: 'special',
                                                         label: '⚡ กรณี Staff / Admin ยืมเอง',
