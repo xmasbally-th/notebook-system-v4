@@ -13,6 +13,7 @@ import {
     Zap, CornerDownRight, GitBranch, QrCode, Camera
 } from 'lucide-react'
 import React, { useState } from 'react'
+import { VisualFlowchart } from '@/components/ui/visual-flowchart'
 
 export default function UserGuidePage() {
     const [activeStatusTab, setActiveStatusTab] = useState<'loans' | 'reservations' | 'equipment' | 'accounts'>('loans')
@@ -790,7 +791,9 @@ export default function UserGuidePage() {
                                         actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff), 🤖 Smart Cron (08:30 น.)"
                                         channels="WeLPRU Mobile Push, Discord Webhook, In-App Alert"
                                     />
-                                    <ResponsiveWorkflowFlowchart
+                                    <VisualFlowchart
+                                        startLabel="จุดเริ่มต้น: ผู้ใช้ทำรายการยืมทันที (หน้าเคาน์เตอร์)"
+                                        endLabel="สิ้นสุด: ส่งคืนอุปกรณ์ & บันทึกผลประเมินเสร็จสิ้น"
                                         steps={[
                                             {
                                                 stepNum: 1,
@@ -913,7 +916,9 @@ export default function UserGuidePage() {
                                         actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff), 🤖 Smart Cron Engine"
                                         channels="WeLPRU Mobile Push, Discord Webhook (ห้อง Reservation), In-App Alert"
                                     />
-                                    <ResponsiveWorkflowFlowchart
+                                    <VisualFlowchart
+                                        startLabel="จุดเริ่มต้น: ผู้ใช้ส่งคำขอจองล่วงหน้า (ผ่านระบบออนไลน์)"
+                                        endLabel="สิ้นสุด: รับเครื่องจริง & แปลงเป็นสัญญาการยืม (Active Loan)"
                                         steps={[
                                             {
                                                 stepNum: 1,
@@ -1014,7 +1019,9 @@ export default function UserGuidePage() {
                                         actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff), 🛡️ ผู้ดูแลระบบ (Admin)"
                                         channels="Discord Webhook (ห้อง Auth), WeLPRU Mobile Push, In-App Alert"
                                     />
-                                    <ResponsiveWorkflowFlowchart
+                                    <VisualFlowchart
+                                        startLabel="จุดเริ่มต้น: ผู้ใช้เข้าสู่ระบบด้วย Google ครั้งแรก"
+                                        endLabel="สิ้นสุด: บัญชีผ่านการอนุมัติ & เริ่มใช้งานระบบได้ทันที"
                                         steps={[
                                             {
                                                 stepNum: 1,
@@ -1072,7 +1079,9 @@ export default function UserGuidePage() {
                                         actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff)"
                                         channels="Discord Webhook (ห้อง General), In-App Evaluation Prompt"
                                     />
-                                    <ResponsiveWorkflowFlowchart
+                                    <VisualFlowchart
+                                        startLabel="จุดเริ่มต้น: ผู้ใช้นำอุปกรณ์และอุปกรณ์เสริมมาส่งคืนเคาน์เตอร์"
+                                        endLabel="สิ้นสุด: ครุภัณฑ์พร้อมให้บริการต่อ / ดำเนินการส่งซ่อมบำรุง"
                                         steps={[
                                             {
                                                 stepNum: 1,
@@ -1325,172 +1334,6 @@ function WorkflowMetaBar({ title, actors, channels }: { title: string; actors: s
     )
 }
 
-interface FlowchartBranch {
-    type: 'success' | 'danger' | 'alert' | 'special' | 'neutral'
-    label: string
-    text: string
-    status?: string
-}
-
-interface FlowchartStep {
-    stepNum: number
-    actor: string
-    actorRole?: 'user' | 'staff' | 'counter' | 'system'
-    title: string
-    desc: string
-    statusBadge?: string
-    branches?: FlowchartBranch[]
-}
-
-const branchStyles: Record<string, { bg: string; border: string; text: string; badge: string }> = {
-    success: {
-        bg: 'bg-emerald-50/70',
-        border: 'border-emerald-200',
-        text: 'text-emerald-900',
-        badge: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    },
-    danger: {
-        bg: 'bg-rose-50/70',
-        border: 'border-rose-200',
-        text: 'text-rose-900',
-        badge: 'bg-rose-100 text-rose-800 border-rose-200',
-    },
-    alert: {
-        bg: 'bg-amber-50/70',
-        border: 'border-amber-200',
-        text: 'text-amber-900',
-        badge: 'bg-amber-100 text-amber-800 border-amber-200',
-    },
-    special: {
-        bg: 'bg-indigo-50/70',
-        border: 'border-indigo-200',
-        text: 'text-indigo-900',
-        badge: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    },
-    neutral: {
-        bg: 'bg-slate-50',
-        border: 'border-slate-200',
-        text: 'text-slate-800',
-        badge: 'bg-slate-100 text-slate-700 border-slate-200',
-    },
-}
-
-const actorRoleStyles: Record<string, string> = {
-    user: 'bg-blue-50 text-blue-700 border-blue-200',
-    staff: 'bg-teal-50 text-teal-700 border-teal-200',
-    counter: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    system: 'bg-purple-50 text-purple-700 border-purple-200',
-}
-
-function ResponsiveWorkflowFlowchart({ steps }: { steps: FlowchartStep[] }) {
-    return (
-        <div>
-            {/* Mobile View: Vertical Connected Timeline (320px - 767px) */}
-            <div className="block md:hidden relative pl-6 border-l-2 border-slate-200 ml-3.5 space-y-5">
-                {steps.map((step) => {
-                    const actorStyle = actorRoleStyles[step.actorRole || 'user'] || actorRoleStyles.user
-                    return (
-                        <div key={step.stepNum} className="relative">
-                            {/* Step Badge positioned on the timeline line */}
-                            <div className="absolute -left-[35px] top-0 w-7 h-7 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs ring-4 ring-white">
-                                {step.stepNum}
-                            </div>
-
-                            <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-200/80">
-                                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                                    <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${actorStyle}`}>
-                                        {step.actor}
-                                    </span>
-                                    {step.statusBadge && (
-                                        <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-white text-slate-700 border border-slate-200 shadow-2xs">
-                                            {step.statusBadge}
-                                        </span>
-                                    )}
-                                </div>
-                                <h5 className="font-bold text-slate-900 text-sm">{step.title}</h5>
-                                <p className="text-xs text-slate-600 leading-relaxed mt-0.5">{step.desc}</p>
-
-                                {step.branches && step.branches.length > 0 && (
-                                    <div className="mt-2.5 pt-2 border-t border-slate-200/60 space-y-2">
-                                        {step.branches.map((b, bIdx) => {
-                                            const bStyle = branchStyles[b.type] || branchStyles.neutral
-                                            return (
-                                                <div key={bIdx} className={`p-2.5 rounded-lg border ${bStyle.bg} ${bStyle.border} ${bStyle.text}`}>
-                                                    <div className="flex items-center justify-between gap-1 mb-0.5">
-                                                        <span className="font-bold text-xs">{b.label}</span>
-                                                        {b.status && (
-                                                            <span className={`text-[10px] font-medium px-2 py-0.5 rounded border ${bStyle.badge}`}>
-                                                                {b.status}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-[11px] opacity-90 leading-relaxed">{b.text}</p>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )
-                })}
-            </div>
-
-            {/* Desktop View: Expanded Stepper with Decision Branches (768px+) */}
-            <div className="hidden md:block space-y-3.5">
-                {steps.map((step) => {
-                    const actorStyle = actorRoleStyles[step.actorRole || 'user'] || actorRoleStyles.user
-                    return (
-                        <div key={step.stepNum} className="bg-white rounded-xl border border-slate-200 p-4 hover:border-slate-300 transition-colors shadow-2xs">
-                            <div className="flex items-start gap-3.5">
-                                <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center shadow-xs shrink-0 mt-0.5">
-                                    {step.stepNum}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between gap-2 mb-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className={`px-2.5 py-0.5 rounded-md text-xs font-semibold border ${actorStyle}`}>
-                                                {step.actor}
-                                            </span>
-                                            <h5 className="font-bold text-slate-900 text-sm">{step.title}</h5>
-                                        </div>
-                                        {step.statusBadge && (
-                                            <span className="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-200">
-                                                {step.statusBadge}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-xs text-slate-600 leading-relaxed">{step.desc}</p>
-
-                                    {step.branches && step.branches.length > 0 && (
-                                        <div className={`mt-3 pt-3 border-t border-slate-100 grid gap-2.5 ${step.branches.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                                            {step.branches.map((b, bIdx) => {
-                                                const bStyle = branchStyles[b.type] || branchStyles.neutral
-                                                return (
-                                                    <div key={bIdx} className={`p-2.5 rounded-lg border ${bStyle.bg} ${bStyle.border} ${bStyle.text}`}>
-                                                        <div className="flex items-center justify-between gap-1 mb-1">
-                                                            <span className="font-bold text-xs">{b.label}</span>
-                                                            {b.status && (
-                                                                <span className={`text-[10px] font-medium px-2 py-0.5 rounded border ${bStyle.badge}`}>
-                                                                    {b.status}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <p className="text-xs opacity-90 leading-relaxed">{b.text}</p>
-                                                    </div>
-                                                )
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )
-                })}
-            </div>
-        </div>
-    )
-}
 
 function LayersIcon(props: any) {
     return (
