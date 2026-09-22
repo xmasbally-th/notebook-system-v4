@@ -1,6 +1,6 @@
 # 📖 ประวัติการแก้ไขระบบ — Change Log
 
-**ระบบ:** Notebook System V5 (ระบบยืม-คืนอุปกรณ์โน้ตบุ๊ค)  
+**ระบบ:** ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์  
 **Tech Stack:** Next.js 15+ (App Router) · Supabase (PostgreSQL) · TypeScript · TailwindCSS · Zod · Recharts  
 **ช่วงเวลา:** ธันวาคม 2568 — กุมภาพันธ์ 2569 (รวมการอัปเดตล่าสุด)
 

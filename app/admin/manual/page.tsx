@@ -21,7 +21,7 @@ export default function AdminManualPage() {
             <div className="print-hidden">
                 <AdminPageHeader
                     title="คู่มือการใช้งาน (สำหรับผู้ดูแลระบบ)"
-                    subtitle="แนะนำการบริหารจัดการระบบและฟังก์ชันทั้งหมดสำหรับผู้ดูแลระบบ (Admin) — Notebook System V5"
+                    subtitle="แนะนำการบริหารจัดการระบบและฟังก์ชันทั้งหมดสำหรับผู้ดูแลระบบ (Admin) — ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์"
                 />
             </div>
 
@@ -36,7 +36,7 @@ export default function AdminManualPage() {
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2.5 w-full">
                                 <div>
                                     <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/40 text-blue-100 text-xs font-medium border border-blue-400/30 mb-1">
-                                        <Sparkles className="w-3 h-3" /> System Administrator Handbook
+                                        <Sparkles className="w-3 h-3" /> ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์
                                     </div>
                                     <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">คู่มือบริหารจัดการระบบสำหรับ Admin</h2>
                                 </div>
@@ -338,7 +338,7 @@ export default function AdminManualPage() {
                     <Section id="workflows" title="13. แผนผังขั้นตอนการทำงานภาพรวม (Master Workflows Pipeline)" icon={FileStack} color="teal">
                         <div className="space-y-6">
                             <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
-                                แผนผังกระบวนการระดับบริหารจัดการ (Master Admin Operations) ในระบบ Notebook System V5 แสดงขั้นตอนการควบคุมระบบ การจัดสรรทรัพยากร และ <strong>จุดแยกตัดสินใจ (Decision Branches)</strong> ทั้งหมด:
+                                แผนผังกระบวนการระดับบริหารจัดการ (Master Admin Operations) ในระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์ แสดงขั้นตอนการควบคุมระบบ การจัดสรรทรัพยากร และ <strong>จุดแยกตัดสินใจ (Decision Branches)</strong> ทั้งหมด:
                             </p>
 
                             {/* Touch-friendly Workflow Tabs */}
@@ -566,7 +566,7 @@ export default function AdminManualPage() {
                 {/* Footer Note */}
                 <div className="mt-14 text-center border-t border-slate-200 pt-8 pb-4">
                     <p className="text-slate-500 text-xs sm:text-sm mb-1">
-                        คู่มือการบริหารจัดการระบบสำหรับผู้ดูแลระบบ (Admin) — Notebook System V5
+                        คู่มือการบริหารจัดการระบบสำหรับผู้ดูแลระบบ (Admin) — ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์
                     </p>
                     <p className="text-slate-400 text-xs">
                         อัปเดตล่าสุดให้สอดคล้องกับโครงสร้างระบบและฐานข้อมูลปัจจุบัน

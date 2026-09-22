@@ -153,7 +153,7 @@ export async function submitReservationRequest(formData: FormData) {
                     { name: '🔗 ตรวจสอบคำขอ', value: `[คลิกเพื่อไปยังหน้ารายการจอง](${appUrl}/admin/reservations)`, inline: false }
                 ],
                 timestamp: new Date().toISOString(),
-                footer: { text: 'ระบบยืม-คืนอุปกรณ์ Notebook System' }
+                footer: { text: 'ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์' }
             },
             discordType: 'reservation',
             welpruUserIds: profile.user_id ? [profile.user_id] : [],

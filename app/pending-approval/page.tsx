@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import PendingApprovalClient from './PendingApprovalClient'
 
 export const metadata = {
-    title: 'รอการอนุมัติ | ระบบยืม-คืนพัสดุและครุภัณฑ์',
+    title: 'รอการอนุมัติ | ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์',
 }
 
 export default async function PendingApprovalPage() {

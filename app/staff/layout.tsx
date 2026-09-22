@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import StaffLayout from '@/components/staff/StaffLayout'
 
 export const metadata = {
-    title: 'Staff Dashboard | ระบบยืม-คืนพัสดุและครุภัณฑ์',
+    title: 'Staff Dashboard | ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์',
 }
 
 export default async function StaffRootLayout({

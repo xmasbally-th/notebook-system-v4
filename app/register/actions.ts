@@ -146,7 +146,7 @@ export async function notifyNewRegistration(userId: string) {
                 { name: '🔗 จัดการผู้ใช้งาน', value: `[คลิกเพื่อตรวจสอบและอนุมัติ](${appUrl}/admin/users)`, inline: false }
             ],
             timestamp: new Date().toISOString(),
-            footer: { text: 'ระบบยืม-คืนอุปกรณ์ Notebook System' }
+            footer: { text: 'ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์' }
         }
 
         const fallbackMessage = `

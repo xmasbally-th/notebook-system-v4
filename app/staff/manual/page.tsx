@@ -21,7 +21,7 @@ export default function StaffManualPage() {
             <div className="print-hidden">
                 <StaffPageHeader
                     title="คู่มือการใช้งาน (สำหรับเจ้าหน้าที่ปฏิบัติการ)"
-                    subtitle="แนะนำการใช้งานระบบทุกฟังก์ชันสำหรับเจ้าหน้าที่ (Staff) — Notebook System V5"
+                    subtitle="แนะนำการใช้งานระบบทุกฟังก์ชันสำหรับเจ้าหน้าที่ (Staff) — ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์"
                 />
             </div>
 
@@ -36,7 +36,7 @@ export default function StaffManualPage() {
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2.5 w-full">
                                 <div>
                                     <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-500/40 text-teal-100 text-xs font-medium border border-teal-400/30 mb-1">
-                                        <Sparkles className="w-3 h-3" /> Staff Operations Guide
+                                        <Sparkles className="w-3 h-3" /> ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์
                                     </div>
                                     <h2 className="text-2xl font-bold tracking-tight">คู่มือปฏิบัติการสำหรับเจ้าหน้าที่ (Staff)</h2>
                                 </div>
@@ -310,7 +310,7 @@ export default function StaffManualPage() {
                     <Section id="workflows" title="8. แผนผังขั้นตอนการทำงานของเจ้าหน้าที่ (Staff Workflows)" icon={Activity} color="teal">
                         <div className="space-y-6">
                             <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
-                                แผนผังขั้นตอนการปฏิบัติงานจริงของเจ้าหน้าที่ (Staff Operations) ในระบบ Notebook System V5 แสดงขั้นตอนการบริการ จุดตรวจเช็ค และ <strong>จุดแยกตัดสินใจ (Decision Branches)</strong> ทั้งหมด:
+                                แผนผังขั้นตอนการปฏิบัติงานจริงของเจ้าหน้าที่ (Staff Operations) ในระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์ แสดงขั้นตอนการบริการ จุดตรวจเช็ค และ <strong>จุดแยกตัดสินใจ (Decision Branches)</strong> ทั้งหมด:
                             </p>
 
                             {/* Touch-friendly Workflow Tabs */}
@@ -663,7 +663,7 @@ export default function StaffManualPage() {
                 {/* Footer Note */}
                 <div className="mt-14 text-center border-t border-slate-200 pt-8 pb-4">
                     <p className="text-slate-500 text-xs sm:text-sm mb-1">
-                        คู่มือปฏิบัติการสำหรับเจ้าหน้าที่ (Staff) — Notebook System V5
+                        คู่มือปฏิบัติการสำหรับเจ้าหน้าที่ (Staff) — ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์
                     </p>
                     <p className="text-slate-400 text-xs">
                         หากพบปัญหาทางเทคนิคหรือข้อผิดพลาดของระบบ กรุณาติดต่อผู้ดูแลระบบ (Admin)

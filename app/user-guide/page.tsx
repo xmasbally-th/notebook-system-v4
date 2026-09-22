@@ -37,7 +37,7 @@ export default function UserGuidePage() {
                                         <Sparkles className="w-3 h-3" /> สำหรับผู้ใช้งานทั่วไป (Students / Lecturers / Staff)
                                     </div>
                                     <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-                                        คู่มือการใช้งานระบบยืม-คืนอุปกรณ์
+                                        คู่มือการใช้งานระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์
                                     </h1>
                                 </div>
                             </div>
@@ -85,7 +85,7 @@ export default function UserGuidePage() {
                                 <h2 className="text-xl font-bold text-slate-900">ภาพรวมระบบและประเภทผู้ใช้งาน</h2>
                             </div>
                             <p className="text-slate-600 leading-relaxed text-sm sm:text-base mb-6">
-                                ระบบยืม-คืนอุปกรณ์ (Notebook System) พัฒนาขึ้นเพื่ออำนวยความสะดวกแก่นักศึกษา อาจารย์ และบุคลากร
+                                ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์ พัฒนาขึ้นเพื่ออำนวยความสะดวกแก่นักศึกษา อาจารย์ และบุคลากร
                                 ให้สามารถยืมอุปกรณ์สำหรับการเรียนการสอนหรือการปฏิบัติงานได้อย่างเป็นระบบ โปร่งใส และตรวจสอบได้แบบ Real-time
                             </p>
 
@@ -748,7 +748,7 @@ export default function UserGuidePage() {
 
                         <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm">
                             <p className="text-slate-600 text-xs sm:text-sm mb-4 leading-relaxed">
-                                แผนผังกระบวนการทำงานจริงของระบบ Notebook System V5 แสดงขั้นตอนการส่งต่อข้อมูล บทบาทผู้กระทำ และ <strong>จุดแยกตัดสินใจ (Decision Branches)</strong> ทั้งหมด:
+                                แผนผังกระบวนการทำงานจริงของระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์ แสดงขั้นตอนการส่งต่อข้อมูล บทบาทผู้กระทำ และ <strong>จุดแยกตัดสินใจ (Decision Branches)</strong> ทั้งหมด:
                             </p>
 
                             {/* Workflow Tabs (Touch-friendly & swipeable on mobile) */}

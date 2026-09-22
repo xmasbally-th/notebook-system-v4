@@ -5,7 +5,7 @@ import AdminNotificationBell from '@/components/admin/AdminNotificationBell'
 import { Suspense } from 'react'
 
 export const metadata = {
-    title: 'Admin Dashboard | ระบบยืม-คืนพัสดุและครุภัณฑ์',
+    title: 'Admin Dashboard | ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์',
 }
 
 export default async function AdminRootLayout({

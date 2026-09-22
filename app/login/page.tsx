@@ -3,8 +3,8 @@ import LoginForm from '@/components/auth/LoginForm'
 import { Suspense } from 'react'
 
 export const metadata = {
-    title: 'เข้าสู่ระบบ | ระบบยืม-คืนพัสดุและครุภัณฑ์',
-    description: 'เข้าสู่ระบบเพื่อใช้งานระบบยืม-คืนพัสดุและครุภัณฑ์',
+    title: 'เข้าสู่ระบบ | ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์',
+    description: 'เข้าสู่ระบบเพื่อใช้งานระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์',
 }
 
 // Optional: you could make this page static by revalidating, but since it calls cookies() via createClient

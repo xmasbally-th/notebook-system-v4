@@ -275,7 +275,7 @@ export async function notifyAndLog(params: NotifyAndLogParams): Promise<void> {
                     description: rest || undefined,
                     color,
                     timestamp: new Date().toISOString(),
-                    footer: { text: 'ระบบยืม-คืนอุปกรณ์ Notebook System' }
+                    footer: { text: 'ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์' }
                 }
             }
 

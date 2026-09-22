@@ -197,7 +197,7 @@ async function processOverdueLoans(admin: any, now: Date): Promise<AutomationTas
                 color: 0xEF4444, // Red
                 fields,
                 timestamp: now.toISOString(),
-                footer: { text: 'ระบบงานอัตโนมัติประจำวัน • Notebook System' }
+                footer: { text: 'ระบบงานอัตโนมัติประจำวัน • ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์' }
             }
 
             await sendDiscordNotification({ embeds: [embed] }, 'loan')
@@ -350,7 +350,7 @@ async function processDueSoonLoans(admin: any, now: Date): Promise<AutomationTas
                 color: 0xF59E0B, // Amber
                 fields,
                 timestamp: now.toISOString(),
-                footer: { text: 'ระบบงานอัตโนมัติประจำวัน • Notebook System' }
+                footer: { text: 'ระบบงานอัตโนมัติประจำวัน • ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์' }
             }
 
             await sendDiscordNotification({ embeds: [embed] }, 'loan')
@@ -493,7 +493,7 @@ async function processExpiredReservations(admin: any, now: Date): Promise<Automa
                 color: 0x6B7280, // Gray
                 fields,
                 timestamp: now.toISOString(),
-                footer: { text: 'ระบบงานอัตโนมัติประจำวัน • Notebook System' }
+                footer: { text: 'ระบบงานอัตโนมัติประจำวัน • ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์' }
             }
 
             await sendDiscordNotification({ embeds: [embed] }, 'reservation')

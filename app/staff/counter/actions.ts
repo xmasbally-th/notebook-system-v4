@@ -300,7 +300,7 @@ export async function createFastCounterLoanAction(input: FastCounterLoanInput) {
                 { name: '👨‍💼 เจ้าหน้าที่ผู้ส่งมอบ', value: staffName, inline: true },
             ],
             timestamp: now.toISOString(),
-            footer: { text: 'ระบบยืม-คืนอุปกรณ์ Notebook System • Counter Mode' }
+            footer: { text: 'ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์ • Counter Mode' }
         },
         discordType: 'loan',
         activity: {
