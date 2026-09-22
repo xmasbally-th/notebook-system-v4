@@ -10,88 +10,92 @@ import {
     Monitor, ClipboardList, ArrowLeft, HelpCircle, Search,
     User, Bell, MessageSquare, LogIn, RotateCcw, ShoppingCart,
     Printer, Star, Shield, Smartphone, Check, Sparkles, AlertCircle,
-    Zap, CornerDownRight, GitBranch, QrCode, Camera
+    Zap, CornerDownRight, GitBranch, QrCode, Camera, Users, Tag,
+    Home, ChevronRight
 } from 'lucide-react'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { VisualFlowchart } from '@/components/ui/visual-flowchart'
 
 export default function UserGuidePage() {
     const [activeStatusTab, setActiveStatusTab] = useState<'loans' | 'reservations' | 'equipment' | 'accounts'>('loans')
     const [activeWorkflowTab, setActiveWorkflowTab] = useState<'loan' | 'reservation' | 'onboarding' | 'inspection'>('loan')
 
+    useEffect(() => {
+        document.title = 'คู่มือการใช้งานระบบ | ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์'
+    }, [])
+
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
             <Header />
 
-            <main className="flex-grow">
-                {/* Page Header */}
-                <div className="manual-header-banner bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-800 py-10 md:py-14 text-white shadow-md">
-                    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                            <div className="flex items-center gap-3.5">
-                                <div className="p-3 bg-white/15 backdrop-blur-md rounded-2xl border border-white/20 shadow-inner">
-                                    <HelpCircle className="w-7 h-7 text-white" />
-                                </div>
-                                <div>
-                                    <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-500/40 text-blue-100 text-xs font-medium border border-blue-400/30 mb-1">
-                                        <Sparkles className="w-3 h-3" /> สำหรับผู้ใช้งานทั่วไป (Students / Lecturers / Staff)
+            <main className="flex-grow py-6 sm:py-8">
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                    {/* Breadcrumb Navigation - Web Only */}
+                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-6 print-hidden">
+                        <Link href="/" className="hover:text-blue-600 transition-colors flex items-center gap-1">
+                            <Home className="w-3.5 h-3.5" /> หน้าแรก
+                        </Link>
+                        <ChevronRight className="w-3 h-3 text-slate-400" />
+                        <span className="text-slate-800 font-medium">คู่มือการใช้งานระบบ</span>
+                    </div>
+
+                    {/* Introduction Banner - Styled Identically to Admin & Staff Manuals */}
+                    <div className="manual-header-banner bg-gradient-to-r from-blue-700 via-indigo-800 to-blue-950 rounded-2xl p-6 sm:p-8 mb-8 text-white shadow-xl">
+                        <div className="flex items-start gap-5">
+                            <div className="p-3 bg-white/15 backdrop-blur-md rounded-2xl border border-white/20 hidden sm:block shadow-inner shrink-0">
+                                <HelpCircle className="w-8 h-8 text-white" />
+                            </div>
+                            <div className="w-full">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2.5 w-full">
+                                    <div>
+                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/40 text-blue-100 text-xs font-medium border border-blue-400/30 mb-1">
+                                            <Sparkles className="w-3 h-3" /> ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์
+                                        </div>
+                                        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">คู่มือการใช้งานสำหรับผู้ใช้งานทั่วไป</h2>
                                     </div>
-                                    <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-                                        คู่มือการใช้งานระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์
-                                    </h1>
+                                    <button
+                                        onClick={() => window.print()}
+                                        className="print-hidden inline-flex items-center justify-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all border border-white/25 backdrop-blur-sm self-start sm:self-auto text-sm font-medium shadow-sm active:scale-95"
+                                    >
+                                        <Printer className="w-4 h-4" />
+                                        พิมพ์ / Export PDF
+                                    </button>
                                 </div>
+                                <p className="text-blue-100 leading-relaxed text-sm sm:text-base max-w-4xl">
+                                    คู่มือฉบับสมบูรณ์สำหรับนักศึกษา อาจารย์ และบุคลากร ครอบคลุมขั้นตอนการเข้าสู่ระบบ, การค้นหาอุปกรณ์,
+                                    ขั้นตอนการขอยืมทันทีพร้อมการสแกน QR Code หน้าเคาน์เตอร์, การจองล่วงหน้าจากที่บ้าน,
+                                    การติดตามสถานะทุกขั้นตอน, การส่งคืน และการทำแบบประเมินความพึงพอใจ
+                                </p>
                             </div>
-                            <button
-                                onClick={() => window.print()}
-                                className="print-hidden inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all border border-white/25 backdrop-blur-sm self-start sm:self-auto text-sm font-medium shadow-sm active:scale-95"
-                            >
-                                <Printer className="w-4 h-4" />
-                                พิมพ์ / Export PDF
-                            </button>
-                        </div>
-                        <p className="text-blue-100 max-w-3xl leading-relaxed text-sm sm:text-base">
-                            รวมขั้นตอนการใช้งานตั้งแต่การเข้าสู่ระบบ, การค้นหาอุปกรณ์, การขอยืมทันที, การจองล่วงหน้า,
-                            การติดตามสถานะทุกขั้นตอน, การส่งคืน และการทำแบบประเมินความพึงพอใจ
-                        </p>
-                    </div>
-                </div>
-
-                {/* Main Content Area */}
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-                    {/* Quick Nav Bar */}
-                    <div className="bg-white rounded-2xl border border-slate-200/80 p-4 mb-8 shadow-sm print-hidden">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-1.5">
-                            <LayersIcon className="w-3.5 h-3.5" /> สารบัญและลิงก์ลัด
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            <QuickNavChip href="#overview" label="ภาพรวม & ประเภทผู้ใช้" color="slate" />
-                            <QuickNavChip href="#login" label="เข้าสู่ระบบ & ลงทะเบียน" color="gray" />
-                            <QuickNavChip href="#find" label="ค้นหาอุปกรณ์" color="indigo" />
-                            <QuickNavChip href="#borrow" label="ขอยืมทันที & สแกน QR" color="blue" />
-                            <QuickNavChip href="#reserve" label="จองอุปกรณ์ล่วงหน้า" color="purple" />
-                            <QuickNavChip href="#statuses" label="ความหมายของทุกสถานะ" color="emerald" />
-                            <QuickNavChip href="#return" label="การส่งคืน & ประเมินผล" color="amber" />
-                            <QuickNavChip href="#notifications" label="การแจ้งเตือน & WeLPRU" color="teal" />
-                            <QuickNavChip href="#profile" label="โปรไฟล์ & ขีดจำกัดการยืม" color="sky" />
-                            <QuickNavChip href="#workflows" label="แผนผังการทำงาน (Workflows)" color="violet" />
                         </div>
                     </div>
 
-                    {/* Section 1: Overview & User Types */}
-                    <section id="overview" className="mb-12 scroll-mt-24">
-                        <div className="bg-gradient-to-br from-blue-50 via-indigo-50/50 to-white rounded-2xl p-6 sm:p-7 border border-blue-100 shadow-sm">
-                            <div className="flex items-center gap-3 mb-3">
-                                <span className="p-2 bg-blue-600 text-white rounded-xl text-lg shadow-sm">📋</span>
-                                <h2 className="text-xl font-bold text-slate-900">ภาพรวมระบบและประเภทผู้ใช้งาน</h2>
-                            </div>
+                    {/* Quick Navigation - All 10 Modules */}
+                    <div className="grid grid-cols-2 sm:grid-cols-5 md:grid-cols-10 gap-2 mb-10 text-center print-hidden">
+                        <QuickNavLink href="#overview" icon={Users} label="ภาพรวม" color="blue" />
+                        <QuickNavLink href="#login" icon={LogIn} label="เข้าสู่ระบบ" color="indigo" />
+                        <QuickNavLink href="#find" icon={Search} label="ค้นหาอุปกรณ์" color="orange" />
+                        <QuickNavLink href="#borrow" icon={Send} label="ยืมทันที/QR" color="teal" />
+                        <QuickNavLink href="#reserve" icon={CalendarPlus} label="จองล่วงหน้า" color="purple" />
+                        <QuickNavLink href="#statuses" icon={ClipboardList} label="สถานะระบบ" color="green" />
+                        <QuickNavLink href="#return" icon={RotateCcw} label="ส่งคืน/ประเมิน" color="amber" />
+                        <QuickNavLink href="#notifications" icon={Bell} label="การแจ้งเตือน" color="teal" />
+                        <QuickNavLink href="#profile" icon={User} label="โปรไฟล์" color="sky" />
+                        <QuickNavLink href="#workflows" icon={Activity} label="ผังการทำงาน" color="violet" />
+                    </div>
+
+                    {/* Detailed Sections in Unified Space-Y */}
+                    <div className="space-y-10">
+                        {/* 1. Overview & User Types */}
+                        <Section id="overview" title="1. ภาพรวมระบบและประเภทผู้ใช้งาน (Overview & User Types)" icon={Users} color="blue">
                             <p className="text-slate-600 leading-relaxed text-sm sm:text-base mb-6">
                                 ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์ พัฒนาขึ้นเพื่ออำนวยความสะดวกแก่นักศึกษา อาจารย์ และบุคลากร
                                 ให้สามารถยืมอุปกรณ์สำหรับการเรียนการสอนหรือการปฏิบัติงานได้อย่างเป็นระบบ โปร่งใส และตรวจสอบได้แบบ Real-time
                             </p>
 
-                            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3">
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
                                 👥 ประเภทผู้ใช้งานและสิทธิ์การยืม (User Types)
-                            </h3>
+                            </h4>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <UserTypeCard
                                     icon="🎓"
@@ -115,15 +119,11 @@ export default function UserGuidePage() {
                                     badgeColor="bg-teal-100 text-teal-800 border-teal-200"
                                 />
                             </div>
-                        </div>
-                    </section>
+                        </Section>
 
-                    {/* Section 2: Login & Registration */}
-                    <section id="login" className="mb-12 scroll-mt-24">
-                        <SectionHeader icon={LogIn} iconColor="text-slate-700" iconBg="bg-slate-100" title="1. การเข้าสู่ระบบและการลงทะเบียน (Login & Registration)" />
-
-                        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                            <div className="divide-y divide-slate-100">
+                        {/* 2. Login & Registration */}
+                        <Section id="login" title="2. การเข้าสู่ระบบและการลงทะเบียน (Login & Registration)" icon={LogIn} color="indigo">
+                            <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden">
                                 <Step
                                     number={1}
                                     title="เข้าสู่หน้าเว็บไซต์ของระบบ"
@@ -157,19 +157,15 @@ export default function UserGuidePage() {
                                     isLast
                                 />
                             </div>
-                        </div>
 
-                        <div className="mt-3 flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs sm:text-sm text-amber-800">
-                            <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
-                            <span><strong>คำแนะนำความปลอดภัย:</strong> หากใช้งานบนเครื่องคอมพิวเตอร์สาธารณะ ให้กดออกจากระบบ (Sign Out) ทุกครั้งหลังเสร็จสิ้นการใช้งาน</span>
-                        </div>
-                    </section>
+                            <div className="mt-4 flex items-center gap-2.5 p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl text-xs sm:text-sm text-amber-800">
+                                <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                                <span><strong>คำแนะนำความปลอดภัย:</strong> หากใช้งานบนเครื่องคอมพิวเตอร์สาธารณะ ให้กดออกจากระบบ (Sign Out) ทุกครั้งหลังเสร็จสิ้นการใช้งาน</span>
+                            </div>
+                        </Section>
 
-                    {/* Section 3: Finding Equipment */}
-                    <section id="find" className="mb-12 scroll-mt-24">
-                        <SectionHeader icon={Search} iconColor="text-indigo-600" iconBg="bg-indigo-100" title="2. การค้นหาอุปกรณ์และสถานะอุปกรณ์ (Equipment Catalog)" />
-
-                        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                        {/* 3. Finding Equipment */}
+                        <Section id="find" title="3. การค้นหาอุปกรณ์และสถานะอุปกรณ์ (Equipment Catalog)" icon={Search} color="orange">
                             <p className="text-slate-600 mb-5 leading-relaxed text-sm sm:text-base">
                                 ไปที่เมนู <Link href="/equipment" className="text-blue-600 font-semibold hover:underline">อุปกรณ์</Link> เพื่อดูรายการอุปกรณ์ทั้งหมดของสถาบัน ระบบมีเครื่องมือช่วยค้นหาอย่างรวดเร็ว:
                             </p>
@@ -186,7 +182,7 @@ export default function UserGuidePage() {
                                 </div>
                                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                                     <div className="flex items-center gap-2 font-semibold text-slate-800 text-sm mb-1.5">
-                                        <TagIcon className="w-4 h-4 text-indigo-600" />
+                                        <Tag className="w-4 h-4 text-indigo-600" />
                                         กรองตามหมวดหมู่และสถานะ
                                     </div>
                                     <p className="text-xs text-slate-600 leading-relaxed">
@@ -236,58 +232,54 @@ export default function UserGuidePage() {
                                     />
                                 </div>
                             </div>
-                        </div>
-                    </section>
+                        </Section>
 
-                    {/* Section 4: Borrowing Now */}
-                    <section id="borrow" className="mb-12 scroll-mt-24">
-                        <SectionHeader icon={Send} iconColor="text-blue-600" iconBg="bg-blue-100" title="3. ขั้นตอนการขอยืมอุปกรณ์ทันที & การสแกน QR บนเครื่อง (Direct Loan & QR Scan)" />
-
-                        {/* QR Code Requirement Alert Callout */}
-                        <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-amber-50/90 border-2 border-amber-300 text-amber-950 shadow-sm">
-                            <div className="flex items-start gap-3.5">
-                                <div className="p-2.5 bg-amber-500 text-white rounded-xl shrink-0 mt-0.5 shadow-sm">
-                                    <QrCode className="w-6 h-6" />
-                                </div>
-                                <div className="space-y-2.5">
-                                    <div>
-                                        <h4 className="font-bold text-base sm:text-lg text-amber-950 flex items-center gap-2">
-                                            <span>📱 ข้อกำหนดสำคัญ: การยืมทันทีต้องสแกน QR Code บนตัวเครื่องอุปกรณ์จริง</span>
-                                        </h4>
-                                        <p className="text-xs sm:text-sm text-amber-900 leading-relaxed mt-1">
-                                            ระบบกำหนดให้การยืมทันที (Direct Loan) เป็นการทำรายการรับเครื่อง <strong>ณ จุดให้บริการเคาน์เตอร์จริงเท่านั้น</strong> เพื่อป้องกันการกดยืมกักตุนอุปกรณ์ล่วงหน้าจากที่อื่น ผู้ใช้จำเป็นต้องสแกน QR Code ที่ติดอยู่บนตัวเครื่องจริงเพื่อยืนยันสิทธิ์:
-                                        </p>
+                        {/* 4. Borrowing Now & QR Scan */}
+                        <Section id="borrow" title="4. ขั้นตอนการขอยืมอุปกรณ์ทันที & การสแกน QR บนเครื่อง (Direct Loan & QR Scan)" icon={Send} color="teal">
+                            {/* QR Code Requirement Alert Callout */}
+                            <div className="mb-6 p-4 sm:p-5 rounded-xl bg-amber-50/90 border border-amber-300 text-amber-950 shadow-2xs">
+                                <div className="flex items-start gap-3.5">
+                                    <div className="p-2.5 bg-amber-500 text-white rounded-xl shrink-0 mt-0.5 shadow-sm">
+                                        <QrCode className="w-6 h-6" />
                                     </div>
-
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                                        <div className="bg-white/90 p-3.5 rounded-xl border border-amber-200/90 shadow-2xs">
-                                            <strong className="text-amber-950 flex items-center gap-1.5 mb-1.5 font-bold text-xs sm:text-sm">
-                                                <Smartphone className="w-4 h-4 text-blue-600 shrink-0" /> วิธีที่ 1: สแกนสติกเกอร์ QR บนเครื่องด้วยมือถือ
-                                            </strong>
-                                            <p className="text-slate-600 leading-relaxed">
-                                                เปิดแอปกล้องในโทรศัพท์มือถือ หรือแอปสแกนเนอร์ ส่องไปที่สติกเกอร์ QR Code บนตัวเครื่องโน้ตบุ๊ค ระบบจะนำท่านเข้าสู่หน้ายืมเครื่องนั้นทันทีพร้อมรับสิทธิ์ <em>Verified On-site Token</em>
+                                    <div className="space-y-2.5">
+                                        <div>
+                                            <h4 className="font-bold text-base sm:text-lg text-amber-950 flex items-center gap-2">
+                                                <span>📱 ข้อกำหนดสำคัญ: การยืมทันทีต้องสแกน QR Code บนตัวเครื่องอุปกรณ์จริง</span>
+                                            </h4>
+                                            <p className="text-xs sm:text-sm text-amber-900 leading-relaxed mt-1">
+                                                ระบบกำหนดให้การยืมทันที (Direct Loan) เป็นการทำรายการรับเครื่อง <strong>ณ จุดให้บริการเคาน์เตอร์จริงเท่านั้น</strong> เพื่อป้องกันการกดยืมกักตุนอุปกรณ์ล่วงหน้าจากที่อื่น ผู้ใช้จำเป็นต้องสแกน QR Code ที่ติดอยู่บนตัวเครื่องจริงเพื่อยืนยันสิทธิ์:
                                             </p>
                                         </div>
-                                        <div className="bg-white/90 p-3.5 rounded-xl border border-amber-200/90 shadow-2xs">
-                                            <strong className="text-amber-950 flex items-center gap-1.5 mb-1.5 font-bold text-xs sm:text-sm">
-                                                <Camera className="w-4 h-4 text-indigo-600 shrink-0" /> วิธีที่ 2: กดปุ่มสแกน QR ในหน้าคำขอยืม
-                                            </strong>
-                                            <p className="text-slate-600 leading-relaxed">
-                                                เมื่อเลือกอุปกรณ์ผ่านหน้าเว็บและเข้าสู่ฟอร์มคำขอ ให้คลิกปุ่ม <strong>"เปิดกล้องสแกน QR Code บนเครื่องนี้ทันที"</strong> เพื่อเปิดกล้องในเว็บสแกนสติกเกอร์ยืนยันว่าท่านอยู่ต่อหน้าอุปกรณ์จริง
-                                            </p>
-                                        </div>
-                                    </div>
 
-                                    <div className="p-2.5 bg-amber-100/70 rounded-lg text-xs text-amber-900 flex items-center gap-2 font-medium">
-                                        <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
-                                        <span>💡 หากท่านยังไม่ได้อยู่หน้าเคาน์เตอร์ หรือต้องการวางแผนยืมใช้งานในวันข้างหน้า กรุณาเลือกแท็บ <strong>"จองล่วงหน้า (Advance Reservation)"</strong> แทน</span>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                            <div className="bg-white/90 p-3.5 rounded-xl border border-amber-200/90 shadow-2xs">
+                                                <strong className="text-amber-950 flex items-center gap-1.5 mb-1.5 font-bold text-xs sm:text-sm">
+                                                    <Smartphone className="w-4 h-4 text-blue-600 shrink-0" /> วิธีที่ 1: สแกนสติกเกอร์ QR บนเครื่องด้วยมือถือ
+                                                </strong>
+                                                <p className="text-slate-600 leading-relaxed">
+                                                    เปิดแอปกล้องในโทรศัพท์มือถือ หรือแอปสแกนเนอร์ ส่องไปที่สติกเกอร์ QR Code บนตัวเครื่องโน้ตบุ๊ค ระบบจะนำท่านเข้าสู่หน้ายืมเครื่องนั้นทันทีพร้อมรับสิทธิ์ <em>Verified On-site Token</em>
+                                                </p>
+                                            </div>
+                                            <div className="bg-white/90 p-3.5 rounded-xl border border-amber-200/90 shadow-2xs">
+                                                <strong className="text-amber-950 flex items-center gap-1.5 mb-1.5 font-bold text-xs sm:text-sm">
+                                                    <Camera className="w-4 h-4 text-indigo-600 shrink-0" /> วิธีที่ 2: กดปุ่มสแกน QR ในหน้าคำขอยืม
+                                                </strong>
+                                                <p className="text-slate-600 leading-relaxed">
+                                                    เมื่อเลือกอุปกรณ์ผ่านหน้าเว็บและเข้าสู่ฟอร์มคำขอ ให้คลิกปุ่ม <strong>"เปิดกล้องสแกน QR Code บนเครื่องนี้ทันที"</strong> เพื่อเปิดกล้องในเว็บสแกนสติกเกอร์ยืนยันว่าท่านอยู่ต่อหน้าอุปกรณ์จริง
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-2.5 bg-amber-100/70 rounded-lg text-xs text-amber-900 flex items-center gap-2 font-medium">
+                                            <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                                            <span>💡 หากท่านยังไม่ได้อยู่หน้าเคาน์เตอร์ หรือต้องการวางแผนยืมใช้งานในวันข้างหน้า กรุณาเลือกแท็บ <strong>"จองล่วงหน้า (Advance Reservation)"</strong> แทน</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                            <div className="divide-y divide-slate-100">
+                            <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden">
                                 <Step
                                     number={1}
                                     title="สแกน QR Code บนตัวเครื่องจริง หรือค้นหาเครื่องสถานะว่าง"
@@ -338,23 +330,19 @@ export default function UserGuidePage() {
                                     isLast
                                 />
                             </div>
-                        </div>
-                    </section>
+                        </Section>
 
-                    {/* Section 5: Reservation */}
-                    <section id="reserve" className="mb-12 scroll-mt-24">
-                        <SectionHeader icon={CalendarPlus} iconColor="text-purple-600" iconBg="bg-purple-100" title="4. ขั้นตอนการจองอุปกรณ์ล่วงหน้า (Advance Reservation)" />
-
-                        {/* No QR Needed Info Box */}
-                        <div className="mb-4 p-3.5 bg-purple-50/80 border border-purple-200 rounded-xl text-xs sm:text-sm text-purple-900 flex items-start gap-2.5">
-                            <Sparkles className="w-4 h-4 text-purple-600 mt-0.5 shrink-0" />
-                            <div>
-                                <strong>ทำรายการได้จากทุกที่ (ไม่ต้องสแกน QR Code บนเครื่อง):</strong> สำหรับการจองล่วงหน้า ท่านสามารถกดจองผ่านเว็บไซต์ได้จากที่บ้านหรือห้องเรียนล่วงหน้า เพื่อล็อกคิวอุปกรณ์ไว้ใช้งานในวันนัดหมาย โดยไม่ต้องเดินทางมาสแกนเครื่องที่เคาน์เตอร์ก่อน
+                        {/* 5. Reservation */}
+                        <Section id="reserve" title="5. ขั้นตอนการจองอุปกรณ์ล่วงหน้า (Advance Reservation)" icon={CalendarPlus} color="purple">
+                            {/* No QR Needed Info Box */}
+                            <div className="mb-5 p-4 bg-purple-50/80 border border-purple-200 rounded-xl text-xs sm:text-sm text-purple-900 flex items-start gap-2.5">
+                                <Sparkles className="w-4 h-4 text-purple-600 mt-0.5 shrink-0" />
+                                <div>
+                                    <strong>ทำรายการได้จากทุกที่ (ไม่ต้องสแกน QR Code บนเครื่อง):</strong> สำหรับการจองล่วงหน้า ท่านสามารถกดจองผ่านเว็บไซต์ได้จากที่บ้านหรือห้องเรียนล่วงหน้า เพื่อล็อกคิวอุปกรณ์ไว้ใช้งานในวันนัดหมาย โดยไม่ต้องเดินทางมาสแกนเครื่องที่เคาน์เตอร์ก่อน
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                            <div className="divide-y divide-slate-100">
+                            <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden">
                                 <Step
                                     number={1}
                                     title="ค้นหาอุปกรณ์และกดปุ่ม 'จอง'"
@@ -382,19 +370,15 @@ export default function UserGuidePage() {
                                     isLast
                                 />
                             </div>
-                        </div>
 
-                        <div className="mt-3 p-3.5 bg-purple-50 border border-purple-200 rounded-xl text-xs sm:text-sm text-purple-900 flex items-start gap-2.5">
-                            <Timer className="w-4 h-4 text-purple-600 mt-0.5 shrink-0" />
-                            <span><strong>หมายเหตุสำคัญ:</strong> หากถึงวันเวลานัดหมายแล้วท่านไม่มารับอุปกรณ์ภายในเวลาที่กำหนด การจองอาจถูกปรับสถานะเป็น <strong>"หมดอายุ (Expired)"</strong> และปล่อยสิทธิ์ให้อุปกรณ์กลับมาว่างสำหรับผู้อื่น</span>
-                        </div>
-                    </section>
+                            <div className="mt-4 p-3.5 bg-purple-50 border border-purple-200 rounded-xl text-xs sm:text-sm text-purple-900 flex items-start gap-2.5">
+                                <Timer className="w-4 h-4 text-purple-600 mt-0.5 shrink-0" />
+                                <span><strong>หมายเหตุสำคัญ:</strong> หากถึงวันเวลานัดหมายแล้วท่านไม่มารับอุปกรณ์ภายในเวลาที่กำหนด การจองอาจถูกปรับสถานะเป็น <strong>"หมดอายุ (Expired)"</strong> และปล่อยสิทธิ์ให้อุปกรณ์กลับมาว่างสำหรับผู้อื่น</span>
+                            </div>
+                        </Section>
 
-                    {/* Section 6: Comprehensive Status Guide */}
-                    <section id="statuses" className="mb-12 scroll-mt-24">
-                        <SectionHeader icon={ClipboardList} iconColor="text-emerald-600" iconBg="bg-emerald-100" title="5. ความหมายของทุกสถานะในระบบ (System Status Guide)" />
-
-                        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                        {/* 6. Comprehensive Status Guide */}
+                        <Section id="statuses" title="6. ความหมายของทุกสถานะในระบบ (System Status Guide)" icon={ClipboardList} color="green">
                             <p className="text-slate-600 text-sm mb-5">
                                 ตรวจสอบและติดตามสถานะคำขอของท่านได้ตลอดเวลาที่หน้า{' '}
                                 <Link href="/my-loans" className="text-blue-600 font-semibold hover:underline">คำขอของฉัน (My Loans)</Link>
@@ -402,28 +386,28 @@ export default function UserGuidePage() {
                             </p>
 
                             {/* Status Filter Tabs */}
-                            <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3 mb-5">
+                            <div className="flex overflow-x-auto no-scrollbar gap-2 pb-2 mb-5 border-b border-slate-100">
                                 <button
                                     onClick={() => setActiveStatusTab('loans')}
-                                    className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${activeStatusTab === 'loans' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                    className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 ${activeStatusTab === 'loans' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                                 >
                                     สถานะการยืม (Loan Statuses)
                                 </button>
                                 <button
                                     onClick={() => setActiveStatusTab('reservations')}
-                                    className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${activeStatusTab === 'reservations' ? 'bg-purple-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                    className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 ${activeStatusTab === 'reservations' ? 'bg-purple-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                                 >
                                     สถานะการจอง (Reservation Statuses)
                                 </button>
                                 <button
                                     onClick={() => setActiveStatusTab('equipment')}
-                                    className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${activeStatusTab === 'equipment' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                    className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 ${activeStatusTab === 'equipment' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                                 >
                                     สถานะอุปกรณ์ (Equipment Statuses)
                                 </button>
                                 <button
                                     onClick={() => setActiveStatusTab('accounts')}
-                                    className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${activeStatusTab === 'accounts' ? 'bg-slate-800 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                    className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 ${activeStatusTab === 'accounts' ? 'bg-slate-800 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                                 >
                                     สถานะบัญชี & การส่งคืน
                                 </button>
@@ -431,7 +415,7 @@ export default function UserGuidePage() {
 
                             {/* Tab 1: Loan Statuses */}
                             {activeStatusTab === 'loans' && (
-                                <div className="space-y-3">
+                                <div className="space-y-2.5">
                                     <StatusRow
                                         icon={<Clock className="w-4 h-4 text-amber-600" />}
                                         name="รอการอนุมัติ (Pending)"
@@ -467,7 +451,7 @@ export default function UserGuidePage() {
 
                             {/* Tab 2: Reservation Statuses */}
                             {activeStatusTab === 'reservations' && (
-                                <div className="space-y-3">
+                                <div className="space-y-2.5">
                                     <StatusRow
                                         icon={<Clock className="w-4 h-4 text-amber-600" />}
                                         name="รอการอนุมัติ (Pending)"
@@ -515,7 +499,7 @@ export default function UserGuidePage() {
 
                             {/* Tab 3: Equipment Statuses */}
                             {activeStatusTab === 'equipment' && (
-                                <div className="space-y-3">
+                                <div className="space-y-2.5">
                                     <StatusRow
                                         icon={<span className="text-base">🟢</span>}
                                         name="ว่าง (available)"
@@ -601,20 +585,16 @@ export default function UserGuidePage() {
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    </section>
+                        </Section>
 
-                    {/* Section 7: Return & Evaluation */}
-                    <section id="return" className="mb-12 scroll-mt-24">
-                        <SectionHeader icon={RotateCcw} iconColor="text-amber-600" iconBg="bg-amber-100" title="6. การคืนอุปกรณ์และการทำแบบประเมินความพึงพอใจ (Return & Evaluation)" />
-
-                        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                        {/* 7. Return & Evaluation */}
+                        <Section id="return" title="7. การส่งคืนอุปกรณ์และการประเมินความพึงพอใจ (Return & Evaluation)" icon={RotateCcw} color="amber">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                 <div>
-                                    <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+                                    <h4 className="font-bold text-slate-900 mb-3 flex items-center gap-2 text-sm sm:text-base">
                                         <Package className="w-5 h-5 text-amber-600" />
                                         ขั้นตอนการคืนอุปกรณ์ที่เคาน์เตอร์
-                                    </h3>
+                                    </h4>
                                     <div className="space-y-3">
                                         <ReturnStepMini
                                             step={1}
@@ -635,10 +615,10 @@ export default function UserGuidePage() {
                                 </div>
 
                                 <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 border border-amber-200/80">
-                                    <h3 className="font-bold text-amber-950 mb-2 flex items-center gap-2">
+                                    <h4 className="font-bold text-amber-950 mb-2 flex items-center gap-2 text-sm sm:text-base">
                                         <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
                                         การทำแบบประเมินความพึงพอใจ
-                                    </h3>
+                                    </h4>
                                     <p className="text-xs sm:text-sm text-amber-900 leading-relaxed mb-4">
                                         เมื่อคืนอุปกรณ์เรียบร้อยแล้ว ในหน้า <strong>"คำขอของฉัน (My Loans)"</strong> จะปรากฏปุ่ม
                                         <span className="inline-flex items-center gap-1 mx-1 px-2 py-0.5 bg-amber-500 text-white rounded text-xs font-semibold">
@@ -659,14 +639,10 @@ export default function UserGuidePage() {
                                     <strong>ข้อควรระวังเรื่องการคืนล่าช้า (Overdue):</strong> หากไม่นำส่งคืนตามกำหนดเวลา ระบบจะขึ้นสถานะ <strong>ค้างคืน</strong> และส่งการแจ้งเตือนไปยังแอป WeLPRU รวมถึงอาจส่งผลต่อการจำกัดสิทธิ์ในการยืมอุปกรณ์ครั้งต่อไป
                                 </div>
                             </div>
-                        </div>
-                    </section>
+                        </Section>
 
-                    {/* Section 8: Notifications & WeLPRU */}
-                    <section id="notifications" className="mb-12 scroll-mt-24">
-                        <SectionHeader icon={Bell} iconColor="text-teal-600" iconBg="bg-teal-100" title="7. ระบบการแจ้งเตือน (Notifications & WeLPRU Push)" />
-
-                        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                        {/* 8. Notifications & WeLPRU Push */}
+                        <Section id="notifications" title="8. ระบบการแจ้งเตือน (Notifications & WeLPRU Push)" icon={Bell} color="teal">
                             <p className="text-slate-600 text-sm mb-4">
                                 ท่านสามารถคลิกที่ไอคอนกระดิ่ง <Bell className="w-4 h-4 inline text-teal-600" /> ที่มุมขวาบน หรือไปที่หน้า{' '}
                                 <Link href="/notifications" className="text-blue-600 font-semibold hover:underline">การแจ้งเตือน</Link>{' '}
@@ -701,19 +677,15 @@ export default function UserGuidePage() {
                                 <NotificationBadgeItem label="เตือนอุปกรณ์ค้างคืน" desc="แจ้งเตือนด่วนเมื่อเลยกำหนดเวลาส่งคืน" />
                                 <NotificationBadgeItem label="ข้อความประกาศจาก Admin" desc="ข่าวสารและประกาศสำคัญเกี่ยวกับระบบ" />
                             </div>
-                        </div>
-                    </section>
+                        </Section>
 
-                    {/* Section 9: Profile & Quotas */}
-                    <section id="profile" className="mb-12 scroll-mt-24">
-                        <SectionHeader icon={User} iconColor="text-sky-600" iconBg="bg-sky-100" title="8. การจัดการโปรไฟล์และขีดจำกัดการยืม (Profile & Loan Limits)" />
-
-                        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                        {/* 9. Profile & Loan Limits */}
+                        <Section id="profile" title="9. การจัดการโปรไฟล์และขีดจำกัดการยืม (Profile & Loan Limits)" icon={User} color="sky">
                             <p className="text-slate-600 text-sm mb-4">
                                 ไปที่หน้า <Link href="/profile" className="text-blue-600 font-semibold hover:underline">โปรไฟล์ของฉัน (Profile)</Link> เพื่อตรวจสอบสถานะและปรับปรุงข้อมูลให้เป็นปัจจุบัน:
                             </p>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200">
                                     <div className="flex items-center gap-2 font-semibold text-emerald-900 text-sm mb-2">
                                         <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -739,405 +711,403 @@ export default function UserGuidePage() {
                                     </ul>
                                 </div>
                             </div>
-                        </div>
-                    </section>
+                        </Section>
 
-                    {/* Section 10: Workflows Pipeline */}
-                    <section id="workflows" className="mb-12 scroll-mt-24">
-                        <SectionHeader icon={Activity} iconColor="text-violet-600" iconBg="bg-violet-100" title="9. แผนผังขั้นตอนการทำงาน (System Workflows)" />
+                        {/* 10. System Workflows */}
+                        <Section id="workflows" title="10. แผนผังขั้นตอนการทำงานภาพรวม (Master System Workflows)" icon={Activity} color="violet">
+                            <div className="space-y-6">
+                                <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
+                                    แผนผังกระบวนการทำงานจริงของระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์ แสดงขั้นตอนการส่งต่อข้อมูล บทบาทผู้กระทำ และ <strong>จุดแยกตัดสินใจ (Decision Branches)</strong> ทั้งหมด:
+                                </p>
 
-                        <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm">
-                            <p className="text-slate-600 text-xs sm:text-sm mb-4 leading-relaxed">
-                                แผนผังกระบวนการทำงานจริงของระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์ แสดงขั้นตอนการส่งต่อข้อมูล บทบาทผู้กระทำ และ <strong>จุดแยกตัดสินใจ (Decision Branches)</strong> ทั้งหมด:
-                            </p>
-
-                            {/* Workflow Tabs (Touch-friendly & swipeable on mobile) */}
-                            <div className="flex overflow-x-auto no-scrollbar gap-2 pb-2 mb-6 border-b border-slate-100 print-hidden">
-                                <button
-                                    onClick={() => setActiveWorkflowTab('loan')}
-                                    className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${activeWorkflowTab === 'loan' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                                >
-                                    <Send className="w-3.5 h-3.5" />
-                                    <span>วงจรการยืมทันที (Direct Loan)</span>
-                                </button>
-                                <button
-                                    onClick={() => setActiveWorkflowTab('reservation')}
-                                    className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${activeWorkflowTab === 'reservation' ? 'bg-purple-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                                >
-                                    <CalendarPlus className="w-3.5 h-3.5" />
-                                    <span>วงจรการจองล่วงหน้า (Reservation)</span>
-                                </button>
-                                <button
-                                    onClick={() => setActiveWorkflowTab('onboarding')}
-                                    className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${activeWorkflowTab === 'onboarding' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                                >
-                                    <UserPlus className="w-3.5 h-3.5" />
-                                    <span>การสมัครสมาชิก & อนุมัติ (Onboarding)</span>
-                                </button>
-                                <button
-                                    onClick={() => setActiveWorkflowTab('inspection')}
-                                    className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${activeWorkflowTab === 'inspection' ? 'bg-amber-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                                >
-                                    <RotateCcw className="w-3.5 h-3.5" />
-                                    <span>ตรวจสภาพ & ประเมินผล (Inspection)</span>
-                                </button>
-                            </div>
-
-                            {/* Workflow 1: Direct Loan Flow */}
-                            <div className={`space-y-6 animate-fadeIn ${activeWorkflowTab === 'loan' ? 'block' : 'hidden print:block print:mt-8'}`}>
-                                <WorkflowMetaBar
-                                    title="วงจรการขอยืมอุปกรณ์ทันทีและการส่งคืน (Direct Lending & Return Flow)"
-                                    actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff), 🤖 Smart Cron (08:30 น.)"
-                                    channels="WeLPRU Mobile Push, Discord Webhook, In-App Alert"
-                                />
-                                <VisualFlowchart
-                                    startLabel="จุดเริ่มต้น: ผู้ใช้ทำรายการยืมทันที (หน้าเคาน์เตอร์)"
-                                    endLabel="สิ้นสุด: ส่งคืนอุปกรณ์ & บันทึกผลประเมินเสร็จสิ้น"
-                                    steps={[
-                                        {
-                                            stepNum: 1,
-                                            actor: '👤 ผู้ใช้งาน',
-                                            actorRole: 'user',
-                                            title: 'สแกน QR บนตัวเครื่อง หรือเลือกเครื่องว่าง',
-                                            desc: 'สแกนสติกเกอร์ QR Code บนตัวเครื่องจริง (แนะนำ) เพื่อรับสิทธิ์หน้างาน หรือเลือกเครื่องสถานะว่างผ่านหน้ารายการอุปกรณ์',
-                                            statusBadge: '🟢 ว่าง (available)',
-                                        },
-                                        {
-                                            stepNum: 2,
-                                            actor: '👤 ผู้ใช้งาน',
-                                            actorRole: 'user',
-                                            title: 'สแกน QR ยืนยันเครื่องจริง & ระบุวัน-เวลาคืน',
-                                            desc: 'สแกน QR ยืนยันการมีตัวเครื่องจริง (On-site Verification) กำหนดวัน-เวลาคืน วัตถุประสงค์ แล้วกดยืนยันคำขอ',
-                                            branches: [
-                                                {
-                                                    type: 'special',
-                                                    label: '📱 การยืนยันสิทธิ์หน้างาน (On-site QR)',
-                                                    text: 'การยืมทันทีต้องสแกน QR Code บนตัวเครื่องจริง หากไม่ได้อยู่หน้าเครื่องให้เลือก "จองล่วงหน้า"',
-                                                    status: '⚡ on-site token'
-                                                },
-                                                {
-                                                    type: 'special',
-                                                    label: '⚡ กรณี Staff / Admin ยืมเอง',
-                                                    text: 'ระบบ Auto-Approve อนุมัติทันที ข้ามขั้นตอนรอตรวจ ไปรับเครื่องได้ทันที',
-                                                    status: '🟢 approved'
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            stepNum: 3,
-                                            actor: '👮‍♂️ Staff / Admin',
-                                            actorRole: 'staff',
-                                            title: 'ตรวจสอบและอนุมัติคำขอ',
-                                            desc: 'เจ้าหน้าที่ตรวจสอบความพร้อมและกดยืนยันอนุมัติคำขอ',
-                                            branches: [
-                                                {
-                                                    type: 'success',
-                                                    label: '🟢 อนุมัติ (Approved)',
-                                                    text: 'ระบบส่งการแจ้งเตือน WeLPRU นัดหมายรับเครื่อง',
-                                                    status: '🟢 approved'
-                                                },
-                                                {
-                                                    type: 'danger',
-                                                    label: '🔴 ปฏิเสธ (Rejected)',
-                                                    text: 'เจ้าหน้าที่ระบุเหตุผลในการไม่อนุมัติ สิ้นสุดคำขอ',
-                                                    status: '🔴 rejected'
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            stepNum: 4,
-                                            actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
-                                            actorRole: 'counter',
-                                            title: 'รับมอบเครื่องที่เคาน์เตอร์บริการ',
-                                            desc: 'ตรวจสอบตัวเครื่องและอุปกรณ์เสริมร่วมกัน -> เจ้าหน้าที่กดยืนยันส่งมอบ -> เริ่มนับเวลาการยืม',
-                                            statusBadge: '🔵 กำลังยืม (borrowed)'
-                                        },
-                                        {
-                                            stepNum: 5,
-                                            actor: '🤖 Smart Cron (08:30 น.)',
-                                            actorRole: 'system',
-                                            title: 'ระบบตรวจสอบกำหนดคืนอัตโนมัติ',
-                                            desc: 'Smart Cron รันตรวจสอบทุก 08:30 น. ของทุกวัน:',
-                                            branches: [
-                                                {
-                                                    type: 'alert',
-                                                    label: '🔔 ถึงกำหนดคืนวันนี้',
-                                                    text: 'ระบบส่งแจ้งเตือนเตือนความจำไปยัง WeLPRU ให้เตรียมส่งคืน'
-                                                },
-                                                {
-                                                    type: 'danger',
-                                                    label: '⚠️ เลยกำหนดคืน (Overdue)',
-                                                    text: 'ขึ้นสถานะค้างคืน -> ส่งแจ้งเตือนฉุกเฉิน WeLPRU ถึงผู้ยืม + แจ้ง Discord เจ้าหน้าที่',
-                                                    status: '⚠️ ค้างคืน (overdue)'
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            stepNum: 6,
-                                            actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
-                                            actorRole: 'counter',
-                                            title: 'ส่งคืนที่เคาน์เตอร์ & ตรวจสภาพ 3 ระดับ',
-                                            desc: 'นำอุปกรณ์มาส่งคืนที่เคาน์เตอร์ เจ้าหน้าที่ตรวจสภาพเครื่องและอุปกรณ์เสริม',
-                                            branches: [
-                                                {
-                                                    type: 'success',
-                                                    label: '🟢 สมบูรณ์ (Good)',
-                                                    text: 'เครื่องและสายชาร์จครบ -> อุปกรณ์กลับสู่สถานะ ว่าง (available)',
-                                                    status: '🟢 available'
-                                                },
-                                                {
-                                                    type: 'alert',
-                                                    label: '🟡 ชำรุด (Damaged) / 🔴 ของไม่ครบ (Missing)',
-                                                    text: 'บันทึกหมายเหตุความเสียหาย -> ปรับสถานะเป็นซ่อมบำรุง (maintenance)',
-                                                    status: '🟡 maintenance'
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            stepNum: 7,
-                                            actor: '👤 ผู้ใช้งาน',
-                                            actorRole: 'user',
-                                            title: 'ทำแบบประเมินความพึงพอใจ 5 ดาว',
-                                            desc: 'ในหน้าคำขอของฉัน คลิกปุ่มประเมิน ให้คะแนนสภาพอุปกรณ์และการบริการ พร้อมระบุข้อเสนอแนะ -> สิ้นสุดกระบวนการสมบูรณ์',
-                                            statusBadge: '⚪ คืนแล้ว (returned)'
-                                        }
-                                    ]}
-                                />
-                            </div>
-
-                            {/* Workflow 2: Reservation Flow */}
-                            <div className={`space-y-6 animate-fadeIn ${activeWorkflowTab === 'reservation' ? 'block' : 'hidden print:block print:mt-8'}`}>
-                                <WorkflowMetaBar
-                                    title="วงจรการจองอุปกรณ์ล่วงหน้าและการแปลงสัญญา (Advance Reservation Flow)"
-                                    actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff), 🤖 Smart Cron Engine"
-                                    channels="WeLPRU Mobile Push, Discord Webhook (ห้อง Reservation), In-App Alert"
-                                />
-                                <VisualFlowchart
-                                    startLabel="จุดเริ่มต้น: ผู้ใช้ส่งคำขอจองล่วงหน้า (ผ่านระบบออนไลน์)"
-                                    endLabel="สิ้นสุด: รับเครื่องจริง & แปลงเป็นสัญญาการยืม (Active Loan)"
-                                    steps={[
-                                        {
-                                            stepNum: 1,
-                                            actor: '👤 ผู้ใช้งาน',
-                                            actorRole: 'user',
-                                            title: 'ค้นหาอุปกรณ์ & คลิกปุ่ม "จอง"',
-                                            desc: 'เลือกอุปกรณ์ที่ต้องการใช้งานในอนาคตเพื่อล็อกคิวล่วงหน้า',
-                                        },
-                                        {
-                                            stepNum: 2,
-                                            actor: '👤 ผู้ใช้งาน',
-                                            actorRole: 'user',
-                                            title: 'ระบุช่วงวันรับ-คืน & วัตถุประสงค์',
-                                            desc: 'เลือกวันที่และเวลาเริ่มใช้งานและส่งคืนตามสิทธิ์โควตา แล้วกดยืนยันคำขอจอง',
-                                            statusBadge: '🟡 รออนุมัติการจอง (pending)'
-                                        },
-                                        {
-                                            stepNum: 3,
-                                            actor: '👮‍♂️ Staff / Admin',
-                                            actorRole: 'staff',
-                                            title: 'เจ้าหน้าที่พิจารณาอนุมัติการจอง',
-                                            desc: 'ตรวจสอบคิวการใช้งานและประวัติผู้ขอ แล้วตัดสินใจ:',
-                                            branches: [
-                                                {
-                                                    type: 'success',
-                                                    label: '🟢 อนุมัติการจอง (Approved)',
-                                                    text: 'คิวจองได้รับการยืนยัน อุปกรณ์ถูกล็อกไว้สำหรับผู้จอง',
-                                                    status: '🟣 จองสำเร็จ (approved)'
-                                                },
-                                                {
-                                                    type: 'danger',
-                                                    label: '🔴 ปฏิเสธ (Rejected)',
-                                                    text: 'ระบุเหตุผล เช่น อุปกรณ์มีคิวซ้อนทับ หรืออยู่ระหว่างส่งซ่อม',
-                                                    status: '🔴 rejected'
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            stepNum: 4,
-                                            actor: '🤖 Smart Cron (ก่อนวันนัดรับ)',
-                                            actorRole: 'system',
-                                            title: 'แจ้งเตือนเตรียมรับเครื่อง & ตรวจสอบการไม่มารับ',
-                                            desc: 'ระบบส่งแจ้งเตือนล่วงหน้า และติดตามการมารับตามเวลาที่นัดหมาย:',
-                                            branches: [
-                                                {
-                                                    type: 'alert',
-                                                    label: '⏰ แจ้งเตือนล่วงหน้า 1 วัน',
-                                                    text: 'ส่ง WeLPRU Push แจ้งผู้ใช้ว่าพรุ่งนี้ถึงกำหนดรับเครื่องที่เคาน์เตอร์'
-                                                },
-                                                {
-                                                    type: 'danger',
-                                                    label: '⚠️ ไม่มารับเครื่องตามนัด (No-show)',
-                                                    text: 'หากเลยเวลานัดเกิน 24 ชม. ระบบ Auto-Cancel ยกเลิกคิวจองอัตโนมัติ ปล่อยเครื่องว่างให้ผู้อื่น',
-                                                    status: '⚪ ยกเลิก (cancelled)'
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            stepNum: 5,
-                                            actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
-                                            actorRole: 'counter',
-                                            title: 'รับมอบเครื่อง & แปลงเป็นการยืมจริง',
-                                            desc: 'ผู้ใช้นำหลักฐานมารับเครื่อง เจ้าหน้าที่กดยืนยันส่งมอบ -> ระบบปรับการจองเป็น Completed และสร้างสัญญาการยืม Active Loan ทันที',
-                                            statusBadge: '📦 รับแล้ว (completed) -> 🔵 กำลังยืม (approved)'
-                                        },
-                                        {
-                                            stepNum: 6,
-                                            actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
-                                            actorRole: 'user',
-                                            title: 'ใช้งานตามกำหนด ส่งคืนที่เคาน์เตอร์ และทำแบบประเมิน',
-                                            desc: 'นำส่งคืนตามกำหนดเวลา -> เจ้าหน้าที่ตรวจสภาพ -> ทำแบบประเมินความพึงพอใจ 5 ดาว',
-                                            statusBadge: '⚪ คืนแล้ว (returned)'
-                                        }
-                                    ]}
-                                />
-                            </div>
-
-                            {/* Workflow 3: Onboarding Flow */}
-                            <div className={`space-y-6 animate-fadeIn ${activeWorkflowTab === 'onboarding' ? 'block' : 'hidden print:block print:mt-8'}`}>
-                                <WorkflowMetaBar
-                                    title="วงจรการสมัครสมาชิกและการอนุมัติบัญชีผู้ใช้งาน (User Onboarding Lifecycle)"
-                                    actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff), 🛡️ ผู้ดูแลระบบ (Admin)"
-                                    channels="Discord Webhook (ห้อง Auth), WeLPRU Mobile Push, In-App Alert"
-                                />
-                                <VisualFlowchart
-                                    startLabel="จุดเริ่มต้น: ผู้ใช้เข้าสู่ระบบด้วย Google ครั้งแรก"
-                                    endLabel="สิ้นสุด: บัญชีผ่านการอนุมัติ & เริ่มใช้งานระบบได้ทันที"
-                                    steps={[
-                                        {
-                                            stepNum: 1,
-                                            actor: '👤 ผู้ใช้งาน',
-                                            actorRole: 'user',
-                                            title: 'เข้าสู่ระบบด้วย Google Sign-In',
-                                            desc: 'คลิกเข้าสู่ระบบด้วยบัญชี Google เพื่อยืนยันตัวตนระดับแรก',
-                                        },
-                                        {
-                                            stepNum: 2,
-                                            actor: '👤 ผู้ใช้งาน',
-                                            actorRole: 'user',
-                                            title: 'กรอกข้อมูลโปรไฟล์ให้ครบถ้วน',
-                                            desc: 'ระบุชื่อ-นามสกุล, เบอร์โทร 10 หลัก, คณะ/สาขา, รหัสนักศึกษา/บุคลากร และเลือกประเภท (Student / Lecturer / Staff)',
-                                            statusBadge: '🟡 รอการอนุมัติ (pending)'
-                                        },
-                                        {
-                                            stepNum: 3,
-                                            actor: '🤖 ระบบ',
-                                            actorRole: 'system',
-                                            title: 'ส่งการแจ้งเตือน Discord แจ้งเจ้าหน้าที่',
-                                            desc: 'ระบบส่ง Webhook เข้าห้อง Auth ของเจ้าหน้าที่ เพื่อแจ้งเตือนว่ามีผู้ใช้ใหม่รออนุมัติ',
-                                        },
-                                        {
-                                            stepNum: 4,
-                                            actor: '👮‍♂️ Staff / 🛡️ Admin',
-                                            actorRole: 'staff',
-                                            title: 'ตรวจสอบข้อมูลและพิจารณาอนุมัติ',
-                                            desc: 'เจ้าหน้าที่เข้าไปที่เมนู /staff/users หรือ Admin ไปที่ /admin/users เพื่อตรวจสอบรหัสและข้อมูล',
-                                            branches: [
-                                                {
-                                                    type: 'success',
-                                                    label: '🟢 อนุมัติบัญชี (Approved)',
-                                                    text: 'ผู้ใช้ได้รับแจ้งเตือน บัญชีเปิดใช้งานสมบูรณ์ สามารถยืมและจองอุปกรณ์ได้ตามโควตา',
-                                                    status: '🟢 approved'
-                                                },
-                                                {
-                                                    type: 'danger',
-                                                    label: '🔴 ไม่อนุมัติ / ระงับสิทธิ์ (Rejected / Suspended)',
-                                                    text: 'ข้อมูลไม่ถูกต้อง หรือผิดระเบียบ ระบบระงับสิทธิ์ไม่ให้ทำรายการยืม-จอง',
-                                                    status: '🔴 rejected'
-                                                }
-                                            ]
-                                        }
-                                    ]}
-                                />
-                            </div>
-
-                            {/* Workflow 4: Return & Inspection Flow */}
-                            <div className={`space-y-6 animate-fadeIn ${activeWorkflowTab === 'inspection' ? 'block' : 'hidden print:block print:mt-8'}`}>
-                                <WorkflowMetaBar
-                                    title="วงจรการรับคืน ตรวจสภาพอุปกรณ์ และประเมินความพึงพอใจ (Return, Inspection & Evaluation)"
-                                    actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff)"
-                                    channels="Discord Webhook (ห้อง General), In-App Evaluation Prompt"
-                                />
-                                <VisualFlowchart
-                                    startLabel="จุดเริ่มต้น: ผู้ใช้นำอุปกรณ์และอุปกรณ์เสริมมาส่งคืนเคาน์เตอร์"
-                                    endLabel="สิ้นสุด: ครุภัณฑ์พร้อมให้บริการต่อ / ดำเนินการส่งซ่อมบำรุง"
-                                    steps={[
-                                        {
-                                            stepNum: 1,
-                                            actor: '👤 ผู้ใช้งาน',
-                                            actorRole: 'user',
-                                            title: 'นำอุปกรณ์มาส่งคืนที่เคาน์เตอร์',
-                                            desc: 'เตรียมเครื่อง สายชาร์จ กระเป๋า ลบข้อมูลส่วนตัว แล้วนำมาส่งที่เคาน์เตอร์บริการ',
-                                            statusBadge: '🔵 กำลังยืม (borrowed)'
-                                        },
-                                        {
-                                            stepNum: 2,
-                                            actor: '👮‍♂️ Staff',
-                                            actorRole: 'counter',
-                                            title: 'ค้นหารายการผ่านระบบ Fast Counter',
-                                            desc: 'สแกนบาร์โค้ด หรือพิมพ์หมายเลขครุภัณฑ์ ระบบจะดึงข้อมูลผู้ยืมขึ้นมาอัตโนมัติใน 1 วินาที',
-                                        },
-                                        {
-                                            stepNum: 3,
-                                            actor: '👮‍♂️ Staff',
-                                            actorRole: 'staff',
-                                            title: 'ตรวจสอบสภาพอุปกรณ์ 3 ระดับ',
-                                            desc: 'ตรวจเช็คตัวเครื่อง หน้าจอ แป้นพิมพ์ และอุปกรณ์เสริมอย่างละเอียด',
-                                            branches: [
-                                                {
-                                                    type: 'success',
-                                                    label: '🟢 สภาพสมบูรณ์ (Good)',
-                                                    text: 'เครื่องปกติ อุปกรณ์ครบ -> ระบบปรับอุปกรณ์เป็น ว่าง (available) ทันที',
-                                                    status: '🟢 available'
-                                                },
-                                                {
-                                                    type: 'alert',
-                                                    label: '🟡 ชำรุดเสียหาย (Damaged)',
-                                                    text: 'บันทึกหมายเหตุความเสียหาย -> ปรับอุปกรณ์เป็น ซ่อมบำรุง (maintenance)',
-                                                    status: '🟡 maintenance'
-                                                },
-                                                {
-                                                    type: 'danger',
-                                                    label: '🔴 อุปกรณ์เสริมไม่ครบ (Missing Parts)',
-                                                    text: 'ระบุรายการอุปกรณ์ที่ขาด (เช่น สายชาร์จ) เพื่อติดตามทวงถาม',
-                                                    status: '🟡 maintenance'
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            stepNum: 4,
-                                            actor: '👮‍♂️ Staff + 🤖 ระบบ',
-                                            actorRole: 'system',
-                                            title: 'ยืนยันรับคืน & อัปเดตสถานะสำเร็จ',
-                                            desc: 'ระบบเปลี่ยนสถานะคำขอเป็น "คืนแล้ว (Returned)" และส่งการแจ้งเตือนยืนยันการคืน',
-                                            statusBadge: '⚪ คืนแล้ว (returned)'
-                                        },
-                                        {
-                                            stepNum: 5,
-                                            actor: '👤 ผู้ใช้งาน',
-                                            actorRole: 'user',
-                                            title: 'ทำแบบประเมินความพึงพอใจ 5 ดาว',
-                                            desc: 'ผู้ใช้เข้าไปที่หน้าคำขอของฉัน คลิกปุ่ม "ประเมินความพึงพอใจ" เพื่อให้คะแนน 1-5 ดาว และกรอกข้อเสนอแนะเพื่อนำไปพัฒนาบริการ',
-                                            statusBadge: '⭐ ประเมินผลแล้ว'
-                                        }
-                                    ]}
-                                />
-                            </div>
-
-                            {/* Legend Bar */}
-                            <div className="mt-6 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-[11px] sm:text-xs text-slate-500">
-                                <div className="flex flex-wrap items-center gap-3">
-                                    <span className="font-semibold text-slate-700">สัญลักษณ์บทบาท:</span>
-                                    <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-800 px-2 py-0.5 rounded border border-blue-200">👤 ผู้ใช้ (User)</span>
-                                    <span className="inline-flex items-center gap-1 bg-teal-50 text-teal-800 px-2 py-0.5 rounded border border-teal-200">👮‍♂️ เจ้าหน้าที่ (Staff)</span>
-                                    <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-800 px-2 py-0.5 rounded border border-purple-200">🤖 ระบบ (Smart Cron)</span>
+                                {/* Workflow Tabs (Touch-friendly & swipeable on mobile) */}
+                                <div className="flex overflow-x-auto no-scrollbar gap-2 pb-2 border-b border-slate-100 print-hidden">
+                                    <button
+                                        onClick={() => setActiveWorkflowTab('loan')}
+                                        className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${activeWorkflowTab === 'loan' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                    >
+                                        <Send className="w-3.5 h-3.5" />
+                                        <span>วงจรการยืมทันที (Direct Loan)</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveWorkflowTab('reservation')}
+                                        className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${activeWorkflowTab === 'reservation' ? 'bg-purple-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                    >
+                                        <CalendarPlus className="w-3.5 h-3.5" />
+                                        <span>วงจรการจองล่วงหน้า (Reservation)</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveWorkflowTab('onboarding')}
+                                        className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${activeWorkflowTab === 'onboarding' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                    >
+                                        <UserPlus className="w-3.5 h-3.5" />
+                                        <span>การสมัครสมาชิก & อนุมัติ (Onboarding)</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveWorkflowTab('inspection')}
+                                        className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${activeWorkflowTab === 'inspection' ? 'bg-amber-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                    >
+                                        <RotateCcw className="w-3.5 h-3.5" />
+                                        <span>ตรวจสภาพ & ประเมินผล (Inspection)</span>
+                                    </button>
                                 </div>
-                                <span className="text-slate-400">รองรับการแสดงผลทั้งหน้าจอมือถือและเดสก์ท็อป</span>
+
+                                {/* Workflow 1: Direct Loan Flow */}
+                                <div className={`space-y-6 animate-fadeIn ${activeWorkflowTab === 'loan' ? 'block' : 'hidden print:block print:mt-8'}`}>
+                                    <WorkflowMetaBar
+                                        title="วงจรการขอยืมอุปกรณ์ทันทีและการส่งคืน (Direct Lending & Return Flow)"
+                                        actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff), 🤖 Smart Cron (08:30 น.)"
+                                        channels="WeLPRU Mobile Push, Discord Webhook, In-App Alert"
+                                    />
+                                    <VisualFlowchart
+                                        startLabel="จุดเริ่มต้น: ผู้ใช้ทำรายการยืมทันที (หน้าเคาน์เตอร์)"
+                                        endLabel="สิ้นสุด: ส่งคืนอุปกรณ์ & บันทึกผลประเมินเสร็จสิ้น"
+                                        steps={[
+                                            {
+                                                stepNum: 1,
+                                                actor: '👤 ผู้ใช้งาน',
+                                                actorRole: 'user',
+                                                title: 'สแกน QR บนตัวเครื่อง หรือเลือกเครื่องว่าง',
+                                                desc: 'สแกนสติกเกอร์ QR Code บนตัวเครื่องจริง (แนะนำ) เพื่อรับสิทธิ์หน้างาน หรือเลือกเครื่องสถานะว่างผ่านหน้ารายการอุปกรณ์',
+                                                statusBadge: '🟢 ว่าง (available)',
+                                            },
+                                            {
+                                                stepNum: 2,
+                                                actor: '👤 ผู้ใช้งาน',
+                                                actorRole: 'user',
+                                                title: 'สแกน QR ยืนยันเครื่องจริง & ระบุวัน-เวลาคืน',
+                                                desc: 'สแกน QR ยืนยันการมีตัวเครื่องจริง (On-site Verification) กำหนดวัน-เวลาคืน วัตถุประสงค์ แล้วกดยืนยันคำขอ',
+                                                branches: [
+                                                    {
+                                                        type: 'special',
+                                                        label: '📱 การยืนยันสิทธิ์หน้างาน (On-site QR)',
+                                                        text: 'การยืมทันทีต้องสแกน QR Code บนตัวเครื่องจริง หากไม่ได้อยู่หน้าเครื่องให้เลือก "จองล่วงหน้า"',
+                                                        status: '⚡ on-site token'
+                                                    },
+                                                    {
+                                                        type: 'special',
+                                                        label: '⚡ กรณี Staff / Admin ยืมเอง',
+                                                        text: 'ระบบ Auto-Approve อนุมัติทันที ข้ามขั้นตอนรอตรวจ ไปรับเครื่องได้ทันที',
+                                                        status: '🟢 approved'
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                stepNum: 3,
+                                                actor: '👮‍♂️ Staff / Admin',
+                                                actorRole: 'staff',
+                                                title: 'ตรวจสอบและอนุมัติคำขอ',
+                                                desc: 'เจ้าหน้าที่ตรวจสอบความพร้อมและกดยืนยันอนุมัติคำขอ',
+                                                branches: [
+                                                    {
+                                                        type: 'success',
+                                                        label: '🟢 อนุมัติ (Approved)',
+                                                        text: 'ระบบส่งการแจ้งเตือน WeLPRU นัดหมายรับเครื่อง',
+                                                        status: '🟢 approved'
+                                                    },
+                                                    {
+                                                        type: 'danger',
+                                                        label: '🔴 ปฏิเสธ (Rejected)',
+                                                        text: 'เจ้าหน้าที่ระบุเหตุผลในการไม่อนุมัติ สิ้นสุดคำขอ',
+                                                        status: '🔴 rejected'
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                stepNum: 4,
+                                                actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
+                                                actorRole: 'counter',
+                                                title: 'รับมอบเครื่องที่เคาน์เตอร์บริการ',
+                                                desc: 'ตรวจสอบตัวเครื่องและอุปกรณ์เสริมร่วมกัน -> เจ้าหน้าที่กดยืนยันส่งมอบ -> เริ่มนับเวลาการยืม',
+                                                statusBadge: '🔵 กำลังยืม (borrowed)'
+                                            },
+                                            {
+                                                stepNum: 5,
+                                                actor: '🤖 Smart Cron (08:30 น.)',
+                                                actorRole: 'system',
+                                                title: 'ระบบตรวจสอบกำหนดคืนอัตโนมัติ',
+                                                desc: 'Smart Cron รันตรวจสอบทุก 08:30 น. ของทุกวัน:',
+                                                branches: [
+                                                    {
+                                                        type: 'alert',
+                                                        label: '🔔 ถึงกำหนดคืนวันนี้',
+                                                        text: 'ระบบส่งแจ้งเตือนเตือนความจำไปยัง WeLPRU ให้เตรียมส่งคืน'
+                                                    },
+                                                    {
+                                                        type: 'danger',
+                                                        label: '⚠️ เลยกำหนดคืน (Overdue)',
+                                                        text: 'ขึ้นสถานะค้างคืน -> ส่งแจ้งเตือนฉุกเฉิน WeLPRU ถึงผู้ยืม + แจ้ง Discord เจ้าหน้าที่',
+                                                        status: '⚠️ ค้างคืน (overdue)'
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                stepNum: 6,
+                                                actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
+                                                actorRole: 'counter',
+                                                title: 'ส่งคืนที่เคาน์เตอร์ & ตรวจสภาพ 3 ระดับ',
+                                                desc: 'นำอุปกรณ์มาส่งคืนที่เคาน์เตอร์ เจ้าหน้าที่ตรวจสภาพเครื่องและอุปกรณ์เสริม',
+                                                branches: [
+                                                    {
+                                                        type: 'success',
+                                                        label: '🟢 สมบูรณ์ (Good)',
+                                                        text: 'เครื่องและสายชาร์จครบ -> อุปกรณ์กลับสู่สถานะ ว่าง (available)',
+                                                        status: '🟢 available'
+                                                    },
+                                                    {
+                                                        type: 'alert',
+                                                        label: '🟡 ชำรุด (Damaged) / 🔴 ของไม่ครบ (Missing)',
+                                                        text: 'บันทึกหมายเหตุความเสียหาย -> ปรับสถานะเป็นซ่อมบำรุง (maintenance)',
+                                                        status: '🟡 maintenance'
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                stepNum: 7,
+                                                actor: '👤 ผู้ใช้งาน',
+                                                actorRole: 'user',
+                                                title: 'ทำแบบประเมินความพึงพอใจ 5 ดาว',
+                                                desc: 'ในหน้าคำขอของฉัน คลิกปุ่มประเมิน ให้คะแนนสภาพอุปกรณ์และการบริการ พร้อมระบุข้อเสนอแนะ -> สิ้นสุดกระบวนการสมบูรณ์',
+                                                statusBadge: '⚪ คืนแล้ว (returned)'
+                                            }
+                                        ]}
+                                    />
+                                </div>
+
+                                {/* Workflow 2: Reservation Flow */}
+                                <div className={`space-y-6 animate-fadeIn ${activeWorkflowTab === 'reservation' ? 'block' : 'hidden print:block print:mt-8'}`}>
+                                    <WorkflowMetaBar
+                                        title="วงจรการจองอุปกรณ์ล่วงหน้าและการแปลงสัญญา (Advance Reservation Flow)"
+                                        actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff), 🤖 Smart Cron Engine"
+                                        channels="WeLPRU Mobile Push, Discord Webhook (ห้อง Reservation), In-App Alert"
+                                    />
+                                    <VisualFlowchart
+                                        startLabel="จุดเริ่มต้น: ผู้ใช้ส่งคำขอจองล่วงหน้า (ผ่านระบบออนไลน์)"
+                                        endLabel="สิ้นสุด: รับเครื่องจริง & แปลงเป็นสัญญาการยืม (Active Loan)"
+                                        steps={[
+                                            {
+                                                stepNum: 1,
+                                                actor: '👤 ผู้ใช้งาน',
+                                                actorRole: 'user',
+                                                title: 'ค้นหาอุปกรณ์ & คลิกปุ่ม "จอง"',
+                                                desc: 'เลือกอุปกรณ์ที่ต้องการใช้งานในอนาคตเพื่อล็อกคิวล่วงหน้า',
+                                            },
+                                            {
+                                                stepNum: 2,
+                                                actor: '👤 ผู้ใช้งาน',
+                                                actorRole: 'user',
+                                                title: 'ระบุช่วงวันรับ-คืน & วัตถุประสงค์',
+                                                desc: 'เลือกวันที่และเวลาเริ่มใช้งานและส่งคืนตามสิทธิ์โควตา แล้วกดยืนยันคำขอจอง',
+                                                statusBadge: '🟡 รออนุมัติการจอง (pending)'
+                                            },
+                                            {
+                                                stepNum: 3,
+                                                actor: '👮‍♂️ Staff / Admin',
+                                                actorRole: 'staff',
+                                                title: 'เจ้าหน้าที่พิจารณาอนุมัติการจอง',
+                                                desc: 'ตรวจสอบคิวการใช้งานและประวัติผู้ขอ แล้วตัดสินใจ:',
+                                                branches: [
+                                                    {
+                                                        type: 'success',
+                                                        label: '🟢 อนุมัติการจอง (Approved)',
+                                                        text: 'คิวจองได้รับการยืนยัน อุปกรณ์ถูกล็อกไว้สำหรับผู้จอง',
+                                                        status: '🟣 จองสำเร็จ (approved)'
+                                                    },
+                                                    {
+                                                        type: 'danger',
+                                                        label: '🔴 ปฏิเสธ (Rejected)',
+                                                        text: 'ระบุเหตุผล เช่น อุปกรณ์มีคิวซ้อนทับ หรืออยู่ระหว่างส่งซ่อม',
+                                                        status: '🔴 rejected'
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                stepNum: 4,
+                                                actor: '🤖 Smart Cron (ก่อนวันนัดรับ)',
+                                                actorRole: 'system',
+                                                title: 'แจ้งเตือนเตรียมรับเครื่อง & ตรวจสอบการไม่มารับ',
+                                                desc: 'ระบบส่งแจ้งเตือนล่วงหน้า และติดตามการมารับตามเวลาที่นัดหมาย:',
+                                                branches: [
+                                                    {
+                                                        type: 'alert',
+                                                        label: '⏰ แจ้งเตือนล่วงหน้า 1 วัน',
+                                                        text: 'ส่ง WeLPRU Push แจ้งผู้ใช้ว่าพรุ่งนี้ถึงกำหนดรับเครื่องที่เคาน์เตอร์'
+                                                    },
+                                                    {
+                                                        type: 'danger',
+                                                        label: '⚠️ ไม่มารับเครื่องตามนัด (No-show)',
+                                                        text: 'หากเลยเวลานัดเกิน 24 ชม. ระบบ Auto-Cancel ยกเลิกคิวจองอัตโนมัติ ปล่อยเครื่องว่างให้ผู้อื่น',
+                                                        status: '⚪ ยกเลิก (cancelled)'
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                stepNum: 5,
+                                                actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
+                                                actorRole: 'counter',
+                                                title: 'รับมอบเครื่อง & แปลงเป็นการยืมจริง',
+                                                desc: 'ผู้ใช้นำหลักฐานมารับเครื่อง เจ้าหน้าที่กดยืนยันส่งมอบ -> ระบบปรับการจองเป็น Completed และสร้างสัญญาการยืม Active Loan ทันที',
+                                                statusBadge: '📦 รับแล้ว (completed) -> 🔵 กำลังยืม (approved)'
+                                            },
+                                            {
+                                                stepNum: 6,
+                                                actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
+                                                actorRole: 'user',
+                                                title: 'ใช้งานตามกำหนด ส่งคืนที่เคาน์เตอร์ และทำแบบประเมิน',
+                                                desc: 'นำส่งคืนตามกำหนดเวลา -> เจ้าหน้าที่ตรวจสภาพ -> ทำแบบประเมินความพึงพอใจ 5 ดาว',
+                                                statusBadge: '⚪ คืนแล้ว (returned)'
+                                            }
+                                        ]}
+                                    />
+                                </div>
+
+                                {/* Workflow 3: Onboarding Flow */}
+                                <div className={`space-y-6 animate-fadeIn ${activeWorkflowTab === 'onboarding' ? 'block' : 'hidden print:block print:mt-8'}`}>
+                                    <WorkflowMetaBar
+                                        title="วงจรการสมัครสมาชิกและการอนุมัติบัญชีผู้ใช้งาน (User Onboarding Lifecycle)"
+                                        actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff), 🛡️ ผู้ดูแลระบบ (Admin)"
+                                        channels="Discord Webhook (ห้อง Auth), WeLPRU Mobile Push, In-App Alert"
+                                    />
+                                    <VisualFlowchart
+                                        startLabel="จุดเริ่มต้น: ผู้ใช้เข้าสู่ระบบด้วย Google ครั้งแรก"
+                                        endLabel="สิ้นสุด: บัญชีผ่านการอนุมัติ & เริ่มใช้งานระบบได้ทันที"
+                                        steps={[
+                                            {
+                                                stepNum: 1,
+                                                actor: '👤 ผู้ใช้งาน',
+                                                actorRole: 'user',
+                                                title: 'เข้าสู่ระบบด้วย Google Sign-In',
+                                                desc: 'คลิกเข้าสู่ระบบด้วยบัญชี Google เพื่อยืนยันตัวตนระดับแรก',
+                                            },
+                                            {
+                                                stepNum: 2,
+                                                actor: '👤 ผู้ใช้งาน',
+                                                actorRole: 'user',
+                                                title: 'กรอกข้อมูลโปรไฟล์ให้ครบถ้วน',
+                                                desc: 'ระบุชื่อ-นามสกุล, เบอร์โทร 10 หลัก, คณะ/สาขา, รหัสนักศึกษา/บุคลากร และเลือกประเภท (Student / Lecturer / Staff)',
+                                                statusBadge: '🟡 รอการอนุมัติ (pending)'
+                                            },
+                                            {
+                                                stepNum: 3,
+                                                actor: '🤖 ระบบ',
+                                                actorRole: 'system',
+                                                title: 'ส่งการแจ้งเตือน Discord แจ้งเจ้าหน้าที่',
+                                                desc: 'ระบบส่ง Webhook เข้าห้อง Auth ของเจ้าหน้าที่ เพื่อแจ้งเตือนว่ามีผู้ใช้ใหม่รออนุมัติ',
+                                            },
+                                            {
+                                                stepNum: 4,
+                                                actor: '👮‍♂️ Staff / 🛡️ Admin',
+                                                actorRole: 'staff',
+                                                title: 'ตรวจสอบข้อมูลและพิจารณาอนุมัติ',
+                                                desc: 'เจ้าหน้าที่เข้าไปที่เมนู /staff/users หรือ Admin ไปที่ /admin/users เพื่อตรวจสอบรหัสและข้อมูล',
+                                                branches: [
+                                                    {
+                                                        type: 'success',
+                                                        label: '🟢 อนุมัติบัญชี (Approved)',
+                                                        text: 'ผู้ใช้ได้รับแจ้งเตือน บัญชีเปิดใช้งานสมบูรณ์ สามารถยืมและจองอุปกรณ์ได้ตามโควตา',
+                                                        status: '🟢 approved'
+                                                    },
+                                                    {
+                                                        type: 'danger',
+                                                        label: '🔴 ไม่อนุมัติ / ระงับสิทธิ์ (Rejected / Suspended)',
+                                                        text: 'ข้อมูลไม่ถูกต้อง หรือผิดระเบียบ ระบบระงับสิทธิ์ไม่ให้ทำรายการยืม-จอง',
+                                                        status: '🔴 rejected'
+                                                    }
+                                                ]
+                                            }
+                                        ]}
+                                    />
+                                </div>
+
+                                {/* Workflow 4: Return & Inspection Flow */}
+                                <div className={`space-y-6 animate-fadeIn ${activeWorkflowTab === 'inspection' ? 'block' : 'hidden print:block print:mt-8'}`}>
+                                    <WorkflowMetaBar
+                                        title="วงจรการรับคืน ตรวจสภาพอุปกรณ์ และประเมินความพึงพอใจ (Return, Inspection & Evaluation)"
+                                        actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff)"
+                                        channels="Discord Webhook (ห้อง General), In-App Evaluation Prompt"
+                                    />
+                                    <VisualFlowchart
+                                        startLabel="จุดเริ่มต้น: ผู้ใช้นำอุปกรณ์และอุปกรณ์เสริมมาส่งคืนเคาน์เตอร์"
+                                        endLabel="สิ้นสุด: ครุภัณฑ์พร้อมให้บริการต่อ / ดำเนินการส่งซ่อมบำรุง"
+                                        steps={[
+                                            {
+                                                stepNum: 1,
+                                                actor: '👤 ผู้ใช้งาน',
+                                                actorRole: 'user',
+                                                title: 'นำอุปกรณ์มาส่งคืนที่เคาน์เตอร์',
+                                                desc: 'เตรียมเครื่อง สายชาร์จ กระเป๋า ลบข้อมูลส่วนตัว แล้วนำมาส่งที่เคาน์เตอร์บริการ',
+                                                statusBadge: '🔵 กำลังยืม (borrowed)'
+                                            },
+                                            {
+                                                stepNum: 2,
+                                                actor: '👮‍♂️ Staff',
+                                                actorRole: 'counter',
+                                                title: 'ค้นหารายการผ่านระบบ Fast Counter',
+                                                desc: 'สแกนบาร์โค้ด หรือพิมพ์หมายเลขครุภัณฑ์ ระบบจะดึงข้อมูลผู้ยืมขึ้นมาอัตโนมัติใน 1 วินาที',
+                                            },
+                                            {
+                                                stepNum: 3,
+                                                actor: '👮‍♂️ Staff',
+                                                actorRole: 'staff',
+                                                title: 'ตรวจสอบสภาพอุปกรณ์ 3 ระดับ',
+                                                desc: 'ตรวจเช็คตัวเครื่อง หน้าจอ แป้นพิมพ์ และอุปกรณ์เสริมอย่างละเอียด',
+                                                branches: [
+                                                    {
+                                                        type: 'success',
+                                                        label: '🟢 สภาพสมบูรณ์ (Good)',
+                                                        text: 'เครื่องปกติ อุปกรณ์ครบ -> ระบบปรับอุปกรณ์เป็น ว่าง (available) ทันที',
+                                                        status: '🟢 available'
+                                                    },
+                                                    {
+                                                        type: 'alert',
+                                                        label: '🟡 ชำรุดเสียหาย (Damaged)',
+                                                        text: 'บันทึกหมายเหตุความเสียหาย -> ปรับอุปกรณ์เป็น ซ่อมบำรุง (maintenance)',
+                                                        status: '🟡 maintenance'
+                                                    },
+                                                    {
+                                                        type: 'danger',
+                                                        label: '🔴 อุปกรณ์เสริมไม่ครบ (Missing Parts)',
+                                                        text: 'ระบุรายการอุปกรณ์ที่ขาด (เช่น สายชาร์จ) เพื่อติดตามทวงถาม',
+                                                        status: '🟡 maintenance'
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                stepNum: 4,
+                                                actor: '👮‍♂️ Staff + 🤖 ระบบ',
+                                                actorRole: 'system',
+                                                title: 'ยืนยันรับคืน & อัปเดตสถานะสำเร็จ',
+                                                desc: 'ระบบเปลี่ยนสถานะคำขอเป็น "คืนแล้ว (Returned)" และส่งการแจ้งเตือนยืนยันการคืน',
+                                                statusBadge: '⚪ คืนแล้ว (returned)'
+                                            },
+                                            {
+                                                stepNum: 5,
+                                                actor: '👤 ผู้ใช้งาน',
+                                                actorRole: 'user',
+                                                title: 'ทำแบบประเมินความพึงพอใจ 5 ดาว',
+                                                desc: 'ผู้ใช้เข้าไปที่หน้าคำขอของฉัน คลิกปุ่ม "ประเมินความพึงพอใจ" เพื่อให้คะแนน 1-5 ดาว และกรอกข้อเสนอแนะเพื่อนำไปพัฒนาบริการ',
+                                                statusBadge: '⭐ ประเมินผลแล้ว'
+                                            }
+                                        ]}
+                                    />
+                                </div>
+
+                                {/* Legend Bar */}
+                                <div className="mt-6 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-[11px] sm:text-xs text-slate-500">
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <span className="font-semibold text-slate-700">สัญลักษณ์บทบาท:</span>
+                                        <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-800 px-2 py-0.5 rounded border border-blue-200">👤 ผู้ใช้ (User)</span>
+                                        <span className="inline-flex items-center gap-1 bg-teal-50 text-teal-800 px-2 py-0.5 rounded border border-teal-200">👮‍♂️ เจ้าหน้าที่ (Staff)</span>
+                                        <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-800 px-2 py-0.5 rounded border border-purple-200">🤖 ระบบ (Smart Cron)</span>
+                                    </div>
+                                    <span className="text-slate-400">รองรับการแสดงผลทั้งหน้าจอมือถือและเดสก์ท็อป</span>
+                                </div>
                             </div>
-                        </div>
-                    </section>
+                        </Section>
+                    </div>
 
                     {/* Quick Launch CTA */}
-                    <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-6 sm:p-8 text-white shadow-lg print-hidden">
+                    <div className="mt-12 bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 rounded-2xl p-6 sm:p-8 text-white shadow-lg print-hidden">
                         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                             <div>
                                 <h3 className="text-xl font-bold mb-1.5">พร้อมเริ่มต้นใช้งานแล้วหรือยัง?</h3>
@@ -1148,13 +1118,13 @@ export default function UserGuidePage() {
                             <div className="flex flex-wrap items-center gap-3">
                                 <Link
                                     href="/equipment"
-                                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-blue-700 font-semibold rounded-xl hover:bg-blue-50 transition-all text-sm shadow-sm"
+                                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-blue-700 font-semibold rounded-xl hover:bg-blue-50 transition-all text-sm shadow-sm active:scale-95"
                                 >
                                     <Monitor className="w-4 h-4" /> ดูรายการอุปกรณ์
                                 </Link>
                                 <Link
                                     href="/my-loans"
-                                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white/15 hover:bg-white/25 text-white font-semibold rounded-xl border border-white/20 backdrop-blur-sm transition-all text-sm"
+                                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white/15 hover:bg-white/25 text-white font-semibold rounded-xl border border-white/20 backdrop-blur-sm transition-all text-sm active:scale-95"
                                 >
                                     <Package className="w-4 h-4" /> คำขอของฉัน
                                 </Link>
@@ -1162,8 +1132,18 @@ export default function UserGuidePage() {
                         </div>
                     </div>
 
+                    {/* Footer Note */}
+                    <div className="mt-14 text-center border-t border-slate-200 pt-8 pb-4">
+                        <p className="text-slate-500 text-xs sm:text-sm mb-1">
+                            คู่มือการใช้งานสำหรับผู้ใช้งานทั่วไป (User Guide) — ระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์
+                        </p>
+                        <p className="text-slate-400 text-xs">
+                            หากพบปัญหาการใช้งานหรือมีข้อสงสัย กรุณาติดต่อเจ้าหน้าที่ประจำเคาน์เตอร์บริการ หรือติดต่อผ่านระบบ Support Chat
+                        </p>
+                    </div>
+
                     {/* Back Link */}
-                    <div className="mt-8 text-center print-hidden">
+                    <div className="mt-4 mb-8 text-center print-hidden">
                         <Link
                             href="/"
                             className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 text-sm font-medium transition-colors"
@@ -1179,27 +1159,74 @@ export default function UserGuidePage() {
     )
 }
 
-/* ─── Helper UI Components ─── */
+/* ─── Helper UI Components Matching Admin & Staff Manuals ─── */
 
-function QuickNavChip({ href, label, color }: { href: string; label: string; color: string }) {
+function QuickNavLink({ href, icon: Icon, label, color }: { href: string; icon: any; label: string; color: string }) {
+    const colorClasses: Record<string, string> = {
+        blue: 'hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200',
+        indigo: 'hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200',
+        orange: 'hover:bg-orange-50 hover:text-orange-700 hover:border-orange-200',
+        teal: 'hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200',
+        green: 'hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200',
+        purple: 'hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200',
+        amber: 'hover:bg-amber-50 hover:text-amber-800 hover:border-amber-200',
+        slate: 'hover:bg-slate-100 hover:text-slate-800 hover:border-slate-300',
+        violet: 'hover:bg-violet-50 hover:text-violet-700 hover:border-violet-200',
+        sky: 'hover:bg-sky-50 hover:text-sky-700 hover:border-sky-200',
+        gray: 'hover:bg-gray-100 hover:text-gray-800 hover:border-gray-300',
+    }
+
     return (
         <a
             href={href}
-            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-700 rounded-lg text-xs font-medium transition-colors"
+            className={`flex flex-col items-center justify-center p-2 sm:p-2.5 rounded-xl border border-slate-200/80 bg-white text-slate-600 transition-all shadow-2xs active:scale-95 ${colorClasses[color] || colorClasses.slate}`}
         >
-            {label}
+            <Icon className="w-4 h-4 mb-1 shrink-0" />
+            <span className="text-[11px] font-semibold leading-tight truncate w-full">{label}</span>
         </a>
     )
 }
 
-function SectionHeader({ icon: Icon, iconColor, iconBg, title }: { icon: any; iconColor: string; iconBg: string; title: string }) {
+function Section({ id, title, icon: Icon, children, color }: { id: string; title: string; icon: any; children: React.ReactNode; color: string }) {
+    const headerColors: Record<string, string> = {
+        blue: 'text-blue-800',
+        indigo: 'text-indigo-800',
+        orange: 'text-orange-800',
+        teal: 'text-teal-800',
+        green: 'text-emerald-800',
+        purple: 'text-purple-800',
+        amber: 'text-amber-800',
+        slate: 'text-slate-800',
+        violet: 'text-violet-800',
+        sky: 'text-sky-800',
+        gray: 'text-slate-800',
+    }
+    const bgColors: Record<string, string> = {
+        blue: 'bg-blue-100 text-blue-700',
+        indigo: 'bg-indigo-100 text-indigo-700',
+        orange: 'bg-orange-100 text-orange-700',
+        teal: 'bg-teal-100 text-teal-700',
+        green: 'bg-emerald-100 text-emerald-700',
+        purple: 'bg-purple-100 text-purple-700',
+        amber: 'bg-amber-100 text-amber-700',
+        slate: 'bg-slate-200 text-slate-700',
+        violet: 'bg-violet-100 text-violet-700',
+        sky: 'bg-sky-100 text-sky-700',
+        gray: 'bg-slate-200 text-slate-700',
+    }
+
     return (
-        <div className="flex items-center gap-3 mb-4">
-            <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center shrink-0`}>
-                <Icon className={`w-5 h-5 ${iconColor}`} />
+        <section id={id} className="scroll-mt-24">
+            <div className="flex items-center gap-3 mb-4">
+                <div className={`p-2 rounded-xl ${bgColors[color] || 'bg-slate-100 text-slate-700'} shrink-0 shadow-2xs`}>
+                    <Icon className="w-5 h-5" />
+                </div>
+                <h3 className={`text-lg sm:text-xl font-bold ${headerColors[color] || 'text-slate-800'} tracking-tight`}>{title}</h3>
             </div>
-            <h2 className="text-xl font-bold text-slate-900 tracking-tight">{title}</h2>
-        </div>
+            <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
+                {children}
+            </div>
+        </section>
     )
 }
 
@@ -1208,7 +1235,7 @@ function UserTypeCard({ icon, title, desc, quota, badgeColor }: { icon: string; 
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
             <div>
                 <div className="text-2xl mb-2">{icon}</div>
-                <h4 className="font-bold text-slate-900 text-sm mb-1">{title}</h4>
+                <h5 className="font-bold text-slate-900 text-sm mb-1">{title}</h5>
                 <p className="text-xs text-slate-500 leading-relaxed mb-3">{desc}</p>
             </div>
             <span className={`inline-block px-2.5 py-1 rounded-md text-[11px] font-medium border ${badgeColor}`}>
@@ -1250,7 +1277,7 @@ function Step({ number, title, description, isLast = false }: {
     isLast?: boolean
 }) {
     return (
-        <div className="flex gap-4 p-5 sm:p-6">
+        <div className="flex gap-4 p-4 sm:p-5">
             <div className={`flex flex-col items-center ${isLast ? '' : 'relative'}`}>
                 <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
                     {number}
@@ -1260,8 +1287,8 @@ function Step({ number, title, description, isLast = false }: {
                 )}
             </div>
             <div className="pt-0.5 flex-1">
-                <h4 className="font-bold text-slate-900 text-base mb-1">{title}</h4>
-                <div className="text-sm text-slate-600 leading-relaxed">{description}</div>
+                <h5 className="font-bold text-slate-900 text-sm sm:text-base mb-1">{title}</h5>
+                <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">{description}</div>
             </div>
         </div>
     )
@@ -1308,25 +1335,5 @@ function WorkflowMetaBar({ title, actors, channels }: { title: string; actors: s
                 </div>
             </div>
         </div>
-    )
-}
-
-
-function LayersIcon(props: any) {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-            <polygon points="12 2 2 7 12 12 22 7 12 2" />
-            <polyline points="2 17 12 22 22 17" />
-            <polyline points="2 12 12 17 22 12" />
-        </svg>
-    )
-}
-
-function TagIcon(props: any) {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-            <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
-            <path d="M7 7h.01" />
-        </svg>
     )
 }
