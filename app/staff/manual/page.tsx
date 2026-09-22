@@ -18,14 +18,16 @@ export default function StaffManualPage() {
 
     return (
         <div className="space-y-6">
-            <StaffPageHeader
-                title="คู่มือการใช้งาน (สำหรับเจ้าหน้าที่ปฏิบัติการ)"
-                subtitle="แนะนำการใช้งานระบบทุกฟังก์ชันสำหรับเจ้าหน้าที่ (Staff) — Notebook System V5"
-            />
+            <div className="print-hidden">
+                <StaffPageHeader
+                    title="คู่มือการใช้งาน (สำหรับเจ้าหน้าที่ปฏิบัติการ)"
+                    subtitle="แนะนำการใช้งานระบบทุกฟังก์ชันสำหรับเจ้าหน้าที่ (Staff) — Notebook System V5"
+                />
+            </div>
 
             <div className="max-w-5xl mx-auto">
                 {/* Introduction Banner */}
-                <div className="bg-gradient-to-r from-teal-700 via-teal-800 to-emerald-800 rounded-2xl p-6 sm:p-8 mb-8 text-white shadow-lg">
+                <div className="manual-header-banner bg-gradient-to-r from-teal-700 via-teal-800 to-emerald-800 rounded-2xl p-6 sm:p-8 mb-8 text-white shadow-lg">
                     <div className="flex items-start gap-5">
                         <div className="p-3 bg-white/15 backdrop-blur-md rounded-2xl border border-white/20 hidden sm:block shadow-inner shrink-0">
                             <HelpCircle className="w-8 h-8 text-white" />
@@ -85,7 +87,7 @@ export default function StaffManualPage() {
                 </div>
 
                 {/* Quick Navigation */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5 mb-10 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5 mb-10 text-center print-hidden">
                     <QuickNavLink href="#dashboard" icon={LayoutDashboard} label="Dashboard" color="blue" />
                     <QuickNavLink href="#counter" icon={QrCode} label="เคาน์เตอร์บริการ" color="teal" />
                     <QuickNavLink href="#users" icon={UserCheck} label="อนุมัติผู้ใช้" color="green" />

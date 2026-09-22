@@ -18,14 +18,16 @@ export default function AdminManualPage() {
 
     return (
         <div className="space-y-6">
-            <AdminPageHeader
-                title="คู่มือการใช้งาน (สำหรับผู้ดูแลระบบ)"
-                subtitle="แนะนำการบริหารจัดการระบบและฟังก์ชันทั้งหมดสำหรับผู้ดูแลระบบ (Admin) — Notebook System V5"
-            />
+            <div className="print-hidden">
+                <AdminPageHeader
+                    title="คู่มือการใช้งาน (สำหรับผู้ดูแลระบบ)"
+                    subtitle="แนะนำการบริหารจัดการระบบและฟังก์ชันทั้งหมดสำหรับผู้ดูแลระบบ (Admin) — Notebook System V5"
+                />
+            </div>
 
             <div className="max-w-6xl mx-auto">
                 {/* Introduction Banner */}
-                <div className="bg-gradient-to-r from-blue-700 via-indigo-800 to-blue-950 rounded-2xl p-6 sm:p-8 mb-8 text-white shadow-xl">
+                <div className="manual-header-banner bg-gradient-to-r from-blue-700 via-indigo-800 to-blue-950 rounded-2xl p-6 sm:p-8 mb-8 text-white shadow-xl">
                     <div className="flex items-start gap-5">
                         <div className="p-3 bg-white/15 backdrop-blur-md rounded-2xl border border-white/20 hidden sm:block shadow-inner shrink-0">
                             <HelpCircle className="w-8 h-8 text-white" />
@@ -56,7 +58,7 @@ export default function AdminManualPage() {
                 </div>
 
                 {/* Quick Navigation - All 12 Modules */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2 mb-10 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2 mb-10 text-center print-hidden">
                     <QuickNavLink href="#dashboard" icon={LayoutDashboard} label="Dashboard" color="blue" />
                     <QuickNavLink href="#users" icon={Users} label="ผู้ใช้งาน" color="indigo" />
                     <QuickNavLink href="#equipment" icon={Package} label="อุปกรณ์" color="orange" />

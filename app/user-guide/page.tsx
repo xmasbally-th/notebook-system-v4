@@ -25,7 +25,7 @@ export default function UserGuidePage() {
 
             <main className="flex-grow">
                 {/* Page Header */}
-                <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-800 py-10 md:py-14 text-white shadow-md">
+                <div className="manual-header-banner bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-800 py-10 md:py-14 text-white shadow-md">
                     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                             <div className="flex items-center gap-3.5">
@@ -59,7 +59,7 @@ export default function UserGuidePage() {
                 {/* Main Content Area */}
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
                     {/* Quick Nav Bar */}
-                    <div className="bg-white rounded-2xl border border-slate-200/80 p-4 mb-8 shadow-sm">
+                    <div className="bg-white rounded-2xl border border-slate-200/80 p-4 mb-8 shadow-sm print-hidden">
                         <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-1.5">
                             <LayersIcon className="w-3.5 h-3.5" /> สารบัญและลิงก์ลัด
                         </div>
@@ -1160,7 +1160,7 @@ export default function UserGuidePage() {
                     </section>
 
                     {/* Quick Launch CTA */}
-                    <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-6 sm:p-8 text-white shadow-lg">
+                    <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-6 sm:p-8 text-white shadow-lg print-hidden">
                         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                             <div>
                                 <h3 className="text-xl font-bold mb-1.5">พร้อมเริ่มต้นใช้งานแล้วหรือยัง?</h3>
@@ -1186,7 +1186,7 @@ export default function UserGuidePage() {
                     </div>
 
                     {/* Back Link */}
-                    <div className="mt-8 text-center">
+                    <div className="mt-8 text-center print-hidden">
                         <Link
                             href="/"
                             className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 text-sm font-medium transition-colors"

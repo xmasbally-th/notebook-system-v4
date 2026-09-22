@@ -415,25 +415,247 @@
   }
 }
 
-/* 🖨️ Print Styles for A4 Manual Export */
+/* 🖨️ Master Print Styles for A4 Document & PDF Export */
 @media print {
+  :root {
+    --background: #ffffff !important;
+    --foreground: #000000 !important;
+    --card-bg: #ffffff !important;
+    --border: #64748b !important;
+    --muted: #f8fafc !important;
+  }
+
   @page {
     size: A4 portrait;
-    margin: 1.5cm;
+    margin: 12mm 10mm 12mm 10mm;
   }
 
-  body {
-    background: white !important;
-    color: black !important;
+  /* Force entire document to crisp high-contrast monochrome / grayscale */
+  *, *::before, *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  /* Hide navigation, headers, footers, and interactive elements when printing */
-  nav, header, footer, button, .print-hidden {
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 9.5pt !important;
+    line-height: 1.35 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide interactive web-only controls & sidebars */
+  aside, nav, header, footer, button, .print-hidden, [role="navigation"], .no-print {
     display: none !important;
   }
 
-  /* Ensure background colors and shadows are printed if wanted, but remove heavy shadows */
-  * {
-    box-shadow: none !important;
+  /* Reset layout offsets created by web sidebars */
+  .lg\:pl-64,
+  .lg\:pl-20,
+  [class*="lg:pl-"],
+  [class*="pl-64"],
+  [class*="pl-20"] {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+  }
+
+  /* High-contrast text colors: eliminate washed out or faint gray text */
+  p, span, li, dt, dd, div, td, th {
+    color: #0f172a !important; /* Rich dark slate/black */
+  }
+
+  /* Headings: solid pure black */
+  h1, h2, h3, h4, h5, h6, strong, b {
+    color: #000000 !important;
+    font-weight: 700 !important;
+  }
+
+  /* Force subdued text to dark readable text */
+  [class*="text-slate-400"],
+  [class*="text-slate-500"],
+  [class*="text-slate-600"],
+  [class*="text-gray-400"],
+  [class*="text-gray-500"],
+  [class*="text-zinc-400"],
+  [class*="text-zinc-500"] {
+    color: #1e293b !important;
+  }
+
+  /* Colored text classes: convert to dark high-contrast tone */
+  [class*="text-blue-"],
+  [class*="text-indigo-"],
+  [class*="text-teal-"],
+  [class*="text-purple-"],
+  [class*="text-emerald-"],
+  [class*="text-amber-"],
+  [class*="text-rose-"] {
+    color: #0f172a !important;
+  }
+
+  /* Header banners with dark gradients: strip dark background and render clean white header */
+  [class*="bg-gradient-"],
+  [class*="from-blue-"],
+  [class*="from-teal-"],
+  [class*="from-indigo-"],
+  [class*="bg-blue-600"],
+  [class*="bg-indigo-600"],
+  [class*="bg-teal-600"],
+  [class*="bg-purple-600"],
+  [class*="bg-slate-800"],
+  [class*="bg-slate-900"] {
+    background: #ffffff !important;
+    background-image: none !important;
+    border: none !important;
+  }
+
+  /* Ensure text inside former gradient banners is solid black (not white!) */
+  [class*="bg-gradient-"] *,
+  [class*="from-blue-"] *,
+  [class*="bg-blue-600"] *,
+  [class*="bg-indigo-600"] *,
+  [class*="bg-teal-600"] *,
+  [class*="bg-purple-600"] *,
+  [class*="bg-slate-800"] *,
+  [class*="bg-slate-900"] * {
+    color: #000000 !important;
+  }
+
+  /* Manual Page Title Header for A4 Print */
+  .manual-header-banner,
+  [class*="py-10 md:py-14"] {
+    border-bottom: 2px solid #000000 !important;
+    padding-top: 0 !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 12px !important;
+    background: #ffffff !important;
+  }
+
+  .manual-header-banner *,
+  .manual-header-banner svg {
+    color: #000000 !important;
+    stroke: #000000 !important;
+  }
+
+  /* Max width containers: expand to full printable A4 page width */
+  main, .max-w-5xl, .max-w-6xl, .max-w-4xl, .container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Optimize section spacing for A4 paper */
+  section {
+    margin-bottom: 14px !important;
+    scroll-margin-top: 0 !important;
+  }
+
+  .mb-12, .mb-10, .mb-8 {
+    margin-bottom: 10px !important;
+  }
+
+  .mt-12, .mt-10, .mt-8 {
+    margin-top: 8px !important;
+  }
+
+  .gap-6, .gap-8 {
+    gap: 8px !important;
+  }
+
+  .space-y-10 > * + *,
+  .space-y-8 > * + *,
+  .space-y-6 > * + *,
+  .space-y-5 > * + * {
+    margin-top: 8px !important;
+  }
+
+  /* Prevent over-crowded 3/4/6 columns on A4 width */
+  .grid-cols-3,
+  .grid-cols-4,
+  [class*="lg:grid-cols-4"],
+  [class*="md:grid-cols-4"],
+  [class*="md:grid-cols-3"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* Cards and containers: compact padding and clear dark borders */
+  .bg-white,
+  .bg-slate-50,
+  [class*="rounded-2xl"],
+  [class*="rounded-xl"] {
+    padding: 8px 10px !important;
+    border-radius: 4px !important;
+    border: 1px solid #64748b !important;
+    background: #ffffff !important;
+  }
+
+  /* Callout alert boxes: light gray tint with solid visible border */
+  [class*="bg-amber-50"],
+  [class*="bg-blue-50"],
+  [class*="bg-purple-50"],
+  [class*="bg-emerald-50"],
+  [class*="bg-teal-50"],
+  [class*="bg-rose-50"],
+  [class*="bg-indigo-50"] {
+    background: #f8fafc !important;
+    border: 1.5px solid #334155 !important;
+  }
+
+  /* Badges & Pills: clear border with solid black text */
+  [class*="rounded-full"],
+  [class*="badge"],
+  span[class*="border"] {
+    background: #f1f5f9 !important;
+    border: 1px solid #475569 !important;
+    color: #000000 !important;
+    font-weight: 600 !important;
+  }
+
+  /* Tables: high contrast borders and headers */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border: 1px solid #475569 !important;
+  }
+
+  th, td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 4px 6px !important;
+    font-size: 8.5pt !important;
+  }
+
+  th {
+    background-color: #f1f5f9 !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
+  }
+
+  /* Page break rules: avoid cutting steps/cards across page splits */
+  section,
+  .print-avoid-break,
+  .card,
+  .step-item,
+  [class*="rounded-2xl"],
+  [class*="rounded-xl"],
+  table,
+  tr,
+  .flowchart-node {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  /* Links: clean black text */
+  a {
+    color: #000000 !important;
+    text-decoration: underline !important;
   }
 }
