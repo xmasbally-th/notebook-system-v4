@@ -290,7 +290,7 @@ export function useReportData(dateRange: DateRange, activeTab: string = 'overvie
     const overdueQuery = useQuery({
         queryKey: ['report-overdue-raw'],
         staleTime: 60000,
-        queryFn: () => fetchSupabase<any[]>(`loanRequests?select=id,start_date,end_date,return_time,user_id,equipment_id,profiles!fk_loanrequests_profiles(first_name,last_name,email,avatar_url,department:departments(name)),equipment:equipment_id(name,equipment_number)&status=eq.approved`)
+        queryFn: () => fetchSupabase<any[]>(`loanRequests?select=id,created_at,start_date,end_date,return_time,user_id,equipment_id,profiles!fk_loanrequests_profiles(first_name,last_name,email,avatar_url,department:departments(name)),equipment:equipment_id(name,equipment_number)&status=eq.approved`)
     })
 
     // 5. Profiles query (core, 5 min cache)
@@ -368,12 +368,15 @@ export function useReportData(dateRange: DateRange, activeTab: string = 'overvie
         const monthlyLoans = loans
         const monthlyReservations = reservations
 
-        // Filter overdue loans accurately using return_time & date range constraints (due date <= toDate)
+        // Filter overdue loans accurately using return_time & date range constraints (due date or created_at within date range)
         const now = new Date()
         const overdueLoans = Array.isArray(rawOverdueLoans)
             ? rawOverdueLoans.filter((loan: any) => {
                 const dueDate = getDueDate(loan.end_date, loan.return_time)
-                return now > dueDate && dueDate <= dateRange.to
+                const loanCreatedAt = loan.created_at ? new Date(loan.created_at) : null
+                const inDateRange = (dueDate >= dateRange.from && dueDate <= dateRange.to) ||
+                    (loanCreatedAt !== null && loanCreatedAt >= dateRange.from && loanCreatedAt <= dateRange.to)
+                return now > dueDate && inDateRange
             })
             : []
 

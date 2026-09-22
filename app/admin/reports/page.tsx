@@ -105,7 +105,7 @@ export default function AdminReportsPage() {
             {/* Header with Date Range and Export */}
             <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm mb-6 flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
-                    <ReportPDFExport data={data} dateRange={dateRange} isLoading={isLoading} />
+                    <ReportPDFExport data={data} dateRange={dateRange} isLoading={isLoading} activeTab={activeTab} />
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-3">
@@ -172,7 +172,7 @@ export default function AdminReportsPage() {
                     {activeTab === 'reservations' && <ReservationsTab data={data} isLoading={isLoading} />}
                     {activeTab === 'users' && <UsersTab data={data} isLoading={isLoading} />}
                     {activeTab === 'activity' && <ActivityTab data={data} isLoading={isLoading} />}
-                    {activeTab === 'monthly' && <MonthlyTab data={data} isLoading={isLoading} />}
+                    {activeTab === 'monthly' && <MonthlyTab data={data} isLoading={isLoading} dateRange={dateRange} />}
                 </div>
             </div>
 

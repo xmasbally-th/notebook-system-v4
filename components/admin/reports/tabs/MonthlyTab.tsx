@@ -19,15 +19,18 @@ import {
     HelpCircle
 } from 'lucide-react'
 
+import ReportPDFExport from '@/components/admin/reports/ReportPDFExport'
+
 // Dynamic import for chart
 const MonthlyTrendChart = dynamic(() => import('@/components/admin/reports/ReportCharts').then(mod => ({ default: mod.MonthlyTrendChart })), { ssr: false })
 
 interface MonthlyTabProps {
     data: ReportData | undefined
     isLoading: boolean
+    dateRange?: { from: Date; to: Date }
 }
 
-export default function MonthlyTab({ data, isLoading }: MonthlyTabProps) {
+export default function MonthlyTab({ data, isLoading, dateRange }: MonthlyTabProps) {
     const [selectedMonthKey, setSelectedMonthKey] = useState<string>('')
     const [searchQuery, setSearchQuery] = useState<string>('')
     const deferredSearchQuery = useDeferredValue(searchQuery)
@@ -70,14 +73,25 @@ export default function MonthlyTab({ data, isLoading }: MonthlyTabProps) {
         if (!data?.monthlyStats) return
         exportToCSV({
             filename: 'รายงานสรุปรายเดือน_รวม',
-            headers: ['เดือน', 'การยืม (ครั้ง)', 'การจอง (ครั้ง)', 'คืนแล้ว (ครั้ง)', 'เกินกำหนด/คืนสาย (ครั้ง)'],
-            rows: data.monthlyStats.map(stat => [
-                stat.month,
-                stat.loans,
-                stat.reservations,
-                stat.returned,
-                stat.overdue
-            ])
+            headers: ['เดือน', 'การยืม (ครั้ง)', 'การจอง (ครั้ง)', 'คืนแล้ว (ครั้ง)', 'เกินกำหนด/คืนสาย (ครั้ง)', 'รวมการใช้งาน (ครั้ง)'],
+            rows: [
+                ...data.monthlyStats.map(stat => [
+                    stat.month,
+                    stat.loans,
+                    stat.reservations,
+                    stat.returned,
+                    stat.overdue,
+                    stat.loans + stat.reservations
+                ]),
+                [
+                    'รวมทั้งหมด',
+                    data.monthlyStats.reduce((sum, s) => sum + s.loans, 0),
+                    data.monthlyStats.reduce((sum, s) => sum + s.reservations, 0),
+                    data.monthlyStats.reduce((sum, s) => sum + s.returned, 0),
+                    data.monthlyStats.reduce((sum, s) => sum + s.overdue, 0),
+                    data.monthlyStats.reduce((sum, s) => sum + (s.loans + s.reservations), 0)
+                ]
+            ]
         })
     }
 
@@ -128,13 +142,25 @@ export default function MonthlyTab({ data, isLoading }: MonthlyTabProps) {
                         <h3 className="text-lg font-bold text-gray-900">แนวโน้มการยืม-จองรายเดือน</h3>
                         <p className="text-xs text-gray-500 mt-0.5">กราฟแสดงการเปรียบเทียบธุรกรรมย้อนหลัง</p>
                     </div>
-                    <button
-                        onClick={exportMonthlyCSV}
-                        className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-all shadow-sm"
-                    >
-                        <FileDown className="w-3.5 h-3.5" />
-                        Export สรุปรวมรายเดือน (.CSV)
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {dateRange && (
+                            <ReportPDFExport
+                                data={data}
+                                dateRange={dateRange}
+                                isLoading={isLoading}
+                                activeTab="monthly"
+                                buttonText="ส่งออก PDF"
+                                buttonClassName="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-sm shadow-blue-100"
+                            />
+                        )}
+                        <button
+                            onClick={exportMonthlyCSV}
+                            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-all shadow-sm"
+                        >
+                            <FileDown className="w-3.5 h-3.5" />
+                            Export สรุปรวมรายเดือน (.CSV)
+                        </button>
+                    </div>
                 </div>
                 <div className="h-[300px]">
                     <MonthlyTrendChart data={data?.monthlyStats ?? []} />

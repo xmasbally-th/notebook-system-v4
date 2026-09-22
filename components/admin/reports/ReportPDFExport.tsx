@@ -9,20 +9,30 @@ interface ReportPDFExportProps {
     data: ReportData | undefined
     dateRange: { from: Date; to: Date }
     isLoading?: boolean
+    activeTab?: string
+    buttonText?: string
+    buttonClassName?: string
 }
 
 // Report header text
 const REPORT_HEADER = 'รายงานสถิติการใช้งานระบบยืม-คืนวัสดุและครุภัณฑ์'
 const ORGANIZATION = 'คณะวิทยาการจัดการ มหาวิทยาลัยราชภัฏลำปาง'
 
-export default function ReportPDFExport({ data, dateRange, isLoading }: ReportPDFExportProps) {
+export default function ReportPDFExport({
+    data,
+    dateRange,
+    isLoading,
+    activeTab = 'overview',
+    buttonText = 'ส่งออก PDF',
+    buttonClassName
+}: ReportPDFExportProps) {
     const [isGenerating, setIsGenerating] = useState(false)
 
     const handleExportPDF = () => {
         if (!data) return
         setIsGenerating(true)
 
-        const printContent = generatePrintableHTML(data, dateRange)
+        const printContent = generatePrintableHTML(data, dateRange, activeTab)
         const printWindow = window.open('', '_blank')
 
         if (printWindow) {
@@ -45,23 +55,25 @@ export default function ReportPDFExport({ data, dateRange, isLoading }: ReportPD
         }
     }
 
+    const defaultButtonClass = "flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+
     return (
         <button
             onClick={handleExportPDF}
             disabled={isGenerating || isLoading || !data}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className={buttonClassName || defaultButtonClass}
         >
             {isGenerating ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
                 <FileDown className="w-4 h-4" />
             )}
-            ส่งออก PDF
+            {buttonText}
         </button>
     )
 }
 
-// Build category breakdown from data
+// Build category breakdown from data (used only when on equipment tab)
 function buildCategoryBreakdown(data: ReportData) {
     if (!data.allEquipment || !data.equipmentTypes) return []
 
@@ -77,56 +89,37 @@ function buildCategoryBreakdown(data: ReportData) {
     }).sort((a, b) => b.total - a.total)
 }
 
-// Build borrowers by department
-function buildBorrowersByDepartment(data: ReportData) {
-    if (!data.userStats) return []
-    
-    const deptMap: Record<string, { borrowerCount: number, totalLoans: number }> = {}
-    
-    data.userStats.forEach(user => {
-        const dept = user.department || 'ไม่ระบุ'
-        if (!deptMap[dept]) {
-            deptMap[dept] = { borrowerCount: 0, totalLoans: 0 }
-        }
-        if (user.loan_count > 0 || user.total_activity > 0) {
-            deptMap[dept].borrowerCount++
-            deptMap[dept].totalLoans += user.loan_count
-        }
-    })
-    
-    return Object.entries(deptMap)
-        .map(([name, stats]) => ({
-            name,
-            borrowerCount: stats.borrowerCount,
-            totalLoans: stats.totalLoans
-        }))
-        .filter(d => d.borrowerCount > 0)
-        .sort((a, b) => b.borrowerCount - a.borrowerCount)
-}
-
-// Status label helper
-function getStatusThaiLabel(status: string): string {
-    const map: Record<string, string> = {
-        ready: 'พร้อมใช้งาน',
-        active: 'พร้อมใช้งาน',
-        borrowed: 'ถูกใช้งาน',
-        maintenance: 'ซ่อมบำรุง',
-        retired: 'เลิกใช้งาน',
-    }
-    return map[status] || status
-}
-
 // Generate printable HTML with full report data
-function generatePrintableHTML(data: ReportData, dateRange: { from: Date; to: Date }): string {
-    const categoryBreakdown = buildCategoryBreakdown(data)
-    const borrowersByDept = buildBorrowersByDepartment(data)
+function generatePrintableHTML(
+    data: ReportData,
+    dateRange: { from: Date; to: Date },
+    activeTab: string = 'overview'
+): string {
+    const isMonthlyTab = activeTab === 'monthly'
+    const isEquipmentTab = activeTab === 'equipment'
+
+    const reportTitle = isMonthlyTab
+        ? 'รายงานสรุปการใช้งานรายเดือน'
+        : (isEquipmentTab ? 'รายงานสถิติคลังอุปกรณ์และครุภัณฑ์' : REPORT_HEADER)
+
+    // Accurate calculation of totals according to the specified date range
+    const totalLoans = data.loanStats.total ?? 0
+    const totalReservations = data.reservationStats.total ?? 0
+    const totalReturned = data.loanStats.returned ?? 0
+    const totalMonthlyLoans = data.monthlyStats ? data.monthlyStats.reduce((sum, s) => sum + s.loans, 0) : totalLoans
+    const totalMonthlyReservations = data.monthlyStats ? data.monthlyStats.reduce((sum, s) => sum + s.reservations, 0) : totalReservations
+    const totalMonthlyReturned = data.monthlyStats ? data.monthlyStats.reduce((sum, s) => sum + s.returned, 0) : totalReturned
+    const totalMonthlyOverdue = data.monthlyStats ? data.monthlyStats.reduce((sum, s) => sum + s.overdue, 0) : (data.loanStats.overdue ?? 0)
+    const totalMonthlyUsage = totalMonthlyLoans + totalMonthlyReservations
+
+    const categoryBreakdown = isEquipmentTab ? buildCategoryBreakdown(data) : []
 
     return `
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>${REPORT_HEADER}</title>
+    <title>${reportTitle}</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
         
@@ -165,6 +158,7 @@ function generatePrintableHTML(data: ReportData, dateRange: { from: Date; to: Da
             font-size: 10pt;
             color: #6b7280;
             margin-top: 5px;
+            font-weight: 600;
         }
         
         .section {
@@ -173,7 +167,7 @@ function generatePrintableHTML(data: ReportData, dateRange: { from: Date; to: Da
         }
         
         .section-title {
-            font-size: 13pt;
+            font-size: 12pt;
             font-weight: 700;
             color: #1e3a5f;
             border-bottom: 2px solid #e5e7eb;
@@ -197,7 +191,7 @@ function generatePrintableHTML(data: ReportData, dateRange: { from: Date; to: Da
         }
         
         .stat-value {
-            font-size: 22pt;
+            font-size: 20pt;
             font-weight: 700;
             color: #2563eb;
             line-height: 1.2;
@@ -206,7 +200,7 @@ function generatePrintableHTML(data: ReportData, dateRange: { from: Date; to: Da
         .stat-label {
             font-size: 9pt;
             color: #6b7280;
-            margin-top: 2px;
+            margin-top: 3px;
         }
         
         .two-col {
@@ -235,6 +229,13 @@ function generatePrintableHTML(data: ReportData, dateRange: { from: Date; to: Da
             font-size: 9pt;
         }
         
+        tfoot td {
+            background: #f8fafc;
+            font-weight: 700;
+            border-top: 2px solid #cbd5e1;
+            border-bottom: 1px solid #cbd5e1;
+        }
+        
         tr:last-child td {
             border-bottom: none;
         }
@@ -249,75 +250,17 @@ function generatePrintableHTML(data: ReportData, dateRange: { from: Date; to: Da
         .text-purple { color: #7c3aed; }
         .text-gray { color: #6b7280; }
         
-        .category-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 0;
-            border-bottom: 1px solid #f3f4f6;
-        }
-        
-        .category-row:last-child {
-            border-bottom: none;
-        }
-        
-        .cat-icon {
-            font-size: 16pt;
-            width: 30px;
-            text-align: center;
-        }
-        
-        .cat-name {
-            flex: 1;
-            font-weight: 600;
-        }
-        
-        .cat-stats {
-            display: flex;
-            gap: 12px;
-            font-size: 9pt;
-        }
-        
-        .cat-stats span {
-            display: inline-flex;
-            align-items: center;
-            gap: 3px;
-        }
-        
-        .dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-        
-        .dot-green { background: #16a34a; }
-        .dot-blue { background: #2563eb; }
-        .dot-orange { background: #ea580c; }
-        
-        .bar-container {
-            width: 80px;
-            height: 10px;
-            background: #e5e7eb;
-            border-radius: 5px;
-            overflow: hidden;
-            display: inline-flex;
-        }
-        
-        .bar-green { background: #16a34a; }
-        .bar-blue { background: #2563eb; }
-        .bar-orange { background: #ea580c; }
-        
         .rank-badge {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             background: #f3f4f6;
-            font-size: 9pt;
-            font-weight: 600;
+            font-size: 8.5pt;
+            font-weight: 700;
+            color: #374151;
         }
         
         .footer {
@@ -337,30 +280,30 @@ function generatePrintableHTML(data: ReportData, dateRange: { from: Date; to: Da
 </head>
 <body>
     <div class="header">
-        <div class="title">${REPORT_HEADER}</div>
+        <div class="title">${reportTitle}</div>
         <div class="subtitle">${ORGANIZATION}</div>
         <div class="date-range">ช่วงเวลา: ${formatThaiDate(dateRange.from)} - ${formatThaiDate(dateRange.to)}</div>
     </div>
     
-    <!-- Overview Stats -->
+    <!-- Overview Stats for Date Range -->
     <div class="section">
-        <div class="section-title">📊 สรุปภาพรวม</div>
+        <div class="section-title">📊 สรุปภาพรวมตามช่วงเวลาที่กำหนด</div>
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-value text-blue">${data.loanStats.total ?? 0}</div>
-                <div class="stat-label">การยืมทั้งหมด</div>
+                <div class="stat-value text-blue">${totalLoans.toLocaleString()}</div>
+                <div class="stat-label">การยืมทั้งหมด (ครั้ง)</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value text-purple">${data.reservationStats.total ?? 0}</div>
-                <div class="stat-label">การจองทั้งหมด</div>
+                <div class="stat-value text-purple">${totalReservations.toLocaleString()}</div>
+                <div class="stat-label">การจองทั้งหมด (ครั้ง)</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">${data.equipmentStats.total ?? 0}</div>
-                <div class="stat-label">อุปกรณ์ทั้งหมด</div>
+                <div class="stat-value text-green">${totalReturned.toLocaleString()}</div>
+                <div class="stat-label">คืนแล้ว (ครั้ง)</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value text-red">${data.loanStats.overdue ?? 0}</div>
-                <div class="stat-label">เกินกำหนด</div>
+                <div class="stat-value text-red">${totalMonthlyOverdue.toLocaleString()}</div>
+                <div class="stat-label">เกินกำหนด/คืนสาย (ครั้ง)</div>
             </div>
         </div>
     </div>
@@ -372,10 +315,10 @@ function generatePrintableHTML(data: ReportData, dateRange: { from: Date; to: Da
             <table>
                 <tr><td>รวมทั้งหมด</td><td class="text-right text-bold">${data.loanStats.total ?? 0} รายการ</td></tr>
                 <tr><td>รอดำเนินการ</td><td class="text-right text-bold">${data.loanStats.pending ?? 0} รายการ</td></tr>
-                <tr><td>อนุมัติแล้ว</td><td class="text-right text-bold">${data.loanStats.approved ?? 0} รายการ</td></tr>
+                <tr><td>อนุมัติแล้ว (กำลังยืม)</td><td class="text-right text-bold text-blue">${data.loanStats.approved ?? 0} รายการ</td></tr>
                 <tr><td>คืนแล้ว</td><td class="text-right text-bold text-green">${data.loanStats.returned ?? 0} รายการ</td></tr>
-                <tr><td>ปฏิเสธ</td><td class="text-right text-bold">${data.loanStats.rejected ?? 0} รายการ</td></tr>
-                <tr><td>เกินกำหนด</td><td class="text-right text-bold text-red">${data.loanStats.overdue ?? 0} รายการ</td></tr>
+                <tr><td>ปฏิเสธ</td><td class="text-right text-bold text-gray">${data.loanStats.rejected ?? 0} รายการ</td></tr>
+                <tr><td>เกินกำหนด (ยังไม่คืน)</td><td class="text-right text-bold text-red">${data.loanStats.overdue ?? 0} รายการ</td></tr>
             </table>
         </div>
         <div>
@@ -383,15 +326,15 @@ function generatePrintableHTML(data: ReportData, dateRange: { from: Date; to: Da
             <table>
                 <tr><td>รวมทั้งหมด</td><td class="text-right text-bold">${data.reservationStats.total ?? 0} รายการ</td></tr>
                 <tr><td>รอดำเนินการ</td><td class="text-right text-bold">${data.reservationStats.pending ?? 0} รายการ</td></tr>
-                <tr><td>อนุมัติแล้ว</td><td class="text-right text-bold">${data.reservationStats.approved ?? 0} รายการ</td></tr>
+                <tr><td>อนุมัติแล้ว</td><td class="text-right text-bold text-blue">${data.reservationStats.approved ?? 0} รายการ</td></tr>
                 <tr><td>เสร็จสิ้น</td><td class="text-right text-bold text-green">${data.reservationStats.completed ?? 0} รายการ</td></tr>
-                <tr><td>ยกเลิก</td><td class="text-right text-bold">${data.reservationStats.cancelled ?? 0} รายการ</td></tr>
+                <tr><td>ยกเลิก</td><td class="text-right text-bold text-gray">${data.reservationStats.cancelled ?? 0} รายการ</td></tr>
+                <tr><td>ปฏิเสธ</td><td class="text-right text-bold text-red">${data.reservationStats.rejected ?? 0} รายการ</td></tr>
             </table>
         </div>
     </div>
     
-    <!-- Monthly Stats Summary -->
-    ${data.monthlyStats && data.monthlyStats.length > 0 ? `
+    <!-- Monthly Stats Summary with Total Footer -->
     <div class="section">
         <div class="section-title">📅 สรุปการใช้งานรายเดือน</div>
         <table>
@@ -406,46 +349,135 @@ function generatePrintableHTML(data: ReportData, dateRange: { from: Date; to: Da
                 </tr>
             </thead>
             <tbody>
-                ${data.monthlyStats.map(stat => `
+                ${!data.monthlyStats || data.monthlyStats.length === 0 ? `
+                    <tr>
+                        <td colspan="6" class="text-center text-gray" style="padding: 16px;">ไม่มีข้อมูลการใช้งานในช่วงเวลานี้</td>
+                    </tr>
+                ` : data.monthlyStats.map(stat => `
                     <tr>
                         <td class="text-bold">${stat.month}</td>
-                        <td class="text-center text-blue">${stat.loans}</td>
-                        <td class="text-center text-purple">${stat.reservations}</td>
-                        <td class="text-center text-green">${stat.returned}</td>
-                        <td class="text-center text-red">${stat.overdue}</td>
-                        <td class="text-center text-bold">${stat.loans + stat.reservations}</td>
+                        <td class="text-center text-blue">${stat.loans.toLocaleString()}</td>
+                        <td class="text-center text-purple">${stat.reservations.toLocaleString()}</td>
+                        <td class="text-center text-green">${stat.returned.toLocaleString()}</td>
+                        <td class="text-center text-red">${stat.overdue.toLocaleString()}</td>
+                        <td class="text-center text-bold">${(stat.loans + stat.reservations).toLocaleString()}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+            ${data.monthlyStats && data.monthlyStats.length > 0 ? `
+            <tfoot>
+                <tr>
+                    <td>รวมทั้งหมด</td>
+                    <td class="text-center text-blue">${totalMonthlyLoans.toLocaleString()}</td>
+                    <td class="text-center text-purple">${totalMonthlyReservations.toLocaleString()}</td>
+                    <td class="text-center text-green">${totalMonthlyReturned.toLocaleString()}</td>
+                    <td class="text-center text-red">${totalMonthlyOverdue.toLocaleString()}</td>
+                    <td class="text-center text-bold">${totalMonthlyUsage.toLocaleString()}</td>
+                </tr>
+            </tfoot>
+            ` : ''}
+        </table>
+    </div>
+
+    <!-- Popular Equipment (Top 5) -->
+    ${data.popularEquipment && data.popularEquipment.length > 0 ? `
+    <div class="section">
+        <div class="section-title">🏆 5 อันดับอุปกรณ์ยอดนิยมที่มีการใช้งานสูงสุด</div>
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-center" style="width: 50px;">อันดับ</th>
+                    <th>ชื่ออุปกรณ์</th>
+                    <th>รหัสอุปกรณ์</th>
+                    <th class="text-center">การยืม (ครั้ง)</th>
+                    <th class="text-center">การจอง (ครั้ง)</th>
+                    <th class="text-center">รวมใช้งาน (ครั้ง)</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.popularEquipment.slice(0, 5).map((item, index) => `
+                    <tr>
+                        <td class="text-center"><span class="rank-badge">${index + 1}</span></td>
+                        <td class="text-bold">${item.name}</td>
+                        <td class="text-gray">${item.equipment_number}</td>
+                        <td class="text-center text-blue">${item.loan_count.toLocaleString()}</td>
+                        <td class="text-center text-purple">${item.reservation_count.toLocaleString()}</td>
+                        <td class="text-center text-bold">${item.total_usage.toLocaleString()}</td>
                     </tr>
                 `).join('')}
             </tbody>
         </table>
     </div>
     ` : ''}
-    
-    <!-- Equipment Stats -->
+
+    <!-- Usage by Department with Total Footer -->
+    ${data.departmentStats && data.departmentStats.filter(d => d.total > 0).length > 0 ? `
     <div class="section">
-        <div class="section-title">📦 สถิติอุปกรณ์</div>
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value">${data.equipmentStats.total ?? 0}</div>
-                <div class="stat-label">ทั้งหมด</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value text-green">${data.equipmentStats.ready ?? 0}</div>
-                <div class="stat-label">พร้อมใช้งาน</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value text-purple">${data.equipmentStats.borrowed ?? 0}</div>
-                <div class="stat-label">ถูกยืม</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value text-orange">${data.equipmentStats.maintenance ?? 0}</div>
-                <div class="stat-label">ซ่อมบำรุง</div>
-            </div>
-        </div>
+        <div class="section-title">👥 สรุปการใช้งานแยกตามสาขาวิชา/หน่วยงาน</div>
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-center" style="width: 50px;">อันดับ</th>
+                    <th>หน่วยงาน/สาขาวิชา</th>
+                    <th class="text-center">การยืม (ครั้ง)</th>
+                    <th class="text-center">การจอง (ครั้ง)</th>
+                    <th class="text-center">รวมทั้งหมด (ครั้ง)</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.departmentStats.filter(d => d.total > 0).map((item, index) => `
+                    <tr>
+                        <td class="text-center"><span class="rank-badge">${index + 1}</span></td>
+                        <td class="text-bold">${item.department}</td>
+                        <td class="text-center text-blue">${item.loans.toLocaleString()}</td>
+                        <td class="text-center text-purple">${item.reservations.toLocaleString()}</td>
+                        <td class="text-center text-bold">${item.total.toLocaleString()}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2" class="text-center">รวมทั้งหมด</td>
+                    <td class="text-center text-blue">${data.departmentStats.reduce((s, d) => s + d.loans, 0).toLocaleString()}</td>
+                    <td class="text-center text-purple">${data.departmentStats.reduce((s, d) => s + d.reservations, 0).toLocaleString()}</td>
+                    <td class="text-center text-bold">${data.departmentStats.reduce((s, d) => s + d.total, 0).toLocaleString()}</td>
+                </tr>
+            </tfoot>
+        </table>
     </div>
+    ` : ''}
     
-    <!-- Category Breakdown -->
-    ${categoryBreakdown.length > 0 ? `
+    <!-- Overdue Items (Filtered within Date Range) -->
+    ${data.overdueItems && data.overdueItems.length > 0 ? `
+    <div class="section">
+        <div class="section-title">⚠️ รายการเกินกำหนดคืน (${data.overdueItems.length} รายการ)</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>ผู้ยืม</th>
+                    <th>อุปกรณ์</th>
+                    <th>รหัสอุปกรณ์</th>
+                    <th class="text-center">กำหนดคืน</th>
+                    <th class="text-center">เกินกำหนด</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.overdueItems.slice(0, 15).map(item => `
+                    <tr>
+                        <td class="text-bold">${item.user_name}</td>
+                        <td>${item.equipment_name}</td>
+                        <td class="text-gray">${item.equipment_number}</td>
+                        <td class="text-center">${formatThaiDate(new Date(item.end_date))}</td>
+                        <td class="text-center text-red text-bold">${item.days_overdue} วัน</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </div>
+    ` : ''}
+
+    ${!isMonthlyTab && isEquipmentTab && categoryBreakdown.length > 0 ? `
+    <!-- Equipment Category Breakdown (Only on Equipment Tab) -->
     <div class="section">
         <div class="section-title">📂 สรุปอุปกรณ์ตามประเภท</div>
         <table>
@@ -468,60 +500,6 @@ function generatePrintableHTML(data: ReportData, dateRange: { from: Date; to: Da
                         <td class="text-center text-blue">${cat.borrowed}</td>
                         <td class="text-center text-orange">${cat.maintenance}</td>
                         <td class="text-center text-bold">${cat.usageRate}%</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    </div>
-    ` : ''}
-    
-    <!-- Borrowers by Department -->
-    ${borrowersByDept.length > 0 ? `
-    <div class="section">
-        <div class="section-title">👥 จำนวนผู้ยืมโดยแบ่งตามหน่วยงาน/สาขาวิชา</div>
-        <table>
-            <thead>
-                <tr>
-                    <th class="text-center">อันดับ</th>
-                    <th>หน่วยงาน/สาขาวิชา</th>
-                    <th class="text-right">จำนวนผู้ยืม (คน)</th>
-                    <th class="text-right">รวมการยืม (ครั้ง)</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${borrowersByDept.map((item, index) => `
-                    <tr>
-                        <td class="text-center"><span class="rank-badge">${index + 1}</span></td>
-                        <td class="text-bold">${item.name}</td>
-                        <td class="text-right text-blue text-bold">${item.borrowerCount.toLocaleString()}</td>
-                        <td class="text-right">${item.totalLoans.toLocaleString()}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    </div>
-    ` : ''}
-    
-    <!-- Overdue Items -->
-    ${data.overdueItems && data.overdueItems.length > 0 ? `
-    <div class="section">
-        <div class="section-title">⚠️ รายการเกินกำหนดคืน (${data.overdueItems.length} รายการ)</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>ผู้ยืม</th>
-                    <th>อุปกรณ์</th>
-                    <th class="text-center">กำหนดคืน</th>
-                    <th class="text-center">เกินกำหนด</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${data.overdueItems.slice(0, 10).map(item => `
-                    <tr>
-                        <td>${item.user_name}</td>
-                        <td>${item.equipment_name}</td>
-                        <td class="text-center">${formatThaiDate(new Date(item.end_date))}</td>
-                        <td class="text-center text-red text-bold">${item.days_overdue} วัน</td>
                     </tr>
                 `).join('')}
             </tbody>
