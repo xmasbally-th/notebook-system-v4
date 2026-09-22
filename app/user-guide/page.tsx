@@ -752,7 +752,7 @@ export default function UserGuidePage() {
                             </p>
 
                             {/* Workflow Tabs (Touch-friendly & swipeable on mobile) */}
-                            <div className="flex overflow-x-auto no-scrollbar gap-2 pb-2 mb-6 border-b border-slate-100">
+                            <div className="flex overflow-x-auto no-scrollbar gap-2 pb-2 mb-6 border-b border-slate-100 print-hidden">
                                 <button
                                     onClick={() => setActiveWorkflowTab('loan')}
                                     className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${activeWorkflowTab === 'loan' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
@@ -784,367 +784,344 @@ export default function UserGuidePage() {
                             </div>
 
                             {/* Workflow 1: Direct Loan Flow */}
-                            {activeWorkflowTab === 'loan' && (
-                                <div className="space-y-6 animate-fadeIn">
-                                    <WorkflowMetaBar
-                                        title="วงจรการขอยืมอุปกรณ์ทันทีและการส่งคืน (Direct Lending & Return Flow)"
-                                        actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff), 🤖 Smart Cron (08:30 น.)"
-                                        channels="WeLPRU Mobile Push, Discord Webhook, In-App Alert"
-                                    />
-                                    <VisualFlowchart
-                                        startLabel="จุดเริ่มต้น: ผู้ใช้ทำรายการยืมทันที (หน้าเคาน์เตอร์)"
-                                        endLabel="สิ้นสุด: ส่งคืนอุปกรณ์ & บันทึกผลประเมินเสร็จสิ้น"
-                                        steps={[
-                                            {
-                                                stepNum: 1,
-                                                actor: '👤 ผู้ใช้งาน',
-                                                actorRole: 'user',
-                                                title: 'สแกน QR บนตัวเครื่อง หรือเลือกเครื่องว่าง',
-                                                desc: 'สแกนสติกเกอร์ QR Code บนตัวเครื่องจริง (แนะนำ) เพื่อรับสิทธิ์หน้างาน หรือเลือกเครื่องสถานะว่างผ่านหน้ารายการอุปกรณ์',
-                                                statusBadge: '🟢 ว่าง (available)',
-                                            },
-                                            {
-                                                stepNum: 2,
-                                                actor: '👤 ผู้ใช้งาน',
-                                                actorRole: 'user',
-                                                title: 'สแกน QR ยืนยันเครื่องจริง & ระบุวัน-เวลาคืน',
-                                                desc: 'สแกน QR ยืนยันการมีตัวเครื่องจริง (On-site Verification) กำหนดวัน-เวลาคืน วัตถุประสงค์ แล้วกดยืนยันคำขอ',
-                                                branches: [
-                                                    {
-                                                        type: 'special',
-                                                        label: '📱 การยืนยันสิทธิ์หน้างาน (On-site QR)',
-                                                        text: 'การยืมทันทีต้องสแกน QR Code บนตัวเครื่องจริง หากไม่ได้อยู่หน้าเครื่องให้เลือก "จองล่วงหน้า"',
-                                                        status: '⚡ on-site token'
-                                                    },
-                                                    {
-                                                        type: 'special',
-                                                        label: '⚡ กรณี Staff / Admin ยืมเอง',
-                                                        text: 'ระบบ Auto-Approve อนุมัติทันที ข้ามขั้นตอนรอตรวจ ไปรับเครื่องได้ทันที',
-                                                        status: '🟢 approved'
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                stepNum: 3,
-                                                actor: '👮‍♂️ Staff / Admin',
-                                                actorRole: 'staff',
-                                                title: 'พิจารณาคำขอยืม (Staff Review)',
-                                                desc: 'ตรวจสอบข้อมูลผู้ยืม วันที่ เวลา วัตถุประสงค์ และความพร้อมของอุปกรณ์',
-                                                statusBadge: '🟡 รอการอนุมัติ (pending)',
-                                                branches: [
-                                                    {
-                                                        type: 'success',
-                                                        label: '🟢 หากอนุมัติ (Approved)',
-                                                        text: 'ระบบส่งแจ้งเตือน WeLPRU + In-App นัดมารับอุปกรณ์ที่เคาน์เตอร์',
-                                                        status: '🟢 approved'
-                                                    },
-                                                    {
-                                                        type: 'danger',
-                                                        label: '🔴 หากปฏิเสธ (Rejected)',
-                                                        text: 'เจ้าหน้าที่ระบุเหตุผล -> ผู้ใช้ได้รับแจ้งเตือน -> สิ้นสุดคำขอ',
-                                                        status: '🔴 rejected'
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                stepNum: 4,
-                                                actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
-                                                actorRole: 'counter',
-                                                title: 'รับมอบอุปกรณ์ที่เคาน์เตอร์บริการ',
-                                                desc: 'ผู้ใช้ติดต่อเคาน์เตอร์ เจ้าหน้าที่ตรวจและจ่ายเครื่อง -> สถานะเครื่องเปลี่ยนเป็นถูกยืม',
-                                                statusBadge: '🔵 ถูกยืม (borrowed)'
-                                            },
-                                            {
-                                                stepNum: 5,
-                                                actor: '🤖 Smart Cron (08:30 น.)',
-                                                actorRole: 'system',
-                                                title: 'ระบบตรวจสอบกำหนดคืนอัตโนมัติ',
-                                                desc: 'ตรวจสอบทุกเช้าเวลา 08:30 น. เพื่อแจ้งเตือนป้องกันการคืนล่าช้า',
-                                                branches: [
-                                                    {
-                                                        type: 'alert',
-                                                        label: '🔔 ก่อนครบกำหนด 1 วัน',
-                                                        text: 'ส่งแจ้งเตือน WeLPRU เตือนใกล้วันส่งคืน',
-                                                    },
-                                                    {
-                                                        type: 'danger',
-                                                        label: '⚠️ เลยกำหนดคืน (Overdue)',
-                                                        text: 'ขึ้นสถานะค้างคืน -> ส่งแจ้งเตือนฉุกเฉิน WeLPRU ถึงผู้ยืม + แจ้ง Discord เจ้าหน้าที่',
-                                                        status: '⚠️ ค้างคืน (overdue)'
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                stepNum: 6,
-                                                actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
-                                                actorRole: 'counter',
-                                                title: 'ส่งคืนที่เคาน์เตอร์ & ตรวจสภาพ 3 ระดับ',
-                                                desc: 'นำอุปกรณ์มาส่งคืนที่เคาน์เตอร์ เจ้าหน้าที่ตรวจสภาพเครื่องและอุปกรณ์เสริม',
-                                                branches: [
-                                                    {
-                                                        type: 'success',
-                                                        label: '🟢 สมบูรณ์ (Good)',
-                                                        text: 'เครื่องและสายชาร์จครบ -> อุปกรณ์กลับสู่สถานะ ว่าง (available)',
-                                                        status: '🟢 available'
-                                                    },
-                                                    {
-                                                        type: 'alert',
-                                                        label: '🟡 ชำรุด (Damaged) / 🔴 ของไม่ครบ (Missing)',
-                                                        text: 'บันทึกหมายเหตุความเสียหาย -> ปรับสถานะเป็นซ่อมบำรุง (maintenance)',
-                                                        status: '🟡 maintenance'
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                stepNum: 7,
-                                                actor: '👤 ผู้ใช้งาน',
-                                                actorRole: 'user',
-                                                title: 'ทำแบบประเมินความพึงพอใจ 5 ดาว',
-                                                desc: 'ในหน้าคำขอของฉัน คลิกปุ่มประเมิน ให้คะแนนสภาพอุปกรณ์และการบริการ พร้อมระบุข้อเสนอแนะ -> สิ้นสุดกระบวนการสมบูรณ์',
-                                                statusBadge: '⚪ คืนแล้ว (returned)'
-                                            }
-                                        ]}
-                                    />
-                                </div>
-                            )}
+                            <div className={`space-y-6 animate-fadeIn ${activeWorkflowTab === 'loan' ? 'block' : 'hidden print:block print:mt-8'}`}>
+                                <WorkflowMetaBar
+                                    title="วงจรการขอยืมอุปกรณ์ทันทีและการส่งคืน (Direct Lending & Return Flow)"
+                                    actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff), 🤖 Smart Cron (08:30 น.)"
+                                    channels="WeLPRU Mobile Push, Discord Webhook, In-App Alert"
+                                />
+                                <VisualFlowchart
+                                    startLabel="จุดเริ่มต้น: ผู้ใช้ทำรายการยืมทันที (หน้าเคาน์เตอร์)"
+                                    endLabel="สิ้นสุด: ส่งคืนอุปกรณ์ & บันทึกผลประเมินเสร็จสิ้น"
+                                    steps={[
+                                        {
+                                            stepNum: 1,
+                                            actor: '👤 ผู้ใช้งาน',
+                                            actorRole: 'user',
+                                            title: 'สแกน QR บนตัวเครื่อง หรือเลือกเครื่องว่าง',
+                                            desc: 'สแกนสติกเกอร์ QR Code บนตัวเครื่องจริง (แนะนำ) เพื่อรับสิทธิ์หน้างาน หรือเลือกเครื่องสถานะว่างผ่านหน้ารายการอุปกรณ์',
+                                            statusBadge: '🟢 ว่าง (available)',
+                                        },
+                                        {
+                                            stepNum: 2,
+                                            actor: '👤 ผู้ใช้งาน',
+                                            actorRole: 'user',
+                                            title: 'สแกน QR ยืนยันเครื่องจริง & ระบุวัน-เวลาคืน',
+                                            desc: 'สแกน QR ยืนยันการมีตัวเครื่องจริง (On-site Verification) กำหนดวัน-เวลาคืน วัตถุประสงค์ แล้วกดยืนยันคำขอ',
+                                            branches: [
+                                                {
+                                                    type: 'special',
+                                                    label: '📱 การยืนยันสิทธิ์หน้างาน (On-site QR)',
+                                                    text: 'การยืมทันทีต้องสแกน QR Code บนตัวเครื่องจริง หากไม่ได้อยู่หน้าเครื่องให้เลือก "จองล่วงหน้า"',
+                                                    status: '⚡ on-site token'
+                                                },
+                                                {
+                                                    type: 'special',
+                                                    label: '⚡ กรณี Staff / Admin ยืมเอง',
+                                                    text: 'ระบบ Auto-Approve อนุมัติทันที ข้ามขั้นตอนรอตรวจ ไปรับเครื่องได้ทันที',
+                                                    status: '🟢 approved'
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            stepNum: 3,
+                                            actor: '👮‍♂️ Staff / Admin',
+                                            actorRole: 'staff',
+                                            title: 'ตรวจสอบและอนุมัติคำขอ',
+                                            desc: 'เจ้าหน้าที่ตรวจสอบความพร้อมและกดยืนยันอนุมัติคำขอ',
+                                            branches: [
+                                                {
+                                                    type: 'success',
+                                                    label: '🟢 อนุมัติ (Approved)',
+                                                    text: 'ระบบส่งการแจ้งเตือน WeLPRU นัดหมายรับเครื่อง',
+                                                    status: '🟢 approved'
+                                                },
+                                                {
+                                                    type: 'danger',
+                                                    label: '🔴 ปฏิเสธ (Rejected)',
+                                                    text: 'เจ้าหน้าที่ระบุเหตุผลในการไม่อนุมัติ สิ้นสุดคำขอ',
+                                                    status: '🔴 rejected'
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            stepNum: 4,
+                                            actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
+                                            actorRole: 'counter',
+                                            title: 'รับมอบเครื่องที่เคาน์เตอร์บริการ',
+                                            desc: 'ตรวจสอบตัวเครื่องและอุปกรณ์เสริมร่วมกัน -> เจ้าหน้าที่กดยืนยันส่งมอบ -> เริ่มนับเวลาการยืม',
+                                            statusBadge: '🔵 กำลังยืม (borrowed)'
+                                        },
+                                        {
+                                            stepNum: 5,
+                                            actor: '🤖 Smart Cron (08:30 น.)',
+                                            actorRole: 'system',
+                                            title: 'ระบบตรวจสอบกำหนดคืนอัตโนมัติ',
+                                            desc: 'Smart Cron รันตรวจสอบทุก 08:30 น. ของทุกวัน:',
+                                            branches: [
+                                                {
+                                                    type: 'alert',
+                                                    label: '🔔 ถึงกำหนดคืนวันนี้',
+                                                    text: 'ระบบส่งแจ้งเตือนเตือนความจำไปยัง WeLPRU ให้เตรียมส่งคืน'
+                                                },
+                                                {
+                                                    type: 'danger',
+                                                    label: '⚠️ เลยกำหนดคืน (Overdue)',
+                                                    text: 'ขึ้นสถานะค้างคืน -> ส่งแจ้งเตือนฉุกเฉิน WeLPRU ถึงผู้ยืม + แจ้ง Discord เจ้าหน้าที่',
+                                                    status: '⚠️ ค้างคืน (overdue)'
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            stepNum: 6,
+                                            actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
+                                            actorRole: 'counter',
+                                            title: 'ส่งคืนที่เคาน์เตอร์ & ตรวจสภาพ 3 ระดับ',
+                                            desc: 'นำอุปกรณ์มาส่งคืนที่เคาน์เตอร์ เจ้าหน้าที่ตรวจสภาพเครื่องและอุปกรณ์เสริม',
+                                            branches: [
+                                                {
+                                                    type: 'success',
+                                                    label: '🟢 สมบูรณ์ (Good)',
+                                                    text: 'เครื่องและสายชาร์จครบ -> อุปกรณ์กลับสู่สถานะ ว่าง (available)',
+                                                    status: '🟢 available'
+                                                },
+                                                {
+                                                    type: 'alert',
+                                                    label: '🟡 ชำรุด (Damaged) / 🔴 ของไม่ครบ (Missing)',
+                                                    text: 'บันทึกหมายเหตุความเสียหาย -> ปรับสถานะเป็นซ่อมบำรุง (maintenance)',
+                                                    status: '🟡 maintenance'
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            stepNum: 7,
+                                            actor: '👤 ผู้ใช้งาน',
+                                            actorRole: 'user',
+                                            title: 'ทำแบบประเมินความพึงพอใจ 5 ดาว',
+                                            desc: 'ในหน้าคำขอของฉัน คลิกปุ่มประเมิน ให้คะแนนสภาพอุปกรณ์และการบริการ พร้อมระบุข้อเสนอแนะ -> สิ้นสุดกระบวนการสมบูรณ์',
+                                            statusBadge: '⚪ คืนแล้ว (returned)'
+                                        }
+                                    ]}
+                                />
+                            </div>
 
                             {/* Workflow 2: Reservation Flow */}
-                            {activeWorkflowTab === 'reservation' && (
-                                <div className="space-y-6 animate-fadeIn">
-                                    <WorkflowMetaBar
-                                        title="วงจรการจองอุปกรณ์ล่วงหน้าและการแปลงสัญญา (Advance Reservation Flow)"
-                                        actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff), 🤖 Smart Cron Engine"
-                                        channels="WeLPRU Mobile Push, Discord Webhook (ห้อง Reservation), In-App Alert"
-                                    />
-                                    <VisualFlowchart
-                                        startLabel="จุดเริ่มต้น: ผู้ใช้ส่งคำขอจองล่วงหน้า (ผ่านระบบออนไลน์)"
-                                        endLabel="สิ้นสุด: รับเครื่องจริง & แปลงเป็นสัญญาการยืม (Active Loan)"
-                                        steps={[
-                                            {
-                                                stepNum: 1,
-                                                actor: '👤 ผู้ใช้งาน',
-                                                actorRole: 'user',
-                                                title: 'ค้นหาอุปกรณ์ & คลิกปุ่ม "จอง"',
-                                                desc: 'เลือกอุปกรณ์ที่ต้องการใช้งานในอนาคตเพื่อล็อกคิวล่วงหน้า',
-                                            },
-                                            {
-                                                stepNum: 2,
-                                                actor: '👤 ผู้ใช้ + 🤖 ระบบ',
-                                                actorRole: 'system',
-                                                title: 'ระบุวัน-เวลา และตรวจสอบการซ้อนทับ',
-                                                desc: 'ระบุวันที่เริ่ม-สิ้นสุด และเวลา ระบบรันฟังก์ชัน validateBooking ป้องกันเวลาชนกัน',
-                                                branches: [
-                                                    {
-                                                        type: 'danger',
-                                                        label: '⚠️ หากตรวจพบเวลาซ้อนทับ',
-                                                        text: 'ระบบแจ้งเตือนช่วงเวลามีผู้จองแล้ว ระงับการทำรายการทันที',
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                stepNum: 3,
-                                                actor: '👮‍♂️ Staff / Admin',
-                                                actorRole: 'staff',
-                                                title: 'พิจารณาคำขอจองล่วงหน้า',
-                                                desc: 'เจ้าหน้าที่ตรวจสอบคิวการใช้งานและอุปกรณ์ในปฏิทินระบบ',
-                                                statusBadge: '🟡 รอการอนุมัติ (pending)',
-                                                branches: [
-                                                    {
-                                                        type: 'success',
-                                                        label: '🟢 หากอนุมัติ (Approved)',
-                                                        text: 'สถานะเป็น "จองสำเร็จ" ล็อกคิวอุปกรณ์ไว้ให้ผู้จอง',
-                                                        status: '🔵 จองสำเร็จ (approved)'
-                                                    },
-                                                    {
-                                                        type: 'danger',
-                                                        label: '🔴 หากปฏิเสธ (Rejected)',
-                                                        text: 'เจ้าหน้าที่ระบุเหตุผล -> แจ้งเตือนผู้ใช้ -> สิ้นสุดคำขอ',
-                                                        status: '🔴 rejected'
-                                                    },
-                                                    {
-                                                        type: 'neutral',
-                                                        label: '⚪ หากผู้ใช้ขอยกเลิก (Cancelled)',
-                                                        text: 'ผู้ใช้กดยกเลิกการจองเองก่อนถึงวันนัดหมาย',
-                                                        status: '⚪ cancelled'
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                stepNum: 4,
-                                                actor: '👮‍♂️ Staff + 🤖 Smart Cron',
-                                                actorRole: 'system',
-                                                title: 'การเปลี่ยนผ่านเมื่อถึงวันนัดหมาย',
-                                                desc: 'เมื่อถึงวันนัดรับเครื่อง เจ้าหน้าที่จัดเตรียมอุปกรณ์หรือระบบจัดการคิว',
-                                                branches: [
-                                                    {
-                                                        type: 'success',
-                                                        label: '🟢 เจ้าหน้าที่เตรียมเครื่องพร้อมจ่าย',
-                                                        text: 'ปรับสถานะเป็น "พร้อมรับ (Ready)" แจ้งเตือนผู้ใช้ให้มารับเครื่อง',
-                                                        status: '🟢 พร้อมรับ (ready)'
-                                                    },
-                                                    {
-                                                        type: 'danger',
-                                                        label: '🟠 หากไม่มารับตามกำหนด (Expired)',
-                                                        text: 'Smart Cron (08:30 น.) ปรับสถานะเป็นหมดอายุ และปลดล็อกเครื่องกลับมาว่าง',
-                                                        status: '🟠 หมดอายุ (expired)'
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                stepNum: 5,
-                                                actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
-                                                actorRole: 'counter',
-                                                title: 'รับมอบเครื่อง & แปลงเป็นการยืมจริง',
-                                                desc: 'ผู้ใช้นำหลักฐานมารับเครื่อง เจ้าหน้าที่กดยืนยันส่งมอบ -> ระบบปรับการจองเป็น Completed และสร้างสัญญาการยืม Active Loan ทันที',
-                                                statusBadge: '📦 รับแล้ว (completed) -> 🔵 กำลังยืม (approved)'
-                                            },
-                                            {
-                                                stepNum: 6,
-                                                actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
-                                                actorRole: 'user',
-                                                title: 'ใช้งานตามกำหนด ส่งคืนที่เคาน์เตอร์ และทำแบบประเมิน',
-                                                desc: 'นำส่งคืนตามกำหนดเวลา -> เจ้าหน้าที่ตรวจสภาพ -> ทำแบบประเมินความพึงพอใจ 5 ดาว',
-                                                statusBadge: '⚪ คืนแล้ว (returned)'
-                                            }
-                                        ]}
-                                    />
-                                </div>
-                            )}
+                            <div className={`space-y-6 animate-fadeIn ${activeWorkflowTab === 'reservation' ? 'block' : 'hidden print:block print:mt-8'}`}>
+                                <WorkflowMetaBar
+                                    title="วงจรการจองอุปกรณ์ล่วงหน้าและการแปลงสัญญา (Advance Reservation Flow)"
+                                    actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff), 🤖 Smart Cron Engine"
+                                    channels="WeLPRU Mobile Push, Discord Webhook (ห้อง Reservation), In-App Alert"
+                                />
+                                <VisualFlowchart
+                                    startLabel="จุดเริ่มต้น: ผู้ใช้ส่งคำขอจองล่วงหน้า (ผ่านระบบออนไลน์)"
+                                    endLabel="สิ้นสุด: รับเครื่องจริง & แปลงเป็นสัญญาการยืม (Active Loan)"
+                                    steps={[
+                                        {
+                                            stepNum: 1,
+                                            actor: '👤 ผู้ใช้งาน',
+                                            actorRole: 'user',
+                                            title: 'ค้นหาอุปกรณ์ & คลิกปุ่ม "จอง"',
+                                            desc: 'เลือกอุปกรณ์ที่ต้องการใช้งานในอนาคตเพื่อล็อกคิวล่วงหน้า',
+                                        },
+                                        {
+                                            stepNum: 2,
+                                            actor: '👤 ผู้ใช้งาน',
+                                            actorRole: 'user',
+                                            title: 'ระบุช่วงวันรับ-คืน & วัตถุประสงค์',
+                                            desc: 'เลือกวันที่และเวลาเริ่มใช้งานและส่งคืนตามสิทธิ์โควตา แล้วกดยืนยันคำขอจอง',
+                                            statusBadge: '🟡 รออนุมัติการจอง (pending)'
+                                        },
+                                        {
+                                            stepNum: 3,
+                                            actor: '👮‍♂️ Staff / Admin',
+                                            actorRole: 'staff',
+                                            title: 'เจ้าหน้าที่พิจารณาอนุมัติการจอง',
+                                            desc: 'ตรวจสอบคิวการใช้งานและประวัติผู้ขอ แล้วตัดสินใจ:',
+                                            branches: [
+                                                {
+                                                    type: 'success',
+                                                    label: '🟢 อนุมัติการจอง (Approved)',
+                                                    text: 'คิวจองได้รับการยืนยัน อุปกรณ์ถูกล็อกไว้สำหรับผู้จอง',
+                                                    status: '🟣 จองสำเร็จ (approved)'
+                                                },
+                                                {
+                                                    type: 'danger',
+                                                    label: '🔴 ปฏิเสธ (Rejected)',
+                                                    text: 'ระบุเหตุผล เช่น อุปกรณ์มีคิวซ้อนทับ หรืออยู่ระหว่างส่งซ่อม',
+                                                    status: '🔴 rejected'
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            stepNum: 4,
+                                            actor: '🤖 Smart Cron (ก่อนวันนัดรับ)',
+                                            actorRole: 'system',
+                                            title: 'แจ้งเตือนเตรียมรับเครื่อง & ตรวจสอบการไม่มารับ',
+                                            desc: 'ระบบส่งแจ้งเตือนล่วงหน้า และติดตามการมารับตามเวลาที่นัดหมาย:',
+                                            branches: [
+                                                {
+                                                    type: 'alert',
+                                                    label: '⏰ แจ้งเตือนล่วงหน้า 1 วัน',
+                                                    text: 'ส่ง WeLPRU Push แจ้งผู้ใช้ว่าพรุ่งนี้ถึงกำหนดรับเครื่องที่เคาน์เตอร์'
+                                                },
+                                                {
+                                                    type: 'danger',
+                                                    label: '⚠️ ไม่มารับเครื่องตามนัด (No-show)',
+                                                    text: 'หากเลยเวลานัดเกิน 24 ชม. ระบบ Auto-Cancel ยกเลิกคิวจองอัตโนมัติ ปล่อยเครื่องว่างให้ผู้อื่น',
+                                                    status: '⚪ ยกเลิก (cancelled)'
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            stepNum: 5,
+                                            actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
+                                            actorRole: 'counter',
+                                            title: 'รับมอบเครื่อง & แปลงเป็นการยืมจริง',
+                                            desc: 'ผู้ใช้นำหลักฐานมารับเครื่อง เจ้าหน้าที่กดยืนยันส่งมอบ -> ระบบปรับการจองเป็น Completed และสร้างสัญญาการยืม Active Loan ทันที',
+                                            statusBadge: '📦 รับแล้ว (completed) -> 🔵 กำลังยืม (approved)'
+                                        },
+                                        {
+                                            stepNum: 6,
+                                            actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
+                                            actorRole: 'user',
+                                            title: 'ใช้งานตามกำหนด ส่งคืนที่เคาน์เตอร์ และทำแบบประเมิน',
+                                            desc: 'นำส่งคืนตามกำหนดเวลา -> เจ้าหน้าที่ตรวจสภาพ -> ทำแบบประเมินความพึงพอใจ 5 ดาว',
+                                            statusBadge: '⚪ คืนแล้ว (returned)'
+                                        }
+                                    ]}
+                                />
+                            </div>
 
                             {/* Workflow 3: Onboarding Flow */}
-                            {activeWorkflowTab === 'onboarding' && (
-                                <div className="space-y-6 animate-fadeIn">
-                                    <WorkflowMetaBar
-                                        title="วงจรการสมัครสมาชิกและการอนุมัติบัญชีผู้ใช้งาน (User Onboarding Lifecycle)"
-                                        actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff), 🛡️ ผู้ดูแลระบบ (Admin)"
-                                        channels="Discord Webhook (ห้อง Auth), WeLPRU Mobile Push, In-App Alert"
-                                    />
-                                    <VisualFlowchart
-                                        startLabel="จุดเริ่มต้น: ผู้ใช้เข้าสู่ระบบด้วย Google ครั้งแรก"
-                                        endLabel="สิ้นสุด: บัญชีผ่านการอนุมัติ & เริ่มใช้งานระบบได้ทันที"
-                                        steps={[
-                                            {
-                                                stepNum: 1,
-                                                actor: '👤 ผู้ใช้งาน',
-                                                actorRole: 'user',
-                                                title: 'เข้าสู่ระบบด้วย Google Sign-In',
-                                                desc: 'คลิกเข้าสู่ระบบด้วยบัญชี Google เพื่อยืนยันตัวตนระดับแรก',
-                                            },
-                                            {
-                                                stepNum: 2,
-                                                actor: '👤 ผู้ใช้งาน',
-                                                actorRole: 'user',
-                                                title: 'กรอกข้อมูลโปรไฟล์ให้ครบถ้วน',
-                                                desc: 'ระบุชื่อ-นามสกุล, เบอร์โทร 10 หลัก, คณะ/สาขา, รหัสนักศึกษา/บุคลากร และเลือกประเภท (Student / Lecturer / Staff)',
-                                                statusBadge: '🟡 รอการอนุมัติ (pending)'
-                                            },
-                                            {
-                                                stepNum: 3,
-                                                actor: '🤖 ระบบ',
-                                                actorRole: 'system',
-                                                title: 'ส่งการแจ้งเตือน Discord แจ้งเจ้าหน้าที่',
-                                                desc: 'ระบบส่ง Webhook เข้าห้อง Auth ของเจ้าหน้าที่ เพื่อแจ้งเตือนว่ามีผู้ใช้ใหม่รออนุมัติ',
-                                            },
-                                            {
-                                                stepNum: 4,
-                                                actor: '👮‍♂️ Staff / 🛡️ Admin',
-                                                actorRole: 'staff',
-                                                title: 'ตรวจสอบข้อมูลและพิจารณาอนุมัติ',
-                                                desc: 'เจ้าหน้าที่เข้าไปที่เมนู /staff/users หรือ Admin ไปที่ /admin/users เพื่อตรวจสอบรหัสและข้อมูล',
-                                                branches: [
-                                                    {
-                                                        type: 'success',
-                                                        label: '🟢 อนุมัติบัญชี (Approved)',
-                                                        text: 'ผู้ใช้ได้รับแจ้งเตือน บัญชีเปิดใช้งานสมบูรณ์ สามารถยืมและจองอุปกรณ์ได้ตามโควตา',
-                                                        status: '🟢 approved'
-                                                    },
-                                                    {
-                                                        type: 'danger',
-                                                        label: '🔴 ไม่อนุมัติ / ระงับสิทธิ์ (Rejected / Suspended)',
-                                                        text: 'ข้อมูลไม่ถูกต้อง หรือผิดระเบียบ ระบบระงับสิทธิ์ไม่ให้ทำรายการยืม-จอง',
-                                                        status: '🔴 rejected'
-                                                    }
-                                                ]
-                                            }
-                                        ]}
-                                    />
-                                </div>
-                            )}
+                            <div className={`space-y-6 animate-fadeIn ${activeWorkflowTab === 'onboarding' ? 'block' : 'hidden print:block print:mt-8'}`}>
+                                <WorkflowMetaBar
+                                    title="วงจรการสมัครสมาชิกและการอนุมัติบัญชีผู้ใช้งาน (User Onboarding Lifecycle)"
+                                    actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff), 🛡️ ผู้ดูแลระบบ (Admin)"
+                                    channels="Discord Webhook (ห้อง Auth), WeLPRU Mobile Push, In-App Alert"
+                                />
+                                <VisualFlowchart
+                                    startLabel="จุดเริ่มต้น: ผู้ใช้เข้าสู่ระบบด้วย Google ครั้งแรก"
+                                    endLabel="สิ้นสุด: บัญชีผ่านการอนุมัติ & เริ่มใช้งานระบบได้ทันที"
+                                    steps={[
+                                        {
+                                            stepNum: 1,
+                                            actor: '👤 ผู้ใช้งาน',
+                                            actorRole: 'user',
+                                            title: 'เข้าสู่ระบบด้วย Google Sign-In',
+                                            desc: 'คลิกเข้าสู่ระบบด้วยบัญชี Google เพื่อยืนยันตัวตนระดับแรก',
+                                        },
+                                        {
+                                            stepNum: 2,
+                                            actor: '👤 ผู้ใช้งาน',
+                                            actorRole: 'user',
+                                            title: 'กรอกข้อมูลโปรไฟล์ให้ครบถ้วน',
+                                            desc: 'ระบุชื่อ-นามสกุล, เบอร์โทร 10 หลัก, คณะ/สาขา, รหัสนักศึกษา/บุคลากร และเลือกประเภท (Student / Lecturer / Staff)',
+                                            statusBadge: '🟡 รอการอนุมัติ (pending)'
+                                        },
+                                        {
+                                            stepNum: 3,
+                                            actor: '🤖 ระบบ',
+                                            actorRole: 'system',
+                                            title: 'ส่งการแจ้งเตือน Discord แจ้งเจ้าหน้าที่',
+                                            desc: 'ระบบส่ง Webhook เข้าห้อง Auth ของเจ้าหน้าที่ เพื่อแจ้งเตือนว่ามีผู้ใช้ใหม่รออนุมัติ',
+                                        },
+                                        {
+                                            stepNum: 4,
+                                            actor: '👮‍♂️ Staff / 🛡️ Admin',
+                                            actorRole: 'staff',
+                                            title: 'ตรวจสอบข้อมูลและพิจารณาอนุมัติ',
+                                            desc: 'เจ้าหน้าที่เข้าไปที่เมนู /staff/users หรือ Admin ไปที่ /admin/users เพื่อตรวจสอบรหัสและข้อมูล',
+                                            branches: [
+                                                {
+                                                    type: 'success',
+                                                    label: '🟢 อนุมัติบัญชี (Approved)',
+                                                    text: 'ผู้ใช้ได้รับแจ้งเตือน บัญชีเปิดใช้งานสมบูรณ์ สามารถยืมและจองอุปกรณ์ได้ตามโควตา',
+                                                    status: '🟢 approved'
+                                                },
+                                                {
+                                                    type: 'danger',
+                                                    label: '🔴 ไม่อนุมัติ / ระงับสิทธิ์ (Rejected / Suspended)',
+                                                    text: 'ข้อมูลไม่ถูกต้อง หรือผิดระเบียบ ระบบระงับสิทธิ์ไม่ให้ทำรายการยืม-จอง',
+                                                    status: '🔴 rejected'
+                                                }
+                                            ]
+                                        }
+                                    ]}
+                                />
+                            </div>
 
                             {/* Workflow 4: Return & Inspection Flow */}
-                            {activeWorkflowTab === 'inspection' && (
-                                <div className="space-y-6 animate-fadeIn">
-                                    <WorkflowMetaBar
-                                        title="วงจรการรับคืน ตรวจสภาพอุปกรณ์ และประเมินความพึงพอใจ (Return, Inspection & Evaluation)"
-                                        actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff)"
-                                        channels="Discord Webhook (ห้อง General), In-App Evaluation Prompt"
-                                    />
-                                    <VisualFlowchart
-                                        startLabel="จุดเริ่มต้น: ผู้ใช้นำอุปกรณ์และอุปกรณ์เสริมมาส่งคืนเคาน์เตอร์"
-                                        endLabel="สิ้นสุด: ครุภัณฑ์พร้อมให้บริการต่อ / ดำเนินการส่งซ่อมบำรุง"
-                                        steps={[
-                                            {
-                                                stepNum: 1,
-                                                actor: '👤 ผู้ใช้งาน',
-                                                actorRole: 'user',
-                                                title: 'นำอุปกรณ์มาส่งคืนที่เคาน์เตอร์',
-                                                desc: 'เตรียมเครื่อง สายชาร์จ กระเป๋า ลบข้อมูลส่วนตัว แล้วนำมาส่งที่เคาน์เตอร์บริการ',
-                                                statusBadge: '🔵 กำลังยืม (borrowed)'
-                                            },
-                                            {
-                                                stepNum: 2,
-                                                actor: '👮‍♂️ Staff',
-                                                actorRole: 'counter',
-                                                title: 'ค้นหารายการผ่านระบบ Fast Counter',
-                                                desc: 'สแกนบาร์โค้ด หรือพิมพ์หมายเลขครุภัณฑ์ ระบบจะดึงข้อมูลผู้ยืมขึ้นมาอัตโนมัติใน 1 วินาที',
-                                            },
-                                            {
-                                                stepNum: 3,
-                                                actor: '👮‍♂️ Staff',
-                                                actorRole: 'staff',
-                                                title: 'ตรวจสอบสภาพอุปกรณ์ 3 ระดับ',
-                                                desc: 'ตรวจเช็คตัวเครื่อง หน้าจอ แป้นพิมพ์ และอุปกรณ์เสริมอย่างละเอียด',
-                                                branches: [
-                                                    {
-                                                        type: 'success',
-                                                        label: '🟢 สภาพสมบูรณ์ (Good)',
-                                                        text: 'เครื่องปกติ อุปกรณ์ครบ -> ระบบปรับอุปกรณ์เป็น ว่าง (available) ทันที',
-                                                        status: '🟢 available'
-                                                    },
-                                                    {
-                                                        type: 'alert',
-                                                        label: '🟡 ชำรุดเสียหาย (Damaged)',
-                                                        text: 'บันทึกหมายเหตุความเสียหาย -> ปรับอุปกรณ์เป็น ซ่อมบำรุง (maintenance)',
-                                                        status: '🟡 maintenance'
-                                                    },
-                                                    {
-                                                        type: 'danger',
-                                                        label: '🔴 อุปกรณ์เสริมไม่ครบ (Missing Parts)',
-                                                        text: 'ระบุรายการอุปกรณ์ที่ขาด (เช่น สายชาร์จ) เพื่อติดตามทวงถาม',
-                                                        status: '🟡 maintenance'
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                stepNum: 4,
-                                                actor: '👮‍♂️ Staff + 🤖 ระบบ',
-                                                actorRole: 'system',
-                                                title: 'ยืนยันรับคืน & อัปเดตสถานะสำเร็จ',
-                                                desc: 'ระบบเปลี่ยนสถานะคำขอเป็น "คืนแล้ว (Returned)" และส่งการแจ้งเตือนยืนยันการคืน',
-                                                statusBadge: '⚪ คืนแล้ว (returned)'
-                                            },
-                                            {
-                                                stepNum: 5,
-                                                actor: '👤 ผู้ใช้งาน',
-                                                actorRole: 'user',
-                                                title: 'ทำแบบประเมินความพึงพอใจ 5 ดาว',
-                                                desc: 'ผู้ใช้เข้าไปที่หน้าคำขอของฉัน คลิกปุ่ม "ประเมินความพึงพอใจ" เพื่อให้คะแนน 1-5 ดาว และกรอกข้อเสนอแนะเพื่อนำไปพัฒนาบริการ',
-                                                statusBadge: '⭐ ประเมินผลแล้ว'
-                                            }
-                                        ]}
-                                    />
-                                </div>
-                            )}
+                            <div className={`space-y-6 animate-fadeIn ${activeWorkflowTab === 'inspection' ? 'block' : 'hidden print:block print:mt-8'}`}>
+                                <WorkflowMetaBar
+                                    title="วงจรการรับคืน ตรวจสภาพอุปกรณ์ และประเมินความพึงพอใจ (Return, Inspection & Evaluation)"
+                                    actors="👤 ผู้ใช้งาน (User), 👮‍♂️ เจ้าหน้าที่ (Staff)"
+                                    channels="Discord Webhook (ห้อง General), In-App Evaluation Prompt"
+                                />
+                                <VisualFlowchart
+                                    startLabel="จุดเริ่มต้น: ผู้ใช้นำอุปกรณ์และอุปกรณ์เสริมมาส่งคืนเคาน์เตอร์"
+                                    endLabel="สิ้นสุด: ครุภัณฑ์พร้อมให้บริการต่อ / ดำเนินการส่งซ่อมบำรุง"
+                                    steps={[
+                                        {
+                                            stepNum: 1,
+                                            actor: '👤 ผู้ใช้งาน',
+                                            actorRole: 'user',
+                                            title: 'นำอุปกรณ์มาส่งคืนที่เคาน์เตอร์',
+                                            desc: 'เตรียมเครื่อง สายชาร์จ กระเป๋า ลบข้อมูลส่วนตัว แล้วนำมาส่งที่เคาน์เตอร์บริการ',
+                                            statusBadge: '🔵 กำลังยืม (borrowed)'
+                                        },
+                                        {
+                                            stepNum: 2,
+                                            actor: '👮‍♂️ Staff',
+                                            actorRole: 'counter',
+                                            title: 'ค้นหารายการผ่านระบบ Fast Counter',
+                                            desc: 'สแกนบาร์โค้ด หรือพิมพ์หมายเลขครุภัณฑ์ ระบบจะดึงข้อมูลผู้ยืมขึ้นมาอัตโนมัติใน 1 วินาที',
+                                        },
+                                        {
+                                            stepNum: 3,
+                                            actor: '👮‍♂️ Staff',
+                                            actorRole: 'staff',
+                                            title: 'ตรวจสอบสภาพอุปกรณ์ 3 ระดับ',
+                                            desc: 'ตรวจเช็คตัวเครื่อง หน้าจอ แป้นพิมพ์ และอุปกรณ์เสริมอย่างละเอียด',
+                                            branches: [
+                                                {
+                                                    type: 'success',
+                                                    label: '🟢 สภาพสมบูรณ์ (Good)',
+                                                    text: 'เครื่องปกติ อุปกรณ์ครบ -> ระบบปรับอุปกรณ์เป็น ว่าง (available) ทันที',
+                                                    status: '🟢 available'
+                                                },
+                                                {
+                                                    type: 'alert',
+                                                    label: '🟡 ชำรุดเสียหาย (Damaged)',
+                                                    text: 'บันทึกหมายเหตุความเสียหาย -> ปรับอุปกรณ์เป็น ซ่อมบำรุง (maintenance)',
+                                                    status: '🟡 maintenance'
+                                                },
+                                                {
+                                                    type: 'danger',
+                                                    label: '🔴 อุปกรณ์เสริมไม่ครบ (Missing Parts)',
+                                                    text: 'ระบุรายการอุปกรณ์ที่ขาด (เช่น สายชาร์จ) เพื่อติดตามทวงถาม',
+                                                    status: '🟡 maintenance'
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            stepNum: 4,
+                                            actor: '👮‍♂️ Staff + 🤖 ระบบ',
+                                            actorRole: 'system',
+                                            title: 'ยืนยันรับคืน & อัปเดตสถานะสำเร็จ',
+                                            desc: 'ระบบเปลี่ยนสถานะคำขอเป็น "คืนแล้ว (Returned)" และส่งการแจ้งเตือนยืนยันการคืน',
+                                            statusBadge: '⚪ คืนแล้ว (returned)'
+                                        },
+                                        {
+                                            stepNum: 5,
+                                            actor: '👤 ผู้ใช้งาน',
+                                            actorRole: 'user',
+                                            title: 'ทำแบบประเมินความพึงพอใจ 5 ดาว',
+                                            desc: 'ผู้ใช้เข้าไปที่หน้าคำขอของฉัน คลิกปุ่ม "ประเมินความพึงพอใจ" เพื่อให้คะแนน 1-5 ดาว และกรอกข้อเสนอแนะเพื่อนำไปพัฒนาบริการ',
+                                            statusBadge: '⭐ ประเมินผลแล้ว'
+                                        }
+                                    ]}
+                                />
+                            </div>
 
                             {/* Legend Bar */}
                             <div className="mt-6 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-[11px] sm:text-xs text-slate-500">

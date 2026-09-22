@@ -15,7 +15,7 @@ interface ReportPDFExportProps {
 }
 
 // Report header text
-const REPORT_HEADER = 'รายงานสถิติการใช้งานระบบยืม-คืนวัสดุและครุภัณฑ์'
+const REPORT_HEADER = 'รายงานสรุปผลการใช้งานระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์'
 const ORGANIZATION = 'คณะวิทยาการจัดการ มหาวิทยาลัยราชภัฏลำปาง'
 
 export default function ReportPDFExport({
@@ -99,7 +99,7 @@ function generatePrintableHTML(
     const isEquipmentTab = activeTab === 'equipment'
 
     const reportTitle = isMonthlyTab
-        ? 'รายงานสรุปการใช้งานรายเดือน'
+        ? 'รายงานสรุปผลการใช้งานระบบยืม-คืนพัสดุและครุภัณฑ์ออนไลน์'
         : (isEquipmentTab ? 'รายงานสถิติคลังอุปกรณ์และครุภัณฑ์' : REPORT_HEADER)
 
     // Accurate calculation of totals according to the specified date range

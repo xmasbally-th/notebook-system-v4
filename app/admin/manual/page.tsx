@@ -342,7 +342,7 @@ export default function AdminManualPage() {
                             </p>
 
                             {/* Touch-friendly Workflow Tabs */}
-                            <div className="flex overflow-x-auto no-scrollbar gap-2 pb-2 border-b border-slate-100">
+                            <div className="flex overflow-x-auto no-scrollbar gap-2 pb-2 border-b border-slate-100 print-hidden">
                                 <button
                                     onClick={() => setActiveAdminWorkflow('rbac')}
                                     className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${activeAdminWorkflow === 'rbac' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
@@ -367,210 +367,198 @@ export default function AdminManualPage() {
                             </div>
 
                             {/* Admin Workflow 1: User RBAC & Lifecycle */}
-                            {activeAdminWorkflow === 'rbac' && (
-                                <div className="space-y-5 animate-fadeIn">
-                                    <WorkflowMetaBar
-                                        title="วงจรชีวิตผู้ใช้งานและการจัดการสิทธิ์ตามบทบาท (User RBAC, Quota & Approval Lifecycle)"
-                                        actors="👤 ผู้ลงทะเบียน (User), 🛡️ Admin, 🤖 ระบบ Auth"
-                                        channels="Discord Webhook (ห้อง Auth), WeLPRU Mobile Push, Supabase RLS"
-                                    />
-                                    <VisualFlowchart
-                                        startLabel="จุดเริ่มต้น: ผู้ใช้ลงทะเบียนและกรอกข้อมูลโปรไฟล์"
-                                        endLabel="สิ้นสุด: จัดสรรสิทธิ์ RBAC & ปรับปรุงโควตาอัตโนมัติ"
-                                        steps={[
-                                            {
-                                                stepNum: 1,
-                                                actor: '👤 ผู้ใช้งาน',
-                                                actorRole: 'user',
-                                                title: 'ลงทะเบียนผ่าน Google OAuth & ส่งโปรไฟล์',
-                                                desc: 'ผู้ใช้เข้าสู่ระบบด้วย Google และกรอกข้อมูลโปรไฟล์ รหัสนักศึกษา/บุคลากร สถานะเริ่มต้นเป็น Pending',
-                                                statusBadge: '🟡 pending',
-                                            },
-                                            {
-                                                stepNum: 2,
-                                                actor: '🛡️ Admin',
-                                                actorRole: 'staff',
-                                                title: 'ตรวจสอบข้อมูล & กำหนดบทบาทใน /admin/users',
-                                                desc: 'ตรวจสอบความถูกต้องของรหัสและคณะ จากนั้นกำหนด Role (User / Staff / Admin) และ User Type (Student / Lecturer / Staff) ซึ่งจะผูกกับโควตายืมอุปกรณ์โดยอัตโนมัติ',
-                                                branches: [
-                                                    {
-                                                        type: 'success',
-                                                        label: '🟢 อนุมัติบัญชี (Approved)',
-                                                        text: 'เปิดสิทธิ์การใช้งานทันที ผู้ใช้จะสามารถเริ่มยืมและจองอุปกรณ์ได้ตามโควตาที่กำหนด',
-                                                        status: '🟢 approved',
-                                                    },
-                                                    {
-                                                        type: 'danger',
-                                                        label: '🔴 ไม่อนุมัติ (Rejected)',
-                                                        text: 'ข้อมูลไม่ถูกต้อง ระบุเหตุผลการไม่อนุมัติ บัญชีจะถูกปฏิเสธและแจ้งเตือนกลับไปยังผู้ใช้',
-                                                        status: '🔴 rejected',
-                                                    },
-                                                ],
-                                            },
-                                            {
-                                                stepNum: 3,
-                                                actor: '👤 ผู้ใช้ + 🤖 ระบบ',
-                                                actorRole: 'user',
-                                                title: 'การใช้งานระบบตามขีดจำกัดโควตา (Enforced Quotas)',
-                                                desc: 'ระบบกั้นสิทธิ์ตามโควตาสูงสุด: นักศึกษา 1 เครื่อง (คืนวันต่อวัน), อาจารย์ 2 เครื่อง (ยืมได้สูงสุด 7 วัน), เจ้าหน้าที่ 2 เครื่อง (ยืมได้สูงสุด 5 วัน)',
-                                                statusBadge: 'Active Enforcement',
-                                            },
-                                            {
-                                                stepNum: 4,
-                                                actor: '🛡️ Admin',
-                                                actorRole: 'staff',
-                                                title: 'การควบคุมกำกับดูแลและระงับสิทธิ์ (Governance & Suspension)',
-                                                desc: 'Admin สามารถบริหารจัดการและลงโทษบัญชีผู้ใช้เมื่อพบพฤติกรรมผิดระเบียบ:',
-                                                branches: [
-                                                    {
-                                                        type: 'alert',
-                                                        label: '🟡 ปรับเปลี่ยน Role / ข้อมูล',
-                                                        text: 'เลื่อนขั้นเป็น Staff หรือแก้ไขข้อมูลคณะ/เบอร์โทรศัพท์ที่ผู้ใช้แจ้งขอเปลี่ยนแปลง',
-                                                    },
-                                                    {
-                                                        type: 'danger',
-                                                        label: '🔴 สั่งระงับบัญชี (Suspended)',
-                                                        text: 'กรณีมีรายการค้างส่งนาน หรือไม่ชำระค่าเสียหาย ระงับสิทธิ์การยืม-จองอุปกรณ์ทั้งหมดในระบบทันที',
-                                                        status: '🔴 suspended',
-                                                    },
-                                                ],
-                                            },
-                                        ]}
-                                    />
-                                </div>
-                            )}
+                            <div className={`space-y-5 animate-fadeIn ${activeAdminWorkflow === 'rbac' ? 'block' : 'hidden print:block print:mt-8'}`}>
+                                <WorkflowMetaBar
+                                    title="วงจรชีวิตผู้ใช้งานและการจัดการสิทธิ์ตามบทบาท (User RBAC, Quota & Approval Lifecycle)"
+                                    actors="👤 ผู้ลงทะเบียน (User), 🛡️ Admin, 🤖 ระบบ Auth"
+                                    channels="Discord Webhook (ห้อง Auth), WeLPRU Mobile Push, Supabase RLS"
+                                />
+                                <VisualFlowchart
+                                    startLabel="จุดเริ่มต้น: ผู้ใช้ลงทะเบียนและกรอกข้อมูลโปรไฟล์"
+                                    endLabel="สิ้นสุด: จัดสรรสิทธิ์ RBAC & ปรับปรุงโควตาอัตโนมัติ"
+                                    steps={[
+                                        {
+                                            stepNum: 1,
+                                            actor: '👤 ผู้ใช้งาน',
+                                            actorRole: 'user',
+                                            title: 'ลงทะเบียนผ่าน Google OAuth & ส่งโปรไฟล์',
+                                            desc: 'ผู้ใช้เข้าสู่ระบบด้วย Google และกรอกข้อมูลโปรไฟล์ รหัสนักศึกษา/บุคลากร สถานะเริ่มต้นเป็น Pending',
+                                            statusBadge: '🟡 pending',
+                                        },
+                                        {
+                                            stepNum: 2,
+                                            actor: '🛡️ Admin',
+                                            actorRole: 'staff',
+                                            title: 'ตรวจสอบข้อมูล & กำหนดบทบาทใน /admin/users',
+                                            desc: 'ตรวจสอบความถูกต้องของรหัสและคณะ จากนั้นกำหนด Role (User / Staff / Admin) และ User Type (Student / Lecturer / Staff) ซึ่งจะผูกกับโควตายืมอุปกรณ์โดยอัตโนมัติ',
+                                            branches: [
+                                                {
+                                                    type: 'success',
+                                                    label: '🟢 อนุมัติบัญชี (Approved)',
+                                                    text: 'เปิดสิทธิ์การใช้งานทันที ผู้ใช้จะสามารถเริ่มยืมและจองอุปกรณ์ได้ตามโควตาที่กำหนด',
+                                                    status: '🟢 approved',
+                                                },
+                                                {
+                                                    type: 'danger',
+                                                    label: '🔴 ไม่อนุมัติ (Rejected)',
+                                                    text: 'ข้อมูลไม่ถูกต้อง ระบุเหตุผลการไม่อนุมัติ บัญชีจะถูกปฏิเสธและแจ้งเตือนกลับไปยังผู้ใช้',
+                                                    status: '🔴 rejected',
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            stepNum: 3,
+                                            actor: '👤 ผู้ใช้ + 🤖 ระบบ',
+                                            actorRole: 'user',
+                                            title: 'การใช้งานระบบตามขีดจำกัดโควตา (Enforced Quotas)',
+                                            desc: 'ระบบกั้นสิทธิ์ตามโควตาสูงสุด: นักศึกษา 1 เครื่อง (คืนวันต่อวัน), อาจารย์ 2 เครื่อง (ยืมได้สูงสุด 7 วัน), เจ้าหน้าที่ 2 เครื่อง (ยืมได้สูงสุด 5 วัน)',
+                                            statusBadge: 'Active Enforcement',
+                                        },
+                                        {
+                                            stepNum: 4,
+                                            actor: '🛡️ Admin',
+                                            actorRole: 'staff',
+                                            title: 'การควบคุมกำกับดูแลและระงับสิทธิ์ (Governance & Suspension)',
+                                            desc: 'Admin สามารถบริหารจัดการและลงโทษบัญชีผู้ใช้เมื่อพบพฤติกรรมผิดระเบียบ:',
+                                            branches: [
+                                                {
+                                                    type: 'alert',
+                                                    label: '🟡 ปรับเปลี่ยน Role / ข้อมูล',
+                                                    text: 'เลื่อนขั้นเป็น Staff หรือแก้ไขข้อมูลคณะ/เบอร์โทรศัพท์ที่ผู้ใช้แจ้งขอเปลี่ยนแปลง',
+                                                },
+                                                {
+                                                    type: 'danger',
+                                                    label: '🔴 สั่งระงับบัญชี (Suspended)',
+                                                    text: 'กรณีมีรายการค้างส่งนาน หรือไม่ชำระค่าเสียหาย ระงับสิทธิ์การยืม-จองอุปกรณ์ทั้งหมดในระบบทันที',
+                                                    status: '🔴 suspended',
+                                                },
+                                            ],
+                                        },
+                                    ]}
+                                />
+                            </div>
 
                             {/* Admin Workflow 2: Special Loans */}
-                            {activeAdminWorkflow === 'special' && (
-                                <div className="space-y-5 animate-fadeIn">
-                                    <WorkflowMetaBar
-                                        title="วงจรการยืมอุปกรณ์กรณีพิเศษสำหรับโครงการ/หน่วยงาน (Special Project Loan Lifecycle)"
-                                        actors="🛡️ Admin, 🏢 หน่วยงาน / โครงการพิเศษ, 🤖 Audit Trail"
-                                        channels="Discord Webhook (ห้อง Special Loans), Staff Activity Log View"
-                                    />
-                                    <VisualFlowchart
-                                        startLabel="จุดเริ่มต้น: ติดต่อขอยืมอุปกรณ์เพื่อโครงการพิเศษ"
-                                        endLabel="สิ้นสุด: ปิดสัญญา Completed & ปลดล็อกอุปกรณ์กลับสู่ระบบ"
-                                        steps={[
-                                            {
-                                                stepNum: 1,
-                                                actor: '🛡️ Admin',
-                                                actorRole: 'staff',
-                                                title: 'สร้างสัญญาการยืมพิเศษ (/admin/special-loans/new)',
-                                                desc: 'ระบุชื่อโครงการ หน่วยงานผู้รับผิดชอบ ผู้ติดต่อ และช่วงวันที่ยืม-คืนตามหนังสือขอความอนุเคราะห์จากหน่วยงาน',
-                                                statusBadge: 'Draft',
-                                            },
-                                            {
-                                                stepNum: 2,
-                                                actor: '🛡️ Admin',
-                                                actorRole: 'staff',
-                                                title: 'เลือกอุปกรณ์แบบเดี่ยวหรือแบบกลุ่ม (Bulk Equipment Selection)',
-                                                desc: 'เลือกอุปกรณ์หลายเครื่องพร้อมกัน ระบบจะปรับสถานะอุปกรณ์ทั้งหมดที่เลือกเป็น "ถูกยืม (borrowed)" ทันทีเพื่อกันสิทธิ์',
-                                                statusBadge: '🔵 borrowed',
-                                            },
-                                            {
-                                                stepNum: 3,
-                                                actor: '🛡️ Admin + 🏢 หน่วยงาน',
-                                                actorRole: 'counter',
-                                                title: 'ส่งมอบอุปกรณ์ & บันทึกสัญญา Active',
-                                                desc: 'ตรวจเช็คอุปกรณ์ร่วมกับผู้แทนโครงการ พิมพ์เอกสารส่งมอบ และบันทึกสัญญาเป็น Active ในระบบ',
-                                                statusBadge: '🟢 Active Loan',
-                                            },
-                                            {
-                                                stepNum: 4,
-                                                actor: '🛡️ Admin',
-                                                actorRole: 'staff',
-                                                title: 'ปิดสัญญาการยืมพิเศษ (Closure & Condition Check)',
-                                                desc: 'เมื่อสิ้นสุดโครงการ ตรวจรับอุปกรณ์คืนตามรายการ:',
-                                                branches: [
-                                                    {
-                                                        type: 'success',
-                                                        label: '🟢 อุปกรณ์ครบถ้วนสมบูรณ์',
-                                                        text: 'อุปกรณ์ทั้งหมดกลับสู่สถานะว่าง (available) ทันที -> ปิดสัญญาเป็น Completed',
-                                                        status: '⚪ completed',
-                                                    },
-                                                    {
-                                                        type: 'alert',
-                                                        label: '🟡 มีอุปกรณ์ชำรุด หรือสูญหาย',
-                                                        text: 'แยกบันทึกเครื่องที่ชำรุดส่งฝ่ายซ่อมบำรุง (maintenance) และดำเนินการติดตามชดใช้ตามระเบียบ',
-                                                        status: '🟡 maintenance',
-                                                    },
-                                                    {
-                                                        type: 'danger',
-                                                        label: '⚪ ขอยกเลิกสัญญาก่อนส่งมอบ (Cancelled)',
-                                                        text: 'ยกเลิกรายการ อุปกรณ์ทั้งหมดถูกปลดล็อกกลับมาว่างทันที',
-                                                        status: '⚪ cancelled',
-                                                    },
-                                                ],
-                                            },
-                                        ]}
-                                    />
-                                </div>
-                            )}
+                            <div className={`space-y-5 animate-fadeIn ${activeAdminWorkflow === 'special' ? 'block' : 'hidden print:block print:mt-8'}`}>
+                                <WorkflowMetaBar
+                                    title="วงจรการยืมอุปกรณ์กรณีพิเศษสำหรับโครงการ/หน่วยงาน (Special Project Loan Lifecycle)"
+                                    actors="🛡️ Admin, 🏢 หน่วยงาน / โครงการพิเศษ, 🤖 Audit Trail"
+                                    channels="Discord Webhook (ห้อง Special Loans), Staff Activity Log View"
+                                />
+                                <VisualFlowchart
+                                    startLabel="จุดเริ่มต้น: ติดต่อขอยืมอุปกรณ์เพื่อโครงการพิเศษ"
+                                    endLabel="สิ้นสุด: ปิดสัญญา Completed & ปลดล็อกอุปกรณ์กลับสู่ระบบ"
+                                    steps={[
+                                        {
+                                            stepNum: 1,
+                                            actor: '🛡️ Admin',
+                                            actorRole: 'staff',
+                                            title: 'สร้างสัญญาการยืมพิเศษ (/admin/special-loans/new)',
+                                            desc: 'ระบุชื่อโครงการ หน่วยงานผู้รับผิดชอบ ผู้ติดต่อ และช่วงวันที่ยืม-คืนตามหนังสือขอความอนุเคราะห์จากหน่วยงาน',
+                                            statusBadge: 'Draft',
+                                        },
+                                        {
+                                            stepNum: 2,
+                                            actor: '🛡️ Admin',
+                                            actorRole: 'staff',
+                                            title: 'เลือกอุปกรณ์แบบเดี่ยวหรือแบบกลุ่ม (Bulk Equipment Selection)',
+                                            desc: 'เลือกอุปกรณ์หลายเครื่องพร้อมกัน ระบบจะปรับสถานะอุปกรณ์ทั้งหมดที่เลือกเป็น "ถูกยืม (borrowed)" ทันทีเพื่อกันสิทธิ์',
+                                            statusBadge: '🔵 borrowed',
+                                        },
+                                        {
+                                            stepNum: 3,
+                                            actor: '🛡️ Admin + 🏢 หน่วยงาน',
+                                            actorRole: 'counter',
+                                            title: 'ส่งมอบอุปกรณ์ & บันทึกสัญญา Active',
+                                            desc: 'ตรวจเช็คอุปกรณ์ร่วมกับผู้แทนโครงการ พิมพ์เอกสารส่งมอบ และบันทึกสัญญาเป็น Active ในระบบ',
+                                            statusBadge: '🟢 Active Loan',
+                                        },
+                                        {
+                                            stepNum: 4,
+                                            actor: '🛡️ Admin',
+                                            actorRole: 'staff',
+                                            title: 'ปิดสัญญาการยืมพิเศษ (Closure & Condition Check)',
+                                            desc: 'เมื่อสิ้นสุดโครงการ ตรวจรับอุปกรณ์คืนตามรายการ:',
+                                            branches: [
+                                                {
+                                                    type: 'success',
+                                                    label: '🟢 อุปกรณ์ครบถ้วนสมบูรณ์',
+                                                    text: 'อุปกรณ์ทั้งหมดกลับสู่สถานะว่าง (available) ทันที -> ปิดสัญญาเป็น Completed',
+                                                    status: '⚪ completed',
+                                                },
+                                                {
+                                                    type: 'alert',
+                                                    label: '🟡 มีอุปกรณ์ชำรุด หรือสูญหาย',
+                                                    text: 'แยกบันทึกเครื่องที่ชำรุดส่งฝ่ายซ่อมบำรุง (maintenance) และดำเนินการติดตามชดใช้ตามระเบียบ',
+                                                    status: '🟡 maintenance',
+                                                },
+                                                {
+                                                    type: 'danger',
+                                                    label: '⚪ ขอยกเลิกสัญญาก่อนส่งมอบ (Cancelled)',
+                                                    text: 'ยกเลิกรายการ อุปกรณ์ทั้งหมดถูกปลดล็อกกลับมาว่างทันที',
+                                                    status: '⚪ cancelled',
+                                                },
+                                            ],
+                                        },
+                                    ]}
+                                />
+                            </div>
 
                             {/* Admin Workflow 3: Data Retention & Audit Trail */}
-                            {activeAdminWorkflow === 'retention' && (
-                                <div className="space-y-5 animate-fadeIn">
-                                    <WorkflowMetaBar
-                                        title="วงจรการบำรุงรักษาข้อมูลและประวัติการปฏิบัติงาน (Data Retention & Audit Trail Lifecycle)"
-                                        actors="🛡️ Admin, 🤖 Supabase Engine, 🤖 Smart Cron"
-                                        channels="staff_activity_log_view, Security Alerts, Performance Monitor"
-                                    />
-                                    <VisualFlowchart
-                                        startLabel="จุดเริ่มต้น: ระบบบันทึก Audit Log ทุกความเคลื่อนไหว"
-                                        endLabel="สิ้นสุด: ดำเนินการ Archive สำเร็จตามมาตรฐาน PDPA"
-                                        steps={[
-                                            {
-                                                stepNum: 1,
-                                                actor: '🤖 ระบบ Supabase',
-                                                actorRole: 'system',
-                                                title: 'บันทึก Audit Log ทุกความเคลื่อนไหว',
-                                                desc: 'ทุกการกดอนุมัติ ส่งมอบ รับคืน หรือแก้ไขข้อมูล จะถูกบันทึกลง staff_activity_log โดยอัตโนมัติพร้อม IP และ User ID',
-                                                statusBadge: 'Real-time Log',
-                                            },
-                                            {
-                                                stepNum: 2,
-                                                actor: '🛡️ Admin',
-                                                actorRole: 'staff',
-                                                title: 'เรียกดู Audit Trail ผ่าน staff_activity_log_view',
-                                                desc: 'ตรวจสอบความโปร่งใส ค้นหาย้อนหลังตามชื่อเจ้าหน้าที่ หมายเลขครุภัณฑ์ หรือช่วงเวลา โดยใช้ Database View ที่ปรับแต่งความเร็วแล้ว',
-                                            },
-                                            {
-                                                stepNum: 3,
-                                                actor: '🛡️ Admin',
-                                                actorRole: 'staff',
-                                                title: 'กำหนดนโยบาย Data Retention ใน /admin/data-retention',
-                                                desc: 'ตั้งค่าระยะเวลาเก็บรักษาข้อมูลแจ้งเตือน (เช่น 30 วัน, 60 วัน, 90 วัน หรือ 180 วัน) เพื่อรักษาขนาดฐานข้อมูลให้อยู่ในเกณฑ์เหมาะสม',
-                                            },
-                                            {
-                                                stepNum: 4,
-                                                actor: '🤖 Smart Cron / 🛡️ Admin',
-                                                actorRole: 'system',
-                                                title: 'กระบวนการ Archive & Clean-up ข้อมูล',
-                                                desc: 'ดำเนินการกวาดล้างข้อมูลเก่าตามเงื่อนไขที่กำหนด:',
-                                                branches: [
-                                                    {
-                                                        type: 'special',
-                                                        label: '⚡ รันอัตโนมัติ (Automated Retention)',
-                                                        text: 'ระบบลบการแจ้งเตือนที่เก่าเกินกำหนดอย่างปลอดภัย โดยไม่ลบประวัติคำขอยืมจริงหรือ Audit Log',
-                                                    },
-                                                    {
-                                                        type: 'alert',
-                                                        label: '🧹 กดปุ่ม "Run Archive Now"',
-                                                        text: 'Admin สั่งรันกวาดล้างทันทีเพื่อลดพื้นที่จัดเก็บ พร้อมแสดงสรุปจำนวนแถวที่ถูกทำความสะอาด',
-                                                    },
-                                                    {
-                                                        type: 'success',
-                                                        label: '🟢 ฐานข้อมูลสะอาด & ปลอดภัย',
-                                                        text: 'ลด Index bloat ระบบตอบสนองรวดเร็ว ปฏิบัติตามมาตรฐาน PDPA อย่างเคร่งครัด',
-                                                        status: 'Optimal DB',
-                                                    },
-                                                ],
-                                            },
-                                        ]}
-                                    />
-                                </div>
-                            )}
+                            <div className={`space-y-5 animate-fadeIn ${activeAdminWorkflow === 'retention' ? 'block' : 'hidden print:block print:mt-8'}`}>
+                                <WorkflowMetaBar
+                                    title="วงจรการบำรุงรักษาข้อมูลและประวัติการปฏิบัติงาน (Data Retention & Audit Trail Lifecycle)"
+                                    actors="🛡️ Admin, 🤖 Supabase Engine, 🤖 Smart Cron"
+                                    channels="staff_activity_log_view, Security Alerts, Performance Monitor"
+                                />
+                                <VisualFlowchart
+                                    startLabel="จุดเริ่มต้น: ระบบบันทึก Audit Log ทุกความเคลื่อนไหว"
+                                    endLabel="สิ้นสุด: ดำเนินการ Archive สำเร็จตามมาตรฐาน PDPA"
+                                    steps={[
+                                        {
+                                            stepNum: 1,
+                                            actor: '🤖 ระบบ Supabase',
+                                            actorRole: 'system',
+                                            title: 'บันทึก Audit Trail ทุกกิจกรรม (Auto Audit Log)',
+                                            desc: 'บันทึก actor_id, action, entity_type, old_data, new_data และ client IP ไว้ในตาราง staff_activity_logs โดยอัตโนมัติ',
+                                            statusBadge: 'Auto-Logged',
+                                        },
+                                        {
+                                            stepNum: 2,
+                                            actor: '🛡️ Admin',
+                                            actorRole: 'staff',
+                                            title: 'ตรวจสอบประวัติงาน (/admin/staff-activity)',
+                                            desc: 'ผู้ดูแลระบบค้นหา ตรวจสอบความถูกต้อง สอบสวนเหตุการณ์ย้อนหลัง หรือกรองตามช่วงเวลาและประเภทกิจกรรม',
+                                            statusBadge: 'Query & Filter',
+                                        },
+                                        {
+                                            stepNum: 3,
+                                            actor: '🤖 Smart Cron + 🛡️ Admin',
+                                            actorRole: 'system',
+                                            title: 'นโยบายการจัดเก็บและทำความสะอาดข้อมูล (Data Retention Policy)',
+                                            desc: 'ดำเนินการกวาดล้างข้อมูลเก่าตามเงื่อนไขที่กำหนด:',
+                                            branches: [
+                                                {
+                                                    type: 'special',
+                                                    label: '⚡ รันอัตโนมัติ (Automated Retention)',
+                                                    text: 'ระบบลบการแจ้งเตือนที่เก่าเกินกำหนดอย่างปลอดภัย โดยไม่ลบประวัติคำขอยืมจริงหรือ Audit Log',
+                                                },
+                                                {
+                                                    type: 'alert',
+                                                    label: '🧹 กดปุ่ม "Run Archive Now"',
+                                                    text: 'Admin สั่งรันกวาดล้างทันทีเพื่อลดพื้นที่จัดเก็บ พร้อมแสดงสรุปจำนวนแถวที่ถูกทำความสะอาด',
+                                                },
+                                                {
+                                                    type: 'success',
+                                                    label: '🟢 ฐานข้อมูลสะอาด & ปลอดภัย',
+                                                    text: 'ลด Index bloat ระบบตอบสนองรวดเร็ว ปฏิบัติตามมาตรฐาน PDPA อย่างเคร่งครัด',
+                                                    status: 'Optimal DB',
+                                                },
+                                            ],
+                                        },
+                                    ]}
+                                />
+                            </div>
                         </div>
                     </Section>
                 </div>

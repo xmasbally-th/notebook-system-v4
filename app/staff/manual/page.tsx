@@ -314,7 +314,7 @@ export default function StaffManualPage() {
                             </p>
 
                             {/* Touch-friendly Workflow Tabs */}
-                            <div className="flex overflow-x-auto no-scrollbar gap-2 pb-2 border-b border-slate-100">
+                            <div className="flex overflow-x-auto no-scrollbar gap-2 pb-2 border-b border-slate-100 print-hidden">
                                 <button
                                     onClick={() => setActiveStaffWorkflow('counter')}
                                     className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 shrink-0 ${activeStaffWorkflow === 'counter' ? 'bg-teal-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
@@ -353,324 +353,309 @@ export default function StaffManualPage() {
                             </div>
 
                             {/* Workflow 1: Fast Counter */}
-                            {activeStaffWorkflow === 'counter' && (
-                                <div className="space-y-5 animate-fadeIn">
-                                    <WorkflowMetaBar
-                                        title="ขั้นตอนการให้บริการด่วนหน้าเคาน์เตอร์ (Fast Counter Service Flow)"
-                                        actors="👮‍♂️ Staff เคาน์เตอร์, 👤 ผู้รับบริการ, 🤖 ระบบ Fast Search"
-                                        channels="In-App Sound Feedback, Real-time Database Sync"
-                                    />
-                                    <VisualFlowchart
-                                        startLabel="จุดเริ่มต้น: เจ้าหน้าที่เปิดสถานี Fast Counter"
-                                        endLabel="สิ้นสุด: ทำรายการเคาน์เตอร์สำเร็จ & ข้อมูล Sync ทันที"
-                                        steps={[
-                                            {
-                                                stepNum: 1,
-                                                actor: '👮‍♂️ Staff เคาน์เตอร์',
-                                                actorRole: 'counter',
-                                                title: 'เปิดสถานี Fast Counter (/staff/counter)',
-                                                desc: 'เข้าสู่หน้าจอ Fast Counter เตรียมเครื่องยิงสแกนเนอร์ หรือเปิดกล้องเว็บแคม/มือถือ',
-                                            },
-                                            {
-                                                stepNum: 2,
-                                                actor: '👮‍♂️ Staff เคาน์เตอร์',
-                                                actorRole: 'counter',
-                                                title: 'สแกน QR Code หรือพิมพ์รหัสครุภัณฑ์',
-                                                desc: 'ระบบจะค้นหาและดึงข้อมูลอุปกรณ์พร้อมสถานะปัจจุบันขึ้นมาอัตโนมัติภายใน 1 วินาที',
-                                                statusBadge: '⚡ Fast Lookup',
-                                            },
-                                            {
-                                                stepNum: 3,
-                                                actor: '🤖 ระบบตรวจสอบสถานะ',
-                                                actorRole: 'system',
-                                                title: 'วิเคราะห์สถานะอัตโนมัติ (Intelligent Routing)',
-                                                desc: 'ระบบสลับโหมดการทำงานให้อัตโนมัติตามสถานะจริงของอุปกรณ์:',
-                                                branches: [
-                                                    {
-                                                        type: 'success',
-                                                        label: '🟢 หากสถานะ "ว่าง (available)"',
-                                                        text: 'สลับเข้าสู่โหมด "จ่ายเครื่องด่วน" -> ค้นหาชื่อผู้รับบริการ หรือสแกนบัตร -> บันทึกการยืมทันที',
-                                                        status: '🔵 borrowed',
-                                                    },
-                                                    {
-                                                        type: 'special',
-                                                        label: '🔵 หากสถานะ "ถูกยืม (borrowed)"',
-                                                        text: 'สลับเข้าสู่โหมด "รับคืนด่วน" -> แสดงชื่อผู้ยืมและปุ่มตรวจสภาพ 3 ระดับทันที',
-                                                        status: '⚪ returned',
-                                                    },
-                                                    {
-                                                        type: 'alert',
-                                                        label: '🟣 หากสถานะ "ถูกจอง (reserved)"',
-                                                        text: 'ตรวจเช็คชื่อผู้จอง หากตรงกัน -> กดยืนยันส่งมอบและแปลงเป็น Active Loan ทันที',
-                                                        status: '🔵 borrowed',
-                                                    },
-                                                ],
-                                            },
-                                            {
-                                                stepNum: 4,
-                                                actor: '👮‍♂️ Staff เคาน์เตอร์',
-                                                actorRole: 'counter',
-                                                title: 'ยืนยันรายการ & ส่งมอบ/เก็บเครื่อง',
-                                                desc: 'ระบบบันทึก Log ลง staff_activity_log ทันที พร้อมเสียงตอบรับการทำรายการสำเร็จ',
-                                                statusBadge: '✅ สำเร็จ',
-                                            },
-                                        ]}
-                                    />
-                                </div>
-                            )}
+                            <div className={`space-y-5 animate-fadeIn ${activeStaffWorkflow === 'counter' ? 'block' : 'hidden print:block print:mt-8'}`}>
+                                <WorkflowMetaBar
+                                    title="ขั้นตอนการให้บริการด่วนหน้าเคาน์เตอร์ (Fast Counter Service Flow)"
+                                    actors="👮‍♂️ Staff เคาน์เตอร์, 👤 ผู้รับบริการ, 🤖 ระบบ Fast Search"
+                                    channels="In-App Sound Feedback, Real-time Database Sync"
+                                />
+                                <VisualFlowchart
+                                    startLabel="จุดเริ่มต้น: เจ้าหน้าที่เปิดสถานี Fast Counter"
+                                    endLabel="สิ้นสุด: ทำรายการเคาน์เตอร์สำเร็จ & ข้อมูล Sync ทันที"
+                                    steps={[
+                                        {
+                                            stepNum: 1,
+                                            actor: '👮‍♂️ Staff เคาน์เตอร์',
+                                            actorRole: 'counter',
+                                            title: 'เปิดสถานี Fast Counter (/staff/counter)',
+                                            desc: 'เข้าสู่หน้าจอ Fast Counter เตรียมเครื่องยิงสแกนเนอร์ หรือเปิดกล้องเว็บแคม/มือถือ',
+                                        },
+                                        {
+                                            stepNum: 2,
+                                            actor: '👮‍♂️ Staff เคาน์เตอร์',
+                                            actorRole: 'counter',
+                                            title: 'สแกน QR Code หรือพิมพ์รหัสครุภัณฑ์',
+                                            desc: 'ระบบจะค้นหาและดึงข้อมูลอุปกรณ์พร้อมสถานะปัจจุบันขึ้นมาอัตโนมัติภายใน 1 วินาที',
+                                            statusBadge: '⚡ Fast Lookup',
+                                        },
+                                        {
+                                            stepNum: 3,
+                                            actor: '🤖 ระบบตรวจสอบสถานะ',
+                                            actorRole: 'system',
+                                            title: 'วิเคราะห์สถานะอัตโนมัติ (Intelligent Routing)',
+                                            desc: 'ระบบสลับโหมดการทำงานให้อัตโนมัติตามสถานะจริงของอุปกรณ์:',
+                                            branches: [
+                                                {
+                                                    type: 'success',
+                                                    label: '🟢 หากสถานะ "ว่าง (available)"',
+                                                    text: 'สลับเข้าสู่โหมด "จ่ายเครื่องด่วน" -> ค้นหาชื่อผู้รับบริการ หรือสแกนบัตร -> บันทึกการยืมทันที',
+                                                    status: '🔵 borrowed',
+                                                },
+                                                {
+                                                    type: 'special',
+                                                    label: '🔵 หากสถานะ "ถูกยืม (borrowed)"',
+                                                    text: 'สลับเข้าสู่โหมด "รับคืนด่วน" -> แสดงชื่อผู้ยืมและปุ่มตรวจสภาพ 3 ระดับทันที',
+                                                    status: '⚪ returned',
+                                                },
+                                                {
+                                                    type: 'alert',
+                                                    label: '🟣 หากมีคิว "จองล่วงหน้า"',
+                                                    text: 'ตรวจสอบสิทธิ์ผู้จองตรงรอบเวลา -> กดส่งมอบอุปกรณ์ให้ผู้จองทันที',
+                                                    status: '🟢 completed',
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            stepNum: 4,
+                                            actor: '👮‍♂️ Staff เคาน์เตอร์',
+                                            actorRole: 'counter',
+                                            title: 'ส่งมอบหรือจัดเก็บอุปกรณ์เข้าตู้',
+                                            desc: 'ส่งมอบเครื่องพร้อมอะแดปเตอร์ให้ผู้รับบริการ หรือเก็บเข้าช่องพร้อมให้บริการต่อไป',
+                                        },
+                                    ]}
+                                />
+                            </div>
 
-                            {/* Workflow 2: Loan & Reservation Approvals */}
-                            {activeStaffWorkflow === 'approvals' && (
-                                <div className="space-y-5 animate-fadeIn">
-                                    <WorkflowMetaBar
-                                        title="วงจรการพิจารณาอนุมัติคำขอยืมและจองล่วงหน้า (Loan & Reservation Approvals)"
-                                        actors="👮‍♂️ เจ้าหน้าที่ (Staff), 👤 ผู้ขอรับบริการ (User), 🤖 ระบบ Auto-Approve"
-                                        channels="Discord Webhook (ห้อง Loans/Reservations), WeLPRU Mobile Push, In-App Alert"
-                                    />
-                                    <VisualFlowchart
-                                        startLabel="จุดเริ่มต้น: ผู้ใช้ส่งคำขอยืมหรือคำขอจองล่วงหน้า"
-                                        endLabel="สิ้นสุด: บันทึกการอนุมัติ/ปฏิเสธ & ส่งแจ้งเตือนอัตโนมัติ"
-                                        steps={[
-                                            {
-                                                stepNum: 1,
-                                                actor: '👤 ผู้ใช้งาน',
-                                                actorRole: 'user',
-                                                title: 'ส่งคำขอยืมหรือจองอุปกรณ์',
-                                                desc: 'คำขอเข้าสู่คิวสถานะ Pending ระบบแจ้งเตือนเจ้าหน้าที่ผ่าน Discord Webhook ทันที',
-                                                statusBadge: '🟡 pending',
-                                            },
-                                            {
-                                                stepNum: 2,
-                                                actor: '👮‍♂️ Staff',
-                                                actorRole: 'staff',
-                                                title: 'ตรวจสอบรายละเอียดในหน้า /staff/loans หรือ /staff/reservations',
-                                                desc: 'ตรวจสอบวัตถุประสงค์ ช่วงวัน-เวลา ยอดโควตาคงเหลือ และประวัติการส่งคืนของผู้ขอ',
-                                                branches: [
-                                                    {
-                                                        type: 'special',
-                                                        label: '⚡ กรณี Staff / Admin ยืมเอง',
-                                                        text: 'ระบบตรวจสอบสิทธิ์และทำ Auto-Approve อนุมัติทันทีอัตโนมัติ ข้ามขั้นตอนรอตรวจ',
-                                                        status: '🟢 approved',
-                                                    },
-                                                    {
-                                                        type: 'neutral',
-                                                        label: '📋 กรณีอนุมัติทีละหลายรายการ (Bulk Action)',
-                                                        text: 'สามารถติ๊กเลือกเช็คบ็อกซ์หลายรายการ แล้วกดปุ่ม "อนุมัติรายการที่เลือก" พร้อมกันในคลิกเดียว',
-                                                    },
-                                                ],
-                                            },
-                                            {
-                                                stepNum: 3,
-                                                actor: '👮‍♂️ Staff',
-                                                actorRole: 'staff',
-                                                title: 'พิจารณาตัดสินใจ (Decision Point)',
-                                                desc: 'กดปุ่มเพื่อดำเนินการตามผลการพิจารณา:',
-                                                branches: [
-                                                    {
-                                                        type: 'success',
-                                                        label: '🟢 อนุมัติ (Approve)',
-                                                        text: 'ระบบเปลี่ยนสถานะเป็น Approved และส่งแจ้งเตือน WeLPRU นัดหมายให้มารับเครื่องที่เคาน์เตอร์',
-                                                        status: '🟢 approved',
-                                                    },
-                                                    {
-                                                        type: 'danger',
-                                                        label: '🔴 ปฏิเสธ (Reject)',
-                                                        text: 'เจ้าหน้าที่ต้องระบุเหตุผลในการไม่อนุมัติ -> ระบบส่งแจ้งเตือนผู้ใช้พร้อมเหตุผล -> จบกระบวนการ',
-                                                        status: '🔴 rejected',
-                                                    },
-                                                ],
-                                            },
-                                            {
-                                                stepNum: 4,
-                                                actor: '👮‍♂️ Staff เคาน์เตอร์',
-                                                actorRole: 'counter',
-                                                title: 'จ่ายเครื่องจริงเมื่อผู้ขอมารับ',
-                                                desc: 'ตรวจสอบตัวตน -> ตรวจสภาพตัวเครื่องร่วมกัน -> กด "ยืนยันส่งมอบ" -> ปรับสถานะเป็น "กำลังยืม"',
-                                                statusBadge: '🔵 กำลังยืม (borrowed)',
-                                            },
-                                        ]}
-                                    />
-                                </div>
-                            )}
+                            {/* Workflow 2: Approvals (Loans & Reservations) */}
+                            <div className={`space-y-5 animate-fadeIn ${activeStaffWorkflow === 'approvals' ? 'block' : 'hidden print:block print:mt-8'}`}>
+                                <WorkflowMetaBar
+                                    title="วงจรการพิจารณาอนุมัติคำขอยืมและการจอง (Approvals Workflow)"
+                                    actors="👤 ผู้ส่งคำขอ (User), 👮‍♂️ เจ้าหน้าที่ (Staff), 🤖 WeLPRU Push"
+                                    channels="Discord Notification Webhook, WeLPRU Mobile Push Notification"
+                                />
+                                <VisualFlowchart
+                                    startLabel="จุดเริ่มต้น: คำขอใหม่เข้าระบบ (Pending Request)"
+                                    endLabel="สิ้นสุด: ส่งมอบอุปกรณ์หรือยกเลิกคำขอเสร็จสิ้น"
+                                    steps={[
+                                        {
+                                            stepNum: 1,
+                                            actor: '👤 ผู้ใช้งาน',
+                                            actorRole: 'user',
+                                            title: 'ยื่นคำขอยืมหรือจองผ่านหน้าเว็บ',
+                                            desc: 'เลือกอุปกรณ์ วัตถุประสงค์ และช่วงวันที่ต้องการใช้งาน -> ส่งคำขอเข้าระบบ',
+                                            statusBadge: '🟡 รออนุมัติ (pending)',
+                                        },
+                                        {
+                                            stepNum: 2,
+                                            actor: '👮‍♂️ Staff',
+                                            actorRole: 'staff',
+                                            title: 'ตรวจสอบข้อมูลในหน้า /staff/loans หรือ /staff/reservations',
+                                            desc: 'เช็คประวัติการใช้งาน ความถูกต้องของเหตุผล และสถานะความพร้อมของอุปกรณ์',
+                                            branches: [
+                                                {
+                                                    type: 'success',
+                                                    label: '⚡ มีสิทธิ์ Auto-Approve',
+                                                    text: 'กรณีเจ้าหน้าที่ยืมเอง หรือได้รับสิทธิ์ยกเว้น -> ระบบอนุมัติทันทีโดยไม่ต้องรอ',
+                                                    status: '🟢 approved',
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            stepNum: 3,
+                                            actor: '👮‍♂️ Staff',
+                                            actorRole: 'staff',
+                                            title: 'พิจารณาตัดสินใจ (Decision Point)',
+                                            desc: 'กดปุ่มเพื่อดำเนินการตามผลการพิจารณา:',
+                                            branches: [
+                                                {
+                                                    type: 'success',
+                                                    label: '🟢 อนุมัติ (Approve)',
+                                                    text: 'ระบบเปลี่ยนสถานะเป็น Approved และส่งแจ้งเตือน WeLPRU นัดหมายให้มารับเครื่องที่เคาน์เตอร์',
+                                                    status: '🟢 approved',
+                                                },
+                                                {
+                                                    type: 'danger',
+                                                    label: '🔴 ปฏิเสธ (Reject)',
+                                                    text: 'เจ้าหน้าที่ต้องระบุเหตุผลในการไม่อนุมัติ -> ระบบส่งแจ้งเตือนผู้ใช้พร้อมเหตุผล -> จบกระบวนการ',
+                                                    status: '🔴 rejected',
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            stepNum: 4,
+                                            actor: '👮‍♂️ Staff เคาน์เตอร์',
+                                            actorRole: 'counter',
+                                            title: 'จ่ายเครื่องจริงเมื่อผู้ขอมารับ',
+                                            desc: 'ตรวจสอบตัวตน -> ตรวจสภาพตัวเครื่องร่วมกัน -> กด "ยืนยันส่งมอบ" -> ปรับสถานะเป็น "กำลังยืม"',
+                                            statusBadge: '🔵 กำลังยืม (borrowed)',
+                                        },
+                                    ]}
+                                />
+                            </div>
 
                             {/* Workflow 3: Returns & Condition Check */}
-                            {activeStaffWorkflow === 'returns' && (
-                                <div className="space-y-5 animate-fadeIn">
-                                    <WorkflowMetaBar
-                                        title="วงจรการรับคืนและตรวจสภาพอุปกรณ์ 3 ระดับ (Inspection & Condition Workflow)"
-                                        actors="👮‍♂️ เจ้าหน้าที่ (Staff), 👤 ผู้ส่งคืน (User)"
-                                        channels="WeLPRU Notification, In-App 5-Star Evaluation, Audit Log"
-                                    />
-                                    <VisualFlowchart
-                                        startLabel="จุดเริ่มต้น: ผู้ใช้นำอุปกรณ์มาส่งคืนที่เคาน์เตอร์"
-                                        endLabel="สิ้นสุด: บันทึกรับคืนสำเร็จ & ส่งลิงก์ประเมินความพึงพอใจ"
-                                        steps={[
-                                            {
-                                                stepNum: 1,
-                                                actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
-                                                actorRole: 'counter',
-                                                title: 'รับอุปกรณ์ที่เคาน์เตอร์บริการ',
-                                                desc: 'รับตัวเครื่อง โน้ตบุ๊ค อะแดปเตอร์สายชาร์จ และกระเป๋า ค้นหาคำขอยืมในระบบ',
-                                                statusBadge: '🔵 กำลังยืม (borrowed)',
-                                            },
-                                            {
-                                                stepNum: 2,
-                                                actor: '👮‍♂️ Staff',
-                                                actorRole: 'staff',
-                                                title: 'ตรวจเช็คสภาพเครื่องและอุปกรณ์เสริม 3 ระดับ',
-                                                desc: 'เปิดเครื่องทดสอบ เปิดหน้าจอ เช็คแป้นพิมพ์ และนับจำนวนอุปกรณ์เสริม:',
-                                                branches: [
-                                                    {
-                                                        type: 'success',
-                                                        label: '🟢 สภาพสมบูรณ์ (Good)',
-                                                        text: 'เครื่องปกติ 100% สายชาร์จครบ -> อุปกรณ์จะถูกปรับสถานะเป็น "ว่าง (available)" ทันทีเพื่อพร้อมให้บริการต่อ',
-                                                        status: '🟢 available',
-                                                    },
-                                                    {
-                                                        type: 'alert',
-                                                        label: '🟡 ชำรุดเสียหาย (Damaged)',
-                                                        text: 'จอแตก, พอร์ตชำรุด, แป้นพิมพ์หลุด -> บันทึกรายละเอียดอาการ -> ปรับสถานะเป็น "ซ่อมบำรุง (maintenance)"',
-                                                        status: '🟡 maintenance',
-                                                    },
-                                                    {
-                                                        type: 'danger',
-                                                        label: '🔴 อุปกรณ์เสริมไม่ครบ (Missing Parts)',
-                                                        text: 'ขาดสายชาร์จ หรือกระเป๋า -> บันทึกรายการที่ขาดเพื่อติดตามทวงถาม -> ปรับสถานะเป็น "ซ่อมบำรุง (maintenance)"',
-                                                        status: '🟡 maintenance',
-                                                    },
-                                                ],
-                                            },
-                                            {
-                                                stepNum: 3,
-                                                actor: '👮‍♂️ Staff',
-                                                actorRole: 'staff',
-                                                title: 'กดยืนยันการรับคืน (Confirm Return)',
-                                                desc: 'ระบบปรับสถานะคำขอเป็น "คืนแล้ว (returned)" บันทึกเวลาคืนจริง และส่งการแจ้งเตือนยืนยันพร้อมเชิญชวนทำแบบประเมินความพึงพอใจ 5 ดาว',
-                                                statusBadge: '⚪ คืนแล้ว (returned)',
-                                            },
-                                        ]}
-                                    />
-                                </div>
-                            )}
+                            <div className={`space-y-5 animate-fadeIn ${activeStaffWorkflow === 'returns' ? 'block' : 'hidden print:block print:mt-8'}`}>
+                                <WorkflowMetaBar
+                                    title="วงจรการรับคืนและตรวจสภาพอุปกรณ์ 3 ระดับ (Inspection & Condition Workflow)"
+                                    actors="👮‍♂️ เจ้าหน้าที่ (Staff), 👤 ผู้ส่งคืน (User)"
+                                    channels="WeLPRU Notification, In-App 5-Star Evaluation, Audit Log"
+                                />
+                                <VisualFlowchart
+                                    startLabel="จุดเริ่มต้น: ผู้ใช้นำอุปกรณ์มาส่งคืนที่เคาน์เตอร์"
+                                    endLabel="สิ้นสุด: บันทึกรับคืนสำเร็จ & ส่งลิงก์ประเมินความพึงพอใจ"
+                                    steps={[
+                                        {
+                                            stepNum: 1,
+                                            actor: '👤 ผู้ใช้ + 👮‍♂️ Staff',
+                                            actorRole: 'counter',
+                                            title: 'รับอุปกรณ์ที่เคาน์เตอร์บริการ',
+                                            desc: 'รับตัวเครื่อง โน้ตบุ๊ค อะแดปเตอร์สายชาร์จ และกระเป๋า ค้นหาคำขอยืมในระบบ',
+                                            statusBadge: '🔵 กำลังยืม (borrowed)',
+                                        },
+                                        {
+                                            stepNum: 2,
+                                            actor: '👮‍♂️ Staff',
+                                            actorRole: 'staff',
+                                            title: 'ตรวจเช็คสภาพเครื่องและอุปกรณ์เสริม 3 ระดับ',
+                                            desc: 'เจ้าหน้าที่ตรวจสอบสภาพจริงและเลือกผลการตรวจ 3 ระดับ:',
+                                            branches: [
+                                                {
+                                                    type: 'success',
+                                                    label: '🟢 สมบูรณ์ 100% (Normal)',
+                                                    text: 'ตัวเครื่องและอุปกรณ์ครบถ้วน ทำงานได้ปกติ -> ปรับสถานะเป็น "ว่าง (available)" ทันที',
+                                                    status: '🟢 available',
+                                                },
+                                                {
+                                                    type: 'alert',
+                                                    label: '🟡 ชำรุด (Damaged)',
+                                                    text: 'จอแตก, บอดี้มีรอยบุบ, แป้นพิมพ์เสียหาย -> แนบรูปถ่ายสภาพ -> ส่งต่อซ่อมบำรุง',
+                                                    status: '🟡 maintenance',
+                                                },
+                                                {
+                                                    type: 'danger',
+                                                    label: '🔴 อุปกรณ์ขาด / สูญหาย (Lost Items)',
+                                                    text: 'สายชาร์จไม่ครบ, หายทั้งชุด -> บันทึกหมายเหตุ ติดตามชดใช้ตามระเบียบ',
+                                                    status: '🔴 missing items',
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            stepNum: 3,
+                                            actor: '👮‍♂️ Staff เคาน์เตอร์',
+                                            actorRole: 'counter',
+                                            title: 'กดยืนยันการรับคืน (Confirm Return)',
+                                            desc: 'บันทึกวัน-เวลาที่ส่งคืนจริง และบันทึกหมายเหตุสภาพเครื่องลงในระบบ',
+                                            statusBadge: '⚪ คืนแล้ว (returned)',
+                                        },
+                                        {
+                                            stepNum: 4,
+                                            actor: '👤 ผู้ใช้งาน',
+                                            actorRole: 'user',
+                                            title: 'ประเมินความพึงพอใจ 5 ดาว',
+                                            desc: 'ผู้ใช้งานได้รับแจ้งเตือนให้ทำแบบประเมินความพึงพอใจ เพื่อนำข้อมูลไปปรับปรุงคุณภาพบริการ',
+                                            statusBadge: '⭐ Rated',
+                                        },
+                                    ]}
+                                />
+                            </div>
 
-                            {/* Workflow 4: User Verification & Onboarding */}
-                            {activeStaffWorkflow === 'users' && (
-                                <div className="space-y-5 animate-fadeIn">
-                                    <WorkflowMetaBar
-                                        title="วงจรการตรวจสอบและอนุมัติผู้ใช้งานใหม่ (User Verification Lifecycle)"
-                                        actors="👤 ผู้ลงทะเบียน (User), 👮‍♂️ เจ้าหน้าที่ (Staff), 🛡️ Admin"
-                                        channels="Discord Webhook (ห้อง Auth), WeLPRU Mobile Push"
-                                    />
-                                    <VisualFlowchart
-                                        startLabel="จุดเริ่มต้น: มีการแจ้งเตือนผู้ใช้ใหม่ใน Discord"
-                                        endLabel="สิ้นสุด: เปิดใช้งานบัญชี / ส่งแจ้งเตือนแก้ไขข้อมูล"
-                                        steps={[
-                                            {
-                                                stepNum: 1,
-                                                actor: '👤 ผู้ใช้งาน',
-                                                actorRole: 'user',
-                                                title: 'เข้าสู่ระบบด้วย Google และกรอกโปรไฟล์',
-                                                desc: 'ระบุรหัสนักศึกษา/บุคลากร เบอร์โทร และคณะ/สาขา -> สถานะบัญชีเป็น Pending',
-                                                statusBadge: '🟡 pending',
-                                            },
-                                            {
-                                                stepNum: 2,
-                                                actor: '🤖 ระบบ',
-                                                actorRole: 'system',
-                                                title: 'ส่ง Webhook แจ้งเตือนเจ้าหน้าที่',
-                                                desc: 'ระบบยิงข้อความเข้าห้อง Discord ให้เจ้าหน้าที่ทราบว่ามีผู้ใช้ใหม่รอการตรวจสอบ',
-                                            },
-                                            {
-                                                stepNum: 3,
-                                                actor: '👮‍♂️ Staff / 🛡️ Admin',
-                                                actorRole: 'staff',
-                                                title: 'ตรวจสอบข้อมูลในหน้า /staff/users',
-                                                desc: 'ตรวจสอบความถูกต้องของรหัสประจำตัว รูปแบบเบอร์โทร และชื่อสังกัด:',
-                                                branches: [
-                                                    {
-                                                        type: 'success',
-                                                        label: '🟢 อนุมัติบัญชี (Approved)',
-                                                        text: 'เปิดสิทธิ์การใช้งานทันที ผู้ใช้จะสามารถเริ่มยืมและจองอุปกรณ์ได้ตามโควตา',
-                                                        status: '🟢 approved',
-                                                    },
-                                                    {
-                                                        type: 'danger',
-                                                        label: '🔴 ปฏิเสธ / ระงับสิทธิ์ (Rejected / Suspended)',
-                                                        text: 'ข้อมูลเท็จหรือไม่ตรงกับสังกัด ระบุเหตุผลการปฏิเสธ บัญชีจะไม่สามารถทำรายการยืม-จองได้',
-                                                        status: '🔴 rejected',
-                                                    },
-                                                ],
-                                            },
-                                        ]}
-                                    />
-                                </div>
-                            )}
+                            {/* Workflow 4: User Verification */}
+                            <div className={`space-y-5 animate-fadeIn ${activeStaffWorkflow === 'users' ? 'block' : 'hidden print:block print:mt-8'}`}>
+                                <WorkflowMetaBar
+                                    title="วงจรการตรวจสอบและอนุมัติผู้ใช้งานใหม่ (User Verification Flow)"
+                                    actors="👤 ผู้สมัครใหม่, 👮‍♂️ เจ้าหน้าที่ (Staff), 🤖 Google Workspace"
+                                    channels="Discord Webhook (ห้อง Auth), WeLPRU Welcome Notification"
+                                />
+                                <VisualFlowchart
+                                    startLabel="จุดเริ่มต้น: ผู้ใช้ลงทะเบียนด้วย Google บัญชีมหาวิทยาลัย"
+                                    endLabel="สิ้นสุด: บัญชีผ่านการอนุมัติ & รับสิทธิ์ยืมตามโควตา"
+                                    steps={[
+                                        {
+                                            stepNum: 1,
+                                            actor: '👤 ผู้สมัครใหม่',
+                                            actorRole: 'user',
+                                            title: 'ลงทะเบียนเข้าสู่ระบบ',
+                                            desc: 'กรอกชื่อ-สกุล, รหัสนักศึกษา/บุคลากร, เบอร์โทรศัพท์ และสังกัดคณะ/หน่วยงาน',
+                                            statusBadge: '🟡 pending',
+                                        },
+                                        {
+                                            stepNum: 2,
+                                            actor: '👮‍♂️ Staff',
+                                            actorRole: 'staff',
+                                            title: 'ตรวจสอบความถูกต้องใน /staff/users',
+                                            desc: 'ตรวจสอบรหัสประจำตัวและความถูกต้องของข้อมูลสังกัดคณะ:',
+                                            branches: [
+                                                {
+                                                    type: 'success',
+                                                    label: '🟢 อนุมัติบัญชี (Approved)',
+                                                    text: 'เปิดสิทธิ์การใช้งานทันที ผู้ใช้จะสามารถเริ่มยืมและจองอุปกรณ์ได้ตามโควตา',
+                                                    status: '🟢 approved',
+                                                },
+                                                {
+                                                    type: 'danger',
+                                                    label: '🔴 ปฏิเสธ / ระงับสิทธิ์ (Rejected / Suspended)',
+                                                    text: 'ข้อมูลเท็จหรือไม่ตรงกับสังกัด ระบุเหตุผลการปฏิเสธ บัญชีจะไม่สามารถทำรายการยืม-จองได้',
+                                                    status: '🔴 rejected',
+                                                },
+                                            ],
+                                        },
+                                    ]}
+                                />
+                            </div>
 
                             {/* Workflow 5: Overdue Tracking & Escalation */}
-                            {activeStaffWorkflow === 'overdue' && (
-                                <div className="space-y-5 animate-fadeIn">
-                                    <WorkflowMetaBar
-                                        title="วงจรการติดตามอุปกรณ์ค้างคืนและการส่งแจ้งเตือน (Overdue Escalation Flow)"
-                                        actors="🤖 Smart Cron (08:30 น.), 👮‍♂️ เจ้าหน้าที่ (Staff), 👤 ผู้ยืมที่ค้างส่ง"
-                                        channels="WeLPRU Mobile Push, Discord Webhook (แจ้งเตือนด่วน), In-App Overdue Badge"
-                                    />
-                                    <VisualFlowchart
-                                        startLabel="จุดเริ่มต้น: Smart Cron รันอัตโนมัติเวลา 08:30 น."
-                                        endLabel="สิ้นสุด: ติดตามทวงถามสำเร็จ / ดำเนินการเสนอระงับสิทธิ์"
-                                        steps={[
-                                            {
-                                                stepNum: 1,
-                                                actor: '🤖 Smart Cron (08:30 น.)',
-                                                actorRole: 'system',
-                                                title: 'ตรวจสอบฐานข้อมูลอัตโนมัติทุกเช้า',
-                                                desc: 'รันคำสั่งเช็ครายการคำขอยืมที่ถึงกำหนดส่งคืนในวันนี้ และรายการที่เลยกำหนดเวลา',
-                                                branches: [
-                                                    {
-                                                        type: 'alert',
-                                                        label: '🔔 รายการที่ต้องคืนวันนี้',
-                                                        text: 'ส่ง WeLPRU Push ล่วงหน้า เตือนให้นำเครื่องมาส่งคืนก่อนเวลาหมดสัญญา',
-                                                    },
-                                                    {
-                                                        type: 'danger',
-                                                        label: '⚠️ รายการที่เลยกำหนด (Overdue)',
-                                                        text: 'ระบบเปลี่ยนสถานะเป็น Overdue อัตโนมัติ พร้อมยิง Discord Alert เข้าห้องเจ้าหน้าที่ทันที',
-                                                        status: '⚠️ ค้างคืน (overdue)',
-                                                    },
-                                                ],
-                                            },
-                                            {
-                                                stepNum: 2,
-                                                actor: '👮‍♂️ Staff',
-                                                actorRole: 'staff',
-                                                title: 'ตรวจสอบรายการค้างคืนในหน้า /staff/overdue',
-                                                desc: 'ดูรายชื่อผู้ค้างคืน หมายเลขโทรศัพท์ จำนวนวันที่เกินกำหนด และรุ่นอุปกรณ์ที่ค้างส่ง',
-                                                statusBadge: '⚠️ Overdue List',
-                                            },
-                                            {
-                                                stepNum: 3,
-                                                actor: '👮‍♂️ Staff',
-                                                actorRole: 'staff',
-                                                title: 'ดำเนินการติดตามทวงถาม (Action Escalation)',
-                                                desc: 'โทรศัพท์ติดต่อผู้ยืมโดยตรง หรือกดปุ่ม "ส่งการแจ้งเตือนเตือนความจำ" ไปยัง WeLPRU ซ้ำอีกครั้ง',
-                                                branches: [
-                                                    {
-                                                        type: 'success',
-                                                        label: '🟢 ผู้ยืมนำส่งคืน',
-                                                        text: 'เข้าสู่กระบวนการตรวจสภาพ 3 ระดับ และปลดสถานะค้างคืนทันที',
-                                                        status: '⚪ returned',
-                                                    },
-                                                    {
-                                                        type: 'danger',
-                                                        label: '🔴 ค้างคืนเกินกำหนดขั้นวิกฤต',
-                                                        text: 'ส่งเรื่องเสนอ Admin เพื่อระงับบัญชีผู้ใช้ชั่วคราว และดำเนินการตามระเบียบมหาวิทยาลัย',
-                                                        status: '🔴 suspended',
-                                                    },
-                                                ],
-                                            },
-                                        ]}
-                                    />
-                                </div>
-                            )}
+                            <div className={`space-y-5 animate-fadeIn ${activeStaffWorkflow === 'overdue' ? 'block' : 'hidden print:block print:mt-8'}`}>
+                                <WorkflowMetaBar
+                                    title="วงจรการติดตามอุปกรณ์ค้างคืนและการส่งแจ้งเตือน (Overdue Escalation Flow)"
+                                    actors="🤖 Smart Cron (08:30 น.), 👮‍♂️ เจ้าหน้าที่ (Staff), 👤 ผู้ยืมที่ค้างส่ง"
+                                    channels="WeLPRU Mobile Push, Discord Webhook (แจ้งเตือนด่วน), In-App Overdue Badge"
+                                />
+                                <VisualFlowchart
+                                    startLabel="จุดเริ่มต้น: Smart Cron รันอัตโนมัติเวลา 08:30 น."
+                                    endLabel="สิ้นสุด: ติดตามทวงถามสำเร็จ / ดำเนินการเสนอระงับสิทธิ์"
+                                    steps={[
+                                        {
+                                            stepNum: 1,
+                                            actor: '🤖 Smart Cron (08:30 น.)',
+                                            actorRole: 'system',
+                                            title: 'ตรวจสอบฐานข้อมูลอัตโนมัติทุกเช้า',
+                                            desc: 'รันคำสั่งเช็ครายการคำขอยืมที่ถึงกำหนดส่งคืนในวันนี้ และรายการที่เลยกำหนดเวลา',
+                                            branches: [
+                                                {
+                                                    type: 'alert',
+                                                    label: '🔔 รายการที่ต้องคืนวันนี้',
+                                                    text: 'ส่ง WeLPRU Push ล่วงหน้า เตือนให้นำเครื่องมาส่งคืนก่อนเวลาหมดสัญญา',
+                                                },
+                                                {
+                                                    type: 'danger',
+                                                    label: '⚠️ รายการที่เลยกำหนด (Overdue)',
+                                                    text: 'ระบบเปลี่ยนสถานะเป็น Overdue อัตโนมัติ พร้อมยิง Discord Alert เข้าห้องเจ้าหน้าที่ทันที',
+                                                    status: '⚠️ ค้างคืน (overdue)',
+                                                },
+                                            ],
+                                        },
+                                        {
+                                            stepNum: 2,
+                                            actor: '👮‍♂️ Staff',
+                                            actorRole: 'staff',
+                                            title: 'ตรวจสอบรายการค้างคืนในหน้า /staff/overdue',
+                                            desc: 'ดูรายชื่อผู้ค้างคืน หมายเลขโทรศัพท์ จำนวนวันที่เกินกำหนด และรุ่นอุปกรณ์ที่ค้างส่ง',
+                                            statusBadge: '⚠️ Overdue List',
+                                        },
+                                        {
+                                            stepNum: 3,
+                                            actor: '👮‍♂️ Staff',
+                                            actorRole: 'staff',
+                                            title: 'ดำเนินการติดตามทวงถาม (Action Escalation)',
+                                            desc: 'โทรศัพท์ติดต่อผู้ยืมโดยตรง หรือกดปุ่ม "ส่งการแจ้งเตือนเตือนความจำ" ไปยัง WeLPRU ซ้ำอีกครั้ง',
+                                            branches: [
+                                                {
+                                                    type: 'success',
+                                                    label: '🟢 ผู้ยืมนำส่งคืน',
+                                                    text: 'เข้าสู่กระบวนการตรวจสภาพ 3 ระดับ และปลดสถานะค้างคืนทันที',
+                                                    status: '⚪ returned',
+                                                },
+                                                {
+                                                    type: 'danger',
+                                                    label: '🔴 ค้างคืนเกินกำหนดขั้นวิกฤต',
+                                                    text: 'ส่งเรื่องเสนอ Admin เพื่อระงับบัญชีผู้ใช้ชั่วคราว และดำเนินการตามระเบียบมหาวิทยาลัย',
+                                                    status: '🔴 suspended',
+                                                },
+                                            ],
+                                        },
+                                    ]}
+                                />
+                            </div>
                         </div>
                     </Section>
                 </div>

@@ -438,6 +438,23 @@
     print-color-adjust: exact !important;
   }
 
+  /* Completely eliminate WebKit scrollbars (removes the vertical cyan bar on print edge) */
+  ::-webkit-scrollbar,
+  ::-webkit-scrollbar-thumb,
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
   html, body {
     background: #ffffff !important;
     color: #000000 !important;
@@ -446,6 +463,19 @@
     width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
+    overflow: visible !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  main,
+  div,
+  .min-h-screen,
+  [class*="min-h-"],
+  [class*="overflow-"] {
+    overflow: visible !important;
+    min-height: 0 !important;
+    height: auto !important;
   }
 
   /* Hide interactive web-only controls & sidebars */
@@ -468,8 +498,18 @@
     color: #0f172a !important; /* Rich dark slate/black */
   }
 
-  /* Headings: solid pure black */
-  h1, h2, h3, h4, h5, h6, strong, b {
+  /* Headings: solid pure black (Strip -webkit-text-fill-color and heading-gradient!) */
+  h1, h2, h3, h4, h5, h6, .font-heading, [class*="text-transparent"] {
+    background: none !important;
+    background-image: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    -webkit-text-fill-color: #000000 !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
+  }
+
+  strong, b {
     color: #000000 !important;
     font-weight: 700 !important;
   }
@@ -527,17 +567,26 @@
   /* Manual Page Title Header for A4 Print */
   .manual-header-banner,
   [class*="py-10 md:py-14"] {
+    border: none !important;
     border-bottom: 2px solid #000000 !important;
+    border-radius: 0 !important;
     padding-top: 0 !important;
     padding-bottom: 8px !important;
     margin-bottom: 12px !important;
-    background: #ffffff !important;
+    background: transparent !important;
+    background-image: none !important;
   }
 
   .manual-header-banner *,
   .manual-header-banner svg {
     color: #000000 !important;
     stroke: #000000 !important;
+  }
+
+  .manual-header-banner .p-3 {
+    border: none !important;
+    background: transparent !important;
+    padding: 2px !important;
   }
 
   /* Max width containers: expand to full printable A4 page width */
@@ -634,16 +683,33 @@
     font-weight: 700 !important;
   }
 
-  /* Page break rules: avoid cutting steps/cards across page splits */
-  section,
+  /* Page break rules: ONLY individual cards and leaf nodes avoid break */
   .print-avoid-break,
   .card,
   .step-item,
-  [class*="rounded-2xl"],
-  [class*="rounded-xl"],
+  .flowchart-node,
   table,
-  tr,
-  .flowchart-node {
+  tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Multi-item containers and sections MUST allow natural page breaking */
+  section,
+  .space-y-10,
+  .space-y-8,
+  .space-y-6,
+  .space-y-5,
+  .space-y-4,
+  [class*="rounded-2xl"],
+  [class*="rounded-xl"] {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  /* Individual cards inside grids avoid being sliced */
+  .grid > div,
+  .grid > article {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
