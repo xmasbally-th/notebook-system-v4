@@ -32,6 +32,7 @@ import { DebugConsole } from '@/components/providers/LazyComponents'
 import QueryProvider from '@/components/providers/QueryProvider'
 import AuthGuard from '@/components/auth/AuthGuard'
 import ProfileCompletionPopup from '@/components/auth/ProfileCompletionPopup'
+import LazyEvaluationPrompt from '@/components/evaluations/LazyEvaluationPrompt'
 import ErrorBoundary from '@/components/error/ErrorBoundary'
 import { ThemeProvider } from '@/components/providers/ThemeContext'
 import { Analytics } from '@vercel/analytics/react'
@@ -72,6 +73,7 @@ export default function RootLayout({
                             <AuthGuard>
                                 {children}
                                 <ProfileCompletionPopup />
+                                <LazyEvaluationPrompt />
                             </AuthGuard>
                         </QueryProvider>
                     </ErrorBoundary>

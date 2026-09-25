@@ -46,6 +46,29 @@ export async function submitReservationRequest(formData: FormData) {
         return { error: 'วันและเวลาที่คืนต้องอยู่หลังวันและเวลาที่รับอุปกรณ์' }
     }
 
+    // 2.5 Check Pending Mandatory Evaluations
+    const { data: cutoffDateRaw } = await (supabase as any)
+        .rpc('get_evaluation_cutoff_date')
+    const cutoffDate = cutoffDateRaw || new Date().toISOString().split('T')[0]
+
+    const { data: returnedLoans, error: evalErr } = await (supabase as any)
+        .from('loanRequests')
+        .select('id, equipment(name, equipment_number), evaluations(id)')
+        .eq('user_id', user.id)
+        .eq('status', 'returned')
+        .gte('updated_at', cutoffDate)
+
+    if (!evalErr && returnedLoans) {
+        const pendingEvals = returnedLoans.filter(
+            (loan: any) => !loan.evaluations || loan.evaluations.length === 0
+        )
+        if (pendingEvals.length > 0) {
+            return {
+                error: `คุณมีรายการยืมอุปกรณ์ที่ส่งคืนแล้วแต่ยังไม่ได้ทำแบบประเมินความพึงพอใจ (${pendingEvals.length} รายการ) กรุณาทำแบบประเมินความพึงพอใจก่อนทำการจองใหม่`
+            }
+        }
+    }
+
     // 3. Domain Validation (Conflicts)
     const validation = await validateBooking({
         userId: user.id,

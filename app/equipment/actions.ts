@@ -73,6 +73,29 @@ export async function submitLoanRequest(prevState: any, formData: FormData) {
         return { error: 'ระบบยืม-คืนปิดให้บริการชั่วคราว' }
     }
 
+    // 3.5 Check Pending Mandatory Evaluations
+    const { data: cutoffDateRaw } = await (supabase as any)
+        .rpc('get_evaluation_cutoff_date')
+    const cutoffDate = cutoffDateRaw || new Date().toISOString().split('T')[0]
+
+    const { data: returnedLoans, error: evalErr } = await (supabase as any)
+        .from('loanRequests')
+        .select('id, equipment(name, equipment_number), evaluations(id)')
+        .eq('user_id', user.id)
+        .eq('status', 'returned')
+        .gte('updated_at', cutoffDate)
+
+    if (!evalErr && returnedLoans) {
+        const pendingEvals = returnedLoans.filter(
+            (loan: any) => !loan.evaluations || loan.evaluations.length === 0
+        )
+        if (pendingEvals.length > 0) {
+            return {
+                error: `คุณมีรายการยืมอุปกรณ์ที่ส่งคืนแล้วแต่ยังไม่ได้ทำแบบประเมินความพึงพอใจ (${pendingEvals.length} รายการ) กรุณาทำแบบประเมินความพึงพอใจก่อนทำการยืมใหม่`
+            }
+        }
+    }
+
     // 4. Server-side Validation
     const userType = profile.user_type || 'student'
     const loanLimits = config?.loan_limits_by_type as LoanLimitsByType | null

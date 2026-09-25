@@ -1,72 +1,49 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+import { usePathname } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import EvaluationModal from './EvaluationModal'
 import { AlertTriangle } from 'lucide-react'
+import { usePendingEvaluations } from '@/hooks/usePendingEvaluations'
 
 export default function ActiveEvaluationPrompt() {
-    const [pendingLoans, setPendingLoans] = useState<any[]>([])
+    const pathname = usePathname()
+    const queryClient = useQueryClient()
+    const { pendingLoans, hasPendingEvaluations } = usePendingEvaluations()
     const [isModalOpen, setIsModalOpen] = useState(false)
-    const [currentLoan, setCurrentLoan] = useState<any>(null)
+    const [currentIndex, setCurrentIndex] = useState(0)
+
+    const isExcludedRoute = !pathname ||
+        pathname.startsWith('/admin') ||
+        pathname.startsWith('/staff') ||
+        pathname.startsWith('/auth') ||
+        pathname.startsWith('/login') ||
+        pathname.startsWith('/register')
 
     useEffect(() => {
-        const checkPendingEvaluations = async () => {
-            const supabase = createBrowserClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-            )
-
-            const { data: { session } } = await supabase.auth.getSession()
-            if (!session) return
-
-            // Get cutoff date from system_config via RPC to bypass RLS lockout
-            const { data: cutoffDateRaw, error: configError } = await supabase
-                .rpc('get_evaluation_cutoff_date')
-
-            if (configError) {
-                console.error('[ActiveEvaluationPrompt] Error fetching cutoff date via RPC:', configError)
-            }
-
-            const cutoffDate = cutoffDateRaw || new Date().toISOString().split('T')[0]
-
-            // Fetch returned loans that might not be evaluated
-            let query = supabase
-                .from('loanRequests')
-                .select('*, equipment(name, equipment_number), evaluations(id)')
-                .eq('user_id', session.user.id)
-                .eq('status', 'returned')
-                .gte('updated_at', cutoffDate) // Only loans returned after cutoff
-                .order('updated_at', { ascending: false })
-
-            const { data: loans, error } = await query
-
-            if (error || !loans) return
-
-            // Filter loans that have NO evaluations
-            const pending = loans.filter((loan: any) =>
-                !loan.evaluations || loan.evaluations.length === 0
-            )
-
-            if (pending.length > 0) {
-                setPendingLoans(pending)
-                setCurrentLoan(pending[0])
-                setIsModalOpen(true)
-            }
-        }
-
-        checkPendingEvaluations()
-    }, [])
-
-    const handleEvaluationSuccess = () => {
-        const remaining = pendingLoans.filter(l => l.id !== currentLoan.id)
-        setPendingLoans(remaining)
-
-        if (remaining.length > 0) {
-            setCurrentLoan(remaining[0])
+        if (!isExcludedRoute && hasPendingEvaluations) {
+            setIsModalOpen(true)
         } else {
             setIsModalOpen(false)
-            setCurrentLoan(null)
+        }
+    }, [isExcludedRoute, hasPendingEvaluations])
+
+    if (isExcludedRoute || !hasPendingEvaluations || pendingLoans.length === 0) return null
+
+    const currentLoan = pendingLoans[currentIndex] || pendingLoans[0]
+
+    const handleEvaluationSuccess = () => {
+        queryClient.invalidateQueries({ queryKey: ['pending-evaluations'] })
+        queryClient.invalidateQueries({ queryKey: ['my-loans'] })
+        queryClient.invalidateQueries({ queryKey: ['my-active-loans-count'] })
+        queryClient.invalidateQueries({ queryKey: ['cart'] })
+
+        if (currentIndex < pendingLoans.length - 1) {
+            setCurrentIndex(prev => prev + 1)
+        } else {
+            setIsModalOpen(false)
+            setCurrentIndex(0)
         }
     }
 

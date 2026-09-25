@@ -32,6 +32,7 @@ import CartBorrowForm from './CartBorrowForm'
 import CartReserveForm from './CartReserveForm'
 import CartConfirmModal from './CartConfirmModal'
 import CartEvaluationAlert from './CartEvaluationAlert'
+import { usePendingEvaluations } from '@/hooks/usePendingEvaluations'
 
 interface CartDrawerProps {
     isOpen: boolean
@@ -88,7 +89,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
     const [showConfirmation, setShowConfirmation] = useState(false)
 
     // Pending evaluations
-    const [pendingEvaluationCount, setPendingEvaluationCount] = useState(0)
+    const { pendingCount: pendingEvaluationCount, hasPendingEvaluations } = usePendingEvaluations()
 
     // Max loan days based on user type
     const maxDays = useMemo(() => {
@@ -218,42 +219,6 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
         }
     }, [isOpen, items.length, checkCartAvailability])
 
-    // Check pending evaluations
-    useEffect(() => {
-        if (!isOpen) return
-        const checkPendingEvaluations = async () => {
-            try {
-                const { data: { session } } = await supabase.auth.getSession()
-                if (!session) return
-
-                const { data: cutoffDateRaw, error: configError } = await supabase
-                    .rpc('get_evaluation_cutoff_date')
-
-                if (configError) {
-                    console.error('[CartDrawer] Error fetching cutoff date via RPC:', configError)
-                }
-
-                const cutoffDate = cutoffDateRaw || new Date().toISOString().split('T')[0]
-
-                const { data: returnedLoans } = await supabase
-                    .from('loanRequests')
-                    .select('id, evaluations(id)')
-                    .eq('user_id', session.user.id)
-                    .eq('status', 'returned')
-                    .gte('updated_at', cutoffDate)
-
-                const pending = (returnedLoans || []).filter(
-                    (loan: any) => !loan.evaluations || loan.evaluations.length === 0
-                )
-                setPendingEvaluationCount(pending.length)
-            } catch (err) {
-                console.error('[CartDrawer] Evaluation check error:', err)
-            }
-        }
-        checkPendingEvaluations()
-    }, [isOpen])
-
-    const hasPendingEvaluations = pendingEvaluationCount > 0
     const hasUnavailableItems = unavailableIds.size > 0
 
     // Validation errors

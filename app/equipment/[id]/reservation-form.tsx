@@ -16,8 +16,11 @@ import {
     AlertTriangle,
     Info,
     CalendarPlus,
-    CalendarX
+    CalendarX,
+    Star
 } from 'lucide-react'
+import { usePendingEvaluations } from '@/hooks/usePendingEvaluations'
+import EquipmentEvaluationAlert from '@/components/evaluations/EquipmentEvaluationAlert'
 
 
 interface ReservationFormProps {
@@ -32,6 +35,7 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
 
     const { validateReservation, isLoading: validationLoading, config } = useReservationValidation(userType as 'student' | 'lecturer' | 'staff')
     const { data: availability } = useEquipmentAvailability(equipmentId)
+    const { pendingLoans, pendingCount, hasPendingEvaluations, isLoading: evalLoading } = usePendingEvaluations()
 
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -128,6 +132,13 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
+
+        if (hasPendingEvaluations) {
+            setValidationErrors([
+                `⚠️ ไม่สามารถส่งคำขอจองได้: คุณมีรายการยืมที่ส่งคืนแล้วแต่ยังไม่ได้ทำแบบประเมินความพึงพอใจ (${pendingCount} รายการ) กรุณาทำแบบประเมินให้เสร็จสิ้นก่อนจองอุปกรณ์`
+            ])
+            return
+        }
 
         if (hasConflictBooking(startDate, endDate, pickupTime, returnTime)) {
             setValidationErrors(['⚠️ อุปกรณ์ชิ้นนี้มีผู้ใช้จอง/ยืมไว้แล้วในช่วงเวลาดังกล่าว กรุณาปรับเปลี่ยนวันและเวลาเพื่อไม่ให้ตรงกัน'])
@@ -249,6 +260,9 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
                     </div>
                 </div>
             </div>
+
+            {/* Pending Evaluations Alert (Must evaluate previous loans before reserving anew) */}
+            <EquipmentEvaluationAlert pendingLoans={pendingLoans} />
 
             {/* Booked / Reserved Date Ranges Warning Box */}
             {((availability?.reservations?.length || 0) + (availability?.loans?.length || 0)) > 0 && (
@@ -408,18 +422,27 @@ export default function ReservationForm({ equipmentId }: ReservationFormProps) {
                 {/* Submit Button */}
                 <button
                     type="submit"
-                    disabled={loading || validationErrors.length > 0 || !startDate || !endDate}
-                    className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled={loading || validationLoading || evalLoading || validationErrors.length > 0 || !startDate || !endDate || hasPendingEvaluations}
+                    className={`w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-all ${
+                        hasPendingEvaluations
+                            ? 'bg-amber-600 hover:bg-amber-700'
+                            : 'bg-purple-600 hover:bg-purple-700'
+                    }`}
                 >
-                    {loading ? (
+                    {loading || validationLoading || evalLoading ? (
                         <>
                             <Loader2 className="w-5 h-5 animate-spin" />
-                            กำลังส่งคำขอ...
+                            <span>กำลังส่งคำขอ...</span>
+                        </>
+                    ) : hasPendingEvaluations ? (
+                        <>
+                            <Star className="w-5 h-5 fill-white text-white" />
+                            <span>กรุณาประเมินการยืมรอบก่อนหน้าก่อน ({pendingCount} รายการ)</span>
                         </>
                     ) : (
                         <>
                             <CalendarPlus className="w-5 h-5" />
-                            จองล่วงหน้า
+                            <span>จองล่วงหน้า</span>
                         </>
                     )}
                 </button>

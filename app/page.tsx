@@ -11,19 +11,10 @@ import SystemStatusBadge from '@/components/home/SystemStatusBadge'
 import QuickSearch from '@/components/home/QuickSearch'
 import { HeroCTA, MidCTA } from '@/components/home/HomeCTA'
 
-// P5: Lazy loaded via client wrapper — avoids loading heavy EvaluationModal upfront
-import LazyEvaluationPrompt from '@/components/evaluations/LazyEvaluationPrompt'
-
-/**
- * Home page — static content streams immediately.
- * Auth-dependent CTA buttons load via client components to avoid blocking TTFB.
- */
 export default function Home() {
     return (
         <div className="min-h-screen bg-white flex flex-col font-sans">
             <Header />
-
-            <LazyEvaluationPrompt />
 
             <main className="flex-grow">
                 {/* Hero Section - static content can be fully prerendered */}

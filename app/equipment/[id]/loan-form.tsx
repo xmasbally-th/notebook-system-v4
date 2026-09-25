@@ -19,8 +19,11 @@ import {
     Info,
     ShieldCheck,
     CalendarX,
-    Camera
+    Camera,
+    Star
 } from 'lucide-react'
+import { usePendingEvaluations } from '@/hooks/usePendingEvaluations'
+import EquipmentEvaluationAlert from '@/components/evaluations/EquipmentEvaluationAlert'
 
 const QrScannerModal = dynamic(
     () => import('@/components/scanner/QrScannerModal'),
@@ -40,6 +43,7 @@ export default function LoanRequestForm({ equipmentId, isCounterMode, counterTok
 
     const { validateDates, isLoading: validationLoading, config, currentLoanCount } = useLoanValidation(userType as 'student' | 'lecturer' | 'staff')
     const { data: availability } = useEquipmentAvailability(equipmentId)
+    const { pendingLoans, pendingCount, hasPendingEvaluations, isLoading: evalLoading } = usePendingEvaluations()
 
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -137,6 +141,13 @@ export default function LoanRequestForm({ equipmentId, isCounterMode, counterTok
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
+
+        if (hasPendingEvaluations) {
+            setValidationErrors([
+                `⚠️ ไม่สามารถส่งคำขอยืมได้: คุณมีรายการยืมที่ส่งคืนแล้วแต่ยังไม่ได้ทำแบบประเมินความพึงพอใจ (${pendingCount} รายการ) กรุณาทำแบบประเมินให้เสร็จสิ้นก่อนยืมใหม่`
+            ])
+            return
+        }
 
         if (hasConflictBooking(startDate, endDate, returnTime)) {
             setValidationErrors(['⚠️ อุปกรณ์ชิ้นนี้มีผู้ใช้จอง/ยืมไว้แล้วในช่วงเวลาดังกล่าว กรุณาปรับเปลี่ยนวันและเวลาเพื่อไม่ให้ตรงกัน'])
@@ -250,6 +261,9 @@ export default function LoanRequestForm({ equipmentId, isCounterMode, counterTok
                     </div>
                 </div>
             )}
+
+            {/* Pending Evaluations Alert (Must evaluate previous loans before borrowing anew) */}
+            <EquipmentEvaluationAlert pendingLoans={pendingLoans} />
 
             {/* Rules Section */}
             {config && (
@@ -426,23 +440,32 @@ export default function LoanRequestForm({ equipmentId, isCounterMode, counterTok
                 {/* Submit Button */}
                 <button
                     type="submit"
-                    disabled={!isCounterMode || loading || validationLoading || validationErrors.length > 0}
-                    className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled={!isCounterMode || loading || validationLoading || evalLoading || validationErrors.length > 0 || hasPendingEvaluations}
+                    className={`w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-all ${
+                        hasPendingEvaluations
+                            ? 'bg-amber-600 hover:bg-amber-700'
+                            : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
                 >
-                    {loading || validationLoading ? (
+                    {loading || validationLoading || evalLoading ? (
                         <>
                             <Loader2 className="w-5 h-5 animate-spin" />
                             {loading ? 'กำลังส่งคำขอ...' : 'กำลังตรวจสอบ...'}
                         </>
+                    ) : hasPendingEvaluations ? (
+                        <>
+                            <Star className="w-5 h-5 fill-white text-white" />
+                            <span>กรุณาประเมินการยืมรอบก่อนหน้าก่อน ({pendingCount} รายการ)</span>
+                        </>
                     ) : !isCounterMode ? (
                         <>
                             <AlertCircle className="w-5 h-5" />
-                            ต้องสแกน QR Code บนตัวเครื่องเพื่อยืมทันที
+                            <span>ต้องสแกน QR Code บนตัวเครื่องเพื่อยืมทันที</span>
                         </>
                     ) : (
                         <>
                             <CheckCircle2 className="w-5 h-5" />
-                            ส่งคำขอยืม
+                            <span>ส่งคำขอยืม</span>
                         </>
                     )}
                 </button>
